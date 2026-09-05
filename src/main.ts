@@ -9,6 +9,7 @@ import { registerUniqueAgentItemHooks } from "./bootstrap/register-unique-agent-
 import { registerDataMigrations } from "./bootstrap/register-data-migrations";
 import { registerAgentOccupationCreationHook } from "./bootstrap/register-agent-occupation-creation-hook";
 import { registerNarrativeScenes } from "./bootstrap/register-narrative-scenes";
+import { registerPoiCanvasSpike } from "./bootstrap/register-poi-canvas-spike";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
@@ -25,6 +26,7 @@ Hooks.once("init", () => {
   registerLicenseNotice();
   registerDebugMode();
   registerNarrativeScenes();
+  registerPoiCanvasSpike();
 
   console.info(`${SYSTEM_ID} | Initializing system v${game.system.version}`);
 });

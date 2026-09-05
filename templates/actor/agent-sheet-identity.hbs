@@ -1,0 +1,60 @@
+<header class="op2-identity__header">
+  <div class="op2-portrait">
+    <img src="{{source.img}}" alt="{{localize 'ORDEMPARANORMAL2.AgentSheet.Fields.Portrait'}}"{{#if canEditStructure}} data-edit="img" data-action="editImage" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.EditPortrait'}}"{{/if}} />
+    {{#if canEditStructure}}<button class="op2-portrait__edit" type="button" data-portrait-trigger title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.EditPortrait'}}"><i class="fa-solid fa-camera"></i></button>{{/if}}
+  </div>
+  <div class="op2-identity__fields">
+    <div class="op2-identity__name-row">
+      {{#if canEditStructure}}
+        <label class="op2-field op2-field--name"><span class="op2-sr-only">{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.Name"}}</span><input type="text" name="name" value="{{agent.name}}" autocomplete="off" /></label>
+      {{else}}
+        <h1 class="op2-identity__name">{{agent.name}}</h1>
+      {{/if}}
+      {{#if editable}}
+        <button class="op2-edit-mode-toggle{{#if editMode}} is-active{{/if}}" type="button" data-action="toggleEditMode" aria-pressed="{{editMode}}" aria-label="{{#if editMode}}{{localize 'ORDEMPARANORMAL2.AgentSheet.Actions.DisableEditMode'}}{{else}}{{localize 'ORDEMPARANORMAL2.AgentSheet.Actions.EnableEditMode'}}{{/if}}" title="{{#if editMode}}{{localize 'ORDEMPARANORMAL2.AgentSheet.Actions.DisableEditMode'}}{{else}}{{localize 'ORDEMPARANORMAL2.AgentSheet.Actions.EnableEditMode'}}{{/if}}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+      {{/if}}
+    </div>
+    <div class="op2-identity__details">
+      <div class="op2-field op2-identity-item-control">
+        <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.Profile"}}</span>
+        {{#if profileConflict}}
+          <div class="op2-identity-item-control__conflict" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> {{localize "ORDEMPARANORMAL2.AgentSheet.Errors.MultipleProfiles"}}</div>
+        {{else}}
+          {{#if canEditStructure}}
+            <button class="op2-identity-item-control__picker" type="button" data-action="openProfilePicker"><img src="{{agent.profile.img}}" alt="" /><span>{{#if agent.profile.selected}}{{agent.profile.name}}{{else}}{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.NoProfile"}}{{/if}}</span><i class="fa-solid fa-chevron-down"></i></button>
+          {{else}}
+            <div class="op2-identity-item-control__display"><img src="{{agent.profile.img}}" alt="" /><span>{{#if agent.profile.selected}}{{agent.profile.name}}{{else}}{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.NoProfile"}}{{/if}}</span></div>
+          {{/if}}
+        {{/if}}
+      </div>
+      <div class="op2-field op2-identity-item-control">
+        <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.Occupation"}}</span>
+        {{#if occupationConflict}}
+          <div class="op2-identity-item-control__conflict" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> {{localize "ORDEMPARANORMAL2.AgentSheet.Errors.MultipleOccupations"}}</div>
+        {{else}}
+          {{#if canEditStructure}}
+            <button class="op2-identity-item-control__picker" type="button" data-action="openOccupationPicker"><img src="{{agent.occupation.img}}" alt="" /><span>{{#if agent.occupation.selected}}{{agent.occupation.name}}{{else}}{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.NoOccupation"}}{{/if}}</span><i class="fa-solid fa-chevron-down"></i></button>
+          {{else}}
+            <div class="op2-identity-item-control__display"><img src="{{agent.occupation.img}}" alt="" /><span>{{#if agent.occupation.selected}}{{agent.occupation.name}}{{else}}{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.NoOccupation"}}{{/if}}</span></div>
+          {{/if}}
+          {{#if legacyOccupation}}<div class="op2-identity-item-control__legacy" role="status"><i class="fa-solid fa-triangle-exclamation"></i> {{localize "ORDEMPARANORMAL2.AgentSheet.Warnings.LegacyOccupation"}}: {{legacyOccupation}}</div>{{/if}}
+        {{/if}}
+      </div>
+      <div class="op2-field op2-field--level"><span>{{localize "ORDEMPARANORMAL2.AgentSheet.Fields.Level"}}</span>{{#if canEditStructure}}<input type="number" name="system.level" value="{{agent.level}}" min="1" max="10" step="1" />{{else}}<span class="op2-field__value">{{agent.level}}</span>{{/if}}</div>
+    </div>
+    <section class="op2-resources" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Resources'}}">
+      {{#each agent.resources}}
+        <div class="op2-resource"><span class="op2-resource__label">{{localize labelKey}}</span><input type="number" name="{{valuePath}}" value="{{value}}" min="0" step="1"{{#unless @root.editable}} disabled{{/unless}} /><span>/</span><input type="number" name="{{maxPath}}" value="{{max}}" min="0" step="1"{{#unless @root.editable}} disabled{{/unless}} /></div>
+      {{/each}}
+    </section>
+  </div>
+</header>
+
+<section class="op2-attributes" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Attributes'}}">
+  {{#each agent.attributes}}
+    <div class="op2-attribute">
+      <button class="op2-roll-trigger op2-attribute__label" type="button" {{#if @root.canRoll}}data-action="rollCheck" data-check-kind="attribute" data-check-key="{{key}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.RollCheck'}}"{{else}}disabled title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Errors.NoRollPermission'}}"{{/if}}>{{localize labelKey}}</button>
+      {{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=die editable=@root.canEditStructure}}
+    </div>
+  {{/each}}
+</section>

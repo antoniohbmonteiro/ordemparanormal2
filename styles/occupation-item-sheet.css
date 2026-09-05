@@ -1,0 +1,7 @@
+.ordemparanormal2.occupation-item-sheet { --op2-occupation-border: rgba(255,255,255,.16); }
+.ordemparanormal2.occupation-item-sheet .window-content { padding: 0; }
+.op2-occupation-item-sheet-content { overflow: hidden; }
+.ordemparanormal2.occupation-item-sheet .op2-occupation-sheet { min-height: 100%; padding: 1rem; }
+.ordemparanormal2.occupation-item-sheet .op2-occupation-sheet__header { display: grid; grid-template-columns: 72px minmax(0,1fr); align-items: center; gap: .75rem; }
+.ordemparanormal2.occupation-item-sheet .op2-occupation-sheet__image { width: 72px; height: 72px; border: 1px solid var(--op2-occupation-border); border-radius: 8px; object-fit: cover; }
+.ordemparanormal2.occupation-item-sheet .op2-occupation-sheet__name { display: flex; min-width: 0; flex-direction: column; gap: .25rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }

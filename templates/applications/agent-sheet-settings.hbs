@@ -1,0 +1,29 @@
+<section class="op2-agent-sheet-settings">
+  <div class="op2-agent-sheet-settings__preview" data-accent-preview style="background-color: {{accentColor}};" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Settings.Preview'}}"></div>
+
+  <div class="op2-agent-sheet-settings__fields">
+    <label>
+      <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Settings.ColorPicker"}}</span>
+      <input type="color" value="{{accentColor}}" data-accent-picker />
+    </label>
+    <label>
+      <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Settings.Hexadecimal"}}</span>
+      <input type="text" name="accentColor" value="{{accentColor}}" maxlength="7" autocomplete="off" spellcheck="false" data-accent-hex />
+    </label>
+  </div>
+
+  <footer class="op2-agent-sheet-settings__actions">
+    <button type="button" data-action="restoreDefault">
+      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+      {{localize "ORDEMPARANORMAL2.AgentSheet.Settings.Actions.RestoreDefault"}}
+    </button>
+    <span class="op2-agent-sheet-settings__action-spacer"></span>
+    <button type="button" data-action="cancel">
+      {{localize "ORDEMPARANORMAL2.AgentSheet.Settings.Actions.Cancel"}}
+    </button>
+    <button type="submit">
+      <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+      {{localize "ORDEMPARANORMAL2.AgentSheet.Settings.Actions.Save"}}
+    </button>
+  </footer>
+</section>

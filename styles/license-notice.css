@@ -1,0 +1,42 @@
+.op2-license-notice .op2-license-notice__content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.op2-license-notice .op2-license-notice__branding {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+}
+
+.op2-license-notice .op2-license-notice__seal {
+  display: block;
+  width: clamp(10%, 18rem, 100%);
+  min-width: 10%;
+  max-width: 100%;
+  height: auto;
+  opacity: 1;
+}
+
+.op2-license-notice .op2-license-notice__ai-warning,
+.op2-license-notice .op2-license-notice__statement {
+  font-weight: 700;
+}
+
+.op2-license-notice .op2-license-notice__ai-warning {
+  margin: 0;
+  text-align: center;
+}
+
+.op2-license-notice .op2-license-notice__content p {
+  margin: 0;
+}
+
+.op2-license-notice .op2-license-notice__preference {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}

@@ -1,0 +1,9 @@
+<section class="op2-occupation-sheet">
+  <header class="op2-occupation-sheet__header">
+    <img class="op2-occupation-sheet__image" src="{{occupation.img}}" alt="{{localize 'ORDEMPARANORMAL2.OccupationSheet.Fields.Image'}}" data-edit="img" {{#if editable}}data-action="editImage"{{/if}} />
+    <label class="op2-occupation-sheet__name">
+      <span>{{localize "ORDEMPARANORMAL2.OccupationSheet.Fields.Name"}}</span>
+      <input type="text" name="name" value="{{occupation.name}}" autocomplete="off"{{#unless editable}} disabled{{/unless}} />
+    </label>
+  </header>
+</section>

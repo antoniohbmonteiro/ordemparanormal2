@@ -1,0 +1,20 @@
+<article class="op2-ability-chat-card">
+  {{> chatCardHeader title=name subtitle=(localize "ORDEMPARANORMAL2.AbilityCard.Subtitle")}}
+
+  {{#if hasDescription}}
+    <details class="op2-ability-chat-card__description">
+      <summary class="op2-ability-chat-card__description-summary">
+        <span class="op2-ability-chat-card__description-label">
+          {{localize "ORDEMPARANORMAL2.AbilityCard.DescriptionSummary"}}
+        </span>
+        <i class="fa-solid fa-chevron-down op2-ability-chat-card__chevron" aria-hidden="true"></i>
+      </summary>
+
+      <div class="op2-ability-chat-card__description-body">{{{description}}}</div>
+    </details>
+  {{else}}
+    <p class="op2-ability-chat-card__empty">
+      {{localize "ORDEMPARANORMAL2.AbilityCard.NoDescription"}}
+    </p>
+  {{/if}}
+</article>

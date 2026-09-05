@@ -1,0 +1,20 @@
+.ordemparanormal2.equipment-item-sheet { --op2-equipment-border: rgba(255,255,255,.16); --op2-equipment-panel: rgba(10,12,15,.42); }
+.ordemparanormal2.equipment-item-sheet .window-content { padding: 0; }
+.op2-equipment-item-sheet-content { overflow: hidden; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__header { display: grid; grid-template-columns: 72px minmax(0,1fr); align-items: center; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--op2-equipment-border); }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__image { width: 72px; height: 72px; border: 1px solid var(--op2-equipment-border); border-radius: 8px; object-fit: cover; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__name,
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__description,
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__category label,
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__uses label { display: flex; min-width: 0; flex-direction: column; gap: .25rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__body { min-height: 0; padding: 1rem; overflow-y: auto; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__description prose-mirror { min-height: 9rem; text-transform: none; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__description .editor-content { min-height: 8rem; padding: .5rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__category { margin: 1rem 0; padding: .75rem; border: 1px solid var(--op2-equipment-border); border-radius: 8px; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__toolbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--op2-equipment-border); }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__toolbar h2 { margin: 0; font-size: .9rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__toolbar button { width: auto; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__uses { display: grid; grid-template-columns: 82px 82px 36px; align-items: end; gap: .5rem; margin-top: .5rem; padding: .65rem; border: 1px solid var(--op2-equipment-border); border-radius: 8px; background: var(--op2-equipment-panel); }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__remove { min-width: 0; margin: 0; padding: .4rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__empty { color: var(--color-text-subtle,#aaa); text-align: center; }

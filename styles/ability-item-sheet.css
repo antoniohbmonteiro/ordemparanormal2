@@ -1,0 +1,20 @@
+.ordemparanormal2.ability-item-sheet { --op2-ability-border: rgba(255,255,255,.16); --op2-ability-panel: rgba(10,12,15,.42); }
+.ordemparanormal2.ability-item-sheet .window-content { padding: 0; }
+.op2-ability-item-sheet-content { overflow: hidden; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__header { display: grid; grid-template-columns: 72px minmax(0,1fr); align-items: center; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--op2-ability-border); }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__image { width: 72px; height: 72px; border: 1px solid var(--op2-ability-border); border-radius: 8px; object-fit: cover; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__name,
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__description,
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__cost label,
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__resource label { display: flex; min-width: 0; flex-direction: column; gap: .25rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__body { min-height: 0; padding: 1rem; overflow-y: auto; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__description prose-mirror { min-height: 9rem; text-transform: none; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__description .editor-content { min-height: 8rem; padding: .5rem; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__cost { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; margin: 1rem 0; border: 1px solid var(--op2-ability-border); border-radius: 8px; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__toolbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--op2-ability-border); }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__toolbar h2 { margin: 0; font-size: .9rem; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__toolbar button { width: auto; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__resource { display: grid; grid-template-columns: 82px 82px 36px; align-items: end; gap: .5rem; margin-top: .5rem; padding: .65rem; border: 1px solid var(--op2-ability-border); border-radius: 8px; background: var(--op2-ability-panel); }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__remove { min-width: 0; margin: 0; padding: .4rem; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__empty { color: var(--color-text-subtle,#aaa); text-align: center; }

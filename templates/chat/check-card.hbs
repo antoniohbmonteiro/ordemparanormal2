@@ -1,0 +1,76 @@
+<article class="op2-check-card">
+  {{> chatCardHeader title=name subtitle=subtitle}}
+
+  <section class="op2-check-card__result{{#if rollAnalysis.isPositiveCritical}} op2-check-card__result--critical-positive{{/if}}{{#if rollAnalysis.isCriticalFailure}} op2-check-card__result--critical-failure{{/if}}">
+    <div class="op2-check-card__result-composition">
+      <span class="op2-check-card__sr-only">
+        {{localize "ORDEMPARANORMAL2.CheckCard.Total"}}
+      </span>
+
+      <strong class="op2-check-card__total">{{total}}</strong>
+
+      {{#if rollAnalysis.isPositiveCritical}}
+        <strong class="op2-check-card__critical-label op2-check-card__critical-label--positive">
+          {{localize "ORDEMPARANORMAL2.CheckCard.PositiveCritical"}}
+        </strong>
+      {{/if}}
+      {{#if rollAnalysis.isCriticalFailure}}
+        <strong class="op2-check-card__critical-label op2-check-card__critical-label--failure">
+          {{localize "ORDEMPARANORMAL2.CheckCard.CriticalFailure"}}
+        </strong>
+      {{/if}}
+
+      {{#if resolution}}
+        <div class="op2-check-card__outcome op2-check-card__outcome--{{resolution.outcome}}">
+          {{#if resolution.isSuccess}}
+            <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
+            <strong>{{localize "ORDEMPARANORMAL2.CheckCard.Success"}}</strong>
+          {{else}}
+            <i class="fa-regular fa-circle-xmark" aria-hidden="true"></i>
+            <strong>{{localize "ORDEMPARANORMAL2.CheckCard.Failure"}}</strong>
+          {{/if}}
+          <span class="op2-check-card__outcome-separator" aria-hidden="true">·</span>
+          <span class="op2-check-card__difficulty">
+            {{localize "ORDEMPARANORMAL2.CheckCard.Difficulty"}} {{resolution.difficulty}}
+          </span>
+        </div>
+      {{/if}}
+
+      <div class="op2-check-card__roll-analysis">
+        <span title="{{localize 'ORDEMPARANORMAL2.CheckCard.HighestResultTooltip'}}">
+          {{localize "ORDEMPARANORMAL2.CheckCard.HighestResult"}}
+          <strong>{{rollAnalysis.highestResult}}</strong>
+        </span>
+        <span class="op2-check-card__analysis-separator" aria-hidden="true">·</span>
+        <span title="{{localize 'ORDEMPARANORMAL2.CheckCard.LowestResultTooltip'}}">
+          {{localize "ORDEMPARANORMAL2.CheckCard.LowestResult"}}
+          <strong>{{rollAnalysis.lowestResult}}</strong>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <details class="op2-check-card__breakdown">
+    <summary class="op2-check-card__summary">
+      <span class="op2-check-card__formula">{{contributingFormula}}</span>
+      <i class="fa-solid fa-chevron-down op2-check-card__chevron" aria-hidden="true"></i>
+    </summary>
+
+    <ol class="op2-check-card__dice">
+      {{#each dice}}
+        <li class="op2-check-card__die{{#unless contributes}} op2-check-card__die--excluded{{/unless}}">
+          <span class="op2-check-card__die-icon" aria-hidden="true">
+            {{#if iconPath}}
+              <img src="{{iconPath}}" alt="" />
+            {{else}}
+              <i class="{{iconClass}}"></i>
+            {{/if}}
+          </span>
+          <span class="op2-check-card__die-label">{{label}}</span>
+          <span class="op2-check-card__die-step">{{dieLabel}}</span>
+          <strong class="op2-check-card__die-result">{{result}}</strong>
+        </li>
+      {{/each}}
+    </ol>
+  </details>
+</article>

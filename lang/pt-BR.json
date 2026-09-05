@@ -1,0 +1,429 @@
+{
+  "TYPES": {
+    "Actor": {
+      "agent": "Agente"
+    },
+    "Item": {
+      "profile": "Perfil",
+      "occupation": "Ocupação",
+      "ability": "Habilidade",
+      "pointOfInterest": "Ponto de Interesse",
+      "equipment": "Equipamento"
+    }
+  },
+  "ORDEMPARANORMAL2": {
+    "Sheets": {
+      "Agent": "Ficha de Agente",
+      "Profile": "Ficha de Perfil",
+      "Occupation": "Ficha de Ocupação",
+      "Ability": "Ficha de Habilidade",
+      "PointOfInterest": "Ficha de Ponto de Interesse",
+      "Equipment": "Ficha de Equipamento"
+    },
+    "Equipment": {
+      "Categories": {
+        "general": "Equipamento",
+        "weapon": "Arma",
+        "tool": "Ferramenta"
+      }
+    },
+    "LicenseNotice": {
+      "Title": "Licença da Comunidade",
+      "SettingName": "Versão aceita do aviso da Licença da Comunidade",
+      "SealAlt": "Selo da Licença da Comunidade de Ordem Paranormal",
+      "Statement": "Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal.",
+      "NoAffiliation": "Este projeto não possui afiliação, aprovação ou endosso oficial.",
+      "AiWarning": "Contém material gerado por inteligência artificial.",
+      "DoNotShowAgain": "Não mostrar novamente",
+      "Actions": {
+        "ViewLicense": "Ver licença",
+        "Understood": "Entendi"
+      },
+      "Errors": {
+        "SaveFailed": "Não foi possível salvar a preferência do aviso de licença."
+      }
+    },
+    "DebugMode": {
+      "SettingName": "Modo de depuração",
+      "SettingHint": "Ativa ferramentas avançadas de desenvolvimento e QA. Pode gerar estados e rolagens artificiais que não ocorrem pelo fluxo normal do jogo.",
+      "Confirmation": {
+        "Title": "ATIVAR MODO DE DEPURAÇÃO?",
+        "Content": "<p>Este modo disponibiliza ferramentas avançadas de desenvolvimento e pode gerar rolagens artificiais ou estados que não existem no fluxo normal do jogo.</p><p>Use somente se você souber exatamente o que está fazendo.</p><p><strong>O uso é por sua conta e risco.</strong></p>",
+        "Cancel": "Cancelar",
+        "Confirm": "EU SEI O QUE ESTOU FAZENDO"
+      }
+    },
+    "AgentSheet": {
+      "Sections": {
+        "Identity": "Identidade do Agente",
+        "Resources": "Recursos",
+        "Attributes": "Atributos",
+        "Content": "Conteúdo do Agente"
+      },
+      "Fields": {
+        "Name": "Nome",
+        "Portrait": "Retrato do Agente",
+        "Profile": "Perfil",
+        "NoProfile": "Nenhum Perfil",
+        "Occupation": "Ocupação",
+        "NoOccupation": "Nenhuma Ocupação",
+        "Level": "Nível",
+        "Current": "Valor atual de",
+        "Maximum": "Valor máximo de"
+      },
+      "Resources": {
+        "Health": "PV",
+        "Determination": "PD"
+      },
+      "Attributes": {
+        "Physical": "Físico",
+        "PhysicalShort": "FÍS",
+        "Mind": "Mente",
+        "MindShort": "MEN",
+        "Emotion": "Emoção",
+        "EmotionShort": "EMO"
+      },
+      "Skills": {
+        "Title": "Perícias"
+      },
+      "Tabs": {
+        "Abilities": "Habilidades",
+        "Inventory": "Inventário",
+        "Notes": "Notas"
+      },
+      "Actions": {
+        "EnableEditMode": "Ativar modo de edição",
+        "DisableEditMode": "Desativar modo de edição"
+      },
+      "Settings": {
+        "MenuLabel": "Configurações da Ficha",
+        "Title": "Configurações da Ficha",
+        "Preview": "Prévia da cor de destaque",
+        "ColorPicker": "Cor de destaque",
+        "Hexadecimal": "Hexadecimal",
+        "Actions": {
+          "RestoreDefault": "Restaurar padrão",
+          "Cancel": "Cancelar",
+          "Save": "Salvar"
+        },
+        "Errors": {
+          "InvalidColor": "Informe uma cor válida no formato #RRGGBB.",
+          "NotEditable": "Você não pode alterar as configurações desta ficha.",
+          "OpenFailed": "Não foi possível abrir as configurações da ficha.",
+          "SaveFailed": "Não foi possível salvar as configurações da ficha."
+        }
+      },
+      "Placeholders": {
+        "Abilities": "Nenhuma habilidade disponível.",
+        "Inventory": "Nenhum item no inventário.",
+        "Notes": "Disponível em uma próxima versão."
+      },
+      "SkillGrades": {
+        "Untrained": "Destreinado",
+        "Trained": "Treinado",
+        "Specialist": "Especialista",
+        "Master": "Mestre",
+        "GrandMaster": "Grão Mestre"
+      },
+      "Tooltips": {
+        "EditPortrait": "Alterar retrato",
+        "RollCheck": "Rolar check"
+      },
+      "Abilities": {
+        "NoCost": "Sem custo",
+        "Resource": "Recurso",
+        "InvalidCost": "Custo inválido",
+        "DecreaseResource": "Reduzir recurso da Habilidade",
+        "IncreaseResource": "Aumentar recurso da Habilidade",
+        "Actions": "Ações da Habilidade",
+        "Edit": "Editar",
+        "Delete": "Excluir",
+        "DeleteTitle": "Excluir Habilidade",
+        "ConfirmDelete": "Deseja excluir a Habilidade \"{name}\"? Esta ação não pode ser desfeita.",
+        "DeleteFailed": "Não foi possível excluir a Habilidade."
+      },
+      "AbilityUse": {
+        "Success": "Habilidade usada.",
+        "Forbidden": "Você não pode usar Habilidades deste Agente.",
+        "InsufficientDetermination": "PD insuficiente para usar esta Habilidade.",
+        "InsufficientResource": "Recurso insuficiente para usar esta Habilidade.",
+        "MissingResource": "O recurso configurado para esta Habilidade não existe.",
+        "Invalid": "A Habilidade possui um custo inválido.",
+        "Failed": "Não foi possível usar a Habilidade."
+      },
+      "Inventory": {
+        "DecreaseUses": "Reduzir usos do Equipamento",
+        "IncreaseUses": "Aumentar usos do Equipamento",
+        "Actions": "Ações do Equipamento",
+        "Edit": "Editar",
+        "Delete": "Excluir",
+        "DeleteTitle": "Excluir Equipamento",
+        "ConfirmDelete": "Deseja excluir o Equipamento \"{name}\"? Esta ação não pode ser desfeita.",
+        "DeleteFailed": "Não foi possível excluir o Equipamento."
+      },
+      "EquipmentUse": {
+        "Failed": "Não foi possível publicar o Equipamento no chat."
+      },
+      "Errors": {
+        "NoRollPermission": "Você não tem permissão para rolar checks deste Agente.",
+        "CheckFailed": "Não foi possível concluir o check.",
+        "ProfileAlreadySelected": "Este Agente já possui um Perfil.",
+        "OccupationAlreadySelected": "Este Agente já possui uma Ocupação.",
+        "ProfileNotEditable": "Você não pode alterar o Perfil deste Agente.",
+        "ItemNotEditable": "Você não pode alterar os Items deste Agente.",
+        "EditModeRequired": "Ative o modo de edição para alterar os Items deste Agente.",
+        "EditModePickerCloseFailed": "Não foi possível encerrar os seletores estruturais. O modo de edição permanece ativo.",
+        "UnsupportedItemDrop": "Somente Items de Perfil, Ocupação, Habilidade ou Equipamento podem ser soltos nesta ficha por enquanto.",
+        "UnsupportedFolderDrop": "Pastas de Items não podem ser soltas nesta ficha.",
+        "AbilityResourceUpdateFailed": "Não foi possível atualizar o recurso da Habilidade.",
+        "EquipmentUsesUpdateFailed": "Não foi possível atualizar os usos do Equipamento.",
+        "MultipleProfiles": "Dados inválidos: este Agente possui mais de um Perfil. Remova o excesso pelo diretório de Items embutidos ou recrie o Agente.",
+        "MultipleOccupations": "Dados inválidos: este Agente possui mais de uma Ocupação. Remova o excesso pelo diretório de Items embutidos ou recrie o Agente."
+      },
+      "Warnings": {
+        "LegacyOccupation": "Texto legado de Ocupação preservado"
+      }
+    },
+    "OccupationSheet": {
+      "Fields": {
+        "Name": "Nome",
+        "Image": "Imagem da Ocupação"
+      }
+    },
+    "ProfileSheet": {
+      "Fields": {
+        "Name": "Nome",
+        "Image": "Imagem do Perfil",
+        "AccentColor": "Cor de destaque"
+      },
+      "Grants": {
+        "Title": "Habilidades concedidas",
+        "Hint": "Arraste Habilidades do mundo ou de um compêndio para este Perfil.",
+        "Empty": "Este Perfil ainda não concede Habilidades.",
+        "Unavailable": "Referência indisponível",
+        "Remove": "Remover concessão"
+      },
+      "Errors": {
+        "AbilityOnly": "Somente Items de Habilidade podem ser adicionados como concessões de Perfil.",
+        "EmbeddedAbility": "Uma Habilidade embutida não pode ser usada como fonte. Use uma Habilidade do mundo ou de um compêndio.",
+        "DuplicateAbility": "Este Perfil já concede essa Habilidade.",
+        "AccentUpdateFailed": "Não foi possível atualizar a cor de destaque do Perfil.",
+        "UpdateFailed": "Não foi possível atualizar as Habilidades concedidas pelo Perfil."
+      }
+    },
+    "AbilityCard": {
+      "Subtitle": "HABILIDADE",
+      "DescriptionSummary": "Descrição",
+      "NoDescription": "Esta Habilidade não possui descrição."
+    },
+    "EquipmentCard": {
+      "DescriptionSummary": "Descrição",
+      "NoDescription": "Este Equipamento não possui descrição.",
+      "Uses": "Usos"
+    },
+    "AbilitySheet": {
+      "Cost": "Custo",
+      "Resource": "Recurso",
+      "EmptyResource": "Esta Habilidade não possui recurso próprio.",
+      "RemoveResourceTitle": "Remover recurso",
+      "ConfirmRemoveResource": "Este recurso contém dados. Deseja removê-lo e descartar seu estado?",
+      "ConfirmRemoveCostResource": "Este recurso é usado pelo custo da Habilidade. Removê-lo também redefinirá o custo para Sem custo. Deseja continuar?",
+      "CostSources": {
+        "none": "Sem custo",
+        "determination": "PD",
+        "resource": "Recurso"
+      },
+      "Fields": {
+        "Name": "Nome",
+        "Image": "Imagem da Habilidade",
+        "Description": "Descrição",
+        "CostSource": "Fonte",
+        "CostAmount": "Valor",
+        "Value": "Valor atual",
+        "Maximum": "Máximo"
+      },
+      "Actions": {
+        "AddResource": "Adicionar recurso",
+        "RemoveResource": "Remover recurso"
+      },
+      "Errors": {
+        "InvalidResource": "Os valores do recurso devem ser números inteiros não negativos.",
+        "UpdateFailed": "Não foi possível atualizar a Habilidade."
+      }
+    },
+    "EquipmentSheet": {
+      "Uses": "Usos",
+      "EmptyUses": "Este Equipamento não possui usos próprios.",
+      "RemoveUsesTitle": "Remover usos",
+      "ConfirmRemoveUses": "Estes usos contêm dados. Deseja removê-los e descartar seu estado?",
+      "Fields": {
+        "Name": "Nome",
+        "Image": "Imagem do Equipamento",
+        "Description": "Descrição",
+        "Category": "Categoria",
+        "Value": "Valor atual",
+        "Maximum": "Máximo"
+      },
+      "Actions": {
+        "AddUses": "Adicionar usos",
+        "RemoveUses": "Remover usos"
+      },
+      "Errors": {
+        "InvalidUses": "Os valores de usos devem ser números inteiros não negativos.",
+        "UpdateFailed": "Não foi possível atualizar o Equipamento."
+      }
+    },
+    "PointOfInterestSheet": {
+      "Information": "Informações",
+      "EmptyInformation": "Este Ponto de Interesse ainda não tem informações.",
+      "GmOnly": "Esta ficha é uma ferramenta de autoria do Mestre.",
+      "Fields": {
+        "Name": "Nome",
+        "Image": "Imagem do Ponto de Interesse",
+        "PublicDescription": "Descrição pública",
+        "GmContextLegend": "Somente o Mestre",
+        "ShowDifficultiesToPlayers": "Mostrar DTs aos jogadores"
+      },
+      "Table": {
+        "Skill": "Perícia",
+        "Difficulty": "DT",
+        "Information": "Informação",
+        "Actions": "Ações"
+      },
+      "Actions": {
+        "AddInformation": "Adicionar informação",
+        "RemoveInformation": "Remover informação"
+      },
+      "Errors": {
+        "InvalidInformation": "Valor inválido. A perícia deve ser do registro e a DT um número inteiro maior ou igual a 1.",
+        "UpdateFailed": "Não foi possível atualizar o Ponto de Interesse."
+      }
+    },
+    "ProfilePicker": {
+      "Title": "Selecionar Perfil",
+      "Current": "Perfil atual",
+      "NoProfile": "Nenhum Perfil selecionado",
+      "None": "Nenhum Perfil selecionado",
+      "Search": "Buscar Perfis",
+      "EmptyCatalog": "Nenhum Perfil visível foi encontrado no mundo ou em compêndios.",
+      "EmptySearch": "Nenhum Perfil corresponde à busca.",
+      "Origins": {
+        "World": "Mundo"
+      },
+      "Actions": {
+        "Edit": "Editar",
+        "Clear": "Limpar"
+      },
+      "Confirm": {
+        "ReplaceTitle": "Substituir Perfil",
+        "Replace": "Deseja substituir o Perfil atual?",
+        "RemoveTitle": "Remover Perfil",
+        "Remove": "Deseja remover o Perfil atual?"
+      },
+      "Errors": {
+        "OperationFailed": "Não foi possível concluir a operação com o Perfil."
+      }
+    },
+    "OccupationPicker": {
+      "Title": "Selecionar Ocupação",
+      "Current": "Ocupação atual",
+      "None": "Nenhuma Ocupação selecionada",
+      "Search": "Buscar Ocupações",
+      "EmptyCatalog": "Nenhuma Ocupação visível foi encontrada no mundo ou em compêndios.",
+      "EmptySearch": "Nenhuma Ocupação corresponde à busca.",
+      "Origins": {
+        "World": "Mundo"
+      },
+      "Actions": {
+        "Edit": "Editar",
+        "Clear": "Limpar"
+      },
+      "Confirm": {
+        "ReplaceTitle": "Substituir Ocupação",
+        "Replace": "Deseja substituir a Ocupação atual?",
+        "RemoveTitle": "Remover Ocupação",
+        "Remove": "Deseja remover a Ocupação atual?"
+      },
+      "Errors": {
+        "OperationFailed": "Não foi possível concluir a operação com a Ocupação."
+      }
+    },
+    "NarrativeScene": {
+      "SettingName": "Cena Narrativa ativa",
+      "Sidebar": {
+        "Tooltip": "Narrativa",
+        "Title": "NARRATIVA",
+        "Active": "CENA ATIVA",
+        "Inactive": "Nenhuma Cena Narrativa ativa.",
+        "NameLabel": "Nome da Cena"
+      },
+      "Hud": {
+        "Label": "CENA NARRATIVA"
+      },
+      "Actions": {
+        "Start": "Iniciar Cena",
+        "End": "Encerrar Cena"
+      },
+      "Errors": {
+        "OperationFailed": "Não foi possível concluir a operação com a Cena Narrativa.",
+        "SynchronizationFailed": "Não foi possível sincronizar a interface da Cena Narrativa.",
+        "InvalidName": "Informe um nome para a Cena Narrativa.",
+        "AlreadyActive": "Já existe uma Cena Narrativa ativa.",
+        "Forbidden": "Apenas GMs podem gerenciar a Cena Narrativa.",
+        "Stale": "A Cena Narrativa ativa mudou e não foi encerrada.",
+        "Inactive": "Não existe uma Cena Narrativa ativa."
+      }
+    },
+    "Migrations": {
+      "SettingName": "Versão de migração dos dados",
+      "Errors": {
+        "Failed": "Não foi possível concluir a migração dos dados do world. Os dados anteriores foram preservados."
+      },
+      "Occupation": {
+        "CreationConflict": "A criação ou importação do Agente foi interrompida porque existem dados legados de Ocupação conflitantes."
+      }
+    },
+    "CheckDialog": {
+      "Title": "Realizar check",
+      "Fields": {
+        "Attribute": "Atributo do check",
+        "Difficulty": "DT",
+        "StepAdjustment": "Ajuste de passo"
+      },
+      "Situational": {
+        "Title": "BÔNUS SITUACIONAL",
+        "Dice": "Dados",
+        "Added": "Adicionados:",
+        "Label": "Situacional"
+      },
+      "Actions": {
+        "AddExtraDie": "Adicionar dado situacional",
+        "Cancel": "Cancelar",
+        "DecreaseStepAdjustment": "Diminuir ajuste de passo",
+        "IncreaseStepAdjustment": "Aumentar ajuste de passo",
+        "RemoveExtraDie": "Remover dado situacional",
+        "Roll": "Rolar"
+      }
+    },
+    "CheckCard": {
+      "Total": "Total",
+      "Difficulty": "DT",
+      "Success": "SUCESSO",
+      "Failure": "FALHA",
+      "PositiveCritical": "CRÍTICO",
+      "CriticalFailure": "FALHA CRÍTICA",
+      "HighestResult": "RA",
+      "LowestResult": "RB",
+      "HighestResultTooltip": "Rolagem Alta",
+      "LowestResultTooltip": "Rolagem Baixa"
+    },
+    "ChatMessage": {
+      "Delete": "Excluir mensagem",
+      "DeleteFailed": "Não foi possível excluir a mensagem.",
+      "RoleConversation": "Conversa",
+      "RoleNarrator": "Narrador",
+      "RolePlayer": "Jogador",
+      "RoleGamemaster": "Gamemaster"
+    }
+  }
+}

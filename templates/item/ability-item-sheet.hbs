@@ -1,0 +1,52 @@
+<section class="op2-ability-sheet">
+  <header class="op2-ability-sheet__header">
+    <img class="op2-ability-sheet__image" src="{{ability.img}}" alt="{{localize 'ORDEMPARANORMAL2.AbilitySheet.Fields.Image'}}" data-edit="img" {{#if editable}}data-action="editImage"{{/if}} />
+    <label class="op2-ability-sheet__name">
+      <span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.Name"}}</span>
+      <input type="text" name="name" value="{{ability.name}}" autocomplete="off"{{#unless editable}} disabled{{/unless}} />
+    </label>
+  </header>
+
+  <div class="op2-ability-sheet__body">
+    <section class="op2-ability-sheet__description">
+      <span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.Description"}}</span>
+      <prose-mirror name="system.description" value="{{ability.description}}" toggled="true" document-uuid="{{ability.uuid}}"{{#unless editable}} disabled{{/unless}}>
+        {{{ability.enrichedDescription}}}
+      </prose-mirror>
+    </section>
+
+    <fieldset class="op2-ability-sheet__cost">
+      <legend>{{localize "ORDEMPARANORMAL2.AbilitySheet.Cost"}}</legend>
+      <label>
+        <span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.CostSource"}}</span>
+        <select data-cost-edit data-cost-field="source"{{#unless editable}} disabled{{/unless}}>
+          {{#each ability.cost.sources}}
+            <option value="{{value}}"{{#if selected}} selected{{/if}}>{{localize labelKey}}</option>
+          {{/each}}
+        </select>
+      </label>
+      <label>
+        <span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.CostAmount"}}</span>
+        <input type="number" value="{{ability.cost.amount}}" min="0" step="1" inputmode="numeric" data-cost-edit data-cost-field="amount"{{#unless editable}} disabled{{/unless}} />
+      </label>
+    </fieldset>
+
+    <section class="op2-ability-sheet__resource-section">
+      <header class="op2-ability-sheet__toolbar">
+        <h2>{{localize "ORDEMPARANORMAL2.AbilitySheet.Resource"}}</h2>
+        {{#if editable}}{{#unless ability.resource}}
+          <button type="button" data-action="addResource"><i class="fa-solid fa-plus"></i> {{localize "ORDEMPARANORMAL2.AbilitySheet.Actions.AddResource"}}</button>
+        {{/unless}}{{/if}}
+      </header>
+      {{#if ability.resource}}
+        <div class="op2-ability-sheet__resource">
+          <label><span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.Value"}}</span><input type="number" value="{{ability.resource.value}}" min="0" step="1" data-resource-edit data-resource-field="value"{{#unless editable}} disabled{{/unless}} /></label>
+          <label><span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.Maximum"}}</span><input type="number" value="{{ability.resource.max}}" min="0" step="1" data-resource-edit data-resource-field="max"{{#unless editable}} disabled{{/unless}} /></label>
+          {{#if editable}}<button class="op2-ability-sheet__remove" type="button" data-action="removeResource" title="{{localize 'ORDEMPARANORMAL2.AbilitySheet.Actions.RemoveResource'}}"><i class="fa-solid fa-trash"></i></button>{{/if}}
+        </div>
+      {{else}}
+        <p class="op2-ability-sheet__empty">{{localize "ORDEMPARANORMAL2.AbilitySheet.EmptyResource"}}</p>
+      {{/if}}
+    </section>
+  </div>
+</section>

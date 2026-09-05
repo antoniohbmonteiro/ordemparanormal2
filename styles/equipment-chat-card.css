@@ -1,0 +1,94 @@
+.op2-equipment-chat-card,
+.op2-equipment-chat-card * {
+  box-sizing: border-box;
+}
+
+.op2-equipment-chat-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--op2-check-text);
+}
+
+.op2-equipment-chat-card__description {
+  border-top: 1px solid var(--op2-check-divider);
+}
+
+.op2-equipment-chat-card__description-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.1rem;
+  padding: 0.42rem 0.68rem;
+  cursor: pointer;
+  list-style: none;
+  color: var(--op2-check-text);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.op2-equipment-chat-card__description-summary::-webkit-details-marker {
+  display: none;
+}
+
+.op2-equipment-chat-card__description-summary:focus-visible {
+  outline: 1px solid var(--op2-check-accent);
+  outline-offset: -2px;
+}
+
+.op2-equipment-chat-card__description-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.op2-equipment-chat-card__chevron {
+  flex: 0 0 auto;
+  color: var(--op2-check-accent);
+  font-size: 0.78rem;
+  transition: transform 140ms ease;
+}
+
+.op2-equipment-chat-card__description[open] .op2-equipment-chat-card__chevron {
+  transform: rotate(180deg);
+}
+
+.op2-equipment-chat-card__description-body {
+  padding: 0.5rem 0.68rem 0.68rem;
+  color: var(--op2-check-text);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.op2-equipment-chat-card__description-body > :first-child {
+  margin-top: 0;
+}
+
+.op2-equipment-chat-card__description-body > :last-child {
+  margin-bottom: 0;
+}
+
+.op2-equipment-chat-card__description-body a {
+  color: #d8b98a;
+}
+
+.op2-equipment-chat-card__empty {
+  margin: 0;
+  padding: 0.5rem 0.68rem 0.68rem;
+  color: var(--op2-check-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.op2-equipment-chat-card__uses {
+  margin: 0;
+  padding: 0.5rem 0.68rem 0.68rem;
+  color: var(--op2-check-muted);
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op2-equipment-chat-card__chevron {
+    transition: none;
+  }
+}

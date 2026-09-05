@@ -1,0 +1,20 @@
+.ordemparanormal2.single-embedded-item-picker .window-content { padding: 0; }
+.op2-single-item-picker-content { overflow: hidden; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker { display: flex; height: 100%; min-height: 0; flex-direction: column; gap: .75rem; padding: 1rem; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__current { padding: .75rem; border: 1px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,15,.42); }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__current h2,.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__group h3 { margin: 0 0 .5rem; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__current-row { display: grid; grid-template-columns: 42px minmax(0,1fr) auto auto; align-items: center; gap: .5rem; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__current-row img,.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry img { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.16); border-radius: 6px; object-fit: cover; }
+.ordemparanormal2.single-embedded-item-picker button { width: auto; margin: 0; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__search { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: .5rem; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__search input { width: 100%; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__catalog { min-height: 0; overflow-y: auto; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__group { margin-bottom: 1rem; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry { display: grid; width: 100%; height: auto; min-height: calc(42px + .9rem); grid-template-columns: 42px minmax(0,1fr); grid-template-rows: auto auto; align-items: center; gap: 0 .65rem; box-sizing: border-box; overflow: hidden; margin-bottom: .4rem; padding: .45rem; line-height: normal; text-align: left; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry > * { pointer-events: none; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry img { grid-row: 1 / -1; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry span,.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__entry small,.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__empty { color: var(--color-text-subtle,#aaa); }
+.ordemparanormal2.single-embedded-item-picker .op2-single-item-picker__empty { text-align: center; }
+.ordemparanormal2.single-embedded-item-picker [hidden] { display: none !important; }
+.ordemparanormal2.single-embedded-item-picker .op2-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }

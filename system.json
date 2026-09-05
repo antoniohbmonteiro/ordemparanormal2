@@ -1,0 +1,131 @@
+{
+  "id": "ordemparanormal2",
+  "title": "Ordem Paranormal 2",
+  "description": "Sistema comunitário não oficial para Foundry Virtual Tabletop, em estágio inicial de desenvolvimento, destinado ao suporte das regras públicas de playtest de Ordem Paranormal RPG 2. Este projeto não é afiliado, patrocinado ou endossado pelos detentores de Ordem Paranormal RPG e não distribui textos, artes ou outros conteúdos protegidos do jogo além do permitido pela Licença da Comunidade de Ordem Paranormal ou por autorização aplicável.",
+  "version": "0.1.0",
+  "license": "LICENSE",
+  "compatibility": {
+    "minimum": 14,
+    "verified": 14
+  },
+  "documentTypes": {
+    "Actor": {
+      "agent": {}
+    },
+    "Item": {
+      "profile": {},
+      "occupation": {},
+      "ability": {},
+      "pointOfInterest": {
+        "htmlFields": ["publicDescription", "gmContext"]
+      },
+      "equipment": {}
+    }
+  },
+  "packs": [
+    {
+      "name": "profiles",
+      "label": "Perfis",
+      "path": "packs/profiles",
+      "type": "Item",
+      "system": "ordemparanormal2",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "abilities",
+      "label": "Habilidades",
+      "path": "packs/abilities",
+      "type": "Item",
+      "system": "ordemparanormal2",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "occupations",
+      "label": "Ocupações",
+      "path": "packs/occupations",
+      "type": "Item",
+      "system": "ordemparanormal2",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "equipment",
+      "label": "Equipamentos",
+      "path": "packs/equipment",
+      "type": "Item",
+      "system": "ordemparanormal2",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Ordem Paranormal 2",
+      "sorting": "a",
+      "color": "#000000",
+      "packs": [
+        "abilities",
+        "profiles",
+        "occupations",
+        "equipment"
+      ],
+      "folders": []
+    }
+  ],
+  "authors": [
+    {
+      "name": "Antonio Henrique Braga Monteiro",
+      "url": "https://github.com/antoniohbmonteiro"
+    }
+  ],
+  "esmodules": [
+    "dist/main.js"
+  ],
+  "styles": [
+    "styles/agent-sheet.css",
+    "styles/profile-item-sheet.css",
+    "styles/occupation-item-sheet.css",
+    "styles/ability-item-sheet.css",
+    "styles/point-of-interest-item-sheet.css",
+    "styles/equipment-item-sheet.css",
+    "styles/single-embedded-item-picker.css",
+    "styles/check-dialog.css",
+    "styles/chat-message-shell.css",
+    "styles/chat-card-header.css",
+    "styles/check-card.css",
+    "styles/ability-card.css",
+    "styles/equipment-chat-card.css",
+    "styles/license-notice.css",
+    "styles/narrative-scene.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/pt-BR.json"
+    },
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    }
+  ],
+  "socket": false,
+  "url": "https://github.com/antoniohbmonteiro/ordemparanormal2",
+  "manifest": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json",
+  "download": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.1.0/ordemparanormal2-v0.1.0.zip"
+}

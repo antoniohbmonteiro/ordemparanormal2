@@ -1,0 +1,105 @@
+.ordemparanormal2.op2-narrative-scene-hud {
+  position: fixed;
+  top: 4.5rem;
+  left: 50%;
+  z-index: 70;
+  width: min(28rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.op2-narrative-scene-hud__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.5rem;
+  background: rgb(10 10 12 / 88%);
+  box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 38%);
+  color: #f3f0e9;
+  text-align: center;
+  backdrop-filter: blur(5px);
+}
+
+.op2-narrative-scene-hud__label,
+.op2-narrative-sidebar__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.op2-narrative-scene-hud__name,
+.op2-narrative-sidebar__name {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.op2-narrative-sidebar__content {
+  --op2-narrative-bg: rgb(18 20 24 / 96%);
+  --op2-narrative-panel: rgb(11 13 16 / 72%);
+  --op2-narrative-border: rgb(255 255 255 / 12%);
+  --op2-narrative-accent: #b5474f;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 1rem;
+  min-height: 100%;
+  padding: 0.75rem;
+  background: var(--op2-narrative-bg);
+  color: #f1f2f4;
+}
+
+.op2-narrative-sidebar__header {
+  border-bottom: 2px solid var(--op2-narrative-accent);
+}
+
+.op2-narrative-sidebar__header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+}
+
+.op2-narrative-sidebar__active {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 0.75rem;
+  border: 1px solid var(--op2-narrative-border);
+  border-radius: 0.4rem;
+  background: var(--op2-narrative-panel);
+  text-align: center;
+}
+
+.op2-narrative-sidebar__name {
+  font-size: 1.1rem;
+}
+
+.op2-narrative-sidebar__empty {
+  margin: 0;
+  color: #a7acb5;
+}
+
+.op2-narrative-sidebar__form {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 0.5rem;
+}
+
+.op2-narrative-sidebar__form input {
+  border: 1px solid var(--op2-narrative-border);
+  background: var(--op2-narrative-panel);
+  color: #f1f2f4;
+}
+
+.op2-narrative-sidebar__content button {
+  width: 100%;
+  border-color: var(--op2-narrative-accent);
+}
+
+.op2-narrative-sidebar__content button:hover,
+.op2-narrative-sidebar__content button:focus-visible {
+  box-shadow: 0 0 0.35rem var(--op2-narrative-accent);
+}

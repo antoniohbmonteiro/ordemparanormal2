@@ -1,0 +1,47 @@
+<section class="op2-equipment-sheet">
+  <header class="op2-equipment-sheet__header">
+    <img class="op2-equipment-sheet__image" src="{{equipment.img}}" alt="{{localize 'ORDEMPARANORMAL2.EquipmentSheet.Fields.Image'}}" data-edit="img" {{#if editable}}data-action="editImage"{{/if}} />
+    <label class="op2-equipment-sheet__name">
+      <span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Name"}}</span>
+      <input type="text" name="name" value="{{equipment.name}}" autocomplete="off"{{#unless editable}} disabled{{/unless}} />
+    </label>
+  </header>
+
+  <div class="op2-equipment-sheet__body">
+    <section class="op2-equipment-sheet__description">
+      <span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Description"}}</span>
+      <prose-mirror name="system.description" value="{{equipment.description}}" toggled="true" document-uuid="{{equipment.uuid}}"{{#unless editable}} disabled{{/unless}}>
+        {{{equipment.enrichedDescription}}}
+      </prose-mirror>
+    </section>
+
+    <fieldset class="op2-equipment-sheet__category">
+      <legend>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Category"}}</legend>
+      <label>
+        <select data-category-edit{{#unless editable}} disabled{{/unless}}>
+          {{#each equipment.category.options}}
+            <option value="{{value}}"{{#if selected}} selected{{/if}}>{{localize labelKey}}</option>
+          {{/each}}
+        </select>
+      </label>
+    </fieldset>
+
+    <section class="op2-equipment-sheet__uses-section">
+      <header class="op2-equipment-sheet__toolbar">
+        <h2>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Uses"}}</h2>
+        {{#if editable}}{{#unless equipment.uses}}
+          <button type="button" data-action="addUses"><i class="fa-solid fa-plus"></i> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.AddUses"}}</button>
+        {{/unless}}{{/if}}
+      </header>
+      {{#if equipment.uses}}
+        <div class="op2-equipment-sheet__uses">
+          <label><span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Value"}}</span><input type="number" value="{{equipment.uses.value}}" min="0" step="1" data-uses-edit data-uses-field="value"{{#unless editable}} disabled{{/unless}} /></label>
+          <label><span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Maximum"}}</span><input type="number" value="{{equipment.uses.max}}" min="0" step="1" data-uses-edit data-uses-field="max"{{#unless editable}} disabled{{/unless}} /></label>
+          {{#if editable}}<button class="op2-equipment-sheet__remove" type="button" data-action="removeUses" title="{{localize 'ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveUses'}}"><i class="fa-solid fa-trash"></i></button>{{/if}}
+        </div>
+      {{else}}
+        <p class="op2-equipment-sheet__empty">{{localize "ORDEMPARANORMAL2.EquipmentSheet.EmptyUses"}}</p>
+      {{/if}}
+    </section>
+  </div>
+</section>

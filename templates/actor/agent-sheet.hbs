@@ -1,0 +1,27 @@
+<div class="op2-agent-layout">
+  <div class="op2-agent-layout__main">
+    <section class="op2-agent-layout__identity op2-panel" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Identity'}}">
+      {{> "systems/ordemparanormal2/templates/actor/agent-sheet-identity.hbs"}}
+    </section>
+
+    <nav class="op2-content-tabs tabs" data-group="content" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Content'}}">
+      {{#each tabs}}
+        <button class="op2-content-tab {{cssClass}}" type="button" data-action="selectAgentTab" data-group="{{group}}" data-tab="{{id}}" aria-pressed="{{active}}">{{localize label}}</button>
+      {{/each}}
+    </nav>
+
+    <main class="op2-agent-sheet__active-content op2-panel">
+      <section class="op2-tab-panel tab {{tabs.abilities.cssClass}}" data-group="content" data-tab="abilities">
+        {{> "systems/ordemparanormal2/templates/actor/agent-sheet-abilities.hbs"}}
+      </section>
+      <section class="op2-tab-panel tab {{tabs.inventory.cssClass}}" data-group="content" data-tab="inventory">
+        {{> "systems/ordemparanormal2/templates/actor/agent-sheet-inventory.hbs"}}
+      </section>
+      <section class="op2-tab-panel tab {{tabs.notes.cssClass}}" data-group="content" data-tab="notes"><p>{{localize "ORDEMPARANORMAL2.AgentSheet.Placeholders.Notes"}}</p></section>
+    </main>
+  </div>
+
+  <aside class="op2-skills-dock op2-panel">
+    {{> "systems/ordemparanormal2/templates/actor/agent-sheet-skills.hbs"}}
+  </aside>
+</div>

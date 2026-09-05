@@ -1,0 +1,15 @@
+<section class="op2-skills" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Skills.Title'}}">
+  <header class="op2-skills__header"><h2>{{localize "ORDEMPARANORMAL2.AgentSheet.Skills.Title"}}</h2></header>
+  <div class="op2-skills__list">
+    {{#each agent.skills}}
+      {{#if isSpecialized}}
+        <details class="op2-aptitude" data-aptitude-details{{#if @root.aptitudeExpanded}} open{{/if}}>
+          <summary class="op2-skill-row op2-skill-row--summary"><span class="op2-skill-row__name">{{label}}</span><span class="op2-skill-row__attribute">{{localize attributeLabelKey}}</span></summary>
+          <div class="op2-aptitude__specializations">{{#each specializations}}<div class="op2-skill-row op2-skill-row--specialization"><button class="op2-roll-trigger op2-skill-row__name" type="button" {{#if @root.canRoll}}data-action="rollCheck" data-check-kind="aptitude" data-check-key="{{key}}"{{else}}disabled{{/if}}>{{label}}</button>{{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=die editable=@root.canEditStructure}}</div>{{/each}}</div>
+        </details>
+      {{else}}
+        <div class="op2-skill-row"><button class="op2-roll-trigger op2-skill-row__name" type="button" {{#if @root.canRoll}}data-action="rollCheck" data-check-kind="skill" data-check-key="{{key}}"{{else}}disabled{{/if}}>{{label}}</button><span class="op2-skill-row__attribute">{{localize attributeLabelKey}}</span>{{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=die editable=@root.canEditStructure}}</div>
+      {{/if}}
+    {{/each}}
+  </div>
+</section>

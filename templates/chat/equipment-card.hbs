@@ -1,0 +1,26 @@
+<article class="op2-equipment-chat-card">
+  {{> chatCardHeader title=name subtitle=(localize categoryLabelKey)}}
+
+  {{#if hasDescription}}
+    <details class="op2-equipment-chat-card__description">
+      <summary class="op2-equipment-chat-card__description-summary">
+        <span class="op2-equipment-chat-card__description-label">
+          {{localize "ORDEMPARANORMAL2.EquipmentCard.DescriptionSummary"}}
+        </span>
+        <i class="fa-solid fa-chevron-down op2-equipment-chat-card__chevron" aria-hidden="true"></i>
+      </summary>
+
+      <div class="op2-equipment-chat-card__description-body">{{{description}}}</div>
+    </details>
+  {{else}}
+    <p class="op2-equipment-chat-card__empty">
+      {{localize "ORDEMPARANORMAL2.EquipmentCard.NoDescription"}}
+    </p>
+  {{/if}}
+
+  {{#if hasUses}}
+    <p class="op2-equipment-chat-card__uses">
+      {{localize "ORDEMPARANORMAL2.EquipmentCard.Uses"}}: {{uses.value}} / {{uses.max}}
+    </p>
+  {{/if}}
+</article>

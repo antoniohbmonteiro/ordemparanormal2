@@ -1,0 +1,11 @@
+<div class="op2-die-control{{#if editable}} is-editable{{/if}}">
+  <span class="op2-die-control__value"{{#if editable}} aria-hidden="true"{{/if}}>{{die.compactLabel}}</span>
+  {{#if editable}}
+    <i class="fa-solid fa-chevron-down op2-die-control__chevron" aria-hidden="true"></i>
+    <select class="op2-die-control__select" name="{{die.path}}">
+      {{#each die.options}}
+        <option value="{{value}}"{{#if selected}} selected{{/if}}>d{{value}}{{#if gradeLabelKey}} — {{localize gradeLabelKey}}{{/if}}</option>
+      {{/each}}
+    </select>
+  {{/if}}
+</div>

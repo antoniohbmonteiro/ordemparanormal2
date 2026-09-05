@@ -1,0 +1,28 @@
+{
+  "name": "ordemparanormal2",
+  "version": "0.1.0",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.1"
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "dev:packs": "npm run build:packs && vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:packs": "node scripts/build-packs.mjs",
+    "build": "npm run build:packs && vite build",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@dfreds/foundry-types": "^14.366.1",
+    "@foundryvtt/foundryvtt-cli": "^0.0.6",
+    "@types/node": "^24.0.0",
+    "typescript": "~7.0.2",
+    "vite": "~8.2.2",
+    "vitest": "~4.1.10"
+  }
+}

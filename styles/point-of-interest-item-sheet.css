@@ -1,0 +1,31 @@
+.ordemparanormal2.point-of-interest-item-sheet { --op2-poi-border: rgba(255,255,255,.16); --op2-poi-panel: rgba(10,12,15,.42); }
+.ordemparanormal2.point-of-interest-item-sheet .window-content { padding: 0; }
+.op2-point-of-interest-item-sheet-content { overflow: hidden; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__header { display: grid; grid-template-columns: 72px minmax(0,1fr); align-items: center; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--op2-poi-border); }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__image { width: 72px; height: 72px; border: 1px solid var(--op2-poi-border); border-radius: 8px; object-fit: cover; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__name,
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__description > span { display: flex; min-width: 0; flex-direction: column; gap: .25rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__body { min-height: 0; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__description prose-mirror,
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__gm prose-mirror { min-height: 8rem; text-transform: none; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__description .editor-content,
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__gm .editor-content { min-height: 6rem; padding: .5rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__gm { margin: 0; padding: .65rem; border: 1px solid var(--op2-poi-border); border-radius: 8px; background: var(--op2-poi-panel); }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__gm legend { padding: 0 .35rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-visibility { display: flex; align-items: center; gap: .5rem; font-size: .8rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-visibility input { width: auto; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__toolbar { display: flex; align-items: center; justify-content: space-between; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__toolbar h2 { margin: 0; font-size: .9rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__toolbar button { width: auto; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information { width: 100%; margin-top: .5rem; border-collapse: collapse; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information th,
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td { padding: .35rem; border-bottom: 1px solid var(--op2-poi-border); vertical-align: top; text-align: left; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information th { font-size: .68rem; text-transform: uppercase; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td:nth-child(2) { width: 5rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td:last-child { width: 2.25rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information textarea { width: 100%; min-height: 2.5rem; resize: vertical; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__remove { min-width: 0; margin: 0; padding: .4rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__empty { color: var(--color-text-subtle,#aaa); text-align: center; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__gm-only { padding: 2rem 1.5rem; color: var(--color-text-subtle,#aaa); text-align: center; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

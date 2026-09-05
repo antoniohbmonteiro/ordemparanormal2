@@ -1,0 +1,33 @@
+<section class="op2-abilities" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tabs.Abilities'}}">
+  {{#each agent.abilities}}
+    <article class="op2-ability-card" data-item-id="{{id}}">
+      <button class="op2-ability-card__use" type="button" data-action="useAbility" data-item-id="{{id}}" aria-label="{{name}}"{{#unless @root.editable}} disabled{{/unless}}></button>
+      <div class="op2-ability-card__identity" aria-hidden="true">
+        <img src="{{img}}" alt="" />
+        <span class="op2-ability-card__body">
+          <span class="op2-ability-card__name">{{name}}</span>
+          <span class="op2-ability-card__cost">{{#if cost.isNone}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost"}}{{/if}}{{#if cost.isDetermination}}{{cost.amount}} {{localize "ORDEMPARANORMAL2.AgentSheet.Resources.Determination"}}{{/if}}{{#if cost.isResource}}{{cost.amount}} {{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource"}}{{/if}}{{#if cost.isInvalid}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.InvalidCost"}}{{/if}}</span>
+        </span>
+      </div>
+      {{#if resource}}
+        <div class="op2-ability-card__resource">
+          <span class="op2-ability-card__resource-track" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{resource.fillPercentage}}">
+            <span class="op2-ability-card__resource-fill" style="width: {{resource.fillPercentage}}%;"></span>
+          </span>
+          <span class="op2-ability-card__resource-controls">
+            {{#if @root.editable}}<button class="op2-ability-card__resource-adjust" type="button" data-action="decreaseAbilityResource" data-resource-adjustment="decrease" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.DecreaseResource'}}"{{#unless resource.canDecrease}} disabled{{/unless}}><i class="fa-solid fa-minus"></i></button>{{/if}}
+            <span class="op2-ability-card__resource-value">{{resource.value}} / {{resource.max}}</span>
+            {{#if @root.editable}}<button class="op2-ability-card__resource-adjust" type="button" data-action="increaseAbilityResource" data-resource-adjustment="increase" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.IncreaseResource'}}"{{#unless resource.canIncrease}} disabled{{/unless}}><i class="fa-solid fa-plus"></i></button>{{/if}}
+          </span>
+        </div>
+      {{/if}}
+      {{#if @root.canEditStructure}}
+        <button class="op2-ability-card__menu-trigger" type="button" data-item-id="{{id}}" aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}">
+          <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
+      {{/if}}
+    </article>
+  {{else}}
+    <p class="op2-empty-state">{{localize "ORDEMPARANORMAL2.AgentSheet.Placeholders.Abilities"}}</p>
+  {{/each}}
+</section>

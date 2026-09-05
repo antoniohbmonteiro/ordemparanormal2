@@ -1,0 +1,319 @@
+.ordemparanormal2.op2-check-dialog {
+  --op2-dialog-bg: rgba(14, 16, 21, 0.98);
+  --op2-dialog-panel: rgba(27, 30, 36, 0.82);
+  --op2-dialog-panel-hover: rgba(39, 43, 51, 0.96);
+  --op2-dialog-input: rgba(9, 11, 15, 0.78);
+  --op2-dialog-text: #f1eee5;
+  --op2-dialog-muted: #aaa9a4;
+  --op2-dialog-border: rgba(241, 238, 229, 0.18);
+  --op2-dialog-border-strong: rgba(241, 238, 229, 0.36);
+  --op2-dialog-accent: #b5474f;
+  --op2-dialog-accent-dark: #7f252b;
+  --op2-dialog-copper: #b58b68;
+  color: var(--op2-dialog-text);
+}
+
+.ordemparanormal2.op2-check-dialog .window-content {
+  background: var(--op2-dialog-bg);
+  padding: 0.75rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__body {
+  display: grid;
+  max-height: calc(100vh - 13rem);
+  gap: 0.55rem;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--op2-dialog-border);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__difficulty {
+  display: grid;
+  grid-template-columns: auto 6rem;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__difficulty input {
+  width: 100%;
+  height: 1.75rem;
+  border: 1px solid var(--op2-dialog-accent);
+  border-radius: 0.45rem;
+  background: var(--op2-dialog-input);
+  color: var(--op2-dialog-text);
+  font: inherit;
+  text-align: center;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__components {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0 0 0.5rem;
+  border-bottom: 1px solid var(--op2-dialog-border);
+  list-style: none;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__component {
+  display: grid;
+  min-height: 1.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__attribute-select {
+  width: fit-content;
+  max-width: 100%;
+  height: 1.75rem;
+  margin: 0;
+  padding: 0 1.6rem 0 0.45rem;
+  border: 1px solid var(--op2-dialog-border-strong);
+  border-radius: 0.35rem;
+  background-color: var(--op2-dialog-input);
+  color: var(--op2-dialog-text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__attribute-select:focus {
+  border-color: var(--op2-dialog-accent);
+  outline: none;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__step-adjustment-control {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(3.75rem, auto) 1.75rem;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__step-adjustment-control button {
+  width: 1.75rem;
+  min-height: 1.75rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--op2-dialog-copper);
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--op2-dialog-text);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__step-adjustment-control button:not(:disabled):hover {
+  border-color: var(--op2-dialog-accent);
+  color: var(--op2-dialog-accent);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__die-value {
+  color: var(--op2-dialog-text);
+  font-size: 0.9rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ordemparanormal2.op2-check-dialog [data-adjustment-direction="increased"],
+.ordemparanormal2.op2-check-dialog [data-adjustment-direction="decreased"] {
+  color: var(--op2-dialog-text);
+}
+
+.ordemparanormal2.op2-check-dialog [data-base-die-label] {
+  margin-left: 0.2rem;
+  color: var(--op2-dialog-muted);
+  font-size: 0.85em;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__situational {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__situational-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--op2-dialog-accent);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__situational-header h4 {
+  margin: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.13em;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__dice-counter {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ordemparanormal2.op2-check-dialog [data-dice-count=""] {
+  min-width: 2.5rem;
+}
+
+.ordemparanormal2.op2-check-dialog [data-dice-count][data-at-limit="true"] {
+  color: var(--op2-dialog-accent);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__die-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__die-option {
+  display: flex;
+  min-width: 0;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.15rem 0.25rem;
+  border: 1px solid var(--op2-dialog-border-strong);
+  border-radius: 0.35rem;
+  background: var(--op2-dialog-panel);
+  color: var(--op2-dialog-text);
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__die-option:not(:disabled):hover {
+  border-color: var(--op2-dialog-accent);
+  background: var(--op2-dialog-panel-hover);
+  color: var(--op2-dialog-accent);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__die-option:disabled {
+  border-color: var(--op2-dialog-border);
+  color: var(--op2-dialog-muted);
+  opacity: 0.45;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-die-icon {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: var(--op2-die-icon) center / contain no-repeat;
+  mask: var(--op2-die-icon) center / contain no-repeat;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-die-icon--d4 {
+  --op2-die-icon: url("../assets/icons/dice/d4.svg");
+}
+
+.ordemparanormal2.op2-check-dialog .op2-die-icon--d6 {
+  --op2-die-icon: url("../assets/icons/dice/d6.svg");
+}
+
+.ordemparanormal2.op2-check-dialog .op2-die-icon--d8 {
+  --op2-die-icon: url("../assets/icons/dice/d8.svg");
+}
+
+.ordemparanormal2.op2-check-dialog .op2-die-icon--d10 {
+  --op2-die-icon: url("../assets/icons/dice/d10.svg");
+}
+
+.ordemparanormal2.op2-check-dialog .op2-die-icon--d12 {
+  --op2-die-icon: url("../assets/icons/dice/d12.svg");
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__added {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__added[hidden] {
+  display: none;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__extra-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__extra-die-chip {
+  display: inline-grid;
+  min-height: 1.75rem;
+  grid-template-columns: auto auto 1.1rem;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.125rem 0.2rem 0.125rem 0.3rem;
+  border: 1px solid var(--op2-dialog-accent);
+  border-radius: 0.35rem;
+  background: var(--op2-dialog-input);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__extra-die-chip .op2-die-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__remove-extra-die {
+  width: 1.1rem;
+  min-height: 1.1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--op2-dialog-accent);
+  box-shadow: none;
+  font-size: 0.85rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__remove-extra-die:hover {
+  color: var(--op2-dialog-text);
+}
+
+.ordemparanormal2.op2-check-dialog .form-footer {
+  gap: 0.4rem;
+  padding: 0.5rem 0 0;
+  border-top: 1px solid var(--op2-dialog-border);
+}
+
+.ordemparanormal2.op2-check-dialog .form-footer button {
+  border: 1px solid var(--op2-dialog-copper);
+  background: transparent;
+  color: var(--op2-dialog-text);
+  min-height: 2rem;
+  padding: 0.2rem 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.ordemparanormal2.op2-check-dialog .form-footer button[data-action="roll"] {
+  border-color: var(--op2-dialog-accent);
+  background: linear-gradient(135deg, var(--op2-dialog-accent-dark), #5e2529);
+}
+
+@media (max-width: 760px) {
+  .ordemparanormal2.op2-check-dialog .op2-check-dialog__die-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

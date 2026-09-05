@@ -1,0 +1,37 @@
+<section class="op2-single-item-picker">
+  <section class="op2-single-item-picker__current" aria-label="{{labels.current}}">
+    <h2>{{labels.current}}</h2>
+    <div class="op2-single-item-picker__current-row">
+      <img src="{{current.img}}" alt="" />
+      <strong>{{current.name}}</strong>
+      {{#if current.selected}}
+        <button type="button" data-action="editCurrent"><i class="fa-solid fa-pen"></i> {{labels.edit}}</button>
+        <button class="op2-single-item-picker__clear" type="button" data-action="clearItem"><i class="fa-solid fa-trash"></i> {{labels.clear}}</button>
+      {{/if}}
+    </div>
+  </section>
+  <label class="op2-single-item-picker__search">
+    <span class="op2-sr-only">{{labels.search}}</span>
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" data-item-search placeholder="{{labels.search}}" autocomplete="off" />
+  </label>
+  <div class="op2-single-item-picker__catalog">
+    {{#if hasEntries}}
+      {{#each groups}}
+        <section class="op2-single-item-picker__group" data-item-group>
+          <h3>{{origin}}</h3>
+          {{#each entries}}
+            <button class="op2-single-item-picker__entry" type="button" data-action="selectItem" data-item-entry data-search-text="{{searchText}}" data-source-kind="{{sourceKind}}" data-pack-id="{{packId}}" data-document-id="{{documentId}}">
+              <img src="{{img}}" alt="" />
+              <span>{{name}}</span>
+              <small>{{origin}}</small>
+            </button>
+          {{/each}}
+        </section>
+      {{/each}}
+    {{else}}
+      <p class="op2-single-item-picker__empty">{{labels.emptyCatalog}}</p>
+    {{/if}}
+    <p class="op2-single-item-picker__empty" data-empty-search hidden>{{labels.emptySearch}}</p>
+  </div>
+</section>

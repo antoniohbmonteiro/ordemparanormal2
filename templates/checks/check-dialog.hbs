@@ -1,0 +1,102 @@
+<section class="op2-check-dialog__body" aria-labelledby="op2-check-dialog-name">
+  <header class="op2-check-dialog__summary">
+    <h3 id="op2-check-dialog-name" class="op2-check-dialog__title">{{name}}</h3>
+
+    <label class="op2-check-dialog__difficulty">
+      <span>{{localize "ORDEMPARANORMAL2.CheckDialog.Fields.Difficulty"}}</span>
+      <input
+        type="number"
+        name="difficulty"
+        min="1"
+        step="1"
+        inputmode="numeric"
+        autocomplete="off"
+        autofocus
+      />
+    </label>
+  </header>
+
+  <ol class="op2-check-dialog__components">
+    {{#each components}}
+      <li class="op2-check-dialog__component">
+        {{#if attributeChoices}}
+          <select
+            class="op2-check-dialog__attribute-select"
+            name="selectedAttribute"
+            data-attribute-select
+            aria-label="{{localize 'ORDEMPARANORMAL2.CheckDialog.Fields.Attribute'}}"
+          >
+            {{#each attributeChoices}}
+              <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+          </select>
+        {{else}}
+          <span>{{label}}</span>
+        {{/if}}
+        <div
+          class="op2-check-dialog__step-adjustment-control"
+          data-step-adjustment-control
+          data-component-key="{{key}}"
+          data-base-die="{{die}}"
+          role="group"
+          aria-label="{{localize 'ORDEMPARANORMAL2.CheckDialog.Fields.StepAdjustment'}}: {{label}}"
+        >
+          <button
+            type="button"
+            data-step-adjustment-decrease
+            aria-label="{{localize 'ORDEMPARANORMAL2.CheckDialog.Actions.DecreaseStepAdjustment'}}"
+          >−</button>
+          <output class="op2-check-dialog__die-value" aria-live="polite">
+            <strong data-effective-die>{{dieLabel}}</strong>
+            <span data-base-die-label hidden>({{dieLabel}})</span>
+          </output>
+          <button
+            type="button"
+            data-step-adjustment-increase
+            aria-label="{{localize 'ORDEMPARANORMAL2.CheckDialog.Actions.IncreaseStepAdjustment'}}"
+          >+</button>
+          <input
+            type="number"
+            name="stepAdjustments.{{key}}"
+            value="0"
+            min="-4"
+            max="4"
+            step="1"
+            hidden
+          />
+        </div>
+      </li>
+    {{/each}}
+  </ol>
+
+  <section class="op2-check-dialog__situational" aria-labelledby="op2-check-dialog-situational-title">
+    <header class="op2-check-dialog__situational-header">
+      <h4 id="op2-check-dialog-situational-title">
+        {{localize "ORDEMPARANORMAL2.CheckDialog.Situational.Title"}}
+      </h4>
+      <span class="op2-check-dialog__dice-counter">
+        {{localize "ORDEMPARANORMAL2.CheckDialog.Situational.Dice"}}
+        <strong data-dice-count aria-live="polite"></strong>
+      </span>
+    </header>
+
+    <div class="op2-check-dialog__die-options">
+      {{#each diceOptions}}
+        <button
+          type="button"
+          class="op2-check-dialog__die-option"
+          data-extra-die-add="{{die}}"
+          aria-label="{{localize 'ORDEMPARANORMAL2.CheckDialog.Actions.AddExtraDie'}}: {{label}}"
+        >
+          <span class="op2-die-icon op2-die-icon--d{{die}}" aria-hidden="true"></span>
+          <strong>{{label}}</strong>
+        </button>
+      {{/each}}
+    </div>
+
+    <div class="op2-check-dialog__added" data-extra-dice-added hidden>
+      <strong>{{localize "ORDEMPARANORMAL2.CheckDialog.Situational.Added"}}</strong>
+      <ol class="op2-check-dialog__extra-dice" data-extra-dice-list></ol>
+    </div>
+  </section>
+</section>

@@ -1,0 +1,30 @@
+<section class="op2-narrative-sidebar__content" aria-labelledby="op2-narrative-sidebar-title">
+  <header class="op2-narrative-sidebar__header">
+    <h2 id="op2-narrative-sidebar-title">{{localize "ORDEMPARANORMAL2.NarrativeScene.Sidebar.Title"}}</h2>
+  </header>
+
+  {{#if isActive}}
+    <div class="op2-narrative-sidebar__active" role="status">
+      <span class="op2-narrative-sidebar__eyebrow">{{localize "ORDEMPARANORMAL2.NarrativeScene.Sidebar.Active"}}</span>
+      <strong class="op2-narrative-sidebar__name">{{scene.name}}</strong>
+    </div>
+    {{#if canManage}}
+      <button type="button" data-action="endNarrativeScene" data-scene-id="{{scene.id}}">
+        <i class="fa-solid fa-stop" aria-hidden="true"></i>
+        {{localize "ORDEMPARANORMAL2.NarrativeScene.Actions.End"}}
+      </button>
+    {{/if}}
+  {{else}}
+    <p class="op2-narrative-sidebar__empty">{{localize "ORDEMPARANORMAL2.NarrativeScene.Sidebar.Inactive"}}</p>
+    {{#if canManage}}
+      <form class="op2-narrative-sidebar__form">
+        <label for="op2-narrative-sidebar-name">{{localize "ORDEMPARANORMAL2.NarrativeScene.Sidebar.NameLabel"}}</label>
+        <input id="op2-narrative-sidebar-name" name="name" type="text" required autocomplete="off" />
+        <button type="button" data-action="startNarrativeScene">
+          <i class="fa-solid fa-play" aria-hidden="true"></i>
+          {{localize "ORDEMPARANORMAL2.NarrativeScene.Actions.Start"}}
+        </button>
+      </form>
+    {{/if}}
+  {{/if}}
+</section>

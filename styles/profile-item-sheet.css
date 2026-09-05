@@ -1,0 +1,22 @@
+.ordemparanormal2.profile-item-sheet { --op2-profile-border: rgba(255, 255, 255, 0.16); }
+.ordemparanormal2.profile-item-sheet .window-content { padding: 0; }
+.op2-profile-item-sheet-content { overflow: hidden auto; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet { display: flex; min-height: 100%; flex-direction: column; gap: 1rem; padding: 1rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__header { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__image { width: 72px; height: 72px; border: 1px solid var(--op2-profile-border); border-radius: 8px; object-fit: cover; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__name { display: flex; min-width: 0; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__accent { display: flex; flex-direction: column; gap: .25rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__accent-control { display: flex; align-items: center; gap: .4rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__accent-control input { width: 2.6rem; height: 2rem; padding: .1rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__accent-control code { font-size: .7rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grants { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 0.6rem; border-top: 1px solid var(--op2-profile-border); padding-top: 0.8rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grants h2 { margin: 0; font-size: 1rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grants header p { margin: 0.2rem 0 0; opacity: 0.7; font-size: 0.75rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 0.6rem; border: 1px solid var(--op2-profile-border); border-radius: 6px; padding: 0.4rem; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant.is-unavailable { border-color: rgba(210, 92, 92, 0.65); }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant img { width: 42px; height: 42px; border: 0; border-radius: 4px; object-fit: cover; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant div { display: flex; min-width: 0; flex-direction: column; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant span { overflow: hidden; opacity: 0.65; font-family: monospace; font-size: 0.65rem; text-overflow: ellipsis; white-space: nowrap; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__grant button { width: 2rem; height: 2rem; border: 0; background: transparent; }
+.ordemparanormal2.profile-item-sheet .op2-profile-sheet__empty { margin: 0; padding: 1rem; border: 1px dashed var(--op2-profile-border); border-radius: 6px; text-align: center; opacity: 0.7; }

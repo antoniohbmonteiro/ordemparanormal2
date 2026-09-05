@@ -1,0 +1,241 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  SYSTEM_ID: ordemparanormal2
+  NODE_VERSION: "24.14.1"
+
+jobs:
+  release:
+    name: Build and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check project
+        run: npm run check
+
+      - name: Read and validate release metadata
+        shell: bash
+        run: |
+          VERSION="$(
+            node -e '
+              const fs = require("node:fs");
+              const manifest = JSON.parse(fs.readFileSync("system.json", "utf8"));
+              const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+              const packageLock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+              const versions = {
+                "system.json": manifest.version,
+                "package.json": packageJson.version,
+                "package-lock.json": packageLock.version,
+                "package-lock.json root package": packageLock.packages?.[""]?.version,
+              };
+              const uniqueVersions = new Set(Object.values(versions));
+
+              if (uniqueVersions.size !== 1 || uniqueVersions.has(undefined)) {
+                console.error("Release versions are not synchronized:", versions);
+                process.exit(1);
+              }
+
+              process.stdout.write(manifest.version);
+            '
+          )"
+
+          ZIP_NAME="${SYSTEM_ID}-v${VERSION}.zip"
+
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "ZIP_NAME=${ZIP_NAME}" >> "$GITHUB_ENV"
+
+          echo "System version: ${VERSION}"
+          echo "Package: ${ZIP_NAME}"
+
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            EXPECTED_TAG="v${VERSION}"
+
+            if [[ "$GITHUB_REF_NAME" != "$EXPECTED_TAG" ]]; then
+              echo "::error::Tag '${GITHUB_REF_NAME}' does not match system.json version '${VERSION}'. Expected '${EXPECTED_TAG}'."
+              exit 1
+            fi
+
+            EXPECTED_DOWNLOAD="https://github.com/${GITHUB_REPOSITORY}/releases/download/${EXPECTED_TAG}/${ZIP_NAME}"
+            EXPECTED_MANIFEST="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/system.json"
+
+            ACTUAL_DOWNLOAD="$(
+              node -e '
+                const fs = require("node:fs");
+                const manifest = JSON.parse(fs.readFileSync("system.json", "utf8"));
+                process.stdout.write(manifest.download ?? "");
+              '
+            )"
+            ACTUAL_MANIFEST="$(
+              node -e '
+                const fs = require("node:fs");
+                const manifest = JSON.parse(fs.readFileSync("system.json", "utf8"));
+                process.stdout.write(manifest.manifest ?? "");
+              '
+            )"
+
+            if [[ "$ACTUAL_DOWNLOAD" != "$EXPECTED_DOWNLOAD" ]]; then
+              echo "::error::system.json download URL does not match the expected release asset."
+              echo "Expected: ${EXPECTED_DOWNLOAD}"
+              echo "Actual:   ${ACTUAL_DOWNLOAD}"
+              exit 1
+            fi
+
+            if [[ "$ACTUAL_MANIFEST" != "$EXPECTED_MANIFEST" ]]; then
+              echo "::error::system.json manifest URL does not match the stable release asset."
+              echo "Expected: ${EXPECTED_MANIFEST}"
+              echo "Actual:   ${ACTUAL_MANIFEST}"
+              exit 1
+            fi
+          fi
+
+      - name: Package system
+        shell: bash
+        run: |
+          rm -rf release
+          mkdir -p release
+
+          cp system.json release/
+          cp LICENSE release/
+          cp NOTICE.md release/
+          cp COMMUNITY_LICENSE.md release/
+          cp THIRD_PARTY_LICENSES.md release/
+          cp README.md release/
+          cp CHANGELOG.md release/
+
+          cp -R assets release/
+          cp -R dist release/
+          cp -R templates release/
+          cp -R styles release/
+          cp -R lang release/
+          cp -R packs release/
+
+          (
+            cd release
+            zip -r "../${ZIP_NAME}" .
+          )
+
+          echo "Created ${ZIP_NAME}"
+
+      - name: Validate package contents
+        shell: bash
+        run: |
+          unzip -t "$ZIP_NAME"
+          ZIP_CONTENTS="$(unzip -Z1 "$ZIP_NAME")"
+
+          for REQUIRED_FILE in LICENSE NOTICE.md system.json dist/main.js packs/profiles/CURRENT packs/abilities/CURRENT COMMUNITY_LICENSE.md THIRD_PARTY_LICENSES.md assets/branding/community-license-seal-white.png assets/branding/community-license-seal-black.png assets/icons/abilities/impeto.svg; do
+            if ! grep --fixed-strings --line-regexp --quiet "$REQUIRED_FILE" <<< "$ZIP_CONTENTS"; then
+              echo "::error::${ZIP_NAME} does not contain ${REQUIRED_FILE} at the expected path."
+              exit 1
+            fi
+          done
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ordemparanormal2-package
+          path: |
+            ordemparanormal2-v*.zip
+            system.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists. Updating asset."
+
+            gh release upload \
+              "$GITHUB_REF_NAME" \
+              "$ZIP_NAME" \
+              system.json \
+              --clobber
+          else
+            gh release create \
+              "$GITHUB_REF_NAME" \
+              "$ZIP_NAME" \
+              system.json \
+              --verify-tag \
+              --title "Ordem Paranormal 2 ${GITHUB_REF_NAME}" \
+              --generate-notes
+          fi
+
+      - name: Publish version to Foundry VTT
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          FOUNDRY_PACKAGE_RELEASE_TOKEN: ${{ secrets.FOUNDRY_PACKAGE_RELEASE_TOKEN }}
+        run: |
+          if [[ -z "$FOUNDRY_PACKAGE_RELEASE_TOKEN" ]]; then
+            echo "::error::FOUNDRY_PACKAGE_RELEASE_TOKEN is not configured."
+            exit 1
+          fi
+
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const manifest = JSON.parse(
+            fs.readFileSync("system.json", "utf8"),
+          );
+
+          const repository = process.env.GITHUB_REPOSITORY;
+          const tag = process.env.GITHUB_REF_NAME;
+
+          const payload = {
+            id: manifest.id,
+            release: {
+              version: manifest.version,
+              manifest: `https://github.com/${repository}/releases/download/${tag}/system.json`,
+              notes: `https://github.com/${repository}/releases/tag/${tag}`,
+              compatibility: {
+                minimum: String(manifest.compatibility.minimum),
+                verified: String(manifest.compatibility.verified),
+              },
+            },
+          };
+
+          fs.writeFileSync(
+            "foundry-release.json",
+            JSON.stringify(payload, null, 2),
+          );
+          NODE
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "Authorization: ${FOUNDRY_PACKAGE_RELEASE_TOKEN}" \
+            --data @foundry-release.json \
+            "https://foundryvtt.com/_api/packages/release_version/"
+
+          echo
+          echo "Foundry package version published successfully."

@@ -1,0 +1,41 @@
+<section class="op2-profile-sheet">
+  <header class="op2-profile-sheet__header">
+    <img class="op2-profile-sheet__image" src="{{profile.img}}" alt="{{localize 'ORDEMPARANORMAL2.ProfileSheet.Fields.Image'}}" data-edit="img" {{#if editable}}data-action="editImage"{{/if}} />
+    <label class="op2-profile-sheet__name">
+      <span>{{localize "ORDEMPARANORMAL2.ProfileSheet.Fields.Name"}}</span>
+      <input type="text" name="name" value="{{profile.name}}" autocomplete="off"{{#unless editable}} disabled{{/unless}} />
+    </label>
+    <label class="op2-profile-sheet__accent">
+      <span>{{localize "ORDEMPARANORMAL2.ProfileSheet.Fields.AccentColor"}}</span>
+      <span class="op2-profile-sheet__accent-control">
+        <input type="color" value="{{profile.accentColor}}" data-profile-accent-color{{#unless editable}} disabled{{/unless}} />
+        <code>{{profile.accentColor}}</code>
+      </span>
+    </label>
+  </header>
+
+  <section class="op2-profile-sheet__grants">
+    <header>
+      <h2>{{localize "ORDEMPARANORMAL2.ProfileSheet.Grants.Title"}}</h2>
+      <p>{{localize "ORDEMPARANORMAL2.ProfileSheet.Grants.Hint"}}</p>
+    </header>
+    <div class="op2-profile-sheet__grant-list">
+      {{#each profile.abilityGrants}}
+        <article class="op2-profile-sheet__grant{{#unless available}} is-unavailable{{/unless}}">
+          <img src="{{img}}" alt="" />
+          <div>
+            <strong>{{name}}</strong>
+            <span>{{#if available}}{{uuid}}{{else}}{{localize "ORDEMPARANORMAL2.ProfileSheet.Grants.Unavailable"}}{{/if}}</span>
+          </div>
+          {{#if @root.editable}}
+            <button type="button" data-action="removeAbilityGrant" data-grant-uuid="{{uuid}}" title="{{localize 'ORDEMPARANORMAL2.ProfileSheet.Grants.Remove'}}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          {{/if}}
+        </article>
+      {{else}}
+        <p class="op2-profile-sheet__empty">{{localize "ORDEMPARANORMAL2.ProfileSheet.Grants.Empty"}}</p>
+      {{/each}}
+    </div>
+  </section>
+</section>

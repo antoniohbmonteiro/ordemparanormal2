@@ -1,0 +1,35 @@
+<div class="op2-chat-message__shell{{#unless portrait}} op2-chat-message__shell--no-portrait{{/unless}}" aria-label="{{speakerName}}">
+  {{#if portrait}}
+    <div class="op2-chat-message__portrait" role="img" aria-label="{{portrait.name}}" title="{{portrait.name}}">
+      {{#if portrait.img}}
+        <img src="{{portrait.img}}" alt="{{portrait.name}}" />
+      {{else}}
+        <i class="fa-solid fa-user" aria-hidden="true"></i>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  <div class="op2-chat-message__header-actions">
+    {{#if metadata}}
+      <time class="op2-chat-message__metadata">{{metadata}}</time>
+    {{/if}}
+
+    {{#if canDelete}}
+      <button
+        class="op2-chat-message__delete"
+        type="button"
+        data-action="delete-message"
+        aria-label="{{localize 'ORDEMPARANORMAL2.ChatMessage.Delete'}}"
+        title="{{localize 'ORDEMPARANORMAL2.ChatMessage.Delete'}}"
+      >
+        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+      </button>
+    {{/if}}
+  </div>
+
+  {{#if header}}
+    {{> chatCardHeader title=header.title subtitle=header.subtitle}}
+  {{/if}}
+
+  <div class="op2-chat-message__content">{{{content}}}</div>
+</div>

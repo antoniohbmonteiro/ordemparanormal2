@@ -44,6 +44,19 @@ npm run check
 
 If Foundry runtime behavior changed, also provide a concise manual Foundry v14 smoke test.
 
+## Commit authorship and attribution
+
+- Never add `Co-Authored-By`, `Co-authored-by`, `Signed-off-by`, `Generated-by`, `Assisted-by`, AI attribution, Claude attribution, Anthropic attribution, or similar attribution trailers to commits unless the user explicitly requests them.
+- Never identify Claude, Anthropic, an AI model, an AI coding agent, or an AI tool as an author, co-author, committer, contributor, or collaborator of the project.
+- Never use `git commit --author` to attribute a commit to Claude, Anthropic, an AI model, an AI coding agent, or another identity.
+- Never set or override `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, or `GIT_COMMITTER_EMAIL`.
+- Never modify the repository or global `user.name` or `user.email` Git configuration.
+- All commits must use the user's existing configured Git author and committer identity.
+- Never add Claude, Anthropic, or another AI tool to `AUTHORS`, `CONTRIBUTORS`, package metadata, system authors, release notes, acknowledgements, or similar contributor metadata unless the user explicitly requests it.
+- Suggested commit messages must contain only the Conventional Commit message. Do not append attribution trailers.
+- If an external tool automatically proposes attribution metadata, remove it before committing.
+- If preserving the user's Git identity cannot be guaranteed, do not create the commit; report the problem instead.
+
 ## Change safety
 
 - Preserve unrelated user changes.
@@ -63,3 +76,5 @@ For implementation work, finish with:
 - `git add` command;
 - suggested Conventional Commit;
 - push command when appropriate.
+
+When suggesting a commit, provide only the commit message itself. Never append attribution, co-author, sign-off, generated-by, or AI-related trailers.

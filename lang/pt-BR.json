@@ -20,6 +20,17 @@
       "PointOfInterest": "Ficha de Ponto de Interesse",
       "Equipment": "Ficha de Equipamento"
     },
+    "PointOfInterest": {
+      "SceneControls": {
+        "Title": "Pontos de Interesse",
+        "SelectPoi": "Selecionar POI",
+        "CreateRectangle": "Criar POI retangular",
+        "CreateEllipse": "Criar POI elíptico",
+        "CreatePolygon": "Criar POI poligonal",
+        "AddArea": "Adicionar área ao POI",
+        "CreateHole": "Criar buraco no POI"
+      }
+    },
     "Equipment": {
       "Categories": {
         "general": "Equipamento",

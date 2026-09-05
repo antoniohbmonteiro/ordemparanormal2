@@ -1,0 +1,12 @@
+/* Foundry applies icon classes to the button; mask only the generated glyph. */
+.op2-poi-control-icon::before {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1.125em;
+  height: 1.125em;
+  background-color: currentColor;
+  -webkit-mask: url("../assets/icons/points-of-interest/magnifying-glass.svg") center / contain no-repeat;
+  mask: url("../assets/icons/points-of-interest/magnifying-glass.svg") center / contain no-repeat;
+  mask-mode: alpha;
+}

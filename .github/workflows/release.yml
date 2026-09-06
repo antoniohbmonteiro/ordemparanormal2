@@ -73,9 +73,20 @@ jobs:
 
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             EXPECTED_TAG="v${VERSION}"
+            EXPECTED_RELEASE_HEADING="# Ordem Paranormal 2 — ${EXPECTED_TAG}"
 
             if [[ "$GITHUB_REF_NAME" != "$EXPECTED_TAG" ]]; then
               echo "::error::Tag '${GITHUB_REF_NAME}' does not match system.json version '${VERSION}'. Expected '${EXPECTED_TAG}'."
+              exit 1
+            fi
+
+            if [[ ! -f RELEASE_NOTES.md ]]; then
+              echo "::error::RELEASE_NOTES.md is missing."
+              exit 1
+            fi
+
+            if ! grep --fixed-strings --line-regexp --quiet "$EXPECTED_RELEASE_HEADING" RELEASE_NOTES.md; then
+              echo "::error::RELEASE_NOTES.md does not contain the expected release heading '${EXPECTED_RELEASE_HEADING}'."
               exit 1
             fi
 
@@ -170,7 +181,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "Release ${GITHUB_REF_NAME} already exists. Updating asset."
+            echo "Release ${GITHUB_REF_NAME} already exists. Updating release and assets."
+
+            gh release edit \
+              "$GITHUB_REF_NAME" \
+              --title "Ordem Paranormal 2 ${GITHUB_REF_NAME}" \
+              --notes-file RELEASE_NOTES.md
 
             gh release upload \
               "$GITHUB_REF_NAME" \
@@ -184,7 +200,7 @@ jobs:
               system.json \
               --verify-tag \
               --title "Ordem Paranormal 2 ${GITHUB_REF_NAME}" \
-              --generate-notes
+              --notes-file RELEASE_NOTES.md
           fi
 
       - name: Publish version to Foundry VTT

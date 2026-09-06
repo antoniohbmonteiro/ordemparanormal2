@@ -4,16 +4,18 @@ import { createPoiCanvasBorder, type PoiBorderStyle } from "./poi-canvas-border"
 
 // Internal art direction. Widths are canvas pixels at 100% zoom; durations are milliseconds.
 export const POI_CANVAS_STYLE = {
+  smallRegionThreshold: 100, // Equivalent square side: sqrt(native composed area), in canvas pixels.
+  minVisualScale: 0.4,
   wine: 0x8C233B,
   halo: 0xC92F48,
   aura: 0x7D1733,
   edge: 0xB02D46,
-  haloWidth: 14,
-  auraWidth: 36,
+  haloWidth: 10,
+  auraWidth: 8,
   blurQuality: 4,
   auraBlurQuality: 4,
   filterPaddingMultiplier: 4,
-  edgeWidth: 2.5, // Visible internal width; the centered stroke is clipped by the native mask.
+  edgeWidth: 3, // Visible internal width; the centered stroke is clipped by the native mask.
   periodMs: 3000,
   harmonicWeight: 0.15,
   harmonicFrequency: 2,
@@ -43,6 +45,11 @@ export const POI_CANVAS_STYLE = {
   },
 };
 
+export function poiRegionVisualScale(area: number): number {
+  return Math.max(POI_CANVAS_STYLE.minVisualScale,
+    Math.min(1, Math.sqrt(Math.max(0, area)) / POI_CANVAS_STYLE.smallRegionThreshold));
+}
+
 export interface PoiVisuals {
   upsert(id: string, geometry: PoiGeometry): void;
   remove(id: string): void;
@@ -68,6 +75,7 @@ interface VisualNode {
   readonly blur: BlurFilter;
   readonly auraBlur: BlurFilter;
   readonly geometry: PoiGeometry;
+  readonly visualScale: number;
   readonly phase: number;
   readonly border: ReturnType<typeof createPoiCanvasBorder>;
   value: number;
@@ -117,7 +125,7 @@ export function createPoiCanvasRenderer(canvas: PoiRenderCanvas): PoiVisuals {
     node.aura.alpha = Math.min(1, mix("auraAlpha") * (1 + outerBreath * mix("pulse")));
     node.edge.alpha = Math.min(1, mix("edgeAlpha"));
     node.fill.alpha = mix("fillAlpha") * intensity;
-    const scale = canvas.stage.scale.x;
+    const scale = canvas.stage.scale.x * node.visualScale;
     node.blur.blur = mix("blur") * (1 + breath * mix("spreadPulse")) * scale;
     node.auraBlur.blur = mix("auraBlur") * (1 + outerBreath * mix("spreadPulse")) * scale;
     // BlurFilter resets padding whenever blur changes, including breathing and zoom.
@@ -159,10 +167,11 @@ export function createPoiCanvasRenderer(canvas: PoiRenderCanvas): PoiVisuals {
       remove(id);
       const group = new PIXI.Container();
       group.name = id;
-      const halo = new PIXI.Graphics().lineStyle(POI_CANVAS_STYLE.haloWidth, POI_CANVAS_STYLE.halo);
-      const aura = new PIXI.Graphics().lineStyle(POI_CANVAS_STYLE.auraWidth, POI_CANVAS_STYLE.aura);
-      const edge = new PIXI.Graphics().lineStyle(POI_CANVAS_STYLE.edgeWidth * 2, POI_CANVAS_STYLE.edge);
-      const border = createPoiCanvasBorder(POI_CANVAS_STYLE.edgeWidth * 2, POI_CANVAS_STYLE.border);
+      const visualScale = poiRegionVisualScale(geometry.area);
+      const halo = new PIXI.Graphics().lineStyle(POI_CANVAS_STYLE.haloWidth * visualScale, POI_CANVAS_STYLE.halo);
+      const aura = new PIXI.Graphics().lineStyle(POI_CANVAS_STYLE.auraWidth * visualScale, POI_CANVAS_STYLE.aura);
+      const edge = new PIXI.Graphics().lineStyle(POI_CANVAS_STYLE.edgeWidth * 2 * visualScale, POI_CANVAS_STYLE.edge);
+      const border = createPoiCanvasBorder(POI_CANVAS_STYLE.edgeWidth * 2 * visualScale, POI_CANVAS_STYLE.border);
       for (const node of geometry) {
         if (node.polygon) {
           aura.drawShape(node.polygon); halo.drawShape(node.polygon); edge.drawShape(node.polygon);
@@ -175,8 +184,8 @@ export function createPoiCanvasRenderer(canvas: PoiRenderCanvas): PoiVisuals {
       geometry.drawShape(mask); mask.endFill();
       edge.mask = mask;
       border.root.mask = mask;
-      const blur = new PIXI.BlurFilter(POI_CANVAS_STYLE.idle.blur * canvas.stage.scale.x, POI_CANVAS_STYLE.blurQuality);
-      const auraBlur = new PIXI.BlurFilter(POI_CANVAS_STYLE.idle.auraBlur * canvas.stage.scale.x, POI_CANVAS_STYLE.auraBlurQuality);
+      const blur = new PIXI.BlurFilter(POI_CANVAS_STYLE.idle.blur * canvas.stage.scale.x * visualScale, POI_CANVAS_STYLE.blurQuality);
+      const auraBlur = new PIXI.BlurFilter(POI_CANVAS_STYLE.idle.auraBlur * canvas.stage.scale.x * visualScale, POI_CANVAS_STYLE.auraBlurQuality);
       for (const filter of [blur, auraBlur]) {
         // Blend the filtered light, not just the source stroke in its offscreen texture.
         filter.blendMode = PIXI.BLEND_MODES.ADD;
@@ -189,7 +198,7 @@ export function createPoiCanvasRenderer(canvas: PoiRenderCanvas): PoiVisuals {
       root.addChildAt(group, Math.max(0, root.children.length - 1));
       // Keep each Region's breathing phase stable across geometry rebuilds.
       const phase = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-      const node: VisualNode = { root: group, aura, halo, edge, fill, blur, auraBlur, geometry, phase, border,
+      const node: VisualNode = { root: group, aura, halo, edge, fill, blur, auraBlur, geometry, visualScale, phase, border,
         value: wasHovered ? 1 : 0, from: 0, target: wasHovered ? 1 : 0, started: 0 };
       nodes.set(id, node);
       if (wasHovered) hovered = id;

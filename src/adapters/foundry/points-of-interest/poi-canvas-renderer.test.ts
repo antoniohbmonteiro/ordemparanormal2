@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPoiCanvasRenderer, POI_CANVAS_STYLE as STYLE, type PoiRenderCanvas } from "./poi-canvas-renderer";
+import { createPoiCanvasRenderer, poiRegionVisualScale, POI_CANVAS_STYLE as STYLE, type PoiRenderCanvas } from "./poi-canvas-renderer";
 import type { PoiGeometry } from "./poi-canvas-regions";
 import { createPoiCanvasBorder } from "./poi-canvas-border";
 
@@ -20,7 +20,7 @@ class Node {
 class Graphic extends Node {
   drawShape = vi.fn(() => this);
   beginFill = vi.fn(() => this);
-  lineStyle = vi.fn(() => this);
+  lineStyle = vi.fn((_width: number, _color: number) => this);
   endFill() { return this; } clear() { return this; } drawRoundedRect() { return this; }
 }
 class Label extends Node { text = ""; width = 80; height = 16; }
@@ -74,7 +74,8 @@ const rectangle = [0, 0, 100, 0, 100, 100, 0, 100];
 function geometryOf(...contours: readonly number[][]) {
   const iterate = vi.fn();
   const polygons = contours.map(points => ({ points }));
-  const geometry = { drawShape: vi.fn(), *[Symbol.iterator]() { iterate(); for (const polygon of polygons) yield { polygon }; } };
+  const geometry = { area: STYLE.smallRegionThreshold ** 2, drawShape: vi.fn(),
+    *[Symbol.iterator]() { iterate(); for (const polygon of polygons) yield { polygon }; } };
   return { geometry: geometry as unknown as PoiGeometry, iterate, polygons };
 }
 function layers(root: Node) {
@@ -89,6 +90,67 @@ function within(value: number, low: number, high: number) {
 }
 
 describe("owned POI graphics", () => {
+  it("scales progressively below the size threshold, clamps tiny regions and preserves larger ones", () => {
+    const thresholdArea = STYLE.smallRegionThreshold ** 2;
+    expect(poiRegionVisualScale(thresholdArea)).toBe(1);
+    expect(poiRegionVisualScale(thresholdArea * 4)).toBe(1);
+    expect(poiRegionVisualScale(0)).toBe(STYLE.minVisualScale);
+    expect(poiRegionVisualScale(thresholdArea * (STYLE.minVisualScale / 2) ** 2)).toBe(STYLE.minVisualScale);
+    const middle = (1 + STYLE.minVisualScale) / 2;
+    expect(poiRegionVisualScale(thresholdArea * middle ** 2)).toBeCloseTo(middle);
+    expect(poiRegionVisualScale(thresholdArea * (1 - 1e-6) ** 2)).toBeCloseTo(1, 5);
+  });
+
+  it.each(["idle", "hover"] as const)("scales only spatial dimensions in %s, independently of zoom", mode => {
+    const f = fixture(); const g = geometryOf(rectangle);
+    const compact = createPoiCanvasRenderer(f.canvas);
+    const smallRoot = f.parent.children.at(-1)!;
+    const factor = (1 + STYLE.minVisualScale) / 2;
+    const readArea = vi.fn(() => (STYLE.smallRegionThreshold * factor) ** 2);
+    const smallGeometry = { ...g.geometry, get area() { return readArea(); } };
+    f.visual.upsert("r", g.geometry); compact.upsert("r", smallGeometry);
+    const full = layers(f.root); const small = layers(smallRoot);
+    const start = mode === "hover" ? STYLE.transition.enterMs : 0;
+    if (mode === "hover") { f.visual.hover("r"); compact.hover("r"); }
+    for (const [a, b] of [[full.edge, small.edge], [full.halo, small.halo], [full.aura, small.aura]]) {
+      expect(b.lineStyle.mock.calls[0][0]).toBeCloseTo(a.lineStyle.mock.calls[0][0] * factor);
+      expect(b.lineStyle.mock.calls[0][1]).toBe(a.lineStyle.mock.calls[0][1]);
+    }
+    expect(full.edge.lineStyle.mock.calls[0][0]).toBe(STYLE.edgeWidth * 2);
+    expect(full.halo.lineStyle.mock.calls[0][0]).toBe(STYLE.haloWidth);
+    expect(full.aura.lineStyle.mock.calls[0][0]).toBe(STYLE.auraWidth);
+    // Ribbon vertices stay centered on the native perimeter; only the stroke's cross section shrinks.
+    const original = full.meshes[0].geometry.attributes.aVertexPosition;
+    const scaled = small.meshes[0].geometry.attributes.aVertexPosition;
+    for (let i = 0; i < original.length; i += 4) {
+      for (const offset of [0, 1]) {
+        const center = (original[i + offset] + original[i + offset + 2]) / 2;
+        expect((scaled[i + offset] + scaled[i + offset + 2]) / 2).toBeCloseTo(center);
+        expect(scaled[i + offset] - center).toBeCloseTo((original[i + offset] - center) * factor);
+      }
+    }
+    for (let step = 0; step <= 16; step++) {
+      f.advance(start + STYLE.periodMs * step / 16);
+      for (const [a, b] of [[full.edge, small.edge], [full.halo, small.halo], [full.aura, small.aura], [full.fill, small.fill]]) {
+        expect(b.alpha).toBe(a.alpha);
+      }
+      for (const [a, b] of [[full.halo, small.halo], [full.aura, small.aura]]) {
+        expect(b.filters[0].blur).toBeCloseTo(a.filters[0].blur * factor);
+        expect(b.filters[0].padding).toBeCloseTo(a.filters[0].padding * factor);
+      }
+      expect(small.meshes[0].shader.uniforms).toEqual(full.meshes[0].shader.uniforms);
+    }
+    const beforeZoom = small.halo.filters[0].blur;
+    f.canvas.stage.scale.x = 2; f.visual.camera(); compact.camera();
+    expect(small.halo.filters[0].blur).toBeCloseTo(beforeZoom * 2);
+    expect(readArea).toHaveBeenCalledOnce();
+    const atThreshold = { ...g.geometry, area: STYLE.smallRegionThreshold ** 2 };
+    compact.upsert("r", atThreshold);
+    expect(layers(smallRoot).halo.lineStyle.mock.calls[0][0]).toBe(STYLE.haloWidth);
+    expect(layers(smallRoot).halo.filters[0].blur).toBe(full.halo.filters[0].blur);
+    compact.destroy(); f.visual.destroy();
+  });
+
   it("delegates composed fill/mask to PolygonTree and keeps holes and islands as separate ribbons", () => {
     const f = fixture();
     const contours = [rectangle, [10, 10, 10, 20, 20, 20, 20, 10], [300, 300, 400, 300, 400, 400, 300, 400]];

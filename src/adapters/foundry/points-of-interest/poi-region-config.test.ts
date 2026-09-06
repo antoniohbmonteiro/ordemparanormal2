@@ -54,7 +54,7 @@ describe("POI RegionConfig draft", () => {
     const { app, button, data } = fixture({ itemUuid: "Item.old" });
     open.mockReturnValue({ result: Promise.resolve({ itemUuid: "Item.new", name: "New", origin: "Mundo" }), close: vi.fn() });
     renderPoiRegionConfig(app); button("Choose").click(); await flushPoiTasks();
-    expect(data()).toEqual({ [POI_REGION_FLAG_PATH]: { replacement: { itemUuid: "Item.new" } } });
+    expect(data()).toEqual({ [POI_REGION_FLAG_PATH]: { replacement: { itemUuid: "Item.new", name: "New" } } });
     button("Remove").click(); expect(data()).toEqual({ [POI_REGION_FLAG_PATH]: expect.any(Deletion) });
     expect(app.document.update).not.toHaveBeenCalled();
     expect(app.document.getFlag()).toEqual({ itemUuid: "Item.old" });

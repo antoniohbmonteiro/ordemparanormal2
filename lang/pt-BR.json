@@ -23,7 +23,8 @@
     "PointOfInterest": {
       "Canvas": {
         "Loading": "Carregando POI…",
-        "Unavailable": "POI indisponível"
+        "Unavailable": "POI indisponível",
+        "Unnamed": "Ponto de interesse"
       },
       "SceneControls": {
         "Title": "Investigação",

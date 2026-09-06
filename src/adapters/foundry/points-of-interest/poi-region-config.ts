@@ -108,7 +108,10 @@ export function renderPoiRegionConfig(value: unknown): void {
       current.picker = undefined;
       if (selection) {
         current.selection = selection;
-        current.draft = { kind: "associate", association: { itemUuid: selection.itemUuid } };
+        current.draft = {
+          kind: "associate",
+          association: { itemUuid: selection.itemUuid, name: selection.name },
+        };
       }
       renderPoiRegionConfig(app);
     });

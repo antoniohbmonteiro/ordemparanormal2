@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 import { createPoiCanvasSession, type PoiSessionEnvironment } from "./poi-canvas-session";
 import { readPoiCanvasRegion, type PoiGeometry } from "./poi-canvas-regions";
 import { findPoiHover, orderPoiHover } from "./poi-canvas-hover";
@@ -9,14 +9,32 @@ function geometry(area = 100): PoiGeometry {
     drawShape: vi.fn(), *[Symbol.iterator]() {} };
 }
 
-function fixture(enabled = true) {
-  let gm = true;
+interface TestRegion {
+  id: string | null;
+  parent: { id: string } | null;
+  viewed: boolean;
+  polygonTree: PoiGeometry;
+  association: unknown;
+  reveal: unknown;
+  getFlag: Mock<(scope: string, key: string) => unknown>;
+}
+
+function fixture(enabled = true, options: { gm?: boolean; userId?: string } = {}) {
+  let gm = options.gm ?? true;
+  const userId = options.userId ?? "gm";
   const subscribers = new Set<(value: boolean) => void>();
   const mode = { get: () => enabled, subscribe: (listener: (value: boolean) => void) => {
     subscribers.add(listener); return () => { subscribers.delete(listener); };
   }, set(value: boolean) { enabled = value; for (const listener of subscribers) listener(value); } };
-  const regions = ["a", "b"].map((id, index) => ({ id, parent: { id: "scene" }, viewed: index === 0,
-    polygonTree: geometry(), getFlag: vi.fn((): unknown => ({ itemUuid: `Item.${id}` })) }));
+  const regions: TestRegion[] = ["a", "b"].map((id, index) => {
+    const region = {
+      id, parent: { id: "scene" }, viewed: index === 0, polygonTree: geometry(),
+      association: { itemUuid: `Item.${id}` } as unknown, reveal: undefined as unknown,
+    } as TestRegion;
+    region.getFlag = vi.fn((_scope: string, key: string): unknown =>
+      key === "pointOfInterestReveal" ? region.reveal : region.association);
+    return region;
+  });
   const controls = Object.assign(new EventTarget(), {
     control: { name: POI_CONTROL_NAME }, tool: { name: "selectPoi" },
   });
@@ -28,20 +46,42 @@ function fixture(enabled = true) {
   const visuals = { setVisible: vi.fn(), upsert: vi.fn(), remove: vi.fn(), hover: vi.fn(), label: vi.fn(), camera: vi.fn(), destroy: vi.fn() };
   const resolve = vi.fn(async (uuid: string) => ({ name: `Name ${uuid}`, gmContext: "NEVER RENDER" }));
   const render = vi.fn(() => visuals);
-  const env = { canvas, mode, focus, isGM: () => gm, localize: (key: string) => key } as unknown as PoiSessionEnvironment;
+  const env = { canvas, mode, focus, userId, isGM: () => gm, localize: (key: string) => key } as unknown as PoiSessionEnvironment;
   const start = () => createPoiCanvasSession(env, { render, resolve });
   const move = () => view.dispatchEvent(Object.assign(new Event("pointermove"), { clientX: 30, clientY: 40 }));
   return { mode, subscribers, regions, controls, view, focus, canvas, visuals, resolve, render, start, move, setGM: (value: boolean) => { gm = value; } };
 }
 
+const GM_VIEWER = { isGM: true, userId: "gm" } as const;
+
 describe("POI discovery and native hit testing", () => {
   it("requires a persisted, viewed, associated Region of the current Scene", () => {
     const region = fixture().regions[0];
-    expect(readPoiCanvasRegion(region, "scene")?.id).toBe("a");
+    expect(readPoiCanvasRegion(region, "scene", GM_VIEWER)?.id).toBe("a");
     for (const invalid of [{ id: null }, { viewed: false }, { parent: { id: "other" } },
       { getFlag: () => null }, { getFlag: () => ({ itemUuid: " " }) }, { polygonTree: geometry(0) }]) {
-      expect(readPoiCanvasRegion({ ...region, ...invalid }, "scene")).toBeNull();
+      expect(readPoiCanvasRegion({ ...region, ...invalid }, "scene", GM_VIEWER)).toBeNull();
     }
+  });
+
+  it("filters by reveal for players only, and snapshots the association name", () => {
+    const region = fixture().regions[0];
+    region.association = { itemUuid: "Item.a", name: "Armário Azul" };
+    expect(readPoiCanvasRegion(region, "scene", GM_VIEWER)?.name).toBe("Armário Azul");
+
+    const player = { isGM: false, userId: "p1" };
+    region.reveal = undefined; // hidden
+    expect(readPoiCanvasRegion(region, "scene", player)).toBeNull();
+    expect(readPoiCanvasRegion(region, "scene", GM_VIEWER)?.id).toBe("a");
+    region.reveal = { mode: "everyone" };
+    expect(readPoiCanvasRegion(region, "scene", player)?.id).toBe("a");
+    region.reveal = { mode: "users", users: ["p2"] };
+    expect(readPoiCanvasRegion(region, "scene", player)).toBeNull();
+    region.reveal = { mode: "users", users: ["p1"] };
+    expect(readPoiCanvasRegion(region, "scene", player)?.id).toBe("a");
+    region.viewed = false; // Level still filters both roles
+    expect(readPoiCanvasRegion(region, "scene", player)).toBeNull();
+    expect(readPoiCanvasRegion(region, "scene", GM_VIEWER)).toBeNull();
   });
   it("uses bounds only to reject and delegates holes to the native tree", () => {
     const shape = geometry();
@@ -64,9 +104,9 @@ describe("POI discovery and native hit testing", () => {
 });
 
 describe("independent POI canvas session", () => {
-  it("does not create visuals or resolve Items for players", () => {
-    const f = fixture(); f.setGM(false);
-    expect(f.start()).toBeNull(); expect(f.render).not.toHaveBeenCalled(); expect(f.resolve).not.toHaveBeenCalled();
+  it("still requires a ready canvas and a scene", () => {
+    const f = fixture(); f.canvas.ready = false;
+    expect(f.start()).toBeNull(); expect(f.render).not.toHaveBeenCalled();
   });
   it("renders idle before lookup and handles hover without a RegionLayer", async () => {
     const f = fixture(); const session = f.start()!;
@@ -197,5 +237,105 @@ describe("independent POI canvas session", () => {
     await vi.waitFor(() => expect(f.resolve).toHaveBeenCalledTimes(2));
     oldResult({ name: "Stale", gmContext: "SECRET" }); await Promise.resolve(); await Promise.resolve(); f.move();
     expect(f.visuals.label).toHaveBeenLastCalledWith("Name Item.new", { x: 30, y: 40 }); session.destroy();
+  });
+
+  it("shows the GM every associated POI regardless of reveal", () => {
+    const f = fixture();
+    f.regions[0].reveal = { mode: "hidden" };
+    f.start();
+    expect(f.visuals.upsert).toHaveBeenCalledExactlyOnceWith("a", f.regions[0].polygonTree);
+  });
+});
+
+describe("player POI canvas session", () => {
+  function playerFixture(enabled = true) {
+    return fixture(enabled, { gm: false, userId: "p1" });
+  }
+
+  it("shows a player only revealed POIs, labelled from the snapshot, without resolving the Item", async () => {
+    const f = playerFixture();
+    f.regions[0].association = { itemUuid: "Item.a", name: "Armário Azul" };
+    f.regions[0].reveal = { mode: "everyone" };
+    const session = f.start()!;
+    expect(f.visuals.upsert).toHaveBeenCalledExactlyOnceWith("a", f.regions[0].polygonTree);
+    f.move();
+    expect(f.visuals.hover).toHaveBeenLastCalledWith("a");
+    expect(f.visuals.label).toHaveBeenLastCalledWith("Armário Azul", { x: 30, y: 40 });
+    await Promise.resolve(); await Promise.resolve();
+    expect(f.resolve).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("does not upsert a hidden POI, nor a users POI the viewer is not listed in", () => {
+    const hidden = playerFixture();
+    hidden.regions[0].reveal = undefined;
+    hidden.start();
+    expect(hidden.visuals.upsert).not.toHaveBeenCalled();
+
+    const others = playerFixture();
+    others.regions[0].reveal = { mode: "users", users: ["p2"] };
+    others.start();
+    expect(others.visuals.upsert).not.toHaveBeenCalled();
+  });
+
+  it("adds and removes a player POI on runtime reveal changes without rebuilding", () => {
+    const f = playerFixture();
+    f.regions[0].association = { itemUuid: "Item.a", name: "Sala" };
+    const session = f.start()!;
+    expect(f.visuals.upsert).not.toHaveBeenCalled();
+    f.regions[0].reveal = { mode: "everyone" };
+    session.regionChanged(f.regions[0]);
+    expect(f.visuals.upsert).toHaveBeenCalledExactlyOnceWith("a", f.regions[0].polygonTree);
+    expect(f.render).toHaveBeenCalledOnce();
+    f.regions[0].reveal = { mode: "hidden" };
+    session.regionChanged(f.regions[0]);
+    expect(f.visuals.remove).toHaveBeenCalledExactlyOnceWith("a");
+    session.destroy();
+  });
+
+  it("updates a player label when only the association name snapshot changes", () => {
+    const f = playerFixture();
+    f.regions[0].association = { itemUuid: "Item.a" };
+    f.regions[0].reveal = { mode: "everyone" };
+    const session = f.start()!;
+    f.move();
+    expect(f.visuals.label).toHaveBeenLastCalledWith("ORDEMPARANORMAL2.PointOfInterest.Canvas.Unnamed", { x: 30, y: 40 });
+    f.visuals.upsert.mockClear();
+    f.regions[0].association = { itemUuid: "Item.a", name: "Armário Azul" };
+    session.regionChanged(f.regions[0]);
+    expect(f.visuals.label).toHaveBeenLastCalledWith("Armário Azul", { x: 30, y: 40 });
+    expect(f.visuals.upsert).not.toHaveBeenCalled();
+    expect(f.resolve).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("shows nothing for a player while Investigation Mode is OFF", () => {
+    const f = playerFixture(false);
+    f.regions[0].reveal = { mode: "everyone" };
+    const session = f.start()!;
+    expect(f.visuals.setVisible).toHaveBeenCalledWith(false);
+    f.move();
+    expect(f.visuals.hover).toHaveBeenLastCalledWith(null);
+    session.destroy();
+  });
+
+  it("keeps a player POI working with the Tokens layer active", () => {
+    const f = playerFixture();
+    f.regions[0].reveal = { mode: "everyone" };
+    const session = f.start()!;
+    f.controls.control.name = "tokens"; f.controls.tool.name = "select";
+    f.controls.dispatchEvent(new Event("activate"));
+    f.move();
+    expect(f.visuals.hover).toHaveBeenLastCalledWith("a");
+    session.destroy();
+  });
+
+  it("cleans up a player session with no listeners or ticker left", () => {
+    const f = playerFixture();
+    f.regions[0].reveal = { mode: "everyone" };
+    const session = f.start()!;
+    session.destroy();
+    expect(f.subscribers.size).toBe(0);
+    expect(f.visuals.destroy).toHaveBeenCalledOnce();
   });
 });

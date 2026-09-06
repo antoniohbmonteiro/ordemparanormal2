@@ -8,6 +8,7 @@ import { openPoiActionsMenu } from "../adapters/foundry/points-of-interest/poi-a
 export function registerPoiCanvas(): void {
   let session: PoiCanvasSession | null = null;
   let stopContextMenu: (() => void) | null = null;
+  let startedAsGM = false;
   const stop = () => {
     stopContextMenu?.(); stopContextMenu = null;
     session?.destroy(); session = null;
@@ -17,13 +18,16 @@ export function registerPoiCanvas(): void {
     const env = globalThis as typeof globalThis & {
       canvas?: PoiSessionCanvas;
     };
-    if (!game.user?.isGM || !env.canvas?.ready) return;
+    if (!env.canvas?.ready) return;
+    startedAsGM = !!game.user?.isGM;
     session = createPoiCanvasSession({
       canvas: env.canvas, mode: investigationMode, focus: window,
+      userId: game.user?.id ?? "",
       isGM: () => !!game.user?.isGM, localize: key => game.i18n.localize(key),
     });
+    // Reveal management from the canvas is GM-only; players have no selectPoi tool.
     const view = (env.canvas.app as unknown as { view?: EventTarget } | undefined)?.view;
-    if (session && view) {
+    if (session && view && game.user?.isGM) {
       const canvasSession = session;
       stopContextMenu = listenPoiSceneContextMenu({
         view,
@@ -48,7 +52,7 @@ export function registerPoiCanvas(): void {
     session?.invalidateItems(uuid => uuid.startsWith(`Compendium.${(pack as { collection: string }).collection}.`)));
   Hooks.on("updateUser", (user: unknown) => {
     if (user !== game.user) return;
-    if (!game.user?.isGM) stop();
-    else if (!session) start();
+    // Rebuild only when the viewer's role actually flips (GM sees all, player sees revealed).
+    if (!session || !!game.user?.isGM !== startedAsGM) start();
   });
 }

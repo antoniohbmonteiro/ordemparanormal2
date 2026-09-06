@@ -14,6 +14,20 @@ describe("POI Region association", () => {
     expect(getFlag).toHaveBeenCalledExactlyOnceWith("ordemparanormal2", "pointOfInterest");
   });
 
+  it("keeps a non-blank name snapshot and drops a blank or non-string one", () => {
+    expect(parsePoiRegionAssociation({ itemUuid: "Item.a", name: "Armário Azul" }))
+      .toEqual({ itemUuid: "Item.a", name: "Armário Azul" });
+    expect(parsePoiRegionAssociation({ itemUuid: "Item.a", name: "  " })).toEqual({ itemUuid: "Item.a" });
+    expect(parsePoiRegionAssociation({ itemUuid: "Item.a", name: 5 })).toEqual({ itemUuid: "Item.a" });
+  });
+
+  it("writes the name snapshot alongside the uuid when present", () => {
+    const create = vi.fn((value: unknown) => ({ replacement: value }));
+    vi.stubGlobal("foundry", { data: { operators: { ForcedReplacement: { create } } } });
+    buildPoiRegionAssociationUpdate({ kind: "associate", association: { itemUuid: "Item.a", name: "Sala" } });
+    expect(create).toHaveBeenCalledExactlyOnceWith({ itemUuid: "Item.a", name: "Sala" });
+  });
+
   it("leaves the entire update untouched for an unchanged draft", () => {
     expect(buildPoiRegionAssociationUpdate({ kind: "unchanged" })).toEqual({});
   });

@@ -14,6 +14,8 @@ export interface PoiSessionEnvironment {
   readonly canvas: PoiSessionCanvas;
   readonly mode: InvestigationMode;
   readonly focus: EventTarget;
+  /** The viewer's id; the GM sees every eligible POI, a player only the ones revealed to this id. */
+  readonly userId: string;
   isGM(): boolean;
   localize(key: string): string;
 }
@@ -44,19 +46,21 @@ export function createPoiCanvasSession(
     resolve: (uuid: string) => Promise<{ readonly name: string } | null>;
   } = { render: createPoiCanvasRenderer, resolve: resolvePoiAssociation },
 ): PoiCanvasSession | null {
-  if (!env.isGM() || !env.canvas.ready || !env.canvas.scene) return null;
+  if (!env.canvas.ready || !env.canvas.scene) return null;
   const scene = env.canvas.scene;
   const renderer = dependencies.render(env.canvas);
   const entries = new Map<string, Entry>();
   const names = new Map<string, Promise<string>>();
   const loading = env.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Loading");
   const unavailable = env.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Unavailable");
+  const unnamed = env.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Unnamed");
   let candidates: PoiRegionView[] = [];
   let pointer: PoiPoint | null = null;
   let lastViewedLevelId = env.canvas.level?.id ?? null;
   let disposed = false;
   renderer.setVisible(env.mode.get());
-  const active = () => !disposed && env.isGM() && env.canvas.ready && env.canvas.scene === scene;
+  const active = () => !disposed && env.canvas.ready && env.canvas.scene === scene;
+  const viewer = () => ({ isGM: env.isGM(), userId: env.userId });
 
   function refreshHover(): void {
     const target = active() && env.mode.get() && pointer
@@ -69,7 +73,7 @@ export function createPoiCanvasSession(
     const uuid = entry.view.itemUuid;
     let request = names.get(uuid);
     if (!request) {
-      request = Promise.resolve().then(() => active() ? dependencies.resolve(uuid) : null)
+      request = Promise.resolve().then(() => active() && env.isGM() ? dependencies.resolve(uuid) : null)
         .then(item => item?.name ?? unavailable, () => unavailable);
       names.set(uuid, request);
     }
@@ -82,17 +86,26 @@ export function createPoiCanvasSession(
   }
 
   function upsert(region: PoiCanvasRegion): void {
-    const view = readPoiCanvasRegion(region, scene.id);
+    const view = readPoiCanvasRegion(region, scene.id, viewer());
     if (!view) {
       if (region.id && entries.delete(region.id)) renderer.remove(region.id);
       return;
     }
+    const gm = env.isGM();
     const prior = entries.get(view.id);
-    if (prior?.view.geometry === view.geometry && prior.view.itemUuid === view.itemUuid) return;
-    const entry = { view, name: prior?.view.itemUuid === view.itemUuid ? prior.name : loading };
+    if (prior && prior.view.geometry === view.geometry && prior.view.itemUuid === view.itemUuid) {
+      if (prior.view.name === view.name) return;
+      // Only the safe-name snapshot changed: swap the entry, leave the geometry node untouched.
+      entries.set(view.id, { view, name: gm ? prior.name : view.name ?? unnamed });
+      return;
+    }
+    const entry = {
+      view,
+      name: prior?.view.itemUuid === view.itemUuid ? prior.name : gm ? loading : view.name ?? unnamed,
+    };
     entries.set(view.id, entry);
     renderer.upsert(view.id, view.geometry);
-    resolveName(entry);
+    if (gm) resolveName(entry);
   }
 
   function refreshCandidates(): void {
@@ -111,7 +124,8 @@ export function createPoiCanvasSession(
   }
 
   function invalidateItems(matches: (uuid: string) => boolean): void {
-    if (!active()) return;
+    // Players never resolve Items: their label comes from the association snapshot via upsert().
+    if (!active() || !env.isGM()) return;
     for (const uuid of names.keys()) if (matches(uuid)) names.delete(uuid);
     for (const entry of entries.values()) {
       if (!matches(entry.view.itemUuid)) continue;

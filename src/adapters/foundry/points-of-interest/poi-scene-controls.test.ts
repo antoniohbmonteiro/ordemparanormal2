@@ -31,6 +31,8 @@ const nativeTools = Object.freeze(Object.fromEntries(
   ]),
 ));
 const prepareSceneControls = vi.fn(() => ({
+  name: "regions",
+  layer: "regions",
   tools: nativeTools,
   onChange: nativeCallback,
   onToolChange: nativeCallback,
@@ -54,6 +56,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   stubGame(true);
   vi.stubGlobal("foundry", {
+    utils: { deepClone: structuredClone },
     canvas: { layers: { RegionLayer: { prepareSceneControls } } },
   });
 });
@@ -98,7 +101,7 @@ describe("POI Scene Controls", () => {
     });
   });
 
-  it("offers six exclusive passive modes using only native icon strings", () => {
+  it("enables only three creation modes using cloned native Shapes without native callbacks or createData", () => {
     const controls: Record<string, SceneControl> = {};
     addPoiSceneControls(controls);
     const group = controls[controlName];
@@ -116,13 +119,18 @@ describe("POI Scene Controls", () => {
       name, title, icon, order,
       button: false,
       toggle: false,
-      creation: false,
+      creation: name.startsWith("create") && name !== "createHole",
+      ...(["createRectangle", "createEllipse", "createPolygon"].includes(name)
+        ? { shapeData: { type: name.replace("create", "").toLowerCase() } } : {}),
       control: false,
       interaction: false,
     })));
     expect(Object.keys(group).sort()).toEqual([
-      "activeTool", "icon", "name", "order", "title", "tools", "visible",
+      "activeTool", "icon", "layer", "name", "onToolChange", "order", "title", "tools", "visible",
     ]);
+    for (const [poi, native] of [["createRectangle", "rectangle"], ["createEllipse", "ellipse"], ["createPolygon", "polygon"]]) {
+      expect((group.tools[poi] as unknown as { shapeData: object }).shapeData).not.toBe(nativeTools[native].shapeData);
+    }
     expect(prepareSceneControls).toHaveBeenCalledExactlyOnceWith();
     expect(nativeCallback).not.toHaveBeenCalled();
   });

@@ -11,9 +11,11 @@ describe("POI Scene Controls bootstrap", () => {
 
     registerPoiSceneControls();
 
-    expect(on).toHaveBeenCalledExactlyOnceWith(
+    expect(on).toHaveBeenCalledTimes(3);
+    expect(on).toHaveBeenCalledWith(
       "getSceneControlButtons",
       addPoiSceneControls,
     );
+    expect(on.mock.calls.map(([hook]) => hook)).toEqual(["getSceneControlButtons", "controlRegion", "renderRegionConfig"]);
   });
 });

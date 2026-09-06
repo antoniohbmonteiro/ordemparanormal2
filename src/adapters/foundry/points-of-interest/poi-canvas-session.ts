@@ -1,5 +1,5 @@
 import { resolvePoiAssociation } from "./poi-catalog";
-import { isPoiHoverActive, type PoiControlState } from "./poi-control-state";
+import type { InvestigationMode } from "./investigation-mode";
 import { findPoiHover, listenPoiPointer, orderPoiHover } from "./poi-canvas-hover";
 import { readPoiCanvasRegion, type PoiCanvasRegion, type PoiPoint, type PoiRegionView } from "./poi-canvas-regions";
 import { createPoiCanvasRenderer, type PoiRenderCanvas, type PoiVisuals } from "./poi-canvas-renderer";
@@ -12,7 +12,7 @@ export interface PoiSessionCanvas extends PoiRenderCanvas {
 
 export interface PoiSessionEnvironment {
   readonly canvas: PoiSessionCanvas;
-  readonly controls: EventTarget & PoiControlState;
+  readonly mode: InvestigationMode;
   readonly focus: EventTarget;
   isGM(): boolean;
   localize(key: string): string;
@@ -47,11 +47,11 @@ export function createPoiCanvasSession(
   let pointer: PoiPoint | null = null;
   let lastViewedLevelId = env.canvas.level?.id ?? null;
   let disposed = false;
-  let wasActive = isPoiHoverActive(env.controls);
+  renderer.setVisible(env.mode.get());
   const active = () => !disposed && env.isGM() && env.canvas.ready && env.canvas.scene === scene;
 
   function refreshHover(): void {
-    const target = active() && isPoiHoverActive(env.controls) && pointer
+    const target = active() && env.mode.get() && pointer
       ? findPoiHover(candidates, env.canvas.canvasCoordinatesFromClient(pointer)) : null;
     renderer.hover(target);
     renderer.label(target ? entries.get(target)?.name ?? unavailable : null, pointer);
@@ -113,15 +113,12 @@ export function createPoiCanvasSession(
     refreshHover();
   }
 
-  const controlsChanged = () => {
+  const stopMode = env.mode.subscribe(enabled => {
     if (!active()) return;
-    const enabled = isPoiHoverActive(env.controls);
-    if (enabled && !wasActive) invalidateItems(() => true);
-    wasActive = enabled;
+    renderer.setVisible(enabled);
+    if (enabled) invalidateItems(() => true);
     refreshHover();
-  };
-  env.controls.addEventListener("activate", controlsChanged);
-  env.controls.addEventListener("render", controlsChanged);
+  });
   const stopPointer = listenPoiPointer(env.canvas.app.view, env.focus, point => {
     pointer = point; refreshHover();
   });
@@ -152,8 +149,7 @@ export function createPoiCanvasSession(
       if (disposed) return;
       disposed = true;
       stopPointer();
-      env.controls.removeEventListener("activate", controlsChanged);
-      env.controls.removeEventListener("render", controlsChanged);
+      stopMode();
       entries.clear(); names.clear(); candidates = []; pointer = null; lastViewedLevelId = null;
       renderer.destroy();
     },

@@ -26,7 +26,8 @@
         "Unavailable": "POI indisponível"
       },
       "SceneControls": {
-        "Title": "Pontos de Interesse",
+        "Title": "Investigação",
+        "InvestigationMode": "Modo Investigação",
         "SelectPoi": "Selecionar POI",
         "CreateRectangle": "Criar POI retangular",
         "CreateEllipse": "Criar POI elíptico",
@@ -61,6 +62,22 @@
         "NoMatches": "Nenhum Ponto de Interesse corresponde à busca.",
         "LoadFailed": "Não foi possível carregar o catálogo de Pontos de Interesse.",
         "Unavailable": "O POI selecionado não está mais disponível. Atualize a lista e escolha outro."
+      },
+      "Reveal": {
+        "Title": "Visibilidade para jogadores",
+        "Mode": {
+          "Hidden": "Oculto",
+          "Everyone": "Revelado para todos",
+          "Users": "Revelado para usuários específicos"
+        },
+        "Apply": "Aplicar visibilidade",
+        "Applied": "Visibilidade atualizada.",
+        "ApplyFailed": "Não foi possível atualizar a visibilidade.",
+        "StatusHidden": "Oculto para jogadores.",
+        "StatusEveryone": "Revelado para todos os jogadores.",
+        "StatusUsers": "Revelado para {count} jogador(es).",
+        "NoPlayers": "Não há jogadores neste mundo.",
+        "Notice": "Algo novo chamou sua atenção nesta cena."
       }
     },
     "Equipment": {

@@ -1,6 +1,7 @@
 import type { SceneControl, SceneControlTool } from "@client/applications/ui/scene-controls.mjs";
 import { onPoiToolChange } from "./poi-region-drawing";
 import { POI_CONTROL_NAME } from "./poi-control-state";
+import { investigationMode } from "./investigation-mode";
 
 const CONTROL_NAME = POI_CONTROL_NAME;
 const LOCALIZATION_PREFIX = "ORDEMPARANORMAL2.PointOfInterest.SceneControls";
@@ -12,24 +13,39 @@ type PoiSceneControlTool = SceneControlTool & {
   interaction: false;
   shapeData?: object;
 };
-type PoiSceneControl = SceneControl & { layer: string };
+type PoiSceneControl = SceneControl & { layer?: string };
+
+function onInvestigationModeChange(_event?: Event, active = false): void {
+  investigationMode.set(active);
+}
+
+export function syncInvestigationModeControl(): void {
+  const controls = (ui as typeof ui & { controls?: {
+    controls: Record<string, SceneControl>; render(): unknown;
+  } }).controls;
+  const tool = controls?.controls?.[CONTROL_NAME]?.tools.investigationMode;
+  if (!tool || tool.active === investigationMode.get()) return;
+  tool.active = investigationMode.get();
+  void controls.render();
+}
 
 export function addPoiSceneControls(controls: Record<string, SceneControl>): void {
-  const native = foundry.canvas.layers.RegionLayer.prepareSceneControls() as PoiSceneControl;
-  const nativeTools = native.tools as typeof native.tools & Record<string, { shapeData?: object }>;
-  const definitions = [
+  const native = game.user.isGM
+    ? foundry.canvas.layers.RegionLayer.prepareSceneControls() as PoiSceneControl : undefined;
+  const nativeTools = native?.tools as Record<string, SceneControlTool & { shapeData?: object }> | undefined;
+  const definitions = nativeTools ? [
     ["selectPoi", "SelectPoi", nativeTools.select.icon, undefined],
     ["createRectangle", "CreateRectangle", nativeTools.rectangle.icon, nativeTools.rectangle.shapeData],
     ["createEllipse", "CreateEllipse", nativeTools.ellipse.icon, nativeTools.ellipse.shapeData],
     ["createPolygon", "CreatePolygon", nativeTools.polygon.icon, nativeTools.polygon.shapeData],
     ["addArea", "AddArea", "fa-solid fa-plus", undefined],
     ["createHole", "CreateHole", nativeTools.hole.icon, undefined],
-  ] as const;
+  ] as const : [];
 
   const tools: Record<string, PoiSceneControlTool> = Object.fromEntries(
     definitions.map(([name, label, icon, shapeData], order) => [name, {
       name,
-      order,
+      order: order + 1,
       title: game.i18n.localize(`${LOCALIZATION_PREFIX}.${label}`),
       icon,
       button: false,
@@ -40,6 +56,13 @@ export function addPoiSceneControls(controls: Record<string, SceneControl>): voi
       interaction: false,
     } satisfies PoiSceneControlTool]),
   );
+  const mode: PoiSceneControlTool = {
+    name: "investigationMode", order: 0,
+    title: game.i18n.localize(`${LOCALIZATION_PREFIX}.InvestigationMode`),
+    icon: "fa-solid fa-eye", toggle: true, button: false,
+    active: investigationMode.get(), creation: false, control: false, interaction: false,
+    onChange: onInvestigationModeChange,
+  };
 
   const order = Object.entries(controls).reduce(
     (nextOrder, [name, control]) => name === CONTROL_NAME
@@ -53,11 +76,11 @@ export function addPoiSceneControls(controls: Record<string, SceneControl>): voi
     title: game.i18n.localize(`${LOCALIZATION_PREFIX}.Title`),
     icon: "op2-poi-control-icon",
     order,
-    visible: game.user.isGM,
-    activeTool: "selectPoi",
-    layer: native.layer,
-    onToolChange: onPoiToolChange,
-    tools,
+    visible: true,
+    // An empty default lets Foundry choose null when only toggles are available.
+    activeTool: native ? "selectPoi" : "",
+    ...(native ? { layer: native.layer, onToolChange: onPoiToolChange } : {}),
+    tools: { investigationMode: mode, ...tools },
   };
   controls[CONTROL_NAME] = control;
 }

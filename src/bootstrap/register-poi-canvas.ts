@@ -1,6 +1,6 @@
 import { createPoiCanvasSession, type PoiCanvasSession, type PoiSessionCanvas } from "../adapters/foundry/points-of-interest/poi-canvas-session";
 import type { PoiCanvasRegion } from "../adapters/foundry/points-of-interest/poi-canvas-regions";
-import type { PoiControlState } from "../adapters/foundry/points-of-interest/poi-control-state";
+import { investigationMode } from "../adapters/foundry/points-of-interest/investigation-mode";
 
 export function registerPoiCanvas(): void {
   let session: PoiCanvasSession | null = null;
@@ -9,11 +9,10 @@ export function registerPoiCanvas(): void {
     stop();
     const env = globalThis as typeof globalThis & {
       canvas?: PoiSessionCanvas;
-      ui: { controls: EventTarget & PoiControlState };
     };
     if (!game.user?.isGM || !env.canvas?.ready) return;
     session = createPoiCanvasSession({
-      canvas: env.canvas, controls: env.ui.controls, focus: window,
+      canvas: env.canvas, mode: investigationMode, focus: window,
       isGM: () => !!game.user?.isGM, localize: key => game.i18n.localize(key),
     });
   };

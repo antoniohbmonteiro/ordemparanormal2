@@ -73,7 +73,7 @@ The system-owned `occupations` compendium provides eight reusable name-only sour
 
 `pointOfInterest` is a standalone, reusable Item type: the GM-authored **definition** of an investigation Point of Interest. It is not embedded on an Actor and holds no execution state.
 
-POI canvas presentation is transient and GM-only. Region documents own composed geometry and Level eligibility (`viewed`); Items own reusable content. The system-owned canvas renderer uses the public polygon tree for drawing and two-dimensional hit testing, independently of RegionLayer activation or Placeables. Idle presence follows the viewed Level; hover and the resolved Item name are enabled only by `selectPoi`. Level changes reconcile eligible Regions, while ordinary pan/zoom reuses geometry and graphics. Unavailable Items retain their association and display an unavailable label. No reveal/hide or selection persistence is introduced.
+POI canvas presentation is transient and GM-only. Region documents own composed geometry and Level eligibility (`viewed`); Items own reusable content. The system-owned canvas renderer uses the public polygon tree for drawing and two-dimensional hit testing, independently of RegionLayer activation or Placeables. Investigation Mode is client-local, initially OFF, and survives Scene, Level and control changes until reload. OFF hides all owned visuals and pauses their ticker; ON shows the existing highlight, hover and resolved Item name independently of active Scene Controls, including Tokens. Geometry and Level reconciliation continue while hidden. The existing control group is displayed as Investigação: its first toggle and the remappable I keybinding share this local state. Players receive only the toggle, with no selectable authoring tool or RegionLayer binding; canvas presentation and Item resolution remain GM-only in this version. GM authoring tools retain their existing drawing behavior. Level changes reconcile eligible Regions, while ordinary pan/zoom reuses geometry and graphics. Unavailable Items retain their association and display an unavailable label. No selection persistence is introduced. Per-placement player reveal state is persisted separately (see "Region reveal" below), but the canvas renderer and Item resolution remain GM-only in this version — reveal currently drives only a private chat notice.
 
 Native `name` and `img` are not duplicated in `system`. `PointOfInterestDataModel` stores:
 
@@ -103,6 +103,26 @@ flags.ordemparanormal2.pointOfInterest = { itemUuid: string }
 The UUID comes from a non-embedded world or compendium Item of type `pointOfInterest`. No Item content, image, name or geometry is copied into this flag. Several Regions may reference the same Item. A structurally valid reference remains an association when its Item is unavailable; resolution is separate and opening a sheet never repairs or deletes flags automatically.
 
 GM association editing lives in the native RegionConfig. Choosing, replacing and removing affect a local sheet draft; the native Update Region submit persists the draft alongside the other form fields. Closing discards it. The form uses public `FormDataExtended.set` and `ForcedReplacement`/`ForcedDeletion` operators at this flag key only, preserving sibling flags and namespaces. Rerenders preserve pending drafts; closing also closes the picker and invalidates delayed results. Only canonical persisted Region documents receive the section; palette and preview documents do not.
+
+### Region reveal
+
+A Region that has a POI association also carries per-placement player visibility, in a **separate** flag so association writes and reveal writes never clobber each other:
+
+```text
+flags.ordemparanormal2.pointOfInterestReveal = {
+  mode: "hidden" | "everyone" | "users",   // absent flag ⇒ hidden
+  users: string[],                         // User ids, meaningful only when mode === "users"
+  notified: string[]                       // User ids already whispered at least once
+}
+```
+
+The defensive reader collapses a missing value or unknown `mode` to fully hidden and drops blank/duplicate ids. Writes replace the whole object through `ForcedReplacement` at this key only. Authorization is pure: the GM is always authorized; `everyone` authorizes every player; `users` authorizes the listed ids; `hidden` authorizes none.
+
+The GM sets visibility from a dedicated "player visibility" fieldset injected into the native RegionConfig (shown only when a POI association is already persisted). Applying is immediate (`region.update`), independent of the native submit, and is the authoritative operation — the only one that can report failure.
+
+When a user gains access for the first time (an authorized id not in `notified`), the system whispers one generic private chat message per newly-revealed user ("algo novo chamou sua atenção nesta cena"), carrying no POI identity, scene name or geometry. `notified` is written together with the reveal, so the whisper is **at-most-once**: hiding sends nothing, and updates that do not newly authorize anyone send nothing. The whisper is a **best-effort** side effect: a `ChatMessage.create` failure is logged, not surfaced, and not retried — so a user may, exceptionally, be revealed without receiving the message if chat fails.
+
+**Visibility trade-off (accepted for this step).** The reveal state lives on the Region flag, which Foundry replicates to player clients in full. A technical player can inspect `mode` / `users` / `notified` via console. This is treated as a UX / authoring-intent barrier, not a hard information barrier: the flag carries no POI content, the Region already exposes POI identity through the association flag, and the renderer stays GM-only this step. A real content barrier for players remains future Investigation Application work (sanitized projection). Making reveal a hard barrier would require GM-authoritative state outside Region flags (socket relay) and is out of scope.
 
 The POI Scene Controls enable native Rectangle, Ellipse and Polygon drawing through the RegionLayer. Drawing produces ordinary Regions with no automatic association. Existing controlled Regions are released before drawing. An open or rendering RegionConfig blocks drawing with a warning; opening one during drawing returns to `selectPoi`. The other three modes remain passive. There is no creation correlation, custom renderer, investigation execution state or migration in this slice.
 

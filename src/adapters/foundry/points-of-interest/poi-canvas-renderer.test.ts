@@ -90,6 +90,23 @@ function within(value: number, low: number, high: number) {
 }
 
 describe("owned POI graphics", () => {
+  it("hides and pauses without rebuilding, including updates while hidden", () => {
+    const f = fixture(); const g = geometryOf(rectangle);
+    f.visual.setVisible(false); f.visual.upsert("r", g.geometry);
+    expect(f.root.visible).toBe(false); expect(f.callbacks.size).toBe(0);
+    const node = f.root.children[0]; const draws = vi.mocked(g.geometry.drawShape).mock.calls.length;
+    f.visual.setVisible(true); f.visual.hover("r"); f.visual.label("Name", { x: 10, y: 20 });
+    expect(f.root.visible).toBe(true); expect(f.callbacks.size).toBe(1);
+    f.advance(1000); f.visual.setVisible(false);
+    expect(f.callbacks.size).toBe(0); expect(f.root.children.at(-1)!.visible).toBe(false);
+    f.visual.hover(null); f.visual.camera();
+    expect(f.callbacks.size).toBe(0);
+    f.visual.setVisible(true); f.visual.setVisible(true);
+    expect(f.callbacks.size).toBe(1); expect(f.root.children[0]).toBe(node);
+    expect(g.geometry.drawShape).toHaveBeenCalledTimes(draws);
+    f.visual.destroy(); f.visual.setVisible(true);
+    expect(f.callbacks.size).toBe(0); expect(f.native.destroyed).toBe(false);
+  });
   it("scales progressively below the size threshold, clamps tiny regions and preserves larger ones", () => {
     const thresholdArea = STYLE.smallRegionThreshold ** 2;
     expect(poiRegionVisualScale(thresholdArea)).toBe(1);

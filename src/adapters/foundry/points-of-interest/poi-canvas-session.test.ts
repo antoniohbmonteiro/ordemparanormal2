@@ -9,8 +9,12 @@ function geometry(area = 100): PoiGeometry {
     drawShape: vi.fn(), *[Symbol.iterator]() {} };
 }
 
-function fixture() {
+function fixture(enabled = true) {
   let gm = true;
+  const subscribers = new Set<(value: boolean) => void>();
+  const mode = { get: () => enabled, subscribe: (listener: (value: boolean) => void) => {
+    subscribers.add(listener); return () => { subscribers.delete(listener); };
+  }, set(value: boolean) { enabled = value; for (const listener of subscribers) listener(value); } };
   const regions = ["a", "b"].map((id, index) => ({ id, parent: { id: "scene" }, viewed: index === 0,
     polygonTree: geometry(), getFlag: vi.fn((): unknown => ({ itemUuid: `Item.${id}` })) }));
   const controls = Object.assign(new EventTarget(), {
@@ -21,13 +25,13 @@ function fixture() {
   const scene = { id: "scene", regions };
   const canvas = { scene, ready: true, level: { id: "first" }, app: { view },
     canvasCoordinatesFromClient: vi.fn(point => point) };
-  const visuals = { upsert: vi.fn(), remove: vi.fn(), hover: vi.fn(), label: vi.fn(), camera: vi.fn(), destroy: vi.fn() };
+  const visuals = { setVisible: vi.fn(), upsert: vi.fn(), remove: vi.fn(), hover: vi.fn(), label: vi.fn(), camera: vi.fn(), destroy: vi.fn() };
   const resolve = vi.fn(async (uuid: string) => ({ name: `Name ${uuid}`, gmContext: "NEVER RENDER" }));
   const render = vi.fn(() => visuals);
-  const env = { canvas, controls, focus, isGM: () => gm, localize: (key: string) => key } as unknown as PoiSessionEnvironment;
+  const env = { canvas, mode, focus, isGM: () => gm, localize: (key: string) => key } as unknown as PoiSessionEnvironment;
   const start = () => createPoiCanvasSession(env, { render, resolve });
   const move = () => view.dispatchEvent(Object.assign(new Event("pointermove"), { clientX: 30, clientY: 40 }));
-  return { regions, controls, view, focus, canvas, visuals, resolve, render, start, move, setGM: (value: boolean) => { gm = value; } };
+  return { mode, subscribers, regions, controls, view, focus, canvas, visuals, resolve, render, start, move, setGM: (value: boolean) => { gm = value; } };
 }
 
 describe("POI discovery and native hit testing", () => {
@@ -72,11 +76,29 @@ describe("independent POI canvas session", () => {
     f.move();
     expect(f.visuals.hover).toHaveBeenLastCalledWith("a");
     expect(f.visuals.label).toHaveBeenLastCalledWith("Name Item.a", { x: 30, y: 40 });
-    f.controls.tool.name = "createRectangle"; f.controls.dispatchEvent(new Event("activate"));
+    f.controls.control.name = "tokens"; f.controls.tool.name = "select";
+    f.controls.dispatchEvent(new Event("activate")); f.move();
+    expect(f.visuals.hover).toHaveBeenLastCalledWith("a");
+    f.mode.set(false);
     expect(f.visuals.hover).toHaveBeenLastCalledWith(null);
     expect(f.visuals.label).toHaveBeenLastCalledWith(null, { x: 30, y: 40 });
     expect(f.visuals.remove).not.toHaveBeenCalled();
     session.destroy();
+  });
+  it("starts hidden, retains updates while OFF and resumes without rebuilding", () => {
+    const f = fixture(false); const session = f.start()!;
+    expect(f.visuals.setVisible).toHaveBeenCalledWith(false);
+    f.move(); expect(f.regions[0].polygonTree.testPoint).not.toHaveBeenCalled();
+    expect(f.visuals.hover).toHaveBeenLastCalledWith(null);
+    f.regions[0].polygonTree = geometry(35); session.regionChanged(f.regions[0]);
+    f.visuals.upsert.mockClear();
+    f.mode.set(true);
+    expect(f.visuals.setVisible).toHaveBeenLastCalledWith(true);
+    expect(f.visuals.hover).toHaveBeenLastCalledWith("a");
+    expect(f.visuals.upsert).not.toHaveBeenCalled();
+    session.destroy(); expect(f.subscribers.size).toBe(0);
+    f.visuals.setVisible.mockClear(); f.mode.set(false);
+    expect(f.visuals.setVisible).not.toHaveBeenCalled();
   });
   it.each([true, false])("reconciles Level changes incrementally (payload level: %s)", explicit => {
     const f = fixture(); const session = f.start()!;

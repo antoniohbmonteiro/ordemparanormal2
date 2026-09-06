@@ -11,7 +11,7 @@ export const POI_CANVAS_STYLE = {
   aura: 0x7D1733,
   edge: 0xB02D46,
   haloWidth: 10,
-  auraWidth: 8,
+  auraWidth: 16,
   blurQuality: 4,
   auraBlurQuality: 4,
   filterPaddingMultiplier: 4,
@@ -51,6 +51,7 @@ export function poiRegionVisualScale(area: number): number {
 }
 
 export interface PoiVisuals {
+  setVisible(visible: boolean): void;
   upsert(id: string, geometry: PoiGeometry): void;
   remove(id: string): void;
   hover(id: string | null): void;
@@ -107,7 +108,7 @@ export function createPoiCanvasRenderer(canvas: PoiRenderCanvas): PoiVisuals {
   const animationStarted = performance.now();
 
   function startTicker(): void {
-    if (!ticking && nodes.size && !disposed) { canvas.app.ticker.add(tick); ticking = true; }
+    if (!ticking && root.visible && nodes.size && !disposed) { canvas.app.ticker.add(tick); ticking = true; }
   }
 
   function stopTicker(): void {
@@ -161,6 +162,17 @@ export function createPoiCanvasRenderer(canvas: PoiRenderCanvas): PoiVisuals {
   }
 
   return {
+    setVisible(visible) {
+      if (disposed || root.visible === visible) return;
+      root.visible = visible;
+      if (visible) { tick(); startTicker(); }
+      else {
+        stopTicker();
+        hovered = null;
+        labelRoot.visible = false;
+        for (const node of nodes.values()) { node.value = 0; node.from = 0; node.target = 0; }
+      }
+    },
     upsert(id, geometry) {
       if (disposed || nodes.get(id)?.geometry === geometry) return;
       const wasHovered = hovered === id;

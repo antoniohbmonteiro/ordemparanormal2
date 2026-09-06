@@ -93,12 +93,17 @@ describe("POI Scene Controls", () => {
 
     expect(controls[controlName]).toMatchObject({
       name: controlName,
-      title: "Pontos de Interesse",
+      title: "Investigação",
       icon: "op2-poi-control-icon",
-      visible: isGM,
+      visible: true,
       order: 0,
-      activeTool: "selectPoi",
     });
+    expect(controls[controlName].activeTool).toBe(isGM ? "selectPoi" : "");
+    if (!isGM) {
+      expect(Object.keys(controls[controlName].tools)).toEqual(["investigationMode"]);
+      expect(controls[controlName]).not.toHaveProperty("layer");
+      expect(prepareSceneControls).not.toHaveBeenCalled();
+    }
   });
 
   it("enables only three creation modes using cloned native Shapes without native callbacks or createData", () => {
@@ -114,9 +119,10 @@ describe("POI Scene Controls", () => {
       ["createHole", "Criar buraco no POI", "native-icon-hole"],
     ];
 
-    expect(Object.keys(group.tools)).toEqual(expected.map(([name]) => name));
-    expect(Object.values(group.tools)).toEqual(expected.map(([name, title, icon], order) => ({
-      name, title, icon, order,
+    expect(Object.keys(group.tools)).toEqual(["investigationMode", ...expected.map(([name]) => name)]);
+    expect(group.tools.investigationMode).toMatchObject({ name: "investigationMode", order: 0, toggle: true, button: false, active: false, creation: false, control: false, interaction: false });
+    expect(Object.values(group.tools).slice(1)).toEqual(expected.map(([name, title, icon], order) => ({
+      name, title, icon, order: order + 1,
       button: false,
       toggle: false,
       creation: name.startsWith("create") && name !== "createHole",

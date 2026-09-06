@@ -7,6 +7,8 @@ export class PoiTestElement extends EventTarget {
   value = "";
   disabled = false;
   hidden = false;
+  checked = false;
+  selected = false;
   type = "";
   size = 0;
   constructor(readonly tagName = "div") { super(); }

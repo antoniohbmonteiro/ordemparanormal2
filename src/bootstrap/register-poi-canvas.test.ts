@@ -14,7 +14,7 @@ describe("POI canvas lifecycle registration", () => {
     vi.stubGlobal("canvas", { ready: true }); vi.stubGlobal("ui", { controls: new EventTarget() });
     vi.stubGlobal("window", new EventTarget());
     const session = { destroy: vi.fn(), pan: vi.fn(), reconcile: vi.fn(),
-      regionChanged: vi.fn(), regionDeleted: vi.fn(), invalidateItems: vi.fn() };
+      regionChanged: vi.fn(), regionDeleted: vi.fn(), invalidateItems: vi.fn(), poiActionTargetAt: vi.fn() };
     vi.mocked(createPoiCanvasSession).mockReturnValue(session);
     registerPoiCanvas();
     expect(hooks.size).toBe(13);

@@ -11,8 +11,12 @@ export class PoiTestElement extends EventTarget {
   selected = false;
   type = "";
   size = 0;
+  style: Record<string, string> = {};
   constructor(readonly tagName = "div") { super(); }
   setAttribute(): void {}
+  contains(node: unknown): boolean {
+    return node === this || this.children.some(child => child.contains(node));
+  }
   append(...children: PoiTestElement[]): void {
     for (const child of children) { child.remove(); child.parent = this; this.children.push(child); }
   }

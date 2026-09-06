@@ -175,6 +175,20 @@ describe("independent POI canvas session", () => {
     const f = fixture(); const session = f.start()!; f.setGM(false);
     await Promise.resolve(); expect(f.resolve).not.toHaveBeenCalled(); session.destroy();
   });
+  it("resolves the POI action target under a client point via the existing hit-test", async () => {
+    const f = fixture(); const session = f.start()!;
+    expect(session.poiActionTargetAt({ x: 1, y: 2 })).toEqual({
+      regionId: "a", itemUuid: "Item.a", name: "ORDEMPARANORMAL2.PointOfInterest.Canvas.Loading",
+    });
+    await vi.waitFor(() => expect(f.resolve).toHaveBeenCalledOnce());
+    expect(session.poiActionTargetAt({ x: 1, y: 2 })).toEqual({
+      regionId: "a", itemUuid: "Item.a", name: "Name Item.a",
+    });
+    vi.mocked(f.regions[0].polygonTree.testPoint).mockReturnValue(false);
+    expect(session.poiActionTargetAt({ x: 1, y: 2 })).toBeNull();
+    session.destroy();
+    expect(session.poiActionTargetAt({ x: 1, y: 2 })).toBeNull();
+  });
   it("does not apply a stale name after reassociation", async () => {
     const f = fixture(); let oldResult!: (value: { name: string; gmContext: string }) => void;
     f.resolve.mockImplementationOnce(() => new Promise(done => { oldResult = done; }));

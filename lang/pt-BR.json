@@ -64,20 +64,21 @@
         "Unavailable": "O POI selecionado não está mais disponível. Atualize a lista e escolha outro."
       },
       "Reveal": {
-        "Title": "Visibilidade para jogadores",
-        "Mode": {
-          "Hidden": "Oculto",
-          "Everyone": "Revelado para todos",
-          "Users": "Revelado para usuários específicos"
+        "Notice": "Algo novo chamou sua atenção nesta cena.",
+        "Menu": {
+          "Open": "Abrir POI",
+          "Everyone": "Mostrar para todos",
+          "Users": "Mostrar para…",
+          "Hide": "Ocultar"
         },
-        "Apply": "Aplicar visibilidade",
-        "Applied": "Visibilidade atualizada.",
-        "ApplyFailed": "Não foi possível atualizar a visibilidade.",
-        "StatusHidden": "Oculto para jogadores.",
-        "StatusEveryone": "Revelado para todos os jogadores.",
-        "StatusUsers": "Revelado para {count} jogador(es).",
-        "NoPlayers": "Não há jogadores neste mundo.",
-        "Notice": "Algo novo chamou sua atenção nesta cena."
+        "Dialog": {
+          "Title": "Mostrar Ponto de Interesse para",
+          "Confirm": "Confirmar",
+          "Cancel": "Cancelar",
+          "Empty": "Não há jogadores neste mundo."
+        },
+        "Unavailable": "O Ponto de Interesse associado está indisponível.",
+        "Failed": "Não foi possível atualizar a visibilidade do Ponto de Interesse."
       }
     },
     "Equipment": {

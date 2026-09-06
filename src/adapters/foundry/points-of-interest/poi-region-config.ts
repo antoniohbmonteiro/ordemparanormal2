@@ -5,10 +5,19 @@ import {
   POI_REGION_FLAG, buildPoiRegionAssociationUpdate, readPoiRegionAssociation,
   type PoiAssociationDraft,
 } from "./poi-region-association";
-import { isPoiRegionConfigEligible, type PoiRegionConfigEligibleApp } from "./poi-region-config-eligibility";
 
-export interface PoiRegionConfigApplication
-  extends Pick<EventTarget, "addEventListener" | "removeEventListener">, PoiRegionConfigEligibleApp {}
+// RegionConfig is missing from the installed types; only its public surface is used here.
+export interface PoiRegionConfigApplication extends Pick<EventTarget, "addEventListener" | "removeEventListener"> {
+  readonly document: {
+    readonly id: string | null;
+    readonly documentName: string;
+    readonly parent: { readonly id: string; readonly regions: { get(id: string): unknown } } | null;
+    getFlag(scope: string, key: string): unknown;
+  };
+  readonly isEditable: boolean;
+  readonly form: HTMLFormElement | null;
+  readonly window: { readonly content: HTMLElement };
+}
 
 interface SectionState {
   draft: PoiAssociationDraft;
@@ -25,7 +34,9 @@ const states = new WeakMap<PoiRegionConfigApplication, SectionState>();
 const localize = (key: string) => game.i18n.localize(`ORDEMPARANORMAL2.PointOfInterest.RegionConfig.${key}`);
 
 function eligible(app: PoiRegionConfigApplication): boolean {
-  return isPoiRegionConfigEligible(app);
+  const doc = app.document;
+  return !!game.user?.isGM && app.isEditable && doc.documentName === "Region"
+    && !!doc.id && doc.parent?.regions.get(doc.id) === doc && !!app.form && !!app.window.content;
 }
 
 function dispose(app: PoiRegionConfigApplication, state: SectionState): void {

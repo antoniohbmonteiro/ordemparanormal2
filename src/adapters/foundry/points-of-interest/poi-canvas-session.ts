@@ -20,12 +20,20 @@ export interface PoiSessionEnvironment {
 
 interface Entry { readonly view: PoiRegionView; name: string }
 
+/** A POI hit under a client point: enough to open its sheet and manage its reveal. */
+export interface PoiActionTarget {
+  readonly regionId: string;
+  readonly itemUuid: string;
+  readonly name: string;
+}
+
 export interface PoiCanvasSession {
   regionChanged(region: PoiCanvasRegion): void;
   regionDeleted(region: PoiCanvasRegion): void;
   reconcile(): void;
   pan(position: { readonly level?: string | null }): void;
   invalidateItems(matches: (uuid: string) => boolean): void;
+  poiActionTargetAt(client: PoiPoint): PoiActionTarget | null;
   destroy(): void;
 }
 
@@ -145,6 +153,12 @@ export function createPoiCanvasSession(
       renderer.camera(); refreshHover();
     },
     invalidateItems,
+    poiActionTargetAt(client) {
+      if (!active()) return null;
+      const id = findPoiHover(candidates, env.canvas.canvasCoordinatesFromClient(client));
+      const entry = id ? entries.get(id) : undefined;
+      return entry ? { regionId: entry.view.id, itemUuid: entry.view.itemUuid, name: entry.name } : null;
+    },
     destroy() {
       if (disposed) return;
       disposed = true;

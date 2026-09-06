@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { preparePoiDrawing, protectPoiDrawingFromConfig, protectPoiDrawingFromControl, POI_CONTROL_NAME } from "./poi-region-drawing";
+import { onPoiToolChange, preparePoiDrawing, protectPoiDrawingFromConfig, protectPoiDrawingFromControl, POI_CONTROL_NAME } from "./poi-region-drawing";
 
 const sheet = { rendered: false, state: 0 };
 const region = { id: "r", parent: { id: "s" }, sheet };
@@ -21,6 +21,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("public POI drawing activation", () => {
+  it("does not access RegionLayer when selectPoi is activated", async () => {
+    controls.tool.name = "selectPoi";
+    vi.stubGlobal("canvas", { get regions() { throw new Error("Selection must not access RegionLayer"); } });
+    onPoiToolChange(new Event("change"), { name: "selectPoi" }, true);
+    await Promise.resolve();
+    expect(controls.activate).not.toHaveBeenCalled();
+  });
   it("awaits native activation before restoring the requested tool, releasing existing Regions", async () => {
     let resume!: () => void;
     controls.activate.mockImplementationOnce(async () => {

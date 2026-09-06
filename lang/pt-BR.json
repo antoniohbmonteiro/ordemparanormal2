@@ -21,6 +21,10 @@
       "Equipment": "Ficha de Equipamento"
     },
     "PointOfInterest": {
+      "Canvas": {
+        "Loading": "Carregando POI…",
+        "Unavailable": "POI indisponível"
+      },
       "SceneControls": {
         "Title": "Pontos de Interesse",
         "SelectPoi": "Selecionar POI",

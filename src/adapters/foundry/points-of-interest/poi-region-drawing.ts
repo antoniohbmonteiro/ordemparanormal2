@@ -1,6 +1,7 @@
 import { SYSTEM_ID } from "../../../config/system-config";
 
-export const POI_CONTROL_NAME = "ordemparanormal2-poi";
+import { POI_CONTROL_NAME } from "./poi-control-state";
+export { POI_CONTROL_NAME } from "./poi-control-state";
 export const POI_DRAWING_TOOLS = ["createRectangle", "createEllipse", "createPolygon"] as const;
 
 interface RegionSheetState { readonly rendered: boolean; readonly state: number }

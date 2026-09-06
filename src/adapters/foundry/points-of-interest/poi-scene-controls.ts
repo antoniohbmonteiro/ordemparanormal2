@@ -1,5 +1,6 @@
 import type { SceneControl, SceneControlTool } from "@client/applications/ui/scene-controls.mjs";
-import { onPoiToolChange, POI_CONTROL_NAME } from "./poi-region-drawing";
+import { onPoiToolChange } from "./poi-region-drawing";
+import { POI_CONTROL_NAME } from "./poi-control-state";
 
 const CONTROL_NAME = POI_CONTROL_NAME;
 const LOCALIZATION_PREFIX = "ORDEMPARANORMAL2.PointOfInterest.SceneControls";

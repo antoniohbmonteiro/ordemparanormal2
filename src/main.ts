@@ -11,6 +11,7 @@ import { registerAgentOccupationCreationHook } from "./bootstrap/register-agent-
 import { registerNarrativeScenes } from "./bootstrap/register-narrative-scenes";
 import { registerPoiSceneControls } from "./bootstrap/register-poi-scene-controls";
 import { registerPoiRegionConfig } from "./bootstrap/register-poi-region-config";
+import { registerPoiCanvas } from "./bootstrap/register-poi-canvas";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
@@ -29,6 +30,7 @@ Hooks.once("init", () => {
   registerNarrativeScenes();
   registerPoiSceneControls();
   registerPoiRegionConfig();
+  registerPoiCanvas();
 
   console.info(`${SYSTEM_ID} | Initializing system v${game.system.version}`);
 });

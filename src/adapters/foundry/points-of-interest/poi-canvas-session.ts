@@ -1,0 +1,161 @@
+import { resolvePoiAssociation } from "./poi-catalog";
+import { isPoiHoverActive, type PoiControlState } from "./poi-control-state";
+import { findPoiHover, listenPoiPointer, orderPoiHover } from "./poi-canvas-hover";
+import { readPoiCanvasRegion, type PoiCanvasRegion, type PoiPoint, type PoiRegionView } from "./poi-canvas-regions";
+import { createPoiCanvasRenderer, type PoiRenderCanvas, type PoiVisuals } from "./poi-canvas-renderer";
+
+export interface PoiSessionCanvas extends PoiRenderCanvas {
+  readonly ready: boolean;
+  readonly scene: { readonly id: string; readonly regions: Iterable<PoiCanvasRegion> } | null;
+  readonly level: { readonly id: string } | null;
+}
+
+export interface PoiSessionEnvironment {
+  readonly canvas: PoiSessionCanvas;
+  readonly controls: EventTarget & PoiControlState;
+  readonly focus: EventTarget;
+  isGM(): boolean;
+  localize(key: string): string;
+}
+
+interface Entry { readonly view: PoiRegionView; name: string }
+
+export interface PoiCanvasSession {
+  regionChanged(region: PoiCanvasRegion): void;
+  regionDeleted(region: PoiCanvasRegion): void;
+  reconcile(): void;
+  pan(position: { readonly level?: string | null }): void;
+  invalidateItems(matches: (uuid: string) => boolean): void;
+  destroy(): void;
+}
+
+export function createPoiCanvasSession(
+  env: PoiSessionEnvironment,
+  dependencies: {
+    render: (canvas: PoiRenderCanvas) => PoiVisuals;
+    resolve: (uuid: string) => Promise<{ readonly name: string } | null>;
+  } = { render: createPoiCanvasRenderer, resolve: resolvePoiAssociation },
+): PoiCanvasSession | null {
+  if (!env.isGM() || !env.canvas.ready || !env.canvas.scene) return null;
+  const scene = env.canvas.scene;
+  const renderer = dependencies.render(env.canvas);
+  const entries = new Map<string, Entry>();
+  const names = new Map<string, Promise<string>>();
+  const loading = env.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Loading");
+  const unavailable = env.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Unavailable");
+  let candidates: PoiRegionView[] = [];
+  let pointer: PoiPoint | null = null;
+  let lastViewedLevelId = env.canvas.level?.id ?? null;
+  let disposed = false;
+  let wasActive = isPoiHoverActive(env.controls);
+  const active = () => !disposed && env.isGM() && env.canvas.ready && env.canvas.scene === scene;
+
+  function refreshHover(): void {
+    const target = active() && isPoiHoverActive(env.controls) && pointer
+      ? findPoiHover(candidates, env.canvas.canvasCoordinatesFromClient(pointer)) : null;
+    renderer.hover(target);
+    renderer.label(target ? entries.get(target)?.name ?? unavailable : null, pointer);
+  }
+
+  function resolveName(entry: Entry): void {
+    const uuid = entry.view.itemUuid;
+    let request = names.get(uuid);
+    if (!request) {
+      request = Promise.resolve().then(() => active() ? dependencies.resolve(uuid) : null)
+        .then(item => item?.name ?? unavailable, () => unavailable);
+      names.set(uuid, request);
+    }
+    const expected = request;
+    void request.then(name => {
+      if (!active() || entries.get(entry.view.id) !== entry || names.get(uuid) !== expected) return;
+      entry.name = name;
+      refreshHover();
+    });
+  }
+
+  function upsert(region: PoiCanvasRegion): void {
+    const view = readPoiCanvasRegion(region, scene.id);
+    if (!view) {
+      if (region.id && entries.delete(region.id)) renderer.remove(region.id);
+      return;
+    }
+    const prior = entries.get(view.id);
+    if (prior?.view.geometry === view.geometry && prior.view.itemUuid === view.itemUuid) return;
+    const entry = { view, name: prior?.view.itemUuid === view.itemUuid ? prior.name : loading };
+    entries.set(view.id, entry);
+    renderer.upsert(view.id, view.geometry);
+    resolveName(entry);
+  }
+
+  function refreshCandidates(): void {
+    candidates = orderPoiHover([...entries.values()].map(entry => entry.view));
+    refreshHover();
+  }
+
+  function reconcile(): void {
+    if (!active()) return;
+    const present = new Set<string>();
+    for (const region of scene.regions) { if (region.id) present.add(region.id); upsert(region); }
+    for (const id of entries.keys()) {
+      if (!present.has(id)) { entries.delete(id); renderer.remove(id); }
+    }
+    refreshCandidates();
+  }
+
+  function invalidateItems(matches: (uuid: string) => boolean): void {
+    if (!active()) return;
+    for (const uuid of names.keys()) if (matches(uuid)) names.delete(uuid);
+    for (const entry of entries.values()) {
+      if (!matches(entry.view.itemUuid)) continue;
+      entry.name = loading;
+      resolveName(entry);
+    }
+    refreshHover();
+  }
+
+  const controlsChanged = () => {
+    if (!active()) return;
+    const enabled = isPoiHoverActive(env.controls);
+    if (enabled && !wasActive) invalidateItems(() => true);
+    wasActive = enabled;
+    refreshHover();
+  };
+  env.controls.addEventListener("activate", controlsChanged);
+  env.controls.addEventListener("render", controlsChanged);
+  const stopPointer = listenPoiPointer(env.canvas.app.view, env.focus, point => {
+    pointer = point; refreshHover();
+  });
+  reconcile();
+
+  return {
+    reconcile,
+    regionChanged(region) {
+      if (!active() || region.parent?.id !== scene.id || ![...scene.regions].includes(region)) return;
+      upsert(region); refreshCandidates();
+    },
+    regionDeleted(region) {
+      if (!active() || region.parent?.id !== scene.id || !region.id) return;
+      if (entries.delete(region.id)) renderer.remove(region.id);
+      refreshCandidates();
+    },
+    pan(position) {
+      if (!active()) return;
+      const level = position.level === undefined ? env.canvas.level?.id ?? null : position.level;
+      if (level !== lastViewedLevelId) {
+        lastViewedLevelId = level;
+        reconcile();
+      }
+      renderer.camera(); refreshHover();
+    },
+    invalidateItems,
+    destroy() {
+      if (disposed) return;
+      disposed = true;
+      stopPointer();
+      env.controls.removeEventListener("activate", controlsChanged);
+      env.controls.removeEventListener("render", controlsChanged);
+      entries.clear(); names.clear(); candidates = []; pointer = null; lastViewedLevelId = null;
+      renderer.destroy();
+    },
+  };
+}

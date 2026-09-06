@@ -73,6 +73,8 @@ The system-owned `occupations` compendium provides eight reusable name-only sour
 
 `pointOfInterest` is a standalone, reusable Item type: the GM-authored **definition** of an investigation Point of Interest. It is not embedded on an Actor and holds no execution state.
 
+POI canvas presentation is transient and GM-only. Region documents own composed geometry and Level eligibility (`viewed`); Items own reusable content. The system-owned canvas renderer uses the public polygon tree for drawing and two-dimensional hit testing, independently of RegionLayer activation or Placeables. Idle presence follows the viewed Level; hover and the resolved Item name are enabled only by `selectPoi`. Level changes reconcile eligible Regions, while ordinary pan/zoom reuses geometry and graphics. Unavailable Items retain their association and display an unavailable label. No reveal/hide or selection persistence is introduced.
+
 Native `name` and `img` are not duplicated in `system`. `PointOfInterestDataModel` stores:
 
 ```text

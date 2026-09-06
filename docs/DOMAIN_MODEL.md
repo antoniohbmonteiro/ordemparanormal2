@@ -90,6 +90,20 @@ information[]
 
 The Point of Interest ItemSheet is a GM authoring tool. Its `_prepareContext` withholds `gmContext` and `information` from the non-GM render context and shows a GM-tool notice instead. This is a **presentation** boundary, not secure transport: POIs stay GM-only-owned in this step, and a client granted Item access can still inspect `item.system`. The future player-facing view must be a separate sanitized projection built by the Investigation Application — never the raw Item. See the "Investigation" section below and `docs/PLAYTEST_FEATURE_NOTES.md` §5.
 
+### Region association
+
+Foundry Regions own canvas geometry, including ordered Shapes and holes. A Region may explicitly reference one reusable POI Item through:
+
+```text
+flags.ordemparanormal2.pointOfInterest = { itemUuid: string }
+```
+
+The UUID comes from a non-embedded world or compendium Item of type `pointOfInterest`. No Item content, image, name or geometry is copied into this flag. Several Regions may reference the same Item. A structurally valid reference remains an association when its Item is unavailable; resolution is separate and opening a sheet never repairs or deletes flags automatically.
+
+GM association editing lives in the native RegionConfig. Choosing, replacing and removing affect a local sheet draft; the native Update Region submit persists the draft alongside the other form fields. Closing discards it. The form uses public `FormDataExtended.set` and `ForcedReplacement`/`ForcedDeletion` operators at this flag key only, preserving sibling flags and namespaces. Rerenders preserve pending drafts; closing also closes the picker and invalidates delayed results. Only canonical persisted Region documents receive the section; palette and preview documents do not.
+
+The POI Scene Controls enable native Rectangle, Ellipse and Polygon drawing through the RegionLayer. Drawing produces ordinary Regions with no automatic association. Existing controlled Regions are released before drawing. An open or rendering RegionConfig blocks drawing with a warning; opening one during drawing returns to `selectPoi`. The other three modes remain passive. There is no creation correlation, custom renderer, investigation execution state or migration in this slice.
+
 ## Attributes
 
 Three attributes are currently stable enough to model under `system.attributes`:

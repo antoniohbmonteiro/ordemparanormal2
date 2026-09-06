@@ -10,6 +10,7 @@ import { registerDataMigrations } from "./bootstrap/register-data-migrations";
 import { registerAgentOccupationCreationHook } from "./bootstrap/register-agent-occupation-creation-hook";
 import { registerNarrativeScenes } from "./bootstrap/register-narrative-scenes";
 import { registerPoiSceneControls } from "./bootstrap/register-poi-scene-controls";
+import { registerPoiRegionConfig } from "./bootstrap/register-poi-region-config";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
@@ -27,6 +28,7 @@ Hooks.once("init", () => {
   registerDebugMode();
   registerNarrativeScenes();
   registerPoiSceneControls();
+  registerPoiRegionConfig();
 
   console.info(`${SYSTEM_ID} | Initializing system v${game.system.version}`);
 });

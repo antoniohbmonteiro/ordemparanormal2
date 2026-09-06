@@ -102,6 +102,7 @@
     "styles/ability-item-sheet.css",
     "styles/point-of-interest-item-sheet.css",
     "styles/poi-scene-controls.css",
+    "styles/poi-region-config.css",
     "styles/equipment-item-sheet.css",
     "styles/single-embedded-item-picker.css",
     "styles/check-dialog.css",

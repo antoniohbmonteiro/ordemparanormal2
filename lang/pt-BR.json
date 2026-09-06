@@ -28,7 +28,35 @@
         "CreateEllipse": "Criar POI elíptico",
         "CreatePolygon": "Criar POI poligonal",
         "AddArea": "Adicionar área ao POI",
-        "CreateHole": "Criar buraco no POI"
+        "CreateHole": "Criar buraco no POI",
+        "CloseRegionConfig": "Feche a configuração da Region antes de desenhar uma nova área.",
+        "DrawingCancelled": "Desenho cancelado para preservar a Region existente.",
+        "ActivationFailed": "Não foi possível iniciar o desenho de Region."
+      },
+      "RegionConfig": {
+        "Title": "Ponto de Interesse",
+        "Choose": "Escolher ou substituir POI",
+        "Remove": "Remover associação",
+        "None": "Nenhum Ponto de Interesse associado.",
+        "Loading": "Carregando associação…",
+        "Invalid": "A associação está em formato inválido. Escolha um POI ou remova a associação.",
+        "Unavailable": "O POI associado está indisponível. Você pode substituí-lo ou remover a associação.",
+        "SaveHint": "Confirme a associação pelo botão nativo Atualizar Region.",
+        "Pending": "Alteração pendente. Use Atualizar Region para salvar; fechar a janela descarta esta alteração."
+      },
+      "Picker": {
+        "Title": "Escolher Ponto de Interesse",
+        "World": "Mundo",
+        "Search": "Buscar por nome ou origem",
+        "Selection": "Pontos de Interesse disponíveis",
+        "Choose": "Usar este POI",
+        "Cancel": "Cancelar",
+        "Retry": "Tentar novamente",
+        "Loading": "Carregando Pontos de Interesse…",
+        "Empty": "Não há Pontos de Interesse disponíveis no mundo ou nos compêndios acessíveis.",
+        "NoMatches": "Nenhum Ponto de Interesse corresponde à busca.",
+        "LoadFailed": "Não foi possível carregar o catálogo de Pontos de Interesse.",
+        "Unavailable": "O POI selecionado não está mais disponível. Atualize a lista e escolha outro."
       }
     },
     "Equipment": {

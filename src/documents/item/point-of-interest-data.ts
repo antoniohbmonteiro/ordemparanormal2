@@ -88,6 +88,34 @@ export function readPointOfInterestInformationList(
   );
 }
 
+/**
+ * Sanitized player-facing projection of a Point of Interest, built GM-side and
+ * sent to authorized players. It carries **only** these fields — never
+ * `gmContext`, `information[].difficulty`, `information[].content`,
+ * `information[].id`, or `showDifficultiesToPlayers`.
+ */
+export interface PoiInvestigationViewData {
+  readonly name: string;
+  /** `publicDescription` already enriched to player-safe HTML. */
+  readonly description: string;
+  /** Localized skill names, deduplicated, in first-occurrence order. */
+  readonly skills: readonly string[];
+}
+
+/**
+ * The distinct skills a Point of Interest references, in the order they first
+ * appear in `information[]`, with structurally invalid entries dropped.
+ */
+export function collectPoiInvestigationSkills(
+  system: unknown,
+): readonly SkillKey[] {
+  const seen = new Set<SkillKey>();
+  for (const info of readPointOfInterestInformationList(system)) {
+    seen.add(info.skill);
+  }
+  return [...seen];
+}
+
 export function assertUniquePointOfInterestInformationIds(
   list: readonly PointOfInterestInformation[],
 ): void {

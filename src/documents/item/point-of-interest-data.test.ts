@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   addPointOfInterestInformation,
   assertUniquePointOfInterestInformationIds,
+  collectPoiInvestigationSkills,
   isPointOfInterestInformation,
   readPointOfInterestInformationList,
   removePointOfInterestInformation,
@@ -83,6 +84,27 @@ describe("readPointOfInterestInformationList", () => {
     expect(readPointOfInterestInformationList(null)).toEqual([]);
     expect(readPointOfInterestInformationList("nope")).toEqual([]);
     expect(readPointOfInterestInformationList({ information: {} })).toEqual([]);
+  });
+});
+
+describe("collectPoiInvestigationSkills", () => {
+  it("deduplicates skills in first-occurrence order and drops invalid entries", () => {
+    const information = [
+      { id: "1", skill: "perception", difficulty: 6, content: "" },
+      { id: "2", skill: "technology", difficulty: 2, content: "" },
+      { id: "3", skill: "perception", difficulty: 9, content: "" },
+      { id: "4", skill: "notASkill", difficulty: 1, content: "" },
+      { id: "5", skill: "crime", difficulty: 1, content: "" },
+    ];
+    expect(collectPoiInvestigationSkills({ information })).toEqual([
+      "perception", "technology", "crime",
+    ]);
+  });
+
+  it("returns nothing for empty or malformed system data", () => {
+    expect(collectPoiInvestigationSkills({})).toEqual([]);
+    expect(collectPoiInvestigationSkills(null)).toEqual([]);
+    expect(collectPoiInvestigationSkills({ information: [] })).toEqual([]);
   });
 });
 

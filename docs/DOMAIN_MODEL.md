@@ -307,7 +307,17 @@ The early Agent model may expose resources and checks that are also useful durin
 
 Investigation is an important future feature, but it should be built on top of the Agent/check foundation rather than embedded into the Agent schema prematurely.
 
-The reusable **Point of Interest Item** (`pointOfInterest`, see above) is the first piece: GM-authored content definition only. The Investigation Application, the Examinar/Investigar/Interagir/Recapitular/Compartilhar flows, information revelation, PD consequences, and the sanitized player projection are still future work.
+The reusable **Point of Interest Item** (`pointOfInterest`, see above) is the first piece: GM-authored content definition only. The Examinar/Investigar/Interagir/Recapitular/Compartilhar flows, information revelation, PD consequences and checks are still future work.
+
+### Investigation Application (base)
+
+A left-click on a POI, **only while Investigation Mode is ON**, opens a minimal `ApplicationV2` — the base of the future Investigation Application. It is opened from the **placement**, so its identity is `sceneId + regionId` (one instance per placement; a second open just focuses the existing window). Future per-placement investigation execution state belongs here, not on the Item.
+
+The click is a pure gesture observer on the canvas view: `pointerdown`/`pointerup` within `CLICK_SLOP` px, over the same POI (reusing the existing PolygonTree hit-test and overlap priority), left button only. It never calls `preventDefault`/`stopPropagation`, so native Token selection and drag are untouched and a drag never opens the window. **A Token keeps priority over the POI**: if a visible Token sits under the gesture start or end (checked with public API only — `canvas.canvasCoordinatesFromClient`, `canvas.tokens.placeables`, `token.visible`, `token.bounds`), the click is left to the Token and the window does not open. GM and player both get the click; the reveal context menu stays GM-only.
+
+The screen shows **only** `name`, `publicDescription` (enriched, `secrets: false`) and the distinct skills of `information[]` (deduplicated, first-occurrence order, localized labels). Never `gmContext`, `difficulty`/DT, `information[].content`, `information[].id`, `showDifficultiesToPlayers`, discovered state, or actions.
+
+**Security — the projection.** The player client never resolves the Item. The sanitized `PoiInvestigationViewData` is built GM-side and delivered via the public v14 query API: the player calls `game.users.activeGM.query("ordemparanormal2.poiInvestigation", { sceneId, regionId })`; the handler receives `(data, { user })` where `user` is the **server-authoritative** requesting User (Foundry 14.367 `Users.#handleUserQuery` resolves it from the socket, not from the payload), re-checks `isPoiRevealedTo(reveal, user.id, false)` **before** touching the Item, and returns only the three whitelisted fields. A GM resolves locally without a query. No GM online → the window shows an error; nothing breaks. The reveal re-check here is a real authorization boundary, not merely UX.
 
 Potential investigation **execution** state (which information a given investigation has revealed, per Actor/scene) should be evaluated separately as scene/region/application state when that feature is planned. It must reference `information[].id`, and it must not live on the POI Item.
 

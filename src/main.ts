@@ -12,6 +12,7 @@ import { registerNarrativeScenes } from "./bootstrap/register-narrative-scenes";
 import { registerPoiSceneControls } from "./bootstrap/register-poi-scene-controls";
 import { registerPoiRegionConfig } from "./bootstrap/register-poi-region-config";
 import { registerPoiCanvas } from "./bootstrap/register-poi-canvas";
+import { registerPoiInvestigation } from "./bootstrap/register-poi-investigation";
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
 import { SYSTEM_ID } from "./config/system-config";
 
@@ -33,6 +34,7 @@ Hooks.once("init", () => {
   registerInvestigationMode();
   registerPoiRegionConfig();
   registerPoiCanvas();
+  registerPoiInvestigation();
 
   console.info(`${SYSTEM_ID} | Initializing system v${game.system.version}`);
 });

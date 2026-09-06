@@ -1,0 +1,133 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolvePoiInvestigationView } from "./resolve-poi-investigation-view";
+
+const fromUuid = vi.fn();
+// Mirrors Foundry: empty/blank content enriches to an empty string.
+const enrichHTML = vi.fn(async (html: string) => (html ? `enriched:${html}` : ""));
+
+function region(flags: { association?: unknown; reveal?: unknown }) {
+  return {
+    getFlag: vi.fn((_scope: string, key: string) =>
+      key === "pointOfInterestReveal" ? flags.reveal : flags.association),
+  };
+}
+
+function stubWorld(sceneRegion: unknown, users: Record<string, { isGM: boolean }> = {}) {
+  vi.stubGlobal("game", {
+    i18n: { localize: (key: string) => key },
+    scenes: { get: () => (sceneRegion === "no-scene" ? undefined : { regions: { get: () => sceneRegion } }) },
+    users: { get: (id: string) => users[id] },
+  });
+}
+
+const REVEALED = { association: { itemUuid: "Item.poi" }, reveal: { mode: "everyone" } };
+const PLAYER = "p1";
+const req = (requesterUserId = PLAYER) => ({ sceneId: "s", regionId: "r", requesterUserId });
+
+beforeEach(() => {
+  fromUuid.mockReset().mockResolvedValue({
+    type: "pointOfInterest",
+    name: "Armário Azul",
+    system: {
+      publicDescription: "<p>Um armário metálico.</p>",
+      gmContext: "SEGREDO DO MESTRE",
+      showDifficultiesToPlayers: true,
+      information: [
+        { id: "1", skill: "perception", difficulty: 6, content: "PISTA SECRETA" },
+        { id: "2", skill: "technology", difficulty: 2, content: "OUTRA PISTA" },
+        { id: "3", skill: "perception", difficulty: 9, content: "MAIS" },
+      ],
+    },
+  });
+  enrichHTML.mockClear();
+  vi.stubGlobal("fromUuid", fromUuid);
+  vi.stubGlobal("foundry", {
+    applications: { ux: { TextEditor: { implementation: { enrichHTML } } } },
+  });
+});
+afterEach(() => vi.unstubAllGlobals());
+
+describe("resolvePoiInvestigationView", () => {
+  it("is unavailable with no Scene, no Region, no association, or a wrong Item type", async () => {
+    stubWorld("no-scene");
+    expect(await resolvePoiInvestigationView(req())).toEqual({ error: "unavailable" });
+
+    stubWorld(null);
+    expect(await resolvePoiInvestigationView(req())).toEqual({ error: "unavailable" });
+
+    stubWorld(region({ association: undefined }));
+    expect(await resolvePoiInvestigationView(req())).toEqual({ error: "unavailable" });
+
+    stubWorld(region(REVEALED));
+    fromUuid.mockResolvedValue({ type: "weapon" });
+    expect(await resolvePoiInvestigationView(req())).toEqual({ error: "unavailable" });
+  });
+
+  it("forbids a non-GM the POI is not revealed to, before resolving the Item", async () => {
+    stubWorld(region({ association: { itemUuid: "Item.poi" }, reveal: { mode: "hidden" } }));
+    expect(await resolvePoiInvestigationView(req())).toEqual({ error: "forbidden" });
+
+    stubWorld(region({ association: { itemUuid: "Item.poi" }, reveal: { mode: "users", users: ["p2"] } }));
+    expect(await resolvePoiInvestigationView(req())).toEqual({ error: "forbidden" });
+
+    expect(fromUuid).not.toHaveBeenCalled();
+  });
+
+  it("builds the projection for a revealed player and for a GM regardless of reveal", async () => {
+    stubWorld(region(REVEALED));
+    expect(await resolvePoiInvestigationView(req())).toEqual({
+      view: {
+        name: "Armário Azul",
+        description: "enriched:<p>Um armário metálico.</p>",
+        skills: ["Percepção", "Tecnologia"],
+      },
+    });
+
+    stubWorld(region({ association: { itemUuid: "Item.poi" }, reveal: { mode: "hidden" } }), { gm1: { isGM: true } });
+    const asGm = await resolvePoiInvestigationView(req("gm1"));
+    expect("view" in asGm && asGm.view.skills).toEqual(["Percepção", "Tecnologia"]);
+  });
+
+  it("never leaks gmContext, difficulty, content or ids into the projection", async () => {
+    stubWorld(region(REVEALED));
+    const result = await resolvePoiInvestigationView(req());
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("SEGREDO DO MESTRE");
+    expect(serialized).not.toContain("PISTA SECRETA");
+    expect(serialized).not.toContain("difficulty");
+    expect("view" in result && Object.keys(result.view).sort()).toEqual(["description", "name", "skills"]);
+  });
+
+  it("enriches the description with secrets disabled", async () => {
+    stubWorld(region(REVEALED));
+    await resolvePoiInvestigationView(req());
+    expect(enrichHTML).toHaveBeenCalledWith(
+      "<p>Um armário metálico.</p>",
+      expect.objectContaining({ secrets: false }),
+    );
+  });
+
+  it("returns a non-empty description when publicDescription is set", async () => {
+    fromUuid.mockResolvedValue({
+      type: "pointOfInterest",
+      name: "Armário Azul",
+      system: { publicDescription: "Descrição de teste", information: [] },
+    });
+    stubWorld(region(REVEALED));
+    const result = await resolvePoiInvestigationView(req());
+    expect("view" in result && result.view.description).toBe("enriched:Descrição de teste");
+  });
+
+  it("returns an empty description when publicDescription is blank (no domain fix)", async () => {
+    fromUuid.mockResolvedValue({
+      type: "pointOfInterest",
+      name: "Armário Azul",
+      system: { publicDescription: "", information: [{ id: "1", skill: "perception", difficulty: 1, content: "" }] },
+    });
+    stubWorld(region(REVEALED));
+    const result = await resolvePoiInvestigationView(req());
+    expect("view" in result && result.view).toEqual({
+      name: "Armário Azul", description: "", skills: ["Percepção"],
+    });
+  });
+});

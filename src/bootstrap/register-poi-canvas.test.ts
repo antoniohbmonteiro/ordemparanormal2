@@ -3,6 +3,8 @@ import { createPoiCanvasSession } from "../adapters/foundry/points-of-interest/p
 import { registerPoiCanvas } from "./register-poi-canvas";
 
 vi.mock("../adapters/foundry/points-of-interest/poi-canvas-session", () => ({ createPoiCanvasSession: vi.fn() }));
+vi.mock("../applications/points-of-interest/investigation-application", () => ({ openInvestigationApplication: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/poi-actions-menu", () => ({ openPoiActionsMenu: vi.fn() }));
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 function register() {
@@ -45,15 +47,36 @@ describe("POI canvas lifecycle registration", () => {
     expect(createPoiCanvasSession).toHaveBeenCalledTimes(3);
   });
 
-  it("starts a session for a non-GM but never wires the canvas context menu", () => {
+  it("wires the left-click listener for a non-GM but not the GM-only context menu", () => {
     const { hooks, user } = register();
     user.isGM = false;
-    const view = { addEventListener: vi.fn(), removeEventListener: vi.fn() };
-    vi.stubGlobal("canvas", { ready: true, app: { view } });
+    const events: string[] = [];
+    const view = {
+      addEventListener: vi.fn((type: string) => events.push(type)),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("canvas", { ready: true, app: { view }, scene: { id: "scene1" } });
     registerPoiCanvas();
     hooks.get("canvasReady")!();
     expect(createPoiCanvasSession).toHaveBeenCalledOnce();
     expect(vi.mocked(createPoiCanvasSession).mock.calls[0][0]).toMatchObject({ userId: "u1" });
-    expect(view.addEventListener).not.toHaveBeenCalled();
+    expect(events).toContain("pointerdown");
+    expect(events).toContain("pointerup");
+    expect(events).not.toContain("contextmenu");
+
+    // stop() aborts the click listener
+    hooks.get("canvasTearDown")!();
+    // the click controller's AbortController fires 'abort'; no explicit removeEventListener assertions needed
+  });
+
+  it("wires the context menu as well for a GM", () => {
+    const { hooks } = register();
+    const events: string[] = [];
+    const view = { addEventListener: vi.fn((type: string) => events.push(type)), removeEventListener: vi.fn() };
+    vi.stubGlobal("canvas", { ready: true, app: { view }, scene: { id: "scene1" } });
+    registerPoiCanvas();
+    hooks.get("canvasReady")!();
+    expect(events).toContain("pointerdown");
+    expect(events).toContain("contextmenu");
   });
 });

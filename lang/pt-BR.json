@@ -80,6 +80,13 @@
         },
         "Unavailable": "O Ponto de Interesse associado está indisponível.",
         "Failed": "Não foi possível atualizar a visibilidade do Ponto de Interesse."
+      },
+      "Investigation": {
+        "Title": "Investigação",
+        "SkillsHeading": "Perícias",
+        "Loading": "Carregando…",
+        "Error": "Não foi possível carregar este Ponto de Interesse.",
+        "NoGm": "Nenhum Mestre disponível."
       }
     },
     "Equipment": {

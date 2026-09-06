@@ -148,6 +148,15 @@ export function isSkillKey(value: unknown): value is SkillKey {
   );
 }
 
+const SKILL_LABELS = new Map<SkillKey, string>(
+  SKILL_DEFINITIONS.map((definition) => [definition.key, definition.label]),
+);
+
+/** The player-facing (already localized) name of a skill. */
+export function skillLabel(key: SkillKey): string {
+  return SKILL_LABELS.get(key) ?? key;
+}
+
 type AptitudeDefinition = Extract<
   RegisteredSkillDefinition,
   { readonly key: "aptitude" }

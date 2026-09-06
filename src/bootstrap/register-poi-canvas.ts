@@ -4,13 +4,18 @@ import { investigationMode } from "../adapters/foundry/points-of-interest/invest
 import { isPoiSelectionActive } from "../adapters/foundry/points-of-interest/poi-control-state";
 import { listenPoiSceneContextMenu } from "../adapters/foundry/points-of-interest/poi-scene-context-menu";
 import { openPoiActionsMenu } from "../adapters/foundry/points-of-interest/poi-actions-menu";
+import { listenPoiSceneClick } from "../adapters/foundry/points-of-interest/poi-scene-click";
+import { isTokenInteractionAt } from "../adapters/foundry/points-of-interest/poi-token-blocking";
+import { openInvestigationApplication } from "../applications/points-of-interest/investigation-application";
 
 export function registerPoiCanvas(): void {
   let session: PoiCanvasSession | null = null;
   let stopContextMenu: (() => void) | null = null;
+  let stopClick: (() => void) | null = null;
   let startedAsGM = false;
   const stop = () => {
     stopContextMenu?.(); stopContextMenu = null;
+    stopClick?.(); stopClick = null;
     session?.destroy(); session = null;
   };
   const start = () => {
@@ -25,16 +30,30 @@ export function registerPoiCanvas(): void {
       userId: game.user?.id ?? "",
       isGM: () => !!game.user?.isGM, localize: key => game.i18n.localize(key),
     });
-    // Reveal management from the canvas is GM-only; players have no selectPoi tool.
     const view = (env.canvas.app as unknown as { view?: EventTarget } | undefined)?.view;
-    if (session && view && game.user?.isGM) {
+    if (session && view) {
       const canvasSession = session;
-      stopContextMenu = listenPoiSceneContextMenu({
+      // Left-click a POI (both roles) → open the Investigation Application.
+      stopClick = listenPoiSceneClick({
         view,
-        isActionable: isPoiSelectionActive,
+        isModeOn: () => investigationMode.get(),
         targetAt: point => canvasSession.poiActionTargetAt(point),
-        open: (target, position) => openPoiActionsMenu(target, position),
+        isBlockedAt: isTokenInteractionAt,
+        open: target => openInvestigationApplication({
+          sceneId: env.canvas?.scene?.id ?? "",
+          regionId: target.regionId,
+          name: target.name,
+        }),
       });
+      // Reveal management from the canvas is GM-only; players have no selectPoi tool.
+      if (game.user?.isGM) {
+        stopContextMenu = listenPoiSceneContextMenu({
+          view,
+          isActionable: isPoiSelectionActive,
+          targetAt: point => canvasSession.poiActionTargetAt(point),
+          open: (target, position) => openPoiActionsMenu(target, position),
+        });
+      }
     }
   };
   Hooks.on("canvasReady", start);

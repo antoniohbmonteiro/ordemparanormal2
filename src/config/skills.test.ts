@@ -7,6 +7,7 @@ import {
   SKILL_DEFINITIONS,
   SKILL_DIE_STEPS,
   SKILL_KEYS,
+  skillLabel,
 } from "./skills";
 
 const EXPECTED_SKILLS = [
@@ -88,6 +89,13 @@ describe("skill registry", () => {
     expect(SKILL_KEYS).toEqual(SKILL_DEFINITIONS.map(({ key }) => key));
     expect(SKILL_KEYS).toHaveLength(20);
     expect(new Set(SKILL_KEYS)).toHaveLength(20);
+  });
+
+  it("maps every skill key to its registered localized label", () => {
+    for (const { key, label } of SKILL_DEFINITIONS) {
+      expect(skillLabel(key)).toBe(label);
+    }
+    expect(skillLabel("perception")).toBe("Percepção");
   });
 
   it("recognizes only canonical skill keys", () => {

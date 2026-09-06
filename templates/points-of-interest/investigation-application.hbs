@@ -1,0 +1,16 @@
+<section class="op2-poi-investigation" role="document">
+  <h2 class="op2-poi-investigation__name">{{name}}</h2>
+  {{#if isReady}}
+  {{#if description}}
+  <div class="op2-poi-investigation__description">{{{description}}}</div>
+  {{/if}}
+  <h3 class="op2-poi-investigation__skills-heading">
+    {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}
+  </h3>
+  <ul class="op2-poi-investigation__skills">
+    {{#each skills}}<li>{{this}}</li>{{/each}}
+  </ul>
+  {{else}}
+  <p class="op2-poi-investigation__status" role="status">{{message}}</p>
+  {{/if}}
+</section>

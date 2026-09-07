@@ -4,7 +4,10 @@ import type {
 } from "@client/applications/_types.mjs";
 import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 
-import type { PoiInvestigationSkillView } from "../../documents/item/point-of-interest-data";
+import type {
+  PoiInvestigationGmSkillView,
+  PoiInvestigationPlayerSkillView,
+} from "../../documents/item/point-of-interest-data";
 import { SYSTEM_ID } from "../../config/system-config";
 import {
   requestPoiInvestigationView,
@@ -28,15 +31,62 @@ export function investigationApplicationKey(sceneId: string, regionId: string): 
   return `${sceneId}.${regionId}`;
 }
 
-export interface InvestigationRenderContext extends ApplicationRenderContext {
+interface InvestigationRenderContextBase extends ApplicationRenderContext {
   readonly actionHintId?: string;
-  readonly isReady: boolean;
   readonly name: string;
   readonly description: string;
   readonly img: string;
-  readonly skills: readonly (PoiInvestigationSkillView & { readonly examineLabel: string })[];
   readonly message: string;
 }
+
+export interface PlayerInvestigationInformationRow {
+  readonly isFirst: boolean;
+  readonly isHidden: boolean;
+  readonly difficulty?: number;
+}
+
+export interface PlayerInvestigationSkillViewModel {
+  readonly key: PoiInvestigationPlayerSkillView["key"];
+  readonly name: string;
+  readonly examineLabel: string;
+  readonly informationCount: number;
+  readonly information: readonly PlayerInvestigationInformationRow[];
+}
+
+export interface GmInvestigationInformationRow {
+  readonly isFirst: boolean;
+  readonly difficulty: number;
+  readonly content: string;
+  readonly revealLabel: string;
+}
+
+export interface GmInvestigationSkillViewModel {
+  readonly key: PoiInvestigationGmSkillView["key"];
+  readonly name: string;
+  readonly informationCount: number;
+  readonly information: readonly GmInvestigationInformationRow[];
+}
+
+export type InvestigationRenderContext =
+  | (InvestigationRenderContextBase & {
+      readonly isReady: false;
+      readonly isPlayer: false;
+      readonly isGm: false;
+      readonly skills: readonly [];
+    })
+  | (InvestigationRenderContextBase & {
+      readonly isReady: true;
+      readonly isPlayer: true;
+      readonly isGm: false;
+      readonly skills: readonly PlayerInvestigationSkillViewModel[];
+    })
+  | (InvestigationRenderContextBase & {
+      readonly isReady: true;
+      readonly isPlayer: false;
+      readonly isGm: true;
+      readonly skills: readonly GmInvestigationSkillViewModel[];
+      readonly gmContext: string;
+    });
 
 /**
  * Pure view-model for the Application. `result === null` means still loading.
@@ -47,20 +97,55 @@ export function buildInvestigationRenderContext(
   localize: (key: string) => string,
 ): InvestigationRenderContext {
   if (!result) {
-    return { isReady: false, name, description: "", img: "", skills: [], message: localize("Loading") };
+    return { isReady: false, isPlayer: false, isGm: false, name, description: "", img: "", skills: [], message: localize("Loading") };
   }
   if ("view" in result) {
-    return {
-      isReady: true,
+    const base = {
+      isReady: true as const,
       name: result.view.name || name,
       description: result.view.description,
       img: result.view.img,
-      skills: result.view.skills.map(skill => ({ ...skill, examineLabel: `${localize("ExamineWith")} ${skill.name}` })),
       message: "",
+    };
+    if (result.view.audience === "gm") {
+      return {
+        ...base,
+        isPlayer: false,
+        isGm: true,
+        gmContext: result.view.gmContext,
+        skills: result.view.skills.map((skill) => ({
+          key: skill.key,
+          name: skill.name,
+          informationCount: skill.information.length,
+          information: skill.information.map((entry, index) => ({
+            ...entry,
+            isFirst: index === 0,
+            revealLabel: `${localize("Reveal")} — ${skill.name}`,
+          })),
+        })),
+      };
+    }
+    return {
+      ...base,
+      isPlayer: true,
+      isGm: false,
+      skills: result.view.skills.map((skill) => ({
+        key: skill.key,
+        name: skill.name,
+        examineLabel: `${localize("ExamineWith")} ${skill.name}`,
+        informationCount: skill.information.length,
+        information: skill.information.map((entry, index) => ({
+          isFirst: index === 0,
+          isHidden: entry.visibility === "hidden",
+          ...(entry.visibility === "public" ? { difficulty: entry.difficulty } : {}),
+        })),
+      })),
     };
   }
   return {
     isReady: false,
+    isPlayer: false,
+    isGm: false,
     name,
     description: "",
     img: "",
@@ -82,7 +167,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-poi-investigation"],
     window: { title: `${LOCALIZATION_ROOT}.Title`, resizable: true, contentClasses: ["op2-investigation-content"] },
-    position: { width: 820, height: 620 },
+    position: { width: 820, height: "auto" as const },
   };
 
   static override PARTS: Record<string, HandlebarsTemplatePart> = {

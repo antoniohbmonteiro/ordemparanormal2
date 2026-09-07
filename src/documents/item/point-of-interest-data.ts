@@ -100,20 +100,55 @@ export function readPointOfInterestSkills(system: unknown): readonly PointOfInte
   return result;
 }
 
-export interface PoiInvestigationSkillView {
+export type PoiInvestigationPlayerInformationView =
+  | {
+      readonly visibility: "public";
+      readonly difficulty: number;
+    }
+  | {
+      readonly visibility: "hidden";
+    };
+
+export interface PoiInvestigationPlayerSkillView {
   readonly key: SkillKey;
   readonly name: string;
-  readonly difficulties: readonly number[];
-  readonly hasHiddenDifficulties: boolean;
+  readonly information: readonly PoiInvestigationPlayerInformationView[];
 }
 
-/** Whitelisted GM-built presentation, never the Item or information entries. */
-export interface PoiInvestigationViewData {
+export interface PoiInvestigationGmInformationView {
+  readonly difficulty: number;
+  readonly content: string;
+}
+
+export interface PoiInvestigationGmSkillView {
+  readonly key: SkillKey;
+  readonly name: string;
+  readonly information: readonly PoiInvestigationGmInformationView[];
+}
+
+interface PoiInvestigationBaseViewData {
   readonly name: string;
   readonly description: string;
   readonly img: string;
-  readonly skills: readonly PoiInvestigationSkillView[];
 }
+
+/** Whitelisted player presentation; array length intentionally exposes clue count. */
+export interface PoiInvestigationPlayerViewData
+  extends PoiInvestigationBaseViewData {
+  readonly audience: "player";
+  readonly skills: readonly PoiInvestigationPlayerSkillView[];
+}
+
+/** Full local-GM presentation; never returned to a non-GM requester. */
+export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
+  readonly audience: "gm";
+  readonly skills: readonly PoiInvestigationGmSkillView[];
+  readonly gmContext: string;
+}
+
+export type PoiInvestigationViewData =
+  | PoiInvestigationPlayerViewData
+  | PoiInvestigationGmViewData;
 
 export function sortPointOfInterestSkills(
   skills: readonly PointOfInterestSkill[],

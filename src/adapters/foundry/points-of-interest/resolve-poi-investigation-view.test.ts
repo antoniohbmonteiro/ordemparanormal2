@@ -81,16 +81,40 @@ describe("resolvePoiInvestigationView", () => {
     stubWorld(region(REVEALED));
     expect(await resolvePoiInvestigationView(req())).toEqual({
       view: {
+        audience: "player",
         name: "Armário Azul",
         description: "enriched:<p>Um armário metálico.</p>",
         img: "icons/svg/eye.svg",
-        skills: [{ key: "perception", name: "Percepção", difficulties: [6], hasHiddenDifficulties: true }, { key: "technology", name: "Tecnologia", difficulties: [], hasHiddenDifficulties: true }],
+        skills: [
+          { key: "perception", name: "Percepção", information: [
+            { visibility: "public", difficulty: 6 },
+            { visibility: "hidden" },
+          ] },
+          { key: "technology", name: "Tecnologia", information: [
+            { visibility: "hidden" },
+          ] },
+        ],
       },
     });
 
     stubWorld(region({ association: { itemUuid: "Item.poi" }, reveal: { mode: "hidden" } }), { gm1: { isGM: true } });
     const asGm = await resolvePoiInvestigationView(req("gm1"));
-    expect("view" in asGm && asGm.view.skills.map(s => s.name)).toEqual(["Percepção", "Tecnologia"]);
+    expect(asGm).toEqual({ view: {
+      audience: "gm",
+      name: "Armário Azul",
+      description: "enriched:<p>Um armário metálico.</p>",
+      img: "icons/svg/eye.svg",
+      gmContext: "enriched:SEGREDO DO MESTRE",
+      skills: [
+        { key: "perception", name: "Percepção", information: [
+          { difficulty: 6, content: "PISTA SECRETA" },
+          { difficulty: 9, content: "MAIS" },
+        ] },
+        { key: "technology", name: "Tecnologia", information: [
+          { difficulty: 2, content: "OUTRA PISTA" },
+        ] },
+      ],
+    } });
   });
 
   it("never leaks gmContext, information content or ids, or the raw Item", async () => {
@@ -101,7 +125,7 @@ describe("resolvePoiInvestigationView", () => {
     expect(serialized).not.toContain("PISTA SECRETA");
     expect(serialized).not.toContain('"id"');
     expect(serialized).not.toContain('"system"');
-    expect("view" in result && Object.keys(result.view).sort()).toEqual(["description", "img", "name", "skills"]);
+    expect("view" in result && Object.keys(result.view).sort()).toEqual(["audience", "description", "img", "name", "skills"]);
   });
 
   it("enriches the description with secrets disabled", async () => {
@@ -110,6 +134,23 @@ describe("resolvePoiInvestigationView", () => {
     expect(enrichHTML).toHaveBeenCalledWith(
       "<p>Um armário metálico.</p>",
       expect.objectContaining({ secrets: false }),
+    );
+  });
+
+  it("enriches gmContext only for a GM, with secrets enabled", async () => {
+    stubWorld(region(REVEALED), { gm1: { isGM: true } });
+    await resolvePoiInvestigationView(req("gm1"));
+    expect(enrichHTML).toHaveBeenCalledWith(
+      "SEGREDO DO MESTRE",
+      expect.objectContaining({ secrets: true }),
+    );
+
+    enrichHTML.mockClear();
+    stubWorld(region(REVEALED));
+    await resolvePoiInvestigationView(req());
+    expect(enrichHTML).not.toHaveBeenCalledWith(
+      "SEGREDO DO MESTRE",
+      expect.anything(),
     );
   });
 
@@ -133,7 +174,7 @@ describe("resolvePoiInvestigationView", () => {
     stubWorld(region(REVEALED));
     const result = await resolvePoiInvestigationView(req());
     expect("view" in result && result.view).toEqual({
-      name: "Armário Azul", description: "", img: "", skills: [],
+      audience: "player", name: "Armário Azul", description: "", img: "", skills: [],
     });
   });
 });
@@ -151,7 +192,7 @@ it.each(["revoke", "reassociate", "delete"])("rechecks placement after asynchron
 });
 
 
-it("projects one canonical row per group with public DTs and one hidden indicator", async () => {
+it("projects one sanitized row per information in canonical skill order without aggregation", async () => {
   stubWorld(region(REVEALED));
   fromUuid.mockResolvedValue({ type: "pointOfInterest", name: "POI", system: {
     skills: [
@@ -170,8 +211,16 @@ it("projects one canonical row per group with public DTs and one hidden indicato
   const result = await resolvePoiInvestigationView(req());
   const serialized = JSON.stringify(result);
   expect("view" in result && result.view.skills).toEqual([
-    { key: "occultism", name: "Ocultismo", difficulties: [1], hasHiddenDifficulties: false },
-    { key: "perception", name: "Percepção", difficulties: [6, 8], hasHiddenDifficulties: true },
+    { key: "occultism", name: "Ocultismo", information: [
+      { visibility: "public", difficulty: 1 },
+    ] },
+    { key: "perception", name: "Percepção", information: [
+      { visibility: "public", difficulty: 8 },
+      { visibility: "public", difficulty: 6 },
+      { visibility: "public", difficulty: 8 },
+      { visibility: "hidden" },
+      { visibility: "hidden" },
+    ] },
   ]);
   expect(serialized).not.toContain("99");
   expect(serialized).not.toContain("100");

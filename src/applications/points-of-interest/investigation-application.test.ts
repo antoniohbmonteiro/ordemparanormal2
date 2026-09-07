@@ -26,7 +26,22 @@ const {
   releaseInvestigationApplication,
 } = await import("./investigation-application");
 
-const skills = [{ key: "perception" as const, name: "Percepção", difficulties: [6], hasHiddenDifficulties: true }];
+const playerSkills = [{
+  key: "perception" as const,
+  name: "Percepção",
+  information: [
+    { visibility: "public" as const, difficulty: 6 },
+    { visibility: "hidden" as const },
+  ],
+}];
+const gmSkills = [{
+  key: "perception" as const,
+  name: "Percepção",
+  information: [
+    { difficulty: 6, content: "Pista A" },
+    { difficulty: 8, content: "Pista B" },
+  ],
+}];
 const localize = (key: string) => key;
 
 afterEach(() => vi.clearAllMocks());
@@ -34,19 +49,65 @@ afterEach(() => vi.clearAllMocks());
 describe("buildInvestigationRenderContext", () => {
   it("is a loading state until a result arrives", () => {
     expect(buildInvestigationRenderContext("Sala", null, localize)).toEqual({
-      isReady: false, name: "Sala", description: "", img: "", skills: [], message: "Loading",
+      isReady: false, isPlayer: false, isGm: false, name: "Sala", description: "", img: "", skills: [], message: "Loading",
     });
   });
 
   it("renders name, description and skills when ready", () => {
-    const result = { view: { name: "Armário Azul", description: "<p>x</p>", img: "icons/svg/eye.svg", skills } };
+    const result = { view: { audience: "player" as const, name: "Armário Azul", description: "<p>x</p>", img: "icons/svg/eye.svg", skills: playerSkills } };
     expect(buildInvestigationRenderContext("fallback", result, localize)).toEqual({
-      isReady: true, name: "Armário Azul", description: "<p>x</p>", img: "icons/svg/eye.svg", skills: skills.map(s => ({ ...s, examineLabel: "ExamineWith Percepção" })), message: "",
+      isReady: true,
+      isPlayer: true,
+      isGm: false,
+      name: "Armário Azul",
+      description: "<p>x</p>",
+      img: "icons/svg/eye.svg",
+      skills: [{
+        key: "perception",
+        name: "Percepção",
+        examineLabel: "ExamineWith Percepção",
+        informationCount: 2,
+        information: [
+          { isFirst: true, isHidden: false, difficulty: 6 },
+          { isFirst: false, isHidden: true },
+        ],
+      }],
+      message: "",
+    });
+  });
+
+  it("builds a complete GM context without player-only controls", () => {
+    const result = { view: {
+      audience: "gm" as const,
+      name: "Armário Azul",
+      description: "<p>x</p>",
+      img: "icons/svg/eye.svg",
+      gmContext: "<p>Segredo</p>",
+      skills: gmSkills,
+    } };
+    expect(buildInvestigationRenderContext("fallback", result, localize)).toEqual({
+      isReady: true,
+      isPlayer: false,
+      isGm: true,
+      name: "Armário Azul",
+      description: "<p>x</p>",
+      img: "icons/svg/eye.svg",
+      gmContext: "<p>Segredo</p>",
+      skills: [{
+        key: "perception",
+        name: "Percepção",
+        informationCount: 2,
+        information: [
+          { isFirst: true, difficulty: 6, content: "Pista A", revealLabel: "Reveal — Percepção" },
+          { isFirst: false, difficulty: 8, content: "Pista B", revealLabel: "Reveal — Percepção" },
+        ],
+      }],
+      message: "",
     });
   });
 
   it("hands a non-empty description straight through to the context", () => {
-    const result = { view: { name: "Armário Azul", description: "<p>Descrição de teste</p>", img: "", skills } };
+    const result = { view: { audience: "player" as const, name: "Armário Azul", description: "<p>Descrição de teste</p>", img: "", skills: playerSkills } };
     expect(buildInvestigationRenderContext("Armário Azul", result, localize).description)
       .toBe("<p>Descrição de teste</p>");
   });
@@ -88,10 +149,12 @@ describe("openInvestigationApplication", () => {
 describe("investigation-application source and template", () => {
   let source = "";
   let template = "";
+  let stylesheet = "";
   beforeAll(async () => {
-    [source, template] = await Promise.all([
+    [source, template, stylesheet] = await Promise.all([
       readFile(fileURLToPath(new URL("./investigation-application.ts", import.meta.url)), "utf8"),
       readFile(fileURLToPath(new URL("../../../templates/points-of-interest/investigation-application.hbs", import.meta.url)), "utf8"),
+      readFile(fileURLToPath(new URL("../../../styles/investigation-application.css", import.meta.url)), "utf8"),
     ]);
   });
 
@@ -111,16 +174,33 @@ describe("investigation-application source and template", () => {
     expect(source).toMatch(/async #load\(\)[\s\S]*?catch \(error\)[\s\S]*?error: "unavailable"/);
   });
 
-  it("keeps the investigation table neutral and exposes no private content", () => {
+  it("uses a four-column grouped grid with role-specific controls", () => {
     expect(template).toContain("{{name}}");
     expect(template).toContain("{{{description}}}");
     expect(template).toContain("{{#each skills}}");
-    expect(template).toContain("{{#each difficulties}}");
-    expect(template).toContain("{{#if hasHiddenDifficulties}}");
+    expect(template).toContain("{{#each information}}");
+    expect(template).toContain("{{#if isHidden}}");
+    expect(template).toContain("{{#if @root.isGm}}");
+    expect(template).toContain("op2-investigation-reveal");
+    expect(template).toContain("op2-investigation-examine");
+    expect(template).toContain("op2-investigation-gm-context");
     expect(template).toMatch(/role="status"/);
-    expect(template).not.toMatch(/gmContext|information\.content|<details|chevron|data-action/i);
+    expect(template).not.toMatch(/<details|chevron|data-action/i);
     expect(template).toContain("disabled");
     expect(template).toContain("aria-describedby");
+    expect((template.match(/role="columnheader"/g) ?? [])).toHaveLength(4);
+    expect(template).toContain("PointOfInterest.Investigation.Action");
+    expect(stylesheet).toContain("--op2-investigation-action-column");
+    expect(stylesheet).toMatch(/grid-template-columns:[\s\S]*?skill-column[\s\S]*?action-column[\s\S]*?difficulty-column[\s\S]*?minmax\(0, 1fr\)/);
+    expect(stylesheet).toContain("grid-row: span var(--op2-information-count)");
+    expect(stylesheet).toMatch(/op2-investigation-skill-cell[\s\S]*?align-items: center;[\s\S]*?text-align: center;/);
+  });
+
+  it("opens at natural height with one viewport-limited scroll region", () => {
+    expect(source).toContain('position: { width: 820, height: "auto" as const }');
+    expect(stylesheet).toContain("max-height: calc(100dvh - 24px)");
+    expect(stylesheet).toContain(".op2-investigation-body");
+    expect((stylesheet.match(/overflow-y: auto/g) ?? [])).toHaveLength(1);
   });
 
   it("renders the description as HTML between the name and the skills section", () => {
@@ -132,20 +212,63 @@ describe("investigation-application source and template", () => {
       isReady: true,
       name: "Armário Azul",
       description: "<p>Descrição de teste</p>",
-      img: "icons/svg/eye.svg", skills,
+      img: "icons/svg/eye.svg",
+      isPlayer: true,
+      isGm: false,
+      skills: [{
+        name: "Percepção",
+        examineLabel: "Examinar com Percepção",
+        informationCount: 2,
+        information: [
+          { isFirst: true, isHidden: false, difficulty: 6 },
+          { isFirst: false, isHidden: true },
+        ],
+      }],
       message: "",
     });
     expect(html).toContain("<p>Descrição de teste</p>");
     expect(html.indexOf("Armário Azul")).toBeLessThan(html.indexOf("Descrição de teste"));
     expect(html.indexOf("Descrição de teste")).toBeLessThan(html.indexOf("SkillsHeading"));
-    expect(html).toContain('<th scope="row">Percepção</th>');
+    expect(html.match(/<strong>Percepção<\/strong>/g)).toHaveLength(1);
     expect(html).toContain("fa-eye-slash");
     expect(html).toContain("NoInformation");
+    expect(html.match(/op2-investigation-row/g)).toHaveLength(2);
+    expect(html.match(/op2-investigation-examine/g)).toHaveLength(1);
+    expect(html.match(/op2-investigation-action/g)).toHaveLength(1);
+    expect(html).toContain("OtherSkill");
+    expect(html).not.toContain("op2-investigation-reveal");
+    expect(html).not.toContain("op2-investigation-gm-context");
 
-    const empty = render({ isReady: true, name: "Sala", description: "", img: "", skills, message: "" });
+    const gmHtml = render({
+      isReady: true,
+      isPlayer: false,
+      isGm: true,
+      name: "Armário Azul",
+      description: "",
+      img: "",
+      gmContext: "<p>Contexto secreto</p>",
+      skills: [{
+        name: "Percepção",
+        informationCount: 2,
+        information: [
+          { isFirst: true, difficulty: 6, content: "Pista A", revealLabel: "Revelar A" },
+          { isFirst: false, difficulty: 8, content: "Pista B", revealLabel: "Revelar B" },
+        ],
+      }],
+      message: "",
+    });
+    expect(gmHtml.match(/op2-investigation-reveal/g)).toHaveLength(2);
+    expect(gmHtml.match(/op2-investigation-action/g)).toHaveLength(2);
+    expect(gmHtml).toContain("Pista A");
+    expect(gmHtml).toContain("Pista B");
+    expect(gmHtml).toContain("Contexto secreto");
+    expect(gmHtml).not.toContain("op2-investigation-examine");
+    expect(gmHtml).not.toContain("OtherSkill");
+
+    const empty = render({ isReady: true, isPlayer: true, isGm: false, name: "Sala", description: "", img: "", skills: [], message: "" });
     expect(empty).not.toContain("op2-investigation-description");
 
-    const loading = render({ isReady: false, name: "Sala", description: "", img: "", skills: [], message: "Carregando…" });
+    const loading = render({ isReady: false, isPlayer: false, isGm: false, name: "Sala", description: "", img: "", skills: [], message: "Carregando…" });
     expect(loading).toContain("Carregando…");
     expect(loading).not.toContain("op2-investigation-description");
   });

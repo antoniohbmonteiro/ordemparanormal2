@@ -52,6 +52,13 @@ async function enrichPlayerDescription(raw: string, relativeTo: foundry.document
   });
 }
 
+async function enrichGmContext(raw: string, relativeTo: foundry.documents.Item): Promise<string> {
+  return foundry.applications.ux.TextEditor.implementation.enrichHTML(raw, {
+    relativeTo,
+    secrets: true,
+  });
+}
+
 /**
  * Builds the sanitized player-facing projection for one POI placement.
  *
@@ -70,8 +77,9 @@ export async function resolvePoiInvestigationView(
   const association = readPoiRegionAssociation(region);
   if (!association) return UNAVAILABLE;
 
+  const isGm = requesterIsGM(request.requesterUserId);
   if (
-    !requesterIsGM(request.requesterUserId)
+    !isGm
     && !isPoiRevealedTo(readPoiRegionReveal(region), request.requesterUserId, false)
   ) {
     return { error: "forbidden" };
@@ -81,28 +89,57 @@ export async function resolvePoiInvestigationView(
   if (!item || item.type !== POINT_OF_INTEREST_ITEM_TYPE) return UNAVAILABLE;
   const relativeTo: foundry.documents.Item = item;
 
-  const system = (item.system ?? {}) as { readonly publicDescription?: unknown };
+  const system = (item.system ?? {}) as {
+    readonly publicDescription?: unknown;
+    readonly gmContext?: unknown;
+  };
   const rawDescription =
     typeof system.publicDescription === "string" ? system.publicDescription : "";
+  const rawGmContext = typeof system.gmContext === "string" ? system.gmContext : "";
 
   const skills = sortPointOfInterestSkills(readPointOfInterestSkills(item.system));
-  const view: PoiInvestigationViewData = {
+  const [description, gmContext] = await Promise.all([
+    enrichPlayerDescription(rawDescription, relativeTo),
+    isGm ? enrichGmContext(rawGmContext, relativeTo) : Promise.resolve(""),
+  ]);
+  const base = {
     name:
       item.name
       ?? association.name
       ?? game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Unnamed"),
-    description: await enrichPlayerDescription(rawDescription, relativeTo),
+    description,
     img: typeof item.img === "string" ? item.img : "",
-    skills: skills.map(({ skill, information }) => {
-      return { key: skill, name: skillLabel(skill),
-        difficulties: [...new Set(information.filter(entry => entry.showDifficultyToPlayers).map(entry => entry.difficulty))].sort((a, b) => a - b),
-        hasHiddenDifficulties: information.some(entry => !entry.showDifficultyToPlayers),
-      };
-    }),
   };
+  const view: PoiInvestigationViewData = isGm
+    ? {
+        ...base,
+        audience: "gm",
+        gmContext,
+        skills: skills.map(({ skill, information }) => ({
+          key: skill,
+          name: skillLabel(skill),
+          information: information.map(({ difficulty, content }) => ({
+            difficulty,
+            content,
+          })),
+        })),
+      }
+    : {
+        ...base,
+        audience: "player",
+        skills: skills.map(({ skill, information }) => ({
+          key: skill,
+          name: skillLabel(skill),
+          information: information.map((entry) =>
+            entry.showDifficultyToPlayers
+              ? { visibility: "public", difficulty: entry.difficulty }
+              : { visibility: "hidden" },
+          ),
+        })),
+      };
   const current = scene(request.sceneId)?.regions?.get(request.regionId) as FlagReader | undefined;
   if (!current || readPoiRegionAssociation(current)?.itemUuid !== association.itemUuid) return UNAVAILABLE;
-  if (!requesterIsGM(request.requesterUserId)
+  if (!isGm
     && !isPoiRevealedTo(readPoiRegionReveal(current), request.requesterUserId, false)) return { error: "forbidden" };
   return { view };
 }

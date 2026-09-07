@@ -32,15 +32,15 @@ describe("Point of Interest authoring view models", () => {
     );
   });
 
-  it("orders groups canonically and shows the skill once per group", () => {
+  it("preserves persisted insertion order and shows the skill once per group", () => {
     const view = buildSkillGroupViewModels(groups);
-    expect(view.map(({ skill }) => skill)).toEqual(["crime", "perception"]);
-    expect(view[1]).toMatchObject({
+    expect(view.map(({ skill }) => skill)).toEqual(["perception", "crime"]);
+    expect(view[0]).toMatchObject({
       skillLabel: "Percepção",
       hasMultipleInformation: true,
       information: [{ id: "a" }, { id: "b" }],
     });
-    expect(view[1].information[0]).not.toHaveProperty("skill");
+    expect(view[0].information[0]).not.toHaveProperty("skill");
   });
 
   it("offers only skills not already present, preventing duplicate creation", () => {

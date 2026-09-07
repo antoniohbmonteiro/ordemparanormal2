@@ -55,6 +55,7 @@ export interface PlayerInvestigationSkillViewModel {
 
 export interface GmInvestigationInformationRow {
   readonly isFirst: boolean;
+  readonly isDifficultyHidden: boolean;
   readonly difficulty: number;
   readonly content: string;
   readonly revealLabel: string;
@@ -118,8 +119,10 @@ export function buildInvestigationRenderContext(
           name: skill.name,
           informationCount: skill.information.length,
           information: skill.information.map((entry, index) => ({
-            ...entry,
             isFirst: index === 0,
+            isDifficultyHidden: !entry.showDifficultyToPlayers,
+            difficulty: entry.difficulty,
+            content: entry.content,
             revealLabel: `${localize("Reveal")} — ${skill.name}`,
           })),
         })),

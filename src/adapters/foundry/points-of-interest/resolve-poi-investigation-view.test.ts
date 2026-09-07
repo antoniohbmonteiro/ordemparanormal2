@@ -107,11 +107,11 @@ describe("resolvePoiInvestigationView", () => {
       gmContext: "enriched:SEGREDO DO MESTRE",
       skills: [
         { key: "perception", name: "Percepção", information: [
-          { difficulty: 6, content: "PISTA SECRETA" },
-          { difficulty: 9, content: "MAIS" },
+          { difficulty: 6, content: "PISTA SECRETA", showDifficultyToPlayers: true },
+          { difficulty: 9, content: "MAIS", showDifficultyToPlayers: false },
         ] },
         { key: "technology", name: "Tecnologia", information: [
-          { difficulty: 2, content: "OUTRA PISTA" },
+          { difficulty: 2, content: "OUTRA PISTA", showDifficultyToPlayers: false },
         ] },
       ],
     } });
@@ -192,7 +192,7 @@ it.each(["revoke", "reassociate", "delete"])("rechecks placement after asynchron
 });
 
 
-it("projects one sanitized row per information in canonical skill order without aggregation", async () => {
+it("projects one sanitized row per information in persisted insertion order without aggregation", async () => {
   stubWorld(region(REVEALED));
   fromUuid.mockResolvedValue({ type: "pointOfInterest", name: "POI", system: {
     skills: [
@@ -211,15 +211,15 @@ it("projects one sanitized row per information in canonical skill order without 
   const result = await resolvePoiInvestigationView(req());
   const serialized = JSON.stringify(result);
   expect("view" in result && result.view.skills).toEqual([
-    { key: "occultism", name: "Ocultismo", information: [
-      { visibility: "public", difficulty: 1 },
-    ] },
     { key: "perception", name: "Percepção", information: [
       { visibility: "public", difficulty: 8 },
       { visibility: "public", difficulty: 6 },
       { visibility: "public", difficulty: 8 },
       { visibility: "hidden" },
       { visibility: "hidden" },
+    ] },
+    { key: "occultism", name: "Ocultismo", information: [
+      { visibility: "public", difficulty: 1 },
     ] },
   ]);
   expect(serialized).not.toContain("99");

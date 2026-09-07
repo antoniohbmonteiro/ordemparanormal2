@@ -211,10 +211,18 @@
 
 .op2-poi-investigation .op2-investigation-difficulty {
   grid-column: 3;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   text-align: center;
   font-weight: 700;
+}
+
+.op2-poi-investigation .op2-investigation-gm-hidden-difficulty {
+  color: var(--op2-text-muted);
+  font-size: .85em;
+  opacity: .8;
 }
 
 .op2-poi-investigation .op2-investigation-information {

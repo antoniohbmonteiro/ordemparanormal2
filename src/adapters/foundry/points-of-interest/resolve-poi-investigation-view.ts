@@ -2,7 +2,6 @@ import { POINT_OF_INTEREST_ITEM_TYPE } from "../../../config/system-config";
 import { skillLabel } from "../../../config/skills";
 import {
   readPointOfInterestSkills,
-  sortPointOfInterestSkills,
   type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { readPoiRegionAssociation } from "./poi-region-association";
@@ -97,7 +96,7 @@ export async function resolvePoiInvestigationView(
     typeof system.publicDescription === "string" ? system.publicDescription : "";
   const rawGmContext = typeof system.gmContext === "string" ? system.gmContext : "";
 
-  const skills = sortPointOfInterestSkills(readPointOfInterestSkills(item.system));
+  const skills = readPointOfInterestSkills(item.system);
   const [description, gmContext] = await Promise.all([
     enrichPlayerDescription(rawDescription, relativeTo),
     isGm ? enrichGmContext(rawGmContext, relativeTo) : Promise.resolve(""),
@@ -118,9 +117,10 @@ export async function resolvePoiInvestigationView(
         skills: skills.map(({ skill, information }) => ({
           key: skill,
           name: skillLabel(skill),
-          information: information.map(({ difficulty, content }) => ({
+          information: information.map(({ difficulty, content, showDifficultyToPlayers }) => ({
             difficulty,
             content,
+            showDifficultyToPlayers,
           })),
         })),
       }

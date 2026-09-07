@@ -1,7 +1,6 @@
 import { SKILL_DEFINITIONS, type SkillKey } from "../../config/skills";
 import {
   POINT_OF_INTEREST_DIFFICULTY_MIN,
-  sortPointOfInterestSkills,
   type PointOfInterestInformation,
   type PointOfInterestSkill,
 } from "../../documents/item/point-of-interest-data";
@@ -30,11 +29,11 @@ export interface PointOfInterestSkillGroupViewModel {
   readonly hasMultipleInformation: boolean;
 }
 
-/** Authoring groups in canonical registry order, independent of persisted order. */
+/** Authoring groups in their persisted insertion order. */
 export function buildSkillGroupViewModels(
   groups: readonly PointOfInterestSkill[],
 ): readonly PointOfInterestSkillGroupViewModel[] {
-  return sortPointOfInterestSkills(groups).map((group) => ({
+  return groups.map((group) => ({
     skill: group.skill,
     skillLabel: SKILL_LABEL_BY_KEY.get(group.skill) ?? group.skill,
     information: group.information.map((entry) => ({ ...entry })),

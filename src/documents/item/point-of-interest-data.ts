@@ -1,4 +1,4 @@
-import { SKILL_KEYS, isSkillKey, type SkillKey } from "../../config/skills";
+import { isSkillKey, type SkillKey } from "../../config/skills";
 
 /** Minimum confirmed Difficulty for Point of Interest information. */
 export const POINT_OF_INTEREST_DIFFICULTY_MIN = 1;
@@ -118,6 +118,7 @@ export interface PoiInvestigationPlayerSkillView {
 export interface PoiInvestigationGmInformationView {
   readonly difficulty: number;
   readonly content: string;
+  readonly showDifficultyToPlayers: boolean;
 }
 
 export interface PoiInvestigationGmSkillView {
@@ -149,17 +150,6 @@ export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData
 export type PoiInvestigationViewData =
   | PoiInvestigationPlayerViewData
   | PoiInvestigationGmViewData;
-
-export function sortPointOfInterestSkills(
-  skills: readonly PointOfInterestSkill[],
-): readonly PointOfInterestSkill[] {
-  const order = new Map(SKILL_KEYS.map((key, index) => [key, index]));
-  return [...skills].sort(
-    (left, right) =>
-      (order.get(left.skill) ?? Number.MAX_SAFE_INTEGER) -
-      (order.get(right.skill) ?? Number.MAX_SAFE_INTEGER),
-  );
-}
 
 function assertInformationIdAvailable(
   skills: readonly PointOfInterestSkill[],

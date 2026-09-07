@@ -92,6 +92,7 @@
         "Information": "Informação",
         "NoInformation": "Sem informações para exibir",
         "HiddenDifficulty": "DT oculta",
+        "HiddenDifficultyToPlayers": "DT oculta aos jogadores",
         "Reveal": "Revelar",
         "GmContext": "Somente o Mestre",
         "EmptyGmContext": "Nenhum contexto privado informado.",

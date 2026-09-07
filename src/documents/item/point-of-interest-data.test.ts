@@ -8,7 +8,6 @@ import {
   readPointOfInterestSkills,
   removePointOfInterestInformation,
   removePointOfInterestSkill,
-  sortPointOfInterestSkills,
   updatePointOfInterestInformation,
   type PointOfInterestSkill,
 } from "./point-of-interest-data";
@@ -51,21 +50,16 @@ describe("Point of Interest grouped shape", () => {
     })).toEqual(groups.slice(0, 1));
   });
 
-  it("presents groups in canonical SKILL_KEYS order", () => {
-    expect(sortPointOfInterestSkills(groups).map(({ skill }) => skill)).toEqual([
-      "crime",
-      "perception",
-    ]);
-  });
 });
 
 describe("Point of Interest grouped mutations", () => {
-  it("adds a skill with its first information and rejects duplicate skills", () => {
-    const next = addPointOfInterestSkill([], "research", "new", { difficulty: 1 });
-    expect(next).toEqual([{
+  it("appends a skill with its first information and rejects duplicate skills", () => {
+    const next = addPointOfInterestSkill(groups, "research", "new", { difficulty: 1 });
+    expect(next.slice(0, 2)).toEqual(groups);
+    expect(next[2]).toEqual({
       skill: "research",
       information: [{ id: "new", difficulty: 1, content: "", showDifficultyToPlayers: false }],
-    }]);
+    });
     expect(() => addPointOfInterestSkill(next, "research", "other", { difficulty: 1 })).toThrow();
   });
 

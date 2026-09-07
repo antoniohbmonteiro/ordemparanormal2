@@ -56,7 +56,10 @@
 
                   <div class="op2-investigation-difficulty" role="cell">
                     {{#if @root.isGm}}
-                      {{difficulty}}
+                      <span>{{difficulty}}</span>
+                      {{#if isDifficultyHidden}}
+                        <span class="op2-investigation-gm-hidden-difficulty" title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficultyToPlayers'}}" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficultyToPlayers'}}"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i></span>
+                      {{/if}}
                     {{else}}
                       {{#if isHidden}}
                         <span title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficulty'}}" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficulty'}}"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i></span>

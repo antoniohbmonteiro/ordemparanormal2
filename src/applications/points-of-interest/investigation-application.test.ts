@@ -38,8 +38,8 @@ const gmSkills = [{
   key: "perception" as const,
   name: "Percepção",
   information: [
-    { difficulty: 6, content: "Pista A" },
-    { difficulty: 8, content: "Pista B" },
+    { difficulty: 6, content: "Pista A", showDifficultyToPlayers: true },
+    { difficulty: 8, content: "Pista B", showDifficultyToPlayers: false },
   ],
 }];
 const localize = (key: string) => key;
@@ -98,8 +98,8 @@ describe("buildInvestigationRenderContext", () => {
         name: "Percepção",
         informationCount: 2,
         information: [
-          { isFirst: true, difficulty: 6, content: "Pista A", revealLabel: "Reveal — Percepção" },
-          { isFirst: false, difficulty: 8, content: "Pista B", revealLabel: "Reveal — Percepção" },
+          { isFirst: true, isDifficultyHidden: false, difficulty: 6, content: "Pista A", revealLabel: "Reveal — Percepção" },
+          { isFirst: false, isDifficultyHidden: true, difficulty: 8, content: "Pista B", revealLabel: "Reveal — Percepção" },
         ],
       }],
       message: "",
@@ -251,8 +251,8 @@ describe("investigation-application source and template", () => {
         name: "Percepção",
         informationCount: 2,
         information: [
-          { isFirst: true, difficulty: 6, content: "Pista A", revealLabel: "Revelar A" },
-          { isFirst: false, difficulty: 8, content: "Pista B", revealLabel: "Revelar B" },
+          { isFirst: true, isDifficultyHidden: false, difficulty: 6, content: "Pista A", revealLabel: "Revelar A" },
+          { isFirst: false, isDifficultyHidden: true, difficulty: 8, content: "Pista B", revealLabel: "Revelar B" },
         ],
       }],
       message: "",
@@ -261,6 +261,8 @@ describe("investigation-application source and template", () => {
     expect(gmHtml.match(/op2-investigation-action/g)).toHaveLength(2);
     expect(gmHtml).toContain("Pista A");
     expect(gmHtml).toContain("Pista B");
+    expect(gmHtml.match(/op2-investigation-gm-hidden-difficulty/g)).toHaveLength(1);
+    expect(gmHtml).toContain("HiddenDifficultyToPlayers");
     expect(gmHtml).toContain("Contexto secreto");
     expect(gmHtml).not.toContain("op2-investigation-examine");
     expect(gmHtml).not.toContain("OtherSkill");

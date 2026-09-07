@@ -144,7 +144,7 @@ O Item `pointOfInterest` já existe como **definição reutilizável, autorada p
 
 Cada `information.id` é gerado uma vez, na criação da linha, e permanece estável em edição e remoção — é a identidade que a execução futura referenciará (ex.: `discoveredInformationIds`).
 
-Não existe no modelo ativo configuração de perícia listada, sugerida ou oculta. Cada grupo existente em `system.skills[]` produz uma linha na Investigation Application, na ordem canônica de `SKILL_KEYS`. A autoria também apresenta os grupos nessa ordem, embora a ordem persistida possa variar.
+Não existe no modelo ativo configuração de perícia listada, sugerida ou oculta. Cada grupo existente em `system.skills[]` produz uma linha na Investigation Application, na ordem persistida de inserção. A autoria preserva a mesma ordem, acrescentando novas perícias ao final da lista.
 
 A Investigation Application base já está implementada e preserva a identidade do placement (`sceneId + regionId`). Ela usa cabeçalho nativo do Foundry e mostra imagem, nome, descrição pública e um grid de quatro colunas: `Perícia | Ação | DT | Informação`, com Informação ocupando o espaço elástico. Cada skill é um bloco visual e cada `information[]` possui sua própria linha. Para players, Perícia e Ação ocupam visualmente o grupo, `Examinar` aparece uma vez por skill, `Outra perícia...` aparece ao final e ambos permanecem desabilitados; cada linha mostra sua DT pública ou apenas o indicador de DT oculta, enquanto Informação permanece no estado neutro. Para o GM, Perícia ocupa visualmente o grupo, Ação permanece individual por informação com um `Revelar` desabilitado em cada linha, e a Application mostra todas as DTs, conteúdos e o painel enriquecido `Somente o Mestre`, sem `Examinar` ou `Outra perícia...`.
 

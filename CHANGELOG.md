@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-07
+
+### Added
+
+- Added a Foundry Scene control group for authoring Point of Interest Regions with native rectangle, ellipse, polygon, area, and hole tools.
+- Added Investigation Mode, canvas POI highlights and hover feedback, token-safe POI clicks, and player visibility controlled by the GM for everyone or selected users.
+- Added the player/GM Investigation Application with grouped skills, one row per information entry, public or hidden difficulties, sanitized player projections, and GM-only context.
+- Added persistent manual information reveal per POI placement, with live refresh of open Investigation Applications.
+- Added player-facing Examinar actions that reuse the existing Agent Check Dialog, roll, and chat workflow without automatic POI difficulty or reveal resolution.
+- Added automatic Discord release announcements generated from the release title, Destaques section, and first public image in `RELEASE_NOTES.md` when the repository webhook secret is configured.
+
+### Changed
+
+- Reworked Point of Interest authoring around ordered skill groups with multiple information entries and per-entry difficulty visibility.
+- Added curated v0.1.1 release notes and repository-hosted screenshots for GitHub Release and external announcement rendering.
+
+### Notes
+
+- Point of Interest Items authored in v0.1.0 use the removed flat information shape and are not migrated automatically; they must be reconfigured before using the new Investigation workflow.
+- Automatic check-to-difficulty comparison, automatic discovery/reveal, individual discovery, Investigation PD costs, functional Outra perícia, and hiding an already revealed information entry remain deferred.
+
 ## [0.1.0] - 2026-09-04
 
 ### Baseline

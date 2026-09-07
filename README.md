@@ -16,7 +16,7 @@ Sistema comunitário **não oficial** para Foundry Virtual Tabletop, criado para
 
 ## Status
 
-**Release pública: v0.1.0 — primeiro baseline consolidado da série 0.1.x**
+**Release pública: v0.1.1 — Pontos de Interesse e Investigação em cena**
 
 Instale pelo manifest publicado como asset da release:
 
@@ -24,7 +24,7 @@ Instale pelo manifest publicado como asset da release:
 https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json
 ```
 
-A **v0.1.0** consolida as capacidades já implementadas como o primeiro baseline público da série **0.1.x**, sem introduzir novas funcionalidades. É a primeira release pública distribuída sob **PolyForm Strict License 1.0.0** e preserva as migrations existentes para worlds 0.0.x.
+A **v0.1.1** introduz o fluxo jogável de Pontos de Interesse em cena: autoria com Regions, visibilidade controlada pelo Mestre, destaque no canvas, telas de investigação distintas para jogadores e Mestres, revelação manual de informações e Examinar integrado ao Check Engine existente. O sistema continua distribuído sob **PolyForm Strict License 1.0.0** e preserva as migrations existentes para os demais dados da série 0.0.x.
 
 O pacote atualmente:
 
@@ -55,7 +55,9 @@ O pacote atualmente:
 - mantém uma Cena Narrativa mundial com ID próprio e nome definido pelo GM, gerenciada pela aba **Narrativa** da sidebar direita e exibida a todos em um HUD somente informativo;
 - permite personalizar uma cor de destaque por Agente pela opção **Configurações da Ficha** no menu da janela, aplicada aos elementos decorativos da sheet e preservada nos Check Chat Cards, sem afetar as cores semânticas de sucesso, falha, crítico e avisos;
 - fornece identidade visual própria aos Perfis oficiais embutidos: Analista azul, Executor vermelho e Vigilante verde;
-- registra `pointOfInterest` como Item type: definição reutilizável de Ponto de Interesse com descrição pública, contexto do Mestre e uma tabela de informações por perícia/DT com identificadores estáveis, sem estado de investigação em andamento;
+- registra `pointOfInterest` como Item type reutilizável, com descrição pública, contexto do Mestre e grupos ordenados de informações por Perícia/DT;
+- fornece Modo Investigação e POIs desenhados com Regions, com destaque no canvas e visibilidade definida pelo Mestre para todos ou jogadores específicos;
+- apresenta telas de investigação distintas para jogador e Mestre, DTs públicas ou ocultas, revelação manual persistente por placement e Examinar integrado ao Check Engine existente;
 - publica um card de chat com nome e descrição ao usar uma Habilidade pela Agent Sheet;
 - registra `equipment` como Item type, com categorias `general`/`weapon`/`tool` e um contador opcional de usos (`uses`) na própria Equipment Sheet;
 - fornece uma aba **Inventário** na Agent Sheet, listando os Equipamentos embutidos com a mesma densidade visual das Habilidades, ajuste manual de usos e publicação no chat sem consumir usos;

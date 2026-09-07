@@ -2,7 +2,7 @@
   "id": "ordemparanormal2",
   "title": "Ordem Paranormal 2",
   "description": "Sistema comunitário não oficial para Foundry Virtual Tabletop, em estágio inicial de desenvolvimento, destinado ao suporte das regras públicas de playtest de Ordem Paranormal RPG 2. Este projeto não é afiliado, patrocinado ou endossado pelos detentores de Ordem Paranormal RPG e não distribui textos, artes ou outros conteúdos protegidos do jogo além do permitido pela Licença da Comunidade de Ordem Paranormal ou por autorização aplicável.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "LICENSE",
   "compatibility": {
     "minimum": 14,
@@ -131,5 +131,5 @@
   "socket": false,
   "url": "https://github.com/antoniohbmonteiro/ordemparanormal2",
   "manifest": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json",
-  "download": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.1.0/ordemparanormal2-v0.1.0.zip"
+  "download": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.1.1/ordemparanormal2-v0.1.1.zip"
 }

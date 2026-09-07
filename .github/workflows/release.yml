@@ -255,3 +255,9 @@ jobs:
 
           echo
           echo "Foundry package version published successfully."
+
+      - name: Announce release on Discord
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          DISCORD_RELEASE_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+        run: node scripts/release/discord-announcement.mjs

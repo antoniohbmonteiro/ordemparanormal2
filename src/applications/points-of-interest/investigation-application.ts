@@ -187,6 +187,7 @@ export function refreshInvestigationApplication(sceneId: string, regionId: strin
 export class InvestigationApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static override DEFAULT_OPTIONS = {
     actions: {
+      enlargeImage: InvestigationApplication.#onEnlargeImage,
       examine: InvestigationApplication.#onExamine,
       revealInformation: InvestigationApplication.#onRevealInformation,
     },
@@ -253,6 +254,17 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 
   async refresh(): Promise<void> {
     if (!this.#closed) await this.#load();
+  }
+
+  static async #onEnlargeImage(this: InvestigationApplication): Promise<void> {
+    const view = this.#result && "view" in this.#result ? this.#result.view : null;
+    if (!view?.img) return;
+
+    const popout = new foundry.applications.apps.ImagePopout({
+      src: view.img,
+      window: { title: view.name },
+    });
+    await popout.render({ force: true });
   }
 
   static async #onExamine(

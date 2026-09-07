@@ -75,6 +75,7 @@
   height: 100%;
   border: 0;
   background: var(--op2-input-bg);
+  cursor: zoom-in;
   object-fit: contain;
 }
 

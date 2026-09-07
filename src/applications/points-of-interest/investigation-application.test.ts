@@ -3,8 +3,10 @@ import { fileURLToPath } from "node:url";
 import Handlebars from "handlebars";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-vi.hoisted(() => {
-  vi.stubGlobal("foundry", {
+const { foundryGlobal, imagePopoutConstructor, imagePopoutRender } = vi.hoisted(() => {
+  const imagePopoutConstructor = vi.fn();
+  const imagePopoutRender = vi.fn(async () => undefined);
+  const foundryGlobal = {
     applications: {
       api: {
         ApplicationV2: class {
@@ -18,8 +20,16 @@ vi.hoisted(() => {
         },
         HandlebarsApplicationMixin: (base: unknown) => base,
       },
+      apps: {
+        ImagePopout: class {
+          render = imagePopoutRender;
+          constructor(options: unknown) { imagePopoutConstructor(options); }
+        },
+      },
     },
-  });
+  };
+  vi.stubGlobal("foundry", foundryGlobal);
+  return { foundryGlobal, imagePopoutConstructor, imagePopoutRender };
 });
 
 const requestPoiInvestigationView = vi.fn();
@@ -73,6 +83,7 @@ const localize = (key: string) => key;
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  vi.stubGlobal("foundry", foundryGlobal);
 });
 
 describe("buildInvestigationRenderContext", () => {
@@ -219,6 +230,73 @@ describe("InvestigationApplication reveal action", () => {
     expect(button.disabled).toBe(false);
     expect(button.setAttribute).toHaveBeenCalledWith("aria-busy", "true");
     expect(button.removeAttribute).toHaveBeenCalledWith("aria-busy");
+  });
+});
+
+describe("InvestigationApplication image action", () => {
+  it("opens the projected image in the native ImagePopout", async () => {
+    requestPoiInvestigationView.mockResolvedValue({
+      view: {
+        audience: "player" as const,
+        name: "Armário Azul",
+        description: "",
+        img: "images/poi.webp",
+        skills: playerSkills,
+      },
+    });
+    vi.stubGlobal("game", { i18n: { localize: (key: string) => key } });
+    const app = new InvestigationApplication({ sceneId: "s", regionId: "r", name: "POI" });
+    await (app as unknown as { _onFirstRender(a: object, b: object): Promise<void> })
+      ._onFirstRender({}, {});
+    await vi.waitFor(() => expect(requestPoiInvestigationView).toHaveBeenCalledOnce());
+
+    await InvestigationApplication.DEFAULT_OPTIONS.actions.enlargeImage.call(app);
+
+    expect(imagePopoutConstructor).toHaveBeenCalledExactlyOnceWith({
+      src: "images/poi.webp",
+      window: { title: "Armário Azul" },
+    });
+    expect(imagePopoutRender).toHaveBeenCalledExactlyOnceWith({ force: true });
+    expect(requestPoiInvestigationView).toHaveBeenCalledOnce();
+  });
+
+  it("does not offer or execute the action without an image", async () => {
+    requestPoiInvestigationView.mockResolvedValue({
+      view: {
+        audience: "player" as const,
+        name: "Armário Azul",
+        description: "",
+        img: "",
+        skills: playerSkills,
+      },
+    });
+    vi.stubGlobal("game", { i18n: { localize: (key: string) => key } });
+    const app = new InvestigationApplication({ sceneId: "s", regionId: "r", name: "POI" });
+    await (app as unknown as { _onFirstRender(a: object, b: object): Promise<void> })
+      ._onFirstRender({}, {});
+    await vi.waitFor(() => expect(requestPoiInvestigationView).toHaveBeenCalledOnce());
+
+    await InvestigationApplication.DEFAULT_OPTIONS.actions.enlargeImage.call(app);
+
+    expect(imagePopoutConstructor).not.toHaveBeenCalled();
+  });
+
+  it("keeps the current broken-image fallback", () => {
+    let onError: (() => void) | undefined;
+    const image = {
+      hidden: false,
+      complete: false,
+      naturalWidth: 0,
+      addEventListener: vi.fn((_event: string, listener: () => void) => { onError = listener; }),
+    };
+    const element = { querySelector: vi.fn(() => image) };
+    const app = new InvestigationApplication({ sceneId: "s", regionId: "r", name: "POI" });
+
+    (app as unknown as { _attachPartListeners(a: string, b: HTMLElement, c: object): void })
+      ._attachPartListeners("main", element as unknown as HTMLElement, {});
+    onError?.();
+
+    expect(image.hidden).toBe(true);
   });
 });
 
@@ -372,6 +450,7 @@ describe("investigation-application source and template", () => {
     expect(template).toContain('data-action="revealInformation"');
     expect(template).toContain('data-information-id="{{id}}"');
     expect(template).toContain('data-action="examine"');
+    expect(template).toContain('data-action="enlargeImage"');
     expect(template).toContain('data-skill="{{../key}}"');
     expect(template).toContain("disabled");
     expect((template.match(/role="columnheader"/g) ?? [])).toHaveLength(4);
@@ -384,6 +463,7 @@ describe("investigation-application source and template", () => {
     expect(stylesheet).toMatch(/op2-investigation-skill \{[\s\S]*?align-content: start;/);
     expect(stylesheet).toMatch(/op2-investigation-information \{[\s\S]*?place-self: stretch;[\s\S]*?text-align: left;/);
     expect(stylesheet).toMatch(/op2-investigation-information__content \{[\s\S]*?height: auto;[\s\S]*?overflow: visible !important;[\s\S]*?text-overflow: clip !important;[\s\S]*?white-space: pre-wrap !important;[\s\S]*?-webkit-line-clamp: unset !important;/);
+    expect(stylesheet).toMatch(/op2-investigation-image img \{[\s\S]*?cursor: zoom-in;/);
   });
 
   it("opens at natural height with one viewport-limited scroll region", () => {
@@ -417,6 +497,8 @@ describe("investigation-application source and template", () => {
       message: "",
     });
     expect(html).toContain("<p>Descrição de teste</p>");
+    expect(html).toContain('data-action="enlargeImage"');
+    expect(html).toContain('title="ORDEMPARANORMAL2.PointOfInterest.Investigation.EnlargeImage"');
     expect(html.indexOf("Armário Azul")).toBeLessThan(html.indexOf("Descrição de teste"));
     expect(html.indexOf("Descrição de teste")).toBeLessThan(html.indexOf("SkillsHeading"));
     expect(html.match(/<strong>Percepção<\/strong>/g)).toHaveLength(1);
@@ -469,6 +551,7 @@ describe("investigation-application source and template", () => {
 
     const empty = render({ isReady: true, isPlayer: true, isGm: false, name: "Sala", description: "", img: "", skills: [], message: "" });
     expect(empty).not.toContain("op2-investigation-description");
+    expect(empty).not.toContain('data-action="enlargeImage"');
 
     const loading = render({ isReady: false, isPlayer: false, isGm: false, name: "Sala", description: "", img: "", skills: [], message: "Carregando…" });
     expect(loading).toContain("Carregando…");

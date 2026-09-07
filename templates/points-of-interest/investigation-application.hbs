@@ -3,7 +3,7 @@
     <header class="op2-investigation-summary">
       <figure class="op2-investigation-image">
         <span role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.NoImage'}}"><i class="fa-solid fa-image" aria-hidden="true"></i></span>
-        {{#if img}}<img data-poi-image src="{{img}}" alt="{{name}}" />{{/if}}
+        {{#if img}}<img data-poi-image data-action="enlargeImage" src="{{img}}" alt="{{name}}" title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.EnlargeImage'}}" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.EnlargeImage'}}" />{{/if}}
       </figure>
       <div class="op2-investigation-intro">
         <h2>{{name}}</h2>

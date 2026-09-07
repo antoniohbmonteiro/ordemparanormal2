@@ -357,22 +357,32 @@
       "Information": "Informações",
       "EmptyInformation": "Este Ponto de Interesse ainda não tem informações.",
       "GmOnly": "Esta ficha é uma ferramenta de autoria do Mestre.",
+      "SelectSkillTitle": "Adicionar perícia",
       "Fields": {
         "Name": "Nome",
         "Image": "Imagem do Ponto de Interesse",
         "PublicDescription": "Descrição pública",
         "GmContextLegend": "Somente o Mestre",
+        "Skill": "Perícia",
         "ShowDifficultyToPlayers": "Mostrar DT aos jogadores"
       },
       "Table": {
         "Skill": "Perícia",
         "Difficulty": "DT",
+        "ShowDifficulty": "Mostrar DT",
         "Information": "Informação",
         "Actions": "Ações"
       },
       "Actions": {
+        "AddSkill": "Adicionar perícia",
         "AddInformation": "Adicionar informação",
-        "RemoveInformation": "Remover informação"
+        "RemoveInformation": "Remover informação",
+        "RemoveSkill": "Remover perícia"
+      },
+      "Confirm": {
+        "RemoveSkillTitle": "Remover perícia",
+        "RemoveSkill": "Remover esta perícia e todas as suas informações?",
+        "RemoveLastInformation": "Esta é a última informação. Removê-la também removerá a perícia. Deseja continuar?"
       },
       "Errors": {
         "InvalidInformation": "Valor inválido. A perícia deve ser do registro e a DT um número inteiro maior ou igual a 1.",

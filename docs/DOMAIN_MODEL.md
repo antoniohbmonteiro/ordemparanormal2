@@ -82,17 +82,18 @@ Native `name` and `img` are not duplicated in `system`. `PointOfInterestDataMode
 ```text
 publicDescription           rich text (ProseMirror / HTML)
 gmContext                    rich text (ProseMirror / HTML), GM-private authoring content
-information[]
-├── id                       stable identity (Foundry randomID), generated once on creation
-├── skill                    canonical SkillKey from the skill registry
-├── difficulty               integer ≥ 1, no upper bound (mirrors resolveCheckDifficulty)
-├── content                  plain multi-line string
-└── showDifficultyToPlayers   boolean, initial false
+skills[]
+├── skill                    canonical SkillKey, unique within the POI
+└── information[]            one or more entries
+    ├── id                   stable identity (Foundry randomID), generated once on creation
+    ├── difficulty           integer ≥ 1, no upper bound (mirrors resolveCheckDifficulty)
+    ├── content              plain multi-line string
+    └── showDifficultyToPlayers boolean, initial false
 ```
 
-`publicDescription` and `gmContext` are declared in `system.json` as `htmlFields`. The `skill` field is constrained to `SKILL_KEYS`; the defensive reader drops any entry with a non-canonical skill, a blank id, or an out-of-range difficulty. Entry `id`s are stable across edit and removal and are the identity a future investigation-execution layer will reference (e.g. `discoveredInformationIds`). There is **no** discovered / execution state on the Item and **no** id migration (the type has never shipped).
+`publicDescription` and `gmContext` are declared in `system.json` as `htmlFields`. A POI may have zero or more skill groups, every group has at least one information entry, and a `SkillKey` may occur only once in the POI. The DataModel rejects empty groups, duplicate skills, and duplicate information ids. The defensive reader accepts only this grouped shape and never reads or converts the removed flat `system.information[]` shape. Entry `id`s are stable across edit and removal and are the identity a future investigation-execution layer will reference (e.g. `discoveredInformationIds`). There is **no** discovered / execution state on the Item and no migration for the development-only flat shape.
 
-The Point of Interest ItemSheet is a GM authoring tool. Its `_prepareContext` withholds `gmContext` and `information` from the non-GM render context and shows a GM-tool notice instead. This is a **presentation** boundary, not secure transport: POIs stay GM-only-owned in this step, and a client granted Item access can still inspect `item.system`. The player-facing Investigation Application receives a separate sanitized projection — never the raw Item. See the "Investigation" section below and `docs/PLAYTEST_FEATURE_NOTES.md` §5.
+The Point of Interest ItemSheet is a GM authoring tool. Its `_prepareContext` withholds `gmContext` and `skills` from the non-GM render context and shows a GM-tool notice instead. This is a **presentation** boundary, not secure transport: POIs stay GM-only-owned in this step, and a client granted Item access can still inspect `item.system`. The player-facing Investigation Application receives a separate sanitized projection — never the raw Item. See the "Investigation" section below and `docs/PLAYTEST_FEATURE_NOTES.md` §5.
 
 ### Region association
 
@@ -315,13 +316,13 @@ A left-click on a POI, **only while Investigation Mode is ON**, opens a minimal 
 
 The click is a pure gesture observer on the canvas view: `pointerdown`/`pointerup` within `CLICK_SLOP` px, over the same POI (reusing the existing PolygonTree hit-test and overlap priority), left button only. It never calls `preventDefault`/`stopPropagation`, so native Token selection and drag are untouched and a drag never opens the window. **A Token keeps priority over the POI**: if a visible Token sits under the gesture start or end (checked with public API only — `canvas.canvasCoordinatesFromClient`, `canvas.tokens.placeables`, `token.visible`, `token.bounds`), the click is left to the Token and the window does not open. GM and player both get the click; the reveal context menu stays GM-only.
 
-The screen shows the native Foundry header, POI image, `name`, `publicDescription` (enriched with `secrets: false`) and a `Perícia | DT | Examinar | Informação` table. Its rows are the distinct skills found in `information[]`, deduplicated in first-occurrence order. Each row contains sorted, distinct public difficulties from entries whose `showDifficultyToPlayers` is true and one boolean indicating whether the skill also has hidden difficulties. `Examinar` and `Outra perícia...` remain disabled, and the information column stays neutral because discovery is not implemented.
+The screen shows the native Foundry header, POI image, `name`, `publicDescription` (enriched with `secrets: false`) and a `Perícia | DT | Examinar | Informação` table. It has one row per valid `system.skills[]` group, in canonical `SKILL_KEYS` order. Each row contains sorted, distinct public difficulties from entries whose `showDifficultyToPlayers` is true and one boolean indicating whether the skill also has hidden difficulties. `Examinar` and `Outra perícia...` remain disabled, and the information column stays neutral because discovery is not implemented.
 
 **Security — the projection.** The player client never resolves the Item. The sanitized `PoiInvestigationViewData` is built GM-side and delivered via the public v14 query API: the player calls `game.users.activeGM.query("ordemparanormal2.poiInvestigation", { sceneId, regionId })`; the handler receives `(data, { user })` where `user` is the **server-authoritative** requesting User (Foundry 14.367 `Users.#handleUserQuery` resolves it from the socket, not from the payload), re-checks `isPoiRevealedTo(reveal, user.id, false)` **before** touching the Item, and returns only whitelisted presentation fields. Association and reveal authorization are checked again after asynchronous Item resolution and description enrichment. A GM resolves locally without a query. No GM online → the window shows an error; nothing breaks. The reveal re-check here is a real authorization boundary, not merely UX.
 
-The projection contains `name`, enriched `description`, the safe `Item.img` path and skill rows (`key`, localized name, public DTs and the hidden-DT boolean). It never contains `gmContext`, `information[].content`, `information[].id`, hidden difficulty values, Item UUID, raw Item data or discovered state.
+The projection contains `name`, enriched `description`, the safe `Item.img` path and skill rows (`key`, localized name, public DTs and the hidden-DT boolean). It never contains `gmContext`, information content or ids, hidden difficulty values, Item UUID, raw Item data or discovered state.
 
-Potential investigation **execution** state (which information a given investigation has revealed, per Actor/scene) should be evaluated separately as scene/region/application state when that feature is planned. It must reference `information[].id`, and it must not live on the POI Item.
+Potential investigation **execution** state (which information a given investigation has revealed, per Actor/scene) should be evaluated separately as scene/region/application state when that feature is planned. It must reference stable information ids, and it must not live on the POI Item.
 
 ## Source-of-truth rule
 
@@ -340,7 +341,7 @@ The Occupation transition is versioned independently in a hidden world setting w
 
 ### Investigation presentation
 
-The Investigation Application retains its Scene + Region identity and requests a GM-authorized projection. A skill exists in the presentation when at least one structurally valid `information[]` entry references it; repeated entries produce one row. There is no active distinction between existing, listed, suggested or hidden skills. Each information entry independently owns `showDifficultyToPlayers` (initial false). Information IDs, difficulties and content remain intact.
+The Investigation Application retains its Scene + Region identity and requests a GM-authorized projection. Every structurally valid group in `system.skills[]` exists in the presentation, in canonical `SKILL_KEYS` order. There is no active distinction between existing, listed, suggested or hidden skills. Each information entry independently owns `showDifficultyToPlayers` (initial false). Information IDs, difficulties and content remain intact.
 
 The projection contains only name, enriched public description (`secrets: false`), image path and derived skill rows (key, label, sorted distinct public difficulties and one hidden-difficulty indicator). No information IDs, hidden DT values, clue content, Item UUID or raw Item system are delivered. Access and association are checked again after asynchronous resolution. Image rendering needs only the path, not Item ownership; unavailable images show a neutral fallback.
 

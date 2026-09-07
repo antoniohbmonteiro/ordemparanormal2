@@ -32,10 +32,14 @@ beforeEach(() => {
     system: {
       publicDescription: "<p>Um armário metálico.</p>",
       gmContext: "SEGREDO DO MESTRE",
-      information: [
-        { id: "1", skill: "perception", difficulty: 6, showDifficultyToPlayers: true, content: "PISTA SECRETA" },
-        { id: "2", skill: "technology", difficulty: 2, content: "OUTRA PISTA" },
-        { id: "3", skill: "perception", difficulty: 9, content: "MAIS" },
+      skills: [
+        { skill: "perception", information: [
+          { id: "1", difficulty: 6, showDifficultyToPlayers: true, content: "PISTA SECRETA" },
+          { id: "3", difficulty: 9, showDifficultyToPlayers: false, content: "MAIS" },
+        ] },
+        { skill: "technology", information: [
+          { id: "2", difficulty: 2, showDifficultyToPlayers: false, content: "OUTRA PISTA" },
+        ] },
       ],
     },
   });
@@ -113,7 +117,7 @@ describe("resolvePoiInvestigationView", () => {
     fromUuid.mockResolvedValue({
       type: "pointOfInterest",
       name: "Armário Azul",
-      system: { publicDescription: "Descrição de teste", information: [] },
+      system: { publicDescription: "Descrição de teste", skills: [] },
     });
     stubWorld(region(REVEALED));
     const result = await resolvePoiInvestigationView(req());
@@ -124,7 +128,7 @@ describe("resolvePoiInvestigationView", () => {
     fromUuid.mockResolvedValue({
       type: "pointOfInterest",
       name: "Armário Azul",
-      system: { publicDescription: "", information: [] },
+      system: { publicDescription: "", skills: [] },
     });
     stubWorld(region(REVEALED));
     const result = await resolvePoiInvestigationView(req());
@@ -147,21 +151,30 @@ it.each(["revoke", "reassociate", "delete"])("rechecks placement after asynchron
 });
 
 
-it("derives deduplicated skills from information, with per-entry public DTs and one hidden indicator", async () => {
+it("projects one canonical row per group with public DTs and one hidden indicator", async () => {
   stubWorld(region(REVEALED));
   fromUuid.mockResolvedValue({ type: "pointOfInterest", name: "POI", system: {
-    information: [
-      { id: "a", skill: "perception", difficulty: 8, showDifficultyToPlayers: true, content: "private" },
-      { id: "b", skill: "perception", difficulty: 6, showDifficultyToPlayers: true, content: "private" },
-      { id: "c", skill: "perception", difficulty: 8, showDifficultyToPlayers: true, content: "private" },
-      { id: "d", skill: "perception", difficulty: 99, content: "private" },
-      { id: "e", skill: "perception", difficulty: 100, content: "private" },
-      { id: "f", skill: "occultism", difficulty: 1, showDifficultyToPlayers: true, content: "private" },
+    skills: [
+      { skill: "perception", information: [
+        { id: "a", difficulty: 8, showDifficultyToPlayers: true, content: "private" },
+        { id: "b", difficulty: 6, showDifficultyToPlayers: true, content: "private" },
+        { id: "c", difficulty: 8, showDifficultyToPlayers: true, content: "private" },
+        { id: "d", difficulty: 99, showDifficultyToPlayers: false, content: "private" },
+        { id: "e", difficulty: 100, showDifficultyToPlayers: false, content: "private" },
+      ] },
+      { skill: "occultism", information: [
+        { id: "f", difficulty: 1, showDifficultyToPlayers: true, content: "private" },
+      ] },
     ],
   } });
   const result = await resolvePoiInvestigationView(req());
+  const serialized = JSON.stringify(result);
   expect("view" in result && result.view.skills).toEqual([
-    { key: "perception", name: "Percepção", difficulties: [6, 8], hasHiddenDifficulties: true },
     { key: "occultism", name: "Ocultismo", difficulties: [1], hasHiddenDifficulties: false },
+    { key: "perception", name: "Percepção", difficulties: [6, 8], hasHiddenDifficulties: true },
   ]);
+  expect(serialized).not.toContain("99");
+  expect(serialized).not.toContain("100");
+  expect(serialized).not.toContain("private");
+  expect(serialized).not.toContain('"id"');
 });

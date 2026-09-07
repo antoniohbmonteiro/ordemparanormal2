@@ -1,8 +1,8 @@
 import { POINT_OF_INTEREST_ITEM_TYPE } from "../../../config/system-config";
 import { skillLabel } from "../../../config/skills";
 import {
-  collectPoiInvestigationSkills,
-  readPointOfInterestInformationList,
+  readPointOfInterestSkills,
+  sortPointOfInterestSkills,
   type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { readPoiRegionAssociation } from "./poi-region-association";
@@ -85,7 +85,7 @@ export async function resolvePoiInvestigationView(
   const rawDescription =
     typeof system.publicDescription === "string" ? system.publicDescription : "";
 
-  const information = readPointOfInterestInformationList(item.system);
+  const skills = sortPointOfInterestSkills(readPointOfInterestSkills(item.system));
   const view: PoiInvestigationViewData = {
     name:
       item.name
@@ -93,11 +93,10 @@ export async function resolvePoiInvestigationView(
       ?? game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.Canvas.Unnamed"),
     description: await enrichPlayerDescription(rawDescription, relativeTo),
     img: typeof item.img === "string" ? item.img : "",
-    skills: collectPoiInvestigationSkills(item.system).map(key => {
-      const entries = information.filter(entry => entry.skill === key);
-      return { key, name: skillLabel(key),
-        difficulties: [...new Set(entries.filter(entry => entry.showDifficultyToPlayers).map(entry => entry.difficulty))].sort((a, b) => a - b),
-        hasHiddenDifficulties: entries.some(entry => !entry.showDifficultyToPlayers),
+    skills: skills.map(({ skill, information }) => {
+      return { key: skill, name: skillLabel(skill),
+        difficulties: [...new Set(information.filter(entry => entry.showDifficultyToPlayers).map(entry => entry.difficulty))].sort((a, b) => a - b),
+        hasHiddenDifficulties: information.some(entry => !entry.showDifficultyToPlayers),
       };
     }),
   };

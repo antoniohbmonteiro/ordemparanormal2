@@ -1,81 +1,71 @@
 import { describe, expect, it } from "vitest";
 
 import { SKILL_DEFINITIONS } from "../../config/skills";
-import type { PointOfInterestInformation } from "../../documents/item/point-of-interest-data";
+import type { PointOfInterestSkill } from "../../documents/item/point-of-interest-data";
 import {
-  buildInformationRowViewModels,
+  buildAvailableSkillOptions,
+  buildSkillGroupViewModels,
   readInformationEditPatch,
   SKILL_OPTION_VIEW_MODELS,
 } from "./point-of-interest-information-editor";
 
-describe("SKILL_OPTION_VIEW_MODELS", () => {
-  it("mirrors the canonical registry order and labels", () => {
+const groups: readonly PointOfInterestSkill[] = [
+  {
+    skill: "perception",
+    information: [
+      { id: "a", difficulty: 6, content: "A", showDifficultyToPlayers: false },
+      { id: "b", difficulty: 8, content: "B", showDifficultyToPlayers: true },
+    ],
+  },
+  {
+    skill: "crime",
+    information: [
+      { id: "c", difficulty: 10, content: "C", showDifficultyToPlayers: false },
+    ],
+  },
+];
+
+describe("Point of Interest authoring view models", () => {
+  it("mirrors canonical skill order and labels", () => {
     expect(SKILL_OPTION_VIEW_MODELS).toEqual(
       SKILL_DEFINITIONS.map(({ key, label }) => ({ value: key, label })),
     );
-    expect(SKILL_OPTION_VIEW_MODELS).toHaveLength(20);
-    expect(SKILL_OPTION_VIEW_MODELS).toContainEqual({
-      value: "aptitude",
-      label: "Aptidão",
-    });
   });
-});
 
-describe("buildInformationRowViewModels", () => {
-  it("builds per-row skill options with a single selected match", () => {
-    const list: readonly PointOfInterestInformation[] = [
-      { id: "a", skill: "perception", difficulty: 6, content: "A", showDifficultyToPlayers: false },
-      { id: "b", skill: "crime", difficulty: 10, content: "B", showDifficultyToPlayers: false },
-    ];
+  it("orders groups canonically and shows the skill once per group", () => {
+    const view = buildSkillGroupViewModels(groups);
+    expect(view.map(({ skill }) => skill)).toEqual(["crime", "perception"]);
+    expect(view[1]).toMatchObject({
+      skillLabel: "Percepção",
+      hasMultipleInformation: true,
+      information: [{ id: "a" }, { id: "b" }],
+    });
+    expect(view[1].information[0]).not.toHaveProperty("skill");
+  });
 
-    const rows = buildInformationRowViewModels(list);
-
-    expect(rows.map((row) => row.id)).toEqual(["a", "b"]);
-    expect(rows[0].skillLabel).toBe("Percepção");
-    expect(rows[0].skillOptions).toHaveLength(20);
-    expect(rows[0].skillOptions.filter((option) => option.selected)).toEqual([
-      { value: "perception", label: "Percepção", selected: true },
-    ]);
-    expect(
-      rows[1].skillOptions.find((option) => option.selected)?.value,
-    ).toBe("crime");
+  it("offers only skills not already present, preventing duplicate creation", () => {
+    const options = buildAvailableSkillOptions(groups);
+    expect(options.map(({ value }) => value)).not.toContain("crime");
+    expect(options.map(({ value }) => value)).not.toContain("perception");
+    expect(options[0]).toEqual({ value: "acrobatics", label: "Acrobacia" });
   });
 });
 
 describe("readInformationEditPatch", () => {
-  it("accepts a canonical skill key", () => {
-    expect(readInformationEditPatch("skill", "perception")).toEqual({
-      skill: "perception",
+  it("edits only DT, visibility, and content", () => {
+    expect(readInformationEditPatch("difficulty", "7")).toEqual({ difficulty: 7 });
+    expect(readInformationEditPatch("showDifficultyToPlayers", "true")).toEqual({
+      showDifficultyToPlayers: true,
     });
-  });
-
-  it("rejects a non-canonical skill", () => {
-    expect(readInformationEditPatch("skill", "Percepção")).toBeNull();
-    expect(readInformationEditPatch("skill", "nope")).toBeNull();
-  });
-
-  it("accepts an integer DT at or above the minimum", () => {
-    expect(readInformationEditPatch("difficulty", "7")).toEqual({
-      difficulty: 7,
-    });
-  });
-
-  it("rejects non-integer or out-of-range DT", () => {
-    expect(readInformationEditPatch("difficulty", "0")).toBeNull();
-    expect(readInformationEditPatch("difficulty", "1.5")).toBeNull();
-    expect(readInformationEditPatch("difficulty", "")).toBeNull();
-    expect(readInformationEditPatch("difficulty", "abc")).toBeNull();
-  });
-
-  it("passes content through and rejects unknown fields", () => {
     expect(readInformationEditPatch("content", "x")).toEqual({ content: "x" });
+    expect(readInformationEditPatch("skill", "perception")).toBeNull();
     expect(readInformationEditPatch("id", "x")).toBeNull();
-    expect(readInformationEditPatch(undefined, "x")).toBeNull();
   });
-});
 
-it("edits only difficulty visibility with a strict boolean input", () => {
-  expect(readInformationEditPatch("showDifficultyToPlayers", "true")).toEqual({ showDifficultyToPlayers: true });
-  expect(readInformationEditPatch("showDifficultyToPlayers", "false")).toEqual({ showDifficultyToPlayers: false });
-  expect(readInformationEditPatch("showDifficultyToPlayers", "yes")).toBeNull();
+  it("rejects invalid DT and visibility values", () => {
+    for (const value of ["0", "1.5", "", "abc"]) {
+      expect(readInformationEditPatch("difficulty", value)).toBeNull();
+    }
+    expect(readInformationEditPatch("showDifficultyToPlayers", "yes")).toBeNull();
+  });
 });

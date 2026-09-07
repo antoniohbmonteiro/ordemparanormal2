@@ -34,26 +34,26 @@ describe("Point of Interest Item Sheet template", () => {
     expect(template).toContain('<prose-mirror name="system.gmContext"');
   });
 
-  it("renders the skill / DT / information table with per-row skill options", () => {
-    expect(template).toContain(
-      "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Skill",
-    );
+  it("renders skill groups with information-only rows", () => {
     expect(template).toContain(
       "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Difficulty",
     );
     expect(template).toContain(
       "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Information",
     );
+    expect(template).toContain('data-action="addSkill"');
     expect(template).toContain('data-action="addInformation"');
     expect(template).toContain('data-action="removeInformation"');
-    expect(template).toContain('data-information-field="skill"');
+    expect(template).toContain('data-action="removeSkill"');
+    expect(template).not.toContain('data-information-field="skill"');
     expect(template).toContain('data-information-field="difficulty"');
     expect(template).toContain('data-information-field="content"');
 
-    const eachRows = template.indexOf("{{#each poi.information}}");
-    const eachOptions = template.indexOf("{{#each skillOptions}}");
-    expect(eachRows).toBeGreaterThan(-1);
-    expect(eachOptions).toBeGreaterThan(eachRows);
+    const eachGroups = template.indexOf("{{#each poi.skills}}");
+    const eachInformation = template.indexOf("{{#each information}}");
+    expect(eachGroups).toBeGreaterThan(-1);
+    expect(eachInformation).toBeGreaterThan(eachGroups);
+    expect(template).not.toContain("<select data-information-edit");
   });
 
   it("keeps difficulty visibility on each information and has no separate skill grid", () => {

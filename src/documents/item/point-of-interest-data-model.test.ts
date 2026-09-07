@@ -47,13 +47,13 @@ describe("PointOfInterestDataModel", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
       publicDescription: MockField;
       gmContext: MockField;
-      information: MockArrayField;
+      skills: MockArrayField;
     };
 
     expect(Object.keys(schema)).toEqual([
       "publicDescription",
       "gmContext",
-      "information",
+      "skills",
     ]);
     expect(schema.publicDescription.options).toMatchObject({
       blank: true,
@@ -62,25 +62,32 @@ describe("PointOfInterestDataModel", () => {
     expect(schema.gmContext.options).toMatchObject({ blank: true, initial: "" });
   });
 
-  it("models information as an array of stable, skill-gated entries", () => {
+  it("models 0..N unique skill groups containing 1..N information", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
-      information: MockArrayField;
+      skills: MockArrayField;
     };
-    const { information } = schema;
+    const { skills } = schema;
 
-    expect(information.options).toMatchObject({ initial: [] });
-    expect(typeof information.options.validate).toBe("function");
+    expect(skills.options).toMatchObject({ initial: [] });
+    expect(typeof skills.options.validate).toBe("function");
 
+    const group = skills.element;
+    expect(Object.keys(group.fields)).toEqual([
+      "skill",
+      "information",
+    ]);
+    expect(group.fields.skill.options.choices).toEqual([...SKILL_KEYS]);
+
+    const information = group.fields.information as unknown as MockArrayField;
+    expect(information.options).toMatchObject({ initial: [], min: 1 });
     const entry = information.element;
     expect(Object.keys(entry.fields)).toEqual([
       "id",
-      "skill",
       "difficulty",
       "content",
       "showDifficultyToPlayers",
     ]);
     expect(entry.fields.id.options).toMatchObject({ blank: false });
-    expect(entry.fields.skill.options.choices).toEqual([...SKILL_KEYS]);
     expect(entry.fields.difficulty.options).toMatchObject({
       integer: true,
       min: 1,
@@ -90,16 +97,27 @@ describe("PointOfInterestDataModel", () => {
     expect(entry.fields.showDifficultyToPlayers.options).toMatchObject({ initial: false });
   });
 
-  it("rejects a repeated information id through the array validator", () => {
+  it("rejects duplicate skills, empty groups, and repeated information ids", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
-      information: MockArrayField;
+      skills: MockArrayField;
     };
-    const validate = schema.information.options.validate as (
+    const validate = schema.skills.options.validate as (
       value: unknown,
     ) => boolean;
 
-    expect(validate([{ id: "a" }, { id: "b" }])).toBe(true);
-    expect(validate([{ id: "a" }, { id: "a" }])).toBe(false);
+    expect(validate([
+      { skill: "crime", information: [{ id: "a" }, { id: "b" }] },
+      { skill: "perception", information: [{ id: "c" }] },
+    ])).toBe(true);
+    expect(validate([
+      { skill: "crime", information: [{ id: "a" }] },
+      { skill: "crime", information: [{ id: "b" }] },
+    ])).toBe(false);
+    expect(validate([{ skill: "crime", information: [] }])).toBe(false);
+    expect(validate([
+      { skill: "crime", information: [{ id: "a" }] },
+      { skill: "perception", information: [{ id: "a" }] },
+    ])).toBe(false);
   });
 
   it("does not override migrateData (no backfill; type never shipped)", () => {

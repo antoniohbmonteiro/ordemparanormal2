@@ -18,11 +18,21 @@
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__toolbar { display: flex; align-items: center; justify-content: space-between; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__toolbar h2 { margin: 0; font-size: .9rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__toolbar button { width: auto; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__skill-groups { display: flex; flex-direction: column; gap: .85rem; margin-top: .75rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__skill-group { padding: .65rem; border: 1px solid var(--op2-poi-border); border-radius: 8px; background: var(--op2-poi-panel); }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__skill-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__skill-header h3 { margin: 0; font-size: .82rem; text-transform: uppercase; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__remove-skill,
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__add-information { width: auto; min-width: 0; margin: 0; padding: .35rem .5rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__add-information { margin-top: .5rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information { width: 100%; margin-top: .5rem; border-collapse: collapse; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information th,
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td { padding: .35rem; border-bottom: 1px solid var(--op2-poi-border); vertical-align: top; text-align: left; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information th { font-size: .68rem; text-transform: uppercase; }
-.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td:nth-child(2) { width: 5rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information th:first-child,
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td:first-child { width: 5rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information th:nth-child(2),
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td:nth-child(2) { width: 5.5rem; text-align: center; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information td:last-child { width: 2.25rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information textarea { width: 100%; min-height: 2.5rem; resize: vertical; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__remove { min-width: 0; margin: 0; padding: .4rem; }

@@ -7,20 +7,24 @@ import type {
   HandlebarsTemplatePart,
 } from "@client/applications/api/handlebars-application.mjs";
 
-import { SKILL_KEYS } from "../../config/skills";
+import { isSkillKey, type SkillKey } from "../../config/skills";
 import { createPointOfInterestInformationId } from "../../adapters/foundry/points-of-interest/create-point-of-interest-information-id";
 import {
   addPointOfInterestInformation,
+  addPointOfInterestSkill,
   POINT_OF_INTEREST_DIFFICULTY_MIN,
-  readPointOfInterestInformationList,
+  readPointOfInterestSkills,
   removePointOfInterestInformation,
+  removePointOfInterestSkill,
   updatePointOfInterestInformation,
-  type PointOfInterestInformation,
+  type PointOfInterestSkill,
 } from "../../documents/item/point-of-interest-data";
 import {
-  buildInformationRowViewModels,
+  buildAvailableSkillOptions,
+  buildSkillGroupViewModels,
   readInformationEditPatch,
-  type InformationRowViewModel,
+  type PointOfInterestSkillGroupViewModel,
+  type SkillOptionViewModel,
 } from "./point-of-interest-information-editor";
 
 const POI_SHEET_TEMPLATE =
@@ -37,26 +41,58 @@ interface PointOfInterestItemSheetContext
     readonly enrichedPublicDescription: string;
     readonly gmContext: string;
     readonly enrichedGmContext: string;
-    readonly information: readonly InformationRowViewModel[];
+    readonly skills: readonly PointOfInterestSkillGroupViewModel[];
+    readonly canAddSkill: boolean;
   };
 }
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const { TextEditor } = foundry.applications.ux;
 const { ItemSheetV2 } = foundry.applications.sheets as unknown as
   FoundryApplicationSheetsWithItemSheetV2;
 
-type InformationMutation = (
-  list: readonly PointOfInterestInformation[],
-) => readonly PointOfInterestInformation[];
+type SkillMutation = (
+  list: readonly PointOfInterestSkill[],
+) => readonly PointOfInterestSkill[];
+
+async function selectSkill(
+  options: readonly SkillOptionViewModel[],
+): Promise<SkillKey | null> {
+  if (options.length === 0) return null;
+  const optionMarkup = options
+    .map(({ value, label }) => `<option value="${value}">${label}</option>`)
+    .join("");
+  return DialogV2.input<SkillKey>({
+    classes: ["ordemparanormal2"],
+    content: `<label>${game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}<select name="skill">${optionMarkup}</select></label>`,
+    modal: true,
+    ok: {
+      action: "add",
+      label: "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddSkill",
+      callback: (_event, button) => {
+        const field = button.form?.elements.namedItem("skill");
+        if (!(field instanceof HTMLSelectElement) || !isSkillKey(field.value)) {
+          throw new Error("Invalid Point of Interest skill selection.");
+        }
+        return field.value;
+      },
+    },
+    rejectClose: false,
+    window: {
+      title: game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.SelectSkillTitle"),
+    },
+  });
+}
 
 export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
   ItemSheetV2,
 ) {
   static override DEFAULT_OPTIONS = {
     actions: {
+      addSkill: PointOfInterestItemSheet.#onAddSkill,
       addInformation: PointOfInterestItemSheet.#onAddInformation,
       removeInformation: PointOfInterestItemSheet.#onRemoveInformation,
+      removeSkill: PointOfInterestItemSheet.#onRemoveSkill,
     },
     classes: ["ordemparanormal2", "point-of-interest-item-sheet"],
     form: { closeOnSubmit: false, submitOnChange: true },
@@ -97,11 +133,11 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
       });
   }
 
-  #enqueueInformationChange(mutate: InformationMutation): void {
+  #enqueueSkillChange(mutate: SkillMutation): void {
     this.#enqueue(async () => {
       const item = this.document as foundry.documents.Item;
-      const next = mutate(readPointOfInterestInformationList(item.system));
-      await item.update({ "system.information": next });
+      const next = mutate(readPointOfInterestSkills(item.system));
+      await item.update({ "system.skills": next });
     });
   }
 
@@ -151,9 +187,10 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
         enrichedPublicDescription,
         gmContext,
         enrichedGmContext,
-        information: buildInformationRowViewModels(
-          readPointOfInterestInformationList(item.system),
-        ),
+        skills: buildSkillGroupViewModels(readPointOfInterestSkills(item.system)),
+        canAddSkill: buildAvailableSkillOptions(
+          readPointOfInterestSkills(item.system),
+        ).length > 0,
       },
     };
   }
@@ -178,7 +215,8 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
         }
 
         const id = control.dataset.informationId;
-        if (!id) return;
+        const skill = control.dataset.skill;
+        if (!id || !isSkillKey(skill)) return;
 
         const patch = readInformationEditPatch(
           control.dataset.informationField,
@@ -196,25 +234,48 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
           return;
         }
 
-        this.#enqueueInformationChange((list) =>
-          updatePointOfInterestInformation(list, id, patch),
+        this.#enqueueSkillChange((list) =>
+          updatePointOfInterestInformation(list, skill, id, patch),
         );
       });
     }
   }
 
+  static async #onAddSkill(this: PointOfInterestItemSheet): Promise<void> {
+    if (!this.#canAuthor) return;
+    await this.#updateQueue;
+    await this.submit();
+
+    const item = this.document as foundry.documents.Item;
+    const options = buildAvailableSkillOptions(readPointOfInterestSkills(item.system));
+    const skill = await selectSkill(options);
+    if (!skill) return;
+
+    const id = createPointOfInterestInformationId();
+    this.#enqueueSkillChange((list) =>
+      addPointOfInterestSkill(list, skill, id, {
+        difficulty: POINT_OF_INTEREST_DIFFICULTY_MIN,
+        content: "",
+      }),
+    );
+  }
+
   static async #onAddInformation(
     this: PointOfInterestItemSheet,
+    _event: PointerEvent,
+    target: HTMLElement,
   ): Promise<void> {
     if (!this.#canAuthor) return;
+
+    const skill = target.dataset.skill;
+    if (!isSkillKey(skill)) return;
 
     await this.#updateQueue;
     await this.submit();
 
     const id = createPointOfInterestInformationId();
-    this.#enqueueInformationChange((list) =>
-      addPointOfInterestInformation(list, id, {
-        skill: SKILL_KEYS[0],
+    this.#enqueueSkillChange((list) =>
+      addPointOfInterestInformation(list, skill, id, {
         difficulty: POINT_OF_INTEREST_DIFFICULTY_MIN,
         content: "",
       }),
@@ -229,13 +290,64 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
     if (!this.#canAuthor) return;
 
     const id = target.dataset.informationId;
-    if (!id) return;
+    const skill = target.dataset.skill;
+    if (!id || !isSkillKey(skill)) return;
 
     await this.#updateQueue;
     await this.submit();
 
-    this.#enqueueInformationChange((list) =>
-      removePointOfInterestInformation(list, id),
+    const item = this.document as foundry.documents.Item;
+    const group = readPointOfInterestSkills(item.system).find(
+      (candidate) => candidate.skill === skill,
     );
+    if (!group?.information.some((entry) => entry.id === id)) return;
+    if (group.information.length === 1) {
+      const confirmed = await DialogV2.confirm({
+        classes: ["ordemparanormal2"],
+        content: `<p>${game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Confirm.RemoveLastInformation")}</p>`,
+        modal: true,
+        rejectClose: false,
+        window: {
+          title: game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Confirm.RemoveSkillTitle"),
+        },
+      });
+      if (!confirmed) return;
+    }
+
+    this.#enqueueSkillChange((list) =>
+      removePointOfInterestInformation(list, skill, id),
+    );
+  }
+
+  static async #onRemoveSkill(
+    this: PointOfInterestItemSheet,
+    _event: PointerEvent,
+    target: HTMLElement,
+  ): Promise<void> {
+    if (!this.#canAuthor) return;
+    const skill = target.dataset.skill;
+    if (!isSkillKey(skill)) return;
+
+    await this.#updateQueue;
+    await this.submit();
+    const item = this.document as foundry.documents.Item;
+    const group = readPointOfInterestSkills(item.system).find(
+      (candidate) => candidate.skill === skill,
+    );
+    if (!group) return;
+    if (group.information.length > 1) {
+      const confirmed = await DialogV2.confirm({
+        classes: ["ordemparanormal2"],
+        content: `<p>${game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Confirm.RemoveSkill")}</p>`,
+        modal: true,
+        rejectClose: false,
+        window: {
+          title: game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Confirm.RemoveSkillTitle"),
+        },
+      });
+      if (!confirmed) return;
+    }
+
+    this.#enqueueSkillChange((list) => removePointOfInterestSkill(list, skill));
   }
 }

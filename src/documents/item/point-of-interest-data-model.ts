@@ -3,6 +3,7 @@ import { POINT_OF_INTEREST_DIFFICULTY_MIN } from "./point-of-interest-data";
 
 export type {
   PointOfInterestInformation,
+  PointOfInterestSkill,
   PointOfInterestSystemData,
 } from "./point-of-interest-data";
 
@@ -44,19 +45,32 @@ type RequiredBooleanField = foundry.data.fields.BooleanField<
 
 type PointOfInterestInformationSchema = {
   id: NonBlankStringField;
-  skill: SkillKeyField;
   difficulty: RequiredIntegerField;
   content: RequiredStringField;
   showDifficultyToPlayers: RequiredBooleanField;
 };
 
+type PointOfInterestInformationArrayField = foundry.data.fields.ArrayField<
+  foundry.data.fields.SchemaField<PointOfInterestInformationSchema>,
+  foundry.data.fields.SourceFromSchema<PointOfInterestInformationSchema>[],
+  foundry.data.fields.ModelPropsFromSchema<PointOfInterestInformationSchema>[],
+  true,
+  false,
+  true
+>;
+
+type PointOfInterestSkillSchema = {
+  skill: SkillKeyField;
+  information: PointOfInterestInformationArrayField;
+};
+
 type PointOfInterestSchema = {
   publicDescription: RequiredStringField;
   gmContext: RequiredStringField;
-  information: foundry.data.fields.ArrayField<
-    foundry.data.fields.SchemaField<PointOfInterestInformationSchema>,
-    foundry.data.fields.SourceFromSchema<PointOfInterestInformationSchema>[],
-    foundry.data.fields.ModelPropsFromSchema<PointOfInterestInformationSchema>[],
+  skills: foundry.data.fields.ArrayField<
+    foundry.data.fields.SchemaField<PointOfInterestSkillSchema>,
+    foundry.data.fields.SourceFromSchema<PointOfInterestSkillSchema>[],
+    foundry.data.fields.ModelPropsFromSchema<PointOfInterestSkillSchema>[],
     true,
     false,
     true
@@ -72,11 +86,24 @@ function createRichTextField(): RequiredStringField {
   });
 }
 
-/** Reject an information list that repeats an id. */
-function hasUniqueInformationIds(value: unknown): boolean {
+/** Reject duplicate skills, empty groups, and information ids repeated anywhere. */
+function hasValidSkillGroups(value: unknown): boolean {
   if (!Array.isArray(value)) return true;
-  const ids = value.map((entry) => (entry as { id?: unknown } | null)?.id);
-  return new Set(ids).size === ids.length;
+  const groups = value as Array<{
+    skill?: unknown;
+    information?: Array<{ id?: unknown }>;
+  } | null>;
+  const skills = groups.map((group) => group?.skill);
+  const ids = groups.flatMap((group) =>
+    Array.isArray(group?.information)
+      ? group.information.map((entry) => entry?.id)
+      : [],
+  );
+  return (
+    groups.every((group) => Array.isArray(group?.information) && group.information.length > 0) &&
+    new Set(skills).size === skills.length &&
+    new Set(ids).size === ids.length
+  );
 }
 
 export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
@@ -87,13 +114,8 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
     return {
       publicDescription: createRichTextField(),
       gmContext: createRichTextField(),
-      information: new foundry.data.fields.ArrayField(
+      skills: new foundry.data.fields.ArrayField(
         new foundry.data.fields.SchemaField({
-          id: new foundry.data.fields.StringField({
-            required: true,
-            nullable: false,
-            blank: false,
-          }),
           skill: new foundry.data.fields.StringField<
             SkillKey,
             SkillKey,
@@ -106,25 +128,35 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
             blank: false,
             choices: [...SKILL_KEYS],
           }),
-          difficulty: new foundry.data.fields.NumberField({
-            required: true,
-            nullable: false,
-            integer: true,
-            min: POINT_OF_INTEREST_DIFFICULTY_MIN,
-            initial: POINT_OF_INTEREST_DIFFICULTY_MIN,
-          }),
-          content: createRichTextField(),
-          showDifficultyToPlayers: new foundry.data.fields.BooleanField({
-            required: true,
-            nullable: false,
-            initial: false,
-          }),
+          information: new foundry.data.fields.ArrayField(
+            new foundry.data.fields.SchemaField({
+              id: new foundry.data.fields.StringField({
+                required: true,
+                nullable: false,
+                blank: false,
+              }),
+              difficulty: new foundry.data.fields.NumberField({
+                required: true,
+                nullable: false,
+                integer: true,
+                min: POINT_OF_INTEREST_DIFFICULTY_MIN,
+                initial: POINT_OF_INTEREST_DIFFICULTY_MIN,
+              }),
+              content: createRichTextField(),
+              showDifficultyToPlayers: new foundry.data.fields.BooleanField({
+                required: true,
+                nullable: false,
+                initial: false,
+              }),
+            }),
+            { required: true, nullable: false, initial: [], min: 1 },
+          ),
         }),
         {
           required: true,
           nullable: false,
           initial: [],
-          validate: hasUniqueInformationIds,
+          validate: hasValidSkillGroups,
         },
       ),
     };

@@ -1,11 +1,9 @@
-import {
-  SKILL_DEFINITIONS,
-  isSkillKey,
-  type SkillKey,
-} from "../../config/skills";
+import { SKILL_DEFINITIONS, type SkillKey } from "../../config/skills";
 import {
   POINT_OF_INTEREST_DIFFICULTY_MIN,
+  sortPointOfInterestSkills,
   type PointOfInterestInformation,
+  type PointOfInterestSkill,
 } from "../../documents/item/point-of-interest-data";
 
 export interface SkillOptionViewModel {
@@ -13,7 +11,6 @@ export interface SkillOptionViewModel {
   readonly label: string;
 }
 
-/** Skill `<option>` view models, in canonical registry order. */
 export const SKILL_OPTION_VIEW_MODELS: readonly SkillOptionViewModel[] =
   SKILL_DEFINITIONS.map((definition) => ({
     value: definition.key,
@@ -24,55 +21,45 @@ const SKILL_LABEL_BY_KEY = new Map<SkillKey, string>(
   SKILL_OPTION_VIEW_MODELS.map((option) => [option.value, option.label]),
 );
 
-export interface InformationRowSkillOptionViewModel
-  extends SkillOptionViewModel {
-  readonly selected: boolean;
-}
+export interface InformationRowViewModel extends PointOfInterestInformation {}
 
-export interface InformationRowViewModel {
-  readonly id: string;
+export interface PointOfInterestSkillGroupViewModel {
   readonly skill: SkillKey;
   readonly skillLabel: string;
-  readonly difficulty: number;
-  readonly content: string;
-  readonly showDifficultyToPlayers: boolean;
-  readonly skillOptions: readonly InformationRowSkillOptionViewModel[];
+  readonly information: readonly InformationRowViewModel[];
+  readonly hasMultipleInformation: boolean;
 }
 
-export function buildInformationRowViewModels(
-  list: readonly PointOfInterestInformation[],
-): readonly InformationRowViewModel[] {
-  return list.map((entry) => ({
-    id: entry.id,
-    skill: entry.skill,
-    skillLabel: SKILL_LABEL_BY_KEY.get(entry.skill) ?? entry.skill,
-    difficulty: entry.difficulty,
-    content: entry.content,
-    showDifficultyToPlayers: entry.showDifficultyToPlayers,
-    skillOptions: SKILL_OPTION_VIEW_MODELS.map((option) => ({
-      ...option,
-      selected: option.value === entry.skill,
-    })),
+/** Authoring groups in canonical registry order, independent of persisted order. */
+export function buildSkillGroupViewModels(
+  groups: readonly PointOfInterestSkill[],
+): readonly PointOfInterestSkillGroupViewModel[] {
+  return sortPointOfInterestSkills(groups).map((group) => ({
+    skill: group.skill,
+    skillLabel: SKILL_LABEL_BY_KEY.get(group.skill) ?? group.skill,
+    information: group.information.map((entry) => ({ ...entry })),
+    hasMultipleInformation: group.information.length > 1,
   }));
 }
 
+/** Only skills not already owned by the POI, in canonical registry order. */
+export function buildAvailableSkillOptions(
+  groups: readonly PointOfInterestSkill[],
+): readonly SkillOptionViewModel[] {
+  const present = new Set(groups.map(({ skill }) => skill));
+  return SKILL_OPTION_VIEW_MODELS.filter(({ value }) => !present.has(value));
+}
+
 export type InformationEditPatch =
-  | { readonly skill: SkillKey }
   | { readonly difficulty: number }
   | { readonly content: string }
   | { readonly showDifficultyToPlayers: boolean };
 
-/**
- * Validate one edited row field into a typed patch, or `null` when the raw
- * value is not acceptable (unknown skill, non-integer or out-of-range DT).
- */
 export function readInformationEditPatch(
   field: string | undefined,
   rawValue: string,
 ): InformationEditPatch | null {
   switch (field) {
-    case "skill":
-      return isSkillKey(rawValue) ? { skill: rawValue } : null;
     case "difficulty": {
       const difficulty = Number(rawValue);
       return Number.isInteger(difficulty) &&
@@ -81,7 +68,9 @@ export function readInformationEditPatch(
         : null;
     }
     case "showDifficultyToPlayers":
-      return rawValue === "true" || rawValue === "false" ? { showDifficultyToPlayers: rawValue === "true" } : null;
+      return rawValue === "true" || rawValue === "false"
+        ? { showDifficultyToPlayers: rawValue === "true" }
+        : null;
     case "content":
       return { content: rawValue };
     default:

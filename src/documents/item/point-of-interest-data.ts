@@ -20,13 +20,13 @@ export interface PointOfInterestInformation {
   readonly skill: SkillKey;
   readonly difficulty: number;
   readonly content: string;
+  readonly showDifficultyToPlayers: boolean;
 }
 
 /** Persisted `system` shape of a Point of Interest Item. */
 export interface PointOfInterestSystemData {
   readonly publicDescription: string;
   readonly gmContext: string;
-  readonly showDifficultiesToPlayers: boolean;
   readonly information: readonly PointOfInterestInformation[];
 }
 
@@ -34,10 +34,11 @@ export type PointOfInterestInformationDraft = {
   readonly skill: SkillKey;
   readonly difficulty: number;
   readonly content?: string;
+  readonly showDifficultyToPlayers?: boolean;
 };
 
 export type PointOfInterestInformationPatch = Partial<
-  Pick<PointOfInterestInformation, "skill" | "difficulty" | "content">
+  Pick<PointOfInterestInformation, "skill" | "difficulty" | "content" | "showDifficultyToPlayers">
 >;
 
 function isNonBlankString(value: unknown): value is string {
@@ -46,7 +47,7 @@ function isNonBlankString(value: unknown): value is string {
 
 export function isPointOfInterestInformation(
   value: unknown,
-): value is PointOfInterestInformation {
+): value is Omit<PointOfInterestInformation, "showDifficultyToPlayers"> & { showDifficultyToPlayers?: unknown } {
   if (!value || typeof value !== "object") return false;
 
   const candidate = value as Partial<PointOfInterestInformation>;
@@ -82,24 +83,26 @@ export function readPointOfInterestInformationList(
             skill: entry.skill,
             difficulty: entry.difficulty,
             content: entry.content,
+            showDifficultyToPlayers: entry.showDifficultyToPlayers === true,
           },
         ]
       : [],
   );
 }
 
-/**
- * Sanitized player-facing projection of a Point of Interest, built GM-side and
- * sent to authorized players. It carries **only** these fields — never
- * `gmContext`, `information[].difficulty`, `information[].content`,
- * `information[].id`, or `showDifficultiesToPlayers`.
- */
+export interface PoiInvestigationSkillView {
+  readonly key: SkillKey;
+  readonly name: string;
+  readonly difficulties: readonly number[];
+  readonly hasHiddenDifficulties: boolean;
+}
+
+/** Whitelisted GM-built presentation, never the Item or information entries. */
 export interface PoiInvestigationViewData {
   readonly name: string;
-  /** `publicDescription` already enriched to player-safe HTML. */
   readonly description: string;
-  /** Localized skill names, deduplicated, in first-occurrence order. */
-  readonly skills: readonly string[];
+  readonly img: string;
+  readonly skills: readonly PoiInvestigationSkillView[];
 }
 
 /**
@@ -144,6 +147,7 @@ export function addPointOfInterestInformation(
       skill: draft.skill,
       difficulty: draft.difficulty,
       content: draft.content ?? "",
+      showDifficultyToPlayers: draft.showDifficultyToPlayers === true,
     },
   ];
 }

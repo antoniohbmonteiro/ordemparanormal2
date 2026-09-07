@@ -23,11 +23,6 @@
       </prose-mirror>
     </fieldset>
 
-    <label class="op2-poi-sheet__difficulty-visibility">
-      <input type="checkbox" data-difficulty-visibility-edit {{#if poi.showDifficultiesToPlayers}}checked{{/if}}{{#unless editable}} disabled{{/unless}} />
-      <span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.ShowDifficultiesToPlayers"}}</span>
-    </label>
-
     <section class="op2-poi-sheet__information-section">
       <header class="op2-poi-sheet__toolbar">
         <h2>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Information"}}</h2>
@@ -57,6 +52,10 @@
               </td>
               <td>
                 <input type="number" min="1" step="1" inputmode="numeric" value="{{difficulty}}" data-information-edit data-information-id="{{id}}" data-information-field="difficulty"{{#unless @root.editable}} disabled{{/unless}} />
+                <label class="op2-poi-sheet__difficulty-visibility">
+                  <input type="checkbox" data-information-edit data-information-id="{{id}}" data-information-field="showDifficultyToPlayers" {{#if showDifficultyToPlayers}}checked{{/if}}{{#unless @root.editable}} disabled{{/unless}} />
+                  {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.ShowDifficultyToPlayers"}}
+                </label>
               </td>
               <td>
                 <textarea rows="2" data-information-edit data-information-id="{{id}}" data-information-field="content"{{#unless @root.editable}} disabled{{/unless}}>{{content}}</textarea>

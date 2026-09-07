@@ -139,16 +139,21 @@ O Item `pointOfInterest` já existe como **definição reutilizável, autorada p
 
 - `name`/`img` nativos;
 - `system.publicDescription` e `system.gmContext` (rich text, declarados como `htmlFields`);
-- `system.showDifficultiesToPlayers` (boolean, inicial `false`);
-- `system.information[]` com `id` estável, `skill` (chave canônica do registro), `difficulty` (inteiro ≥ 1, sem máximo) e `content`.
+- `system.information[]` com `id` estável, `skill` (chave canônica do registro), `difficulty` (inteiro ≥ 1, sem máximo), `showDifficultyToPlayers` (boolean, inicial `false`) e `content`.
 
 Cada `information.id` é gerado uma vez, na criação da linha, e permanece estável em edição e remoção — é a identidade que a execução futura referenciará (ex.: `discoveredInformationIds`).
 
-Ainda **não** implementado: Investigation Application; fluxos Investigar/Examinar/Interagir/Recapitular/Compartilhar; integração com Check Dialog; revelação de informações; consumo de PD; estado de informações descobertas; vínculo com Narrative Scene; condições de desbloqueio; perícias secretas; automação para jogadores; compêndio de POIs.
+Não existe no modelo ativo configuração de perícia listada, sugerida ou oculta. A lista apresentada na Investigation Application é derivada diretamente de `information[]`: uma ou mais informações com a mesma `skill` produzem uma única linha, na ordem da primeira ocorrência.
+
+A Investigation Application base já está implementada e preserva a identidade do placement (`sceneId + regionId`). Ela usa cabeçalho nativo do Foundry e mostra imagem, nome, descrição pública e a tabela `Perícia | DT | Examinar | Informação`. `Examinar` permanece desabilitado, `Outra perícia...` pode ser exibida desabilitada e a coluna Informação permanece no estado neutro `Sem informações para exibir`.
+
+Ainda **não** implementado: checks de Examinar; revelação de informações; consumo de PD; estado de informações descobertas; vínculo com Narrative Scene; condições de desbloqueio; perícias secretas; automação para jogadores; compêndio de POIs.
 
 ### Boundary de privacidade
 
-A ItemSheet do POI é ferramenta de autoria do GM. O branch de `_prepareContext` que oculta `gmContext` e `information` de não-GM é uma boundary de **apresentação**, não de transporte seguro: nesta etapa os POIs permanecem com ownership GM-only e um cliente com acesso ao Item ainda pode inspecionar `item.system`. A futura player-facing POI View **não** poderá entregar o Item bruto como substituto; a futura Investigation Application deverá fornecer apenas uma projeção sanitizada contendo `publicDescription`, a lista de perícias, DTs somente se `showDifficultiesToPlayers`, e o `content` apenas das informações já reveladas (por `id`).
+A ItemSheet do POI é ferramenta de autoria do GM. O branch de `_prepareContext` que oculta `gmContext` e `information` de não-GM é uma boundary de **apresentação**, não de transporte seguro: os POIs permanecem com ownership GM-only e um cliente com acesso ao Item ainda poderia inspecionar `item.system`.
+
+A Investigation Application não entrega o Item bruto ao jogador. A projeção sanitizada é criada no lado do GM por `CONFIG.queries`, usando o usuário identificado pelo contexto da query e revalidando associação e autorização de reveal. Ela contém somente nome, descrição pública enriquecida com `secrets: false`, caminho/URL de `Item.img` e linhas derivadas de perícia. Para cada skill, envia DTs públicas distintas e ordenadas e um único booleano indicando a existência de DT oculta. Nunca envia valor de DT oculta, `information.content`, `information.id`, `gmContext`, UUID do Item ou o Item bruto. O jogador não resolve o Item.
 
 Exemplo conceitual:
 
@@ -158,46 +163,19 @@ Percepção — DT 6 → informação A
 Percepção — DT 8 → informação B
 Crime      — DT 10 → informação C
 
-### Investigation Application
+### Decisões adiadas
 
-Uma aplicação dedicada pode apresentar os POIs ativos da investigação.
+Os pontos abaixo registram direção futura e **não fazem parte do comportamento ou do modelo ativo**:
 
-Ações relevantes do Playtest:
+1. A autoria poderá evoluir para blocos por skill: um botão `Adicionar perícia`, uma skill configurada como bloco/tag e uma ou mais `information[]` adicionadas ou removidas dentro desse bloco. A ItemSheet atual continua trabalhando diretamente com linhas de informação.
+2. Poderá existir uma separação entre skill existente no POI e skill sugerida/mostrada pelo GM ao jogador, permitindo mostrar todas, algumas ou nenhuma como dica. Essa configuração não existe no modelo ativo atual.
+3. `Outra perícia...` poderá permitir a tentativa de uma skill não sugerida. A resposta ao cliente não poderá revelar se uma skill escondida possui informações; o julgamento narrativo permanece com o GM.
+4. No MVP futuro de `Examinar`, o player escolherá uma perícia, usará o Check Engine e publicará o resultado no chat. Inicialmente o sistema não precisa comparar automaticamente resultado e DT: o GM decidirá manualmente quais informações revelar. Comparação automática, reveal e PD poderão vir depois.
+5. Uma Investigation Application futura do GM mostrará todas as informações, DTs e conteúdos e terá a ação manual `Revelar`. O player continuará vendo somente a projeção sanitizada e as informações efetivamente reveladas.
+6. O estado de informação descoberta pertence ao placement/investigação, não ao Item canônico. A persistência ainda será definida; conteúdo secreto não deve ser armazenado em Region flags replicadas aos players.
+7. `Interagir` permanece uma ação de RP e não precisa de botão. `Recapitular`, `Compartilhar` e Habilidades/Itens genéricos continuam fora da POI Application por enquanto.
 
-- Investigar;
-- Examinar;
-- Interagir;
-- Recapitular;
-- Compartilhar;
-- Habilidades/Itens quando aplicável.
-
-### Examinar
-
-- selecionar POI;
-- selecionar perícia;
-- abrir Check Dialog;
-- resolver informações atingidas;
-- revelar somente informações ainda desconhecidas;
-- aplicar a consequência de PD quando nenhuma nova informação for obtida,
-  conforme a regra confirmada do Playtest;
-- crítico pode sinalizar ao GM a necessidade de informação adicional
-  quando aplicável.
-
-Não automatizar decisões narrativas que pertencem ao GM.
-
-### Interagir
-
-Não tentar resolver semanticamente a ação do jogador.
-
-O jogador informa o que pretende fazer e o GM decide o resultado usando
-o contexto privado do POI.
-
-### Estado
-
-Ainda precisa ser decidido onde o estado da investigação será persistido.
-
-Não escolher Scene flags, Items, Regions ou outro mecanismo somente por
-conveniência antes do Plan específico dessa feature.
+Não automatizar decisões narrativas que pertencem ao GM e não escolher Scene flags, Items, Regions ou outro mecanismo de persistência apenas por conveniência antes do Plan específico da feature.
 
 ---
 
@@ -369,3 +347,5 @@ Direção de evolução:
 - automações construídas sobre regras não confirmadas.
 
 O Playtest atual é a fonte de verdade.
+
+A Investigation Application já possui apresentação e projeção segura de skills derivadas de `information[]`, imagem e DTs públicas por informação. Examinar e descoberta persistente continuam fora desta entrega.

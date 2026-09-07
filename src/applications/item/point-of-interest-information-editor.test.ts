@@ -24,8 +24,8 @@ describe("SKILL_OPTION_VIEW_MODELS", () => {
 describe("buildInformationRowViewModels", () => {
   it("builds per-row skill options with a single selected match", () => {
     const list: readonly PointOfInterestInformation[] = [
-      { id: "a", skill: "perception", difficulty: 6, content: "A" },
-      { id: "b", skill: "crime", difficulty: 10, content: "B" },
+      { id: "a", skill: "perception", difficulty: 6, content: "A", showDifficultyToPlayers: false },
+      { id: "b", skill: "crime", difficulty: 10, content: "B", showDifficultyToPlayers: false },
     ];
 
     const rows = buildInformationRowViewModels(list);
@@ -72,4 +72,10 @@ describe("readInformationEditPatch", () => {
     expect(readInformationEditPatch("id", "x")).toBeNull();
     expect(readInformationEditPatch(undefined, "x")).toBeNull();
   });
+});
+
+it("edits only difficulty visibility with a strict boolean input", () => {
+  expect(readInformationEditPatch("showDifficultyToPlayers", "true")).toEqual({ showDifficultyToPlayers: true });
+  expect(readInformationEditPatch("showDifficultyToPlayers", "false")).toEqual({ showDifficultyToPlayers: false });
+  expect(readInformationEditPatch("showDifficultyToPlayers", "yes")).toBeNull();
 });

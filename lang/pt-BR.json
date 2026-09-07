@@ -83,7 +83,18 @@
       },
       "Investigation": {
         "Title": "Investigação",
-        "SkillsHeading": "Perícias",
+        "SkillsHeading": "Investigação",
+        "Skill": "Perícia",
+        "Difficulty": "DT",
+        "Examine": "Examinar",
+        "ExamineWith": "Examinar com",
+        "Information": "Informação",
+        "NoInformation": "Sem informações para exibir",
+        "HiddenDifficulty": "DT oculta",
+        "OtherSkill": "Outra perícia...",
+        "UnavailableAction": "Examinar ainda não está disponível nesta etapa.",
+        "NoSkills": "Nenhuma perícia disponível.",
+        "NoImage": "Imagem indisponível",
         "Loading": "Carregando…",
         "Error": "Não foi possível carregar este Ponto de Interesse.",
         "NoGm": "Nenhum Mestre disponível."
@@ -351,7 +362,7 @@
         "Image": "Imagem do Ponto de Interesse",
         "PublicDescription": "Descrição pública",
         "GmContextLegend": "Somente o Mestre",
-        "ShowDifficultiesToPlayers": "Mostrar DTs aos jogadores"
+        "ShowDifficultyToPlayers": "Mostrar DT aos jogadores"
       },
       "Table": {
         "Skill": "Perícia",

@@ -47,14 +47,12 @@ describe("PointOfInterestDataModel", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
       publicDescription: MockField;
       gmContext: MockField;
-      showDifficultiesToPlayers: MockField;
       information: MockArrayField;
     };
 
     expect(Object.keys(schema)).toEqual([
       "publicDescription",
       "gmContext",
-      "showDifficultiesToPlayers",
       "information",
     ]);
     expect(schema.publicDescription.options).toMatchObject({
@@ -62,9 +60,6 @@ describe("PointOfInterestDataModel", () => {
       initial: "",
     });
     expect(schema.gmContext.options).toMatchObject({ blank: true, initial: "" });
-    expect(schema.showDifficultiesToPlayers.options).toMatchObject({
-      initial: false,
-    });
   });
 
   it("models information as an array of stable, skill-gated entries", () => {
@@ -82,6 +77,7 @@ describe("PointOfInterestDataModel", () => {
       "skill",
       "difficulty",
       "content",
+      "showDifficultyToPlayers",
     ]);
     expect(entry.fields.id.options).toMatchObject({ blank: false });
     expect(entry.fields.skill.options.choices).toEqual([...SKILL_KEYS]);
@@ -91,6 +87,7 @@ describe("PointOfInterestDataModel", () => {
     });
     expect(entry.fields.difficulty.options).not.toHaveProperty("max");
     expect(entry.fields.content.options).toMatchObject({ blank: true });
+    expect(entry.fields.showDifficultyToPlayers.options).toMatchObject({ initial: false });
   });
 
   it("rejects a repeated information id through the array validator", () => {

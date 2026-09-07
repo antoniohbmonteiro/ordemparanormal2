@@ -37,7 +37,6 @@ interface PointOfInterestItemSheetContext
     readonly enrichedPublicDescription: string;
     readonly gmContext: string;
     readonly enrichedGmContext: string;
-    readonly showDifficultiesToPlayers: boolean;
     readonly information: readonly InformationRowViewModel[];
   };
 }
@@ -122,7 +121,6 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
     const system = item.system as unknown as {
       readonly publicDescription?: unknown;
       readonly gmContext?: unknown;
-      readonly showDifficultiesToPlayers?: unknown;
     };
     const publicDescription =
       typeof system.publicDescription === "string"
@@ -153,7 +151,6 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
         enrichedPublicDescription,
         gmContext,
         enrichedGmContext,
-        showDifficultiesToPlayers: system.showDifficultiesToPlayers === true,
         information: buildInformationRowViewModels(
           readPointOfInterestInformationList(item.system),
         ),
@@ -185,7 +182,9 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
 
         const patch = readInformationEditPatch(
           control.dataset.informationField,
-          control.value,
+          control instanceof HTMLInputElement && control.type === "checkbox"
+            ? String(control.checked)
+            : control.value,
         );
         if (!patch) {
           ui.notifications.error(
@@ -202,24 +201,6 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(
         );
       });
     }
-
-    htmlElement
-      .querySelector<HTMLInputElement>("[data-difficulty-visibility-edit]")
-      ?.addEventListener("change", (event) => {
-        event.stopPropagation();
-        const input = event.currentTarget as HTMLInputElement;
-        if (!this.#canAuthor) {
-          void this.render({ force: true });
-          return;
-        }
-
-        const checked = input.checked;
-        this.#enqueue(async () => {
-          await (this.document as foundry.documents.Item).update({
-            "system.showDifficultiesToPlayers": checked,
-          });
-        });
-      });
   }
 
   static async #onAddInformation(

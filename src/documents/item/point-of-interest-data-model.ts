@@ -47,12 +47,12 @@ type PointOfInterestInformationSchema = {
   skill: SkillKeyField;
   difficulty: RequiredIntegerField;
   content: RequiredStringField;
+  showDifficultyToPlayers: RequiredBooleanField;
 };
 
 type PointOfInterestSchema = {
   publicDescription: RequiredStringField;
   gmContext: RequiredStringField;
-  showDifficultiesToPlayers: RequiredBooleanField;
   information: foundry.data.fields.ArrayField<
     foundry.data.fields.SchemaField<PointOfInterestInformationSchema>,
     foundry.data.fields.SourceFromSchema<PointOfInterestInformationSchema>[],
@@ -87,11 +87,6 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
     return {
       publicDescription: createRichTextField(),
       gmContext: createRichTextField(),
-      showDifficultiesToPlayers: new foundry.data.fields.BooleanField({
-        required: true,
-        nullable: false,
-        initial: false,
-      }),
       information: new foundry.data.fields.ArrayField(
         new foundry.data.fields.SchemaField({
           id: new foundry.data.fields.StringField({
@@ -119,6 +114,11 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
             initial: POINT_OF_INTEREST_DIFFICULTY_MIN,
           }),
           content: createRichTextField(),
+          showDifficultyToPlayers: new foundry.data.fields.BooleanField({
+            required: true,
+            nullable: false,
+            initial: false,
+          }),
         }),
         {
           required: true,

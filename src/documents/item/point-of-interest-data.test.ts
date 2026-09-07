@@ -12,9 +12,9 @@ import {
 } from "./point-of-interest-data";
 
 const rows: readonly PointOfInterestInformation[] = [
-  { id: "a", skill: "perception", difficulty: 6, content: "A" },
-  { id: "b", skill: "crime", difficulty: 10, content: "B" },
-  { id: "c", skill: "aptitude", difficulty: 2, content: "C" },
+  { id: "a", skill: "perception", difficulty: 6, content: "A", showDifficultyToPlayers: false },
+  { id: "b", skill: "crime", difficulty: 10, content: "B", showDifficultyToPlayers: false },
+  { id: "c", skill: "aptitude", difficulty: 2, content: "C", showDifficultyToPlayers: false },
 ];
 
 describe("isPointOfInterestInformation", () => {
@@ -28,7 +28,7 @@ describe("isPointOfInterestInformation", () => {
         id: "x",
         skill: "Percepção",
         difficulty: 6,
-        content: "",
+        content: "", showDifficultyToPlayers: false,
       }),
     ).toBe(false);
     expect(
@@ -36,7 +36,7 @@ describe("isPointOfInterestInformation", () => {
         id: "x",
         skill: "perception",
         difficulty: 0,
-        content: "",
+        content: "", showDifficultyToPlayers: false,
       }),
     ).toBe(false);
     expect(
@@ -44,7 +44,7 @@ describe("isPointOfInterestInformation", () => {
         id: "  ",
         skill: "perception",
         difficulty: 6,
-        content: "",
+        content: "", showDifficultyToPlayers: false,
       }),
     ).toBe(false);
   });
@@ -59,21 +59,21 @@ describe("readPointOfInterestInformationList", () => {
     expect(
       readPointOfInterestInformationList({
         information: [
-          { id: "a", skill: "perception", difficulty: 6, content: "A" },
-          { id: "b", skill: "lockpicking", difficulty: 6, content: "B" },
-          { id: "c", skill: "Percepção", difficulty: 6, content: "C" },
+          { id: "a", skill: "perception", difficulty: 6, content: "A", showDifficultyToPlayers: false },
+          { id: "b", skill: "lockpicking", difficulty: 6, content: "B", showDifficultyToPlayers: false },
+          { id: "c", skill: "Percepção", difficulty: 6, content: "C", showDifficultyToPlayers: false },
         ],
       }),
-    ).toEqual([{ id: "a", skill: "perception", difficulty: 6, content: "A" }]);
+    ).toEqual([{ id: "a", skill: "perception", difficulty: 6, content: "A", showDifficultyToPlayers: false }]);
   });
 
   it("drops structurally invalid rows", () => {
     expect(
       readPointOfInterestInformationList({
         information: [
-          { id: "", skill: "perception", difficulty: 6, content: "A" },
-          { id: "b", skill: "perception", difficulty: 1.5, content: "B" },
-          { id: "c", skill: "perception", difficulty: 0, content: "C" },
+          { id: "", skill: "perception", difficulty: 6, content: "A", showDifficultyToPlayers: false },
+          { id: "b", skill: "perception", difficulty: 1.5, content: "B", showDifficultyToPlayers: false },
+          { id: "c", skill: "perception", difficulty: 0, content: "C", showDifficultyToPlayers: false },
           { id: "d", skill: "perception", difficulty: 6, content: 7 },
         ],
       }),
@@ -88,23 +88,16 @@ describe("readPointOfInterestInformationList", () => {
 });
 
 describe("collectPoiInvestigationSkills", () => {
-  it("deduplicates skills in first-occurrence order and drops invalid entries", () => {
-    const information = [
-      { id: "1", skill: "perception", difficulty: 6, content: "" },
-      { id: "2", skill: "technology", difficulty: 2, content: "" },
-      { id: "3", skill: "perception", difficulty: 9, content: "" },
-      { id: "4", skill: "notASkill", difficulty: 1, content: "" },
-      { id: "5", skill: "crime", difficulty: 1, content: "" },
-    ];
-    expect(collectPoiInvestigationSkills({ information })).toEqual([
-      "perception", "technology", "crime",
-    ]);
+  it("derives distinct skills from information in first-occurrence order", () => {
+    expect(collectPoiInvestigationSkills({
+      information: [rows[0], rows[0], rows[1], rows[0], rows[2]],
+    })).toEqual(["perception", "crime", "aptitude"]);
+    expect(collectPoiInvestigationSkills(null)).toEqual([]);
   });
 
-  it("returns nothing for empty or malformed system data", () => {
-    expect(collectPoiInvestigationSkills({})).toEqual([]);
-    expect(collectPoiInvestigationSkills(null)).toEqual([]);
-    expect(collectPoiInvestigationSkills({ information: [] })).toEqual([]);
+  it("preserves legacy information without exposing its difficulty", () => {
+    const legacy = { id: "old", skill: "perception", difficulty: 9, content: "Private" };
+    expect(readPointOfInterestInformationList({ information: [legacy], showDifficultiesToPlayers: true })).toEqual([{ ...legacy, showDifficultyToPlayers: false }]);
   });
 });
 
@@ -115,7 +108,7 @@ describe("addPointOfInterestInformation", () => {
       difficulty: 4,
     });
     expect(next).toEqual([
-      { id: "a", skill: "research", difficulty: 4, content: "" },
+      { id: "a", skill: "research", difficulty: 4, content: "", showDifficultyToPlayers: false },
     ]);
   });
 
@@ -143,7 +136,7 @@ describe("updatePointOfInterestInformation", () => {
     const next = updatePointOfInterestInformation(rows, "b", { difficulty: 12 });
     expect(next).toEqual([
       rows[0],
-      { id: "b", skill: "crime", difficulty: 12, content: "B" },
+      { id: "b", skill: "crime", difficulty: 12, content: "B", showDifficultyToPlayers: false },
       rows[2],
     ]);
     expect(next[0]).toBe(rows[0]);

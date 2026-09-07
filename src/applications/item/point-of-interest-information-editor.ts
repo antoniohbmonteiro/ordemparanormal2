@@ -35,6 +35,7 @@ export interface InformationRowViewModel {
   readonly skillLabel: string;
   readonly difficulty: number;
   readonly content: string;
+  readonly showDifficultyToPlayers: boolean;
   readonly skillOptions: readonly InformationRowSkillOptionViewModel[];
 }
 
@@ -47,6 +48,7 @@ export function buildInformationRowViewModels(
     skillLabel: SKILL_LABEL_BY_KEY.get(entry.skill) ?? entry.skill,
     difficulty: entry.difficulty,
     content: entry.content,
+    showDifficultyToPlayers: entry.showDifficultyToPlayers,
     skillOptions: SKILL_OPTION_VIEW_MODELS.map((option) => ({
       ...option,
       selected: option.value === entry.skill,
@@ -57,7 +59,8 @@ export function buildInformationRowViewModels(
 export type InformationEditPatch =
   | { readonly skill: SkillKey }
   | { readonly difficulty: number }
-  | { readonly content: string };
+  | { readonly content: string }
+  | { readonly showDifficultyToPlayers: boolean };
 
 /**
  * Validate one edited row field into a typed patch, or `null` when the raw
@@ -77,6 +80,8 @@ export function readInformationEditPatch(
         ? { difficulty }
         : null;
     }
+    case "showDifficultyToPlayers":
+      return rawValue === "true" || rawValue === "false" ? { showDifficultyToPlayers: rawValue === "true" } : null;
     case "content":
       return { content: rawValue };
     default:

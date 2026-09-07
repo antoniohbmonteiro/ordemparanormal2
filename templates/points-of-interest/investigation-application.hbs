@@ -1,16 +1,46 @@
-<section class="op2-poi-investigation" role="document">
-  <h2 class="op2-poi-investigation__name">{{name}}</h2>
+<section class="op2-investigation-body" role="document">
   {{#if isReady}}
-  {{#if description}}
-  <div class="op2-poi-investigation__description">{{{description}}}</div>
-  {{/if}}
-  <h3 class="op2-poi-investigation__skills-heading">
-    {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}
-  </h3>
-  <ul class="op2-poi-investigation__skills">
-    {{#each skills}}<li>{{this}}</li>{{/each}}
-  </ul>
+  <header class="op2-investigation-summary">
+    <figure class="op2-investigation-image">
+      <span role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.NoImage'}}"><i class="fa-solid fa-image" aria-hidden="true"></i></span>
+      {{#if img}}<img data-poi-image src="{{img}}" alt="{{name}}" />{{/if}}
+    </figure>
+    <div class="op2-investigation-intro">
+      <h2>{{name}}</h2>
+      {{#if description}}
+      <div class="op2-investigation-description">{{{description}}}</div>
+      {{/if}}
+    </div>
+  </header>
+  <section class="op2-investigation-panel">
+    <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}</h3>
+    <p id="{{actionHintId}}" class="op2-investigation-hint">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.UnavailableAction"}}</p>
+    <table class="op2-investigation-table">
+      <colgroup><col class="skill" /><col class="difficulty" /><col class="examine" /><col /></colgroup>
+      <thead><tr>
+        <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Skill"}}</th>
+        <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Difficulty"}}</th>
+        <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Examine"}}</th>
+        <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Information"}}</th>
+      </tr></thead>
+      <tbody>
+        {{#each skills}}
+        <tr>
+          <th scope="row">{{name}}</th>
+          <td><div class="op2-investigation-dt">
+            {{#each difficulties}}<span>{{this}}</span>{{/each}}
+            {{#if hasHiddenDifficulties}}<span title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficulty'}}" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficulty'}}"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i></span>
+            {{else}}{{#unless difficulties.length}}—{{/unless}}{{/if}}
+          </div></td>
+          <td><button type="button" class="op2-investigation-examine" disabled aria-label="{{examineLabel}}" title="{{examineLabel}}" aria-describedby="{{@root.actionHintId}}"><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></button></td>
+          <td class="op2-investigation-information">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}</td>
+        </tr>
+        {{else}}<tr><td colspan="4">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoSkills"}}</td></tr>{{/each}}
+      </tbody>
+    </table>
+    <button type="button" class="op2-investigation-other" disabled aria-describedby="{{actionHintId}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.OtherSkill"}}</button>
+  </section>
   {{else}}
-  <p class="op2-poi-investigation__status" role="status">{{message}}</p>
+  <h2>{{name}}</h2><p role="status">{{message}}</p>
   {{/if}}
 </section>

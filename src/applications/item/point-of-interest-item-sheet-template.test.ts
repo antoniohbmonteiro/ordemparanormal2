@@ -56,13 +56,11 @@ describe("Point of Interest Item Sheet template", () => {
     expect(eachOptions).toBeGreaterThan(eachRows);
   });
 
-  it("keeps the DT-visibility toggle on its own selector", () => {
-    expect(template).toContain("data-difficulty-visibility-edit");
-    const toggleLine = template
-      .split("\n")
-      .find((line) => line.includes("data-difficulty-visibility-edit"));
-    expect(toggleLine).toBeDefined();
-    expect(toggleLine).not.toContain("data-information-edit");
+  it("keeps difficulty visibility on each information and has no separate skill grid", () => {
+    expect(template).toContain('data-information-field="showDifficultyToPlayers"');
+    expect(template).not.toContain("data-listed-skill");
+    expect(template).not.toContain("op2-poi-sheet__skill-options");
+    expect(template).not.toContain("data-difficulty-visibility-edit");
   });
 
   it("never exposes the entry id as an editable field or execution state", () => {

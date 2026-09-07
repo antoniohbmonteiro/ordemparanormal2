@@ -2,8 +2,9 @@ import type {
   ApplicationClosingOptions,
   ApplicationRenderContext,
 } from "@client/applications/_types.mjs";
-import type { HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
+import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 
+import type { PoiInvestigationSkillView } from "../../documents/item/point-of-interest-data";
 import { SYSTEM_ID } from "../../config/system-config";
 import {
   requestPoiInvestigationView,
@@ -28,10 +29,12 @@ export function investigationApplicationKey(sceneId: string, regionId: string): 
 }
 
 export interface InvestigationRenderContext extends ApplicationRenderContext {
+  readonly actionHintId?: string;
   readonly isReady: boolean;
   readonly name: string;
   readonly description: string;
-  readonly skills: readonly string[];
+  readonly img: string;
+  readonly skills: readonly (PoiInvestigationSkillView & { readonly examineLabel: string })[];
   readonly message: string;
 }
 
@@ -44,14 +47,15 @@ export function buildInvestigationRenderContext(
   localize: (key: string) => string,
 ): InvestigationRenderContext {
   if (!result) {
-    return { isReady: false, name, description: "", skills: [], message: localize("Loading") };
+    return { isReady: false, name, description: "", img: "", skills: [], message: localize("Loading") };
   }
   if ("view" in result) {
     return {
       isReady: true,
       name: result.view.name || name,
       description: result.view.description,
-      skills: result.view.skills,
+      img: result.view.img,
+      skills: result.view.skills.map(skill => ({ ...skill, examineLabel: `${localize("ExamineWith")} ${skill.name}` })),
       message: "",
     };
   }
@@ -59,6 +63,7 @@ export function buildInvestigationRenderContext(
     isReady: false,
     name,
     description: "",
+    img: "",
     skills: [],
     message: localize(result.error === "no-gm" ? "NoGm" : "Error"),
   };
@@ -76,12 +81,12 @@ export function releaseInvestigationApplication(sceneId: string, regionId: strin
 export class InvestigationApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-poi-investigation"],
-    window: { title: `${LOCALIZATION_ROOT}.Title` },
-    position: { width: 420, height: "auto" as const },
+    window: { title: `${LOCALIZATION_ROOT}.Title`, resizable: true, contentClasses: ["op2-investigation-content"] },
+    position: { width: 820, height: 620 },
   };
 
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
-    main: { template: INVESTIGATION_TEMPLATE },
+    main: { template: INVESTIGATION_TEMPLATE, scrollable: [".op2-investigation-body"] },
   };
 
   #params: InvestigationApplicationParams;
@@ -96,9 +101,9 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   }
 
   protected override async _prepareContext(): Promise<InvestigationRenderContext> {
-    return buildInvestigationRenderContext(this.#params.name, this.#result, key =>
+    return { ...buildInvestigationRenderContext(this.#params.name, this.#result, key =>
       game.i18n.localize(`${LOCALIZATION_ROOT}.${key}`),
-    );
+    ), actionHintId: `${this.id}-action-hint` };
   }
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
@@ -106,6 +111,15 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     // Not awaited: _onFirstRender runs inside the render semaphore, and #load
     // triggers its own render() when the projection arrives.
     void this.#load();
+  }
+
+  protected override _attachPartListeners(partId: string, element: HTMLElement, options: HandlebarsRenderOptions): void {
+    super._attachPartListeners(partId, element, options);
+    const image = element.querySelector<HTMLImageElement>("[data-poi-image]");
+    if (!image) return;
+    const fallback = () => { image.hidden = true; };
+    image.addEventListener("error", fallback, { once: true });
+    if (image.complete && image.naturalWidth === 0) fallback();
   }
 
   async #load(): Promise<void> {

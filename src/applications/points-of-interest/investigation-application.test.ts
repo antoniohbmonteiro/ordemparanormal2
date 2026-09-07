@@ -26,6 +26,7 @@ const {
   releaseInvestigationApplication,
 } = await import("./investigation-application");
 
+const skills = [{ key: "perception" as const, name: "Percepção", difficulties: [6], hasHiddenDifficulties: true }];
 const localize = (key: string) => key;
 
 afterEach(() => vi.clearAllMocks());
@@ -33,19 +34,19 @@ afterEach(() => vi.clearAllMocks());
 describe("buildInvestigationRenderContext", () => {
   it("is a loading state until a result arrives", () => {
     expect(buildInvestigationRenderContext("Sala", null, localize)).toEqual({
-      isReady: false, name: "Sala", description: "", skills: [], message: "Loading",
+      isReady: false, name: "Sala", description: "", img: "", skills: [], message: "Loading",
     });
   });
 
   it("renders name, description and skills when ready", () => {
-    const result = { view: { name: "Armário Azul", description: "<p>x</p>", skills: ["Percepção", "Tecnologia"] } };
+    const result = { view: { name: "Armário Azul", description: "<p>x</p>", img: "icons/svg/eye.svg", skills } };
     expect(buildInvestigationRenderContext("fallback", result, localize)).toEqual({
-      isReady: true, name: "Armário Azul", description: "<p>x</p>", skills: ["Percepção", "Tecnologia"], message: "",
+      isReady: true, name: "Armário Azul", description: "<p>x</p>", img: "icons/svg/eye.svg", skills: skills.map(s => ({ ...s, examineLabel: "ExamineWith Percepção" })), message: "",
     });
   });
 
   it("hands a non-empty description straight through to the context", () => {
-    const result = { view: { name: "Armário Azul", description: "<p>Descrição de teste</p>", skills: ["Percepção"] } };
+    const result = { view: { name: "Armário Azul", description: "<p>Descrição de teste</p>", img: "", skills } };
     expect(buildInvestigationRenderContext("Armário Azul", result, localize).description)
       .toBe("<p>Descrição de teste</p>");
   });
@@ -110,12 +111,16 @@ describe("investigation-application source and template", () => {
     expect(source).toMatch(/async #load\(\)[\s\S]*?catch \(error\)[\s\S]*?error: "unavailable"/);
   });
 
-  it("shows only name, description and skills — no DT, clue content or gm context", () => {
+  it("keeps the investigation table neutral and exposes no private content", () => {
     expect(template).toContain("{{name}}");
     expect(template).toContain("{{{description}}}");
     expect(template).toContain("{{#each skills}}");
+    expect(template).toContain("{{#each difficulties}}");
+    expect(template).toContain("{{#if hasHiddenDifficulties}}");
     expect(template).toMatch(/role="status"/);
-    expect(template).not.toMatch(/difficulty|gmContext|content|<button|<form|<input|data-action/i);
+    expect(template).not.toMatch(/gmContext|information\.content|<details|chevron|data-action/i);
+    expect(template).toContain("disabled");
+    expect(template).toContain("aria-describedby");
   });
 
   it("renders the description as HTML between the name and the skills section", () => {
@@ -127,19 +132,21 @@ describe("investigation-application source and template", () => {
       isReady: true,
       name: "Armário Azul",
       description: "<p>Descrição de teste</p>",
-      skills: ["Percepção", "Tecnologia"],
+      img: "icons/svg/eye.svg", skills,
       message: "",
     });
     expect(html).toContain("<p>Descrição de teste</p>");
     expect(html.indexOf("Armário Azul")).toBeLessThan(html.indexOf("Descrição de teste"));
     expect(html.indexOf("Descrição de teste")).toBeLessThan(html.indexOf("SkillsHeading"));
-    expect(html).toContain("<li>Percepção</li>");
+    expect(html).toContain('<th scope="row">Percepção</th>');
+    expect(html).toContain("fa-eye-slash");
+    expect(html).toContain("NoInformation");
 
-    const empty = render({ isReady: true, name: "Sala", description: "", skills: ["Percepção"], message: "" });
-    expect(empty).not.toContain("op2-poi-investigation__description");
+    const empty = render({ isReady: true, name: "Sala", description: "", img: "", skills, message: "" });
+    expect(empty).not.toContain("op2-investigation-description");
 
-    const loading = render({ isReady: false, name: "Sala", description: "", skills: [], message: "Carregando…" });
+    const loading = render({ isReady: false, name: "Sala", description: "", img: "", skills: [], message: "Carregando…" });
     expect(loading).toContain("Carregando…");
-    expect(loading).not.toContain("op2-poi-investigation__description");
+    expect(loading).not.toContain("op2-investigation-description");
   });
 });

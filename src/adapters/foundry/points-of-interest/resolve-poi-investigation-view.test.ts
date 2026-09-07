@@ -28,12 +28,12 @@ beforeEach(() => {
   fromUuid.mockReset().mockResolvedValue({
     type: "pointOfInterest",
     name: "Armário Azul",
+    img: "icons/svg/eye.svg",
     system: {
       publicDescription: "<p>Um armário metálico.</p>",
       gmContext: "SEGREDO DO MESTRE",
-      showDifficultiesToPlayers: true,
       information: [
-        { id: "1", skill: "perception", difficulty: 6, content: "PISTA SECRETA" },
+        { id: "1", skill: "perception", difficulty: 6, showDifficultyToPlayers: true, content: "PISTA SECRETA" },
         { id: "2", skill: "technology", difficulty: 2, content: "OUTRA PISTA" },
         { id: "3", skill: "perception", difficulty: 9, content: "MAIS" },
       ],
@@ -79,23 +79,25 @@ describe("resolvePoiInvestigationView", () => {
       view: {
         name: "Armário Azul",
         description: "enriched:<p>Um armário metálico.</p>",
-        skills: ["Percepção", "Tecnologia"],
+        img: "icons/svg/eye.svg",
+        skills: [{ key: "perception", name: "Percepção", difficulties: [6], hasHiddenDifficulties: true }, { key: "technology", name: "Tecnologia", difficulties: [], hasHiddenDifficulties: true }],
       },
     });
 
     stubWorld(region({ association: { itemUuid: "Item.poi" }, reveal: { mode: "hidden" } }), { gm1: { isGM: true } });
     const asGm = await resolvePoiInvestigationView(req("gm1"));
-    expect("view" in asGm && asGm.view.skills).toEqual(["Percepção", "Tecnologia"]);
+    expect("view" in asGm && asGm.view.skills.map(s => s.name)).toEqual(["Percepção", "Tecnologia"]);
   });
 
-  it("never leaks gmContext, difficulty, content or ids into the projection", async () => {
+  it("never leaks gmContext, information content or ids, or the raw Item", async () => {
     stubWorld(region(REVEALED));
     const result = await resolvePoiInvestigationView(req());
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain("SEGREDO DO MESTRE");
     expect(serialized).not.toContain("PISTA SECRETA");
-    expect(serialized).not.toContain("difficulty");
-    expect("view" in result && Object.keys(result.view).sort()).toEqual(["description", "name", "skills"]);
+    expect(serialized).not.toContain('"id"');
+    expect(serialized).not.toContain('"system"');
+    expect("view" in result && Object.keys(result.view).sort()).toEqual(["description", "img", "name", "skills"]);
   });
 
   it("enriches the description with secrets disabled", async () => {
@@ -122,12 +124,44 @@ describe("resolvePoiInvestigationView", () => {
     fromUuid.mockResolvedValue({
       type: "pointOfInterest",
       name: "Armário Azul",
-      system: { publicDescription: "", information: [{ id: "1", skill: "perception", difficulty: 1, content: "" }] },
+      system: { publicDescription: "", information: [] },
     });
     stubWorld(region(REVEALED));
     const result = await resolvePoiInvestigationView(req());
     expect("view" in result && result.view).toEqual({
-      name: "Armário Azul", description: "", skills: ["Percepção"],
+      name: "Armário Azul", description: "", img: "", skills: [],
     });
   });
+});
+
+it.each(["revoke", "reassociate", "delete"])("rechecks placement after asynchronous enrichment: %s", async change => {
+  const flags = { association: { itemUuid: "Item.poi" }, reveal: { mode: "everyone" } };
+  stubWorld(region(flags));
+  enrichHTML.mockImplementationOnce(async () => {
+    if (change === "revoke") flags.reveal.mode = "hidden";
+    if (change === "reassociate") flags.association.itemUuid = "Item.other";
+    if (change === "delete") stubWorld(null);
+    return "Public";
+  });
+  expect(await resolvePoiInvestigationView(req())).toEqual({ error: change === "revoke" ? "forbidden" : "unavailable" });
+});
+
+
+it("derives deduplicated skills from information, with per-entry public DTs and one hidden indicator", async () => {
+  stubWorld(region(REVEALED));
+  fromUuid.mockResolvedValue({ type: "pointOfInterest", name: "POI", system: {
+    information: [
+      { id: "a", skill: "perception", difficulty: 8, showDifficultyToPlayers: true, content: "private" },
+      { id: "b", skill: "perception", difficulty: 6, showDifficultyToPlayers: true, content: "private" },
+      { id: "c", skill: "perception", difficulty: 8, showDifficultyToPlayers: true, content: "private" },
+      { id: "d", skill: "perception", difficulty: 99, content: "private" },
+      { id: "e", skill: "perception", difficulty: 100, content: "private" },
+      { id: "f", skill: "occultism", difficulty: 1, showDifficultyToPlayers: true, content: "private" },
+    ],
+  } });
+  const result = await resolvePoiInvestigationView(req());
+  expect("view" in result && result.view.skills).toEqual([
+    { key: "perception", name: "Percepção", difficulties: [6, 8], hasHiddenDifficulties: true },
+    { key: "occultism", name: "Ocultismo", difficulties: [1], hasHiddenDifficulties: false },
+  ]);
 });

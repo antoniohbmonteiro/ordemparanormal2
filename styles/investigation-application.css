@@ -142,6 +142,7 @@
 
 .op2-poi-investigation .op2-investigation-skill {
   grid-auto-rows: minmax(54px, auto);
+  align-content: start;
 }
 
 .op2-poi-investigation .op2-investigation-row {
@@ -227,13 +228,29 @@
 
 .op2-poi-investigation .op2-investigation-information {
   grid-column: 4;
-  align-content: center;
+  place-self: stretch;
+  display: block;
   min-height: 54px;
   color: var(--op2-text-muted);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  text-align: left;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.op2-poi-investigation .op2-investigation-information__content {
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  overflow: visible !important;
+  text-align: left !important;
+  text-overflow: clip !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  -webkit-line-clamp: unset !important;
 }
 
 .op2-poi-investigation .op2-investigation-reveal,
@@ -248,6 +265,12 @@
 
 .op2-poi-investigation .op2-investigation-examine { width: 100%; }
 .op2-poi-investigation .op2-investigation-reveal { padding-inline: 7px; font-size: 12px; }
+.op2-poi-investigation .op2-investigation-revealed {
+  color: var(--op2-text-muted);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
 .op2-poi-investigation .op2-investigation-other {
   width: 100%;
   margin-top: 8px;

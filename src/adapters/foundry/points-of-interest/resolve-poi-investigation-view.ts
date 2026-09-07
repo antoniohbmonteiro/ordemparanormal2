@@ -4,6 +4,7 @@ import {
   readPointOfInterestSkills,
   type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
+import { readPoiInformationRevealState } from "./poi-information-reveal-state";
 import { readPoiRegionAssociation } from "./poi-region-association";
 import { isPoiRevealedTo, readPoiRegionReveal } from "./poi-region-reveal";
 
@@ -97,6 +98,9 @@ export async function resolvePoiInvestigationView(
   const rawGmContext = typeof system.gmContext === "string" ? system.gmContext : "";
 
   const skills = readPointOfInterestSkills(item.system);
+  const revealedInformationIds = new Set(
+    readPoiInformationRevealState(region, association.itemUuid).informationIds,
+  );
   const [description, gmContext] = await Promise.all([
     enrichPlayerDescription(rawDescription, relativeTo),
     isGm ? enrichGmContext(rawGmContext, relativeTo) : Promise.resolve(""),
@@ -113,14 +117,17 @@ export async function resolvePoiInvestigationView(
     ? {
         ...base,
         audience: "gm",
+        associationItemUuid: association.itemUuid,
         gmContext,
         skills: skills.map(({ skill, information }) => ({
           key: skill,
           name: skillLabel(skill),
-          information: information.map(({ difficulty, content, showDifficultyToPlayers }) => ({
+          information: information.map(({ id, difficulty, content, showDifficultyToPlayers }) => ({
+            id,
             difficulty,
             content,
             showDifficultyToPlayers,
+            isRevealed: revealedInformationIds.has(id),
           })),
         })),
       }
@@ -130,11 +137,12 @@ export async function resolvePoiInvestigationView(
         skills: skills.map(({ skill, information }) => ({
           key: skill,
           name: skillLabel(skill),
-          information: information.map((entry) =>
-            entry.showDifficultyToPlayers
-              ? { visibility: "public", difficulty: entry.difficulty }
-              : { visibility: "hidden" },
-          ),
+          information: information.map((entry) => ({
+            ...(entry.showDifficultyToPlayers
+              ? { visibility: "public" as const, difficulty: entry.difficulty }
+              : { visibility: "hidden" as const }),
+            ...(revealedInformationIds.has(entry.id) ? { content: entry.content } : {}),
+          })),
         })),
       };
   const current = scene(request.sceneId)?.regions?.get(request.regionId) as FlagReader | undefined;

@@ -15,13 +15,6 @@
 
     <section class="op2-investigation-panel">
       <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}</h3>
-      <p id="{{actionHintId}}" class="op2-investigation-hint">
-        {{#if isPlayer}}
-          {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.UnavailableAction"}}
-        {{else}}
-          {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.UnavailableRevealAction"}}
-        {{/if}}
-      </p>
 
       <div class="op2-investigation-table {{#if isPlayer}}is-player{{else}}is-gm{{/if}}" role="table" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading'}}">
         <div class="op2-investigation-table__header" role="row">
@@ -45,12 +38,16 @@
                   {{#if @root.isPlayer}}
                     {{#if isFirst}}
                       <div class="op2-investigation-action" role="cell">
-                        <button type="button" class="op2-investigation-examine" disabled aria-label="{{../examineLabel}}" title="{{../examineLabel}}" aria-describedby="{{@root.actionHintId}}"><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></button>
+                        <button type="button" class="op2-investigation-examine" data-action="examine" data-skill="{{../key}}" aria-label="{{../examineLabel}}" title="{{../examineLabel}}"><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></button>
                       </div>
                     {{/if}}
                   {{else}}
                     <div class="op2-investigation-action" role="cell">
-                      <button type="button" class="op2-investigation-reveal" disabled aria-label="{{revealLabel}}" aria-describedby="{{@root.actionHintId}}"><i class="fa-solid fa-eye" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"}}</button>
+                      {{#if isRevealed}}
+                        <span class="op2-investigation-revealed"><i class="fa-solid fa-check" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Revealed"}}</span>
+                      {{else}}
+                        <button type="button" class="op2-investigation-reveal" data-action="revealInformation" data-information-id="{{id}}" aria-label="{{revealLabel}}"><i class="fa-solid fa-eye" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"}}</button>
+                      {{/if}}
                     </div>
                   {{/if}}
 
@@ -70,11 +67,7 @@
                   </div>
 
                   <div class="op2-investigation-information" role="cell">
-                    {{#if @root.isGm}}
-                      {{content}}
-                    {{else}}
-                      {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}
-                    {{/if}}
+                    <div class="op2-investigation-information__content">{{#if @root.isGm}}{{content}}{{else}}{{#if isRevealed}}{{content}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}{{/if}}{{/if}}</div>
                   </div>
                 </div>
               {{/each}}
@@ -86,7 +79,7 @@
       </div>
 
       {{#if isPlayer}}
-        <button type="button" class="op2-investigation-other" disabled aria-describedby="{{actionHintId}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.OtherSkill"}}</button>
+        <button type="button" class="op2-investigation-other" disabled title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.UnavailableOtherSkill'}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.OtherSkill"}}</button>
       {{/if}}
     </section>
 

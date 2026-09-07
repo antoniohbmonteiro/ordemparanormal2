@@ -100,14 +100,18 @@ export function readPointOfInterestSkills(system: unknown): readonly PointOfInte
   return result;
 }
 
-export type PoiInvestigationPlayerInformationView =
+export type PoiInvestigationPlayerInformationView = (
   | {
       readonly visibility: "public";
       readonly difficulty: number;
     }
   | {
       readonly visibility: "hidden";
-    };
+    }
+) & {
+  /** Present only after this placement has revealed the information. */
+  readonly content?: string;
+};
 
 export interface PoiInvestigationPlayerSkillView {
   readonly key: SkillKey;
@@ -116,9 +120,11 @@ export interface PoiInvestigationPlayerSkillView {
 }
 
 export interface PoiInvestigationGmInformationView {
+  readonly id: string;
   readonly difficulty: number;
   readonly content: string;
   readonly showDifficultyToPlayers: boolean;
+  readonly isRevealed: boolean;
 }
 
 export interface PoiInvestigationGmSkillView {
@@ -143,6 +149,7 @@ export interface PoiInvestigationPlayerViewData
 /** Full local-GM presentation; never returned to a non-GM requester. */
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";
+  readonly associationItemUuid: string;
   readonly skills: readonly PoiInvestigationGmSkillView[];
   readonly gmContext: string;
 }

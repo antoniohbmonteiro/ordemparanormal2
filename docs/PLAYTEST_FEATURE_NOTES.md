@@ -142,19 +142,23 @@ O Item `pointOfInterest` já existe como **definição reutilizável, autorada p
 - `system.skills[]`, com uma `SkillKey` única por grupo e `information[]` contendo uma ou mais entradas;
 - cada informação contém `id` estável, `difficulty` (inteiro ≥ 1, sem máximo), `showDifficultyToPlayers` (boolean, inicial `false`) e `content`, sem repetir a skill do grupo.
 
-Cada `information.id` é gerado uma vez, na criação da linha, e permanece estável em edição e remoção — é a identidade que a execução futura referenciará (ex.: `discoveredInformationIds`).
+Cada `information.id` é gerado uma vez, na criação da linha, e permanece estável em edição e remoção — é a identidade usada pelo estado de revelação do placement.
 
 Não existe no modelo ativo configuração de perícia listada, sugerida ou oculta. Cada grupo existente em `system.skills[]` produz uma linha na Investigation Application, na ordem persistida de inserção. A autoria preserva a mesma ordem, acrescentando novas perícias ao final da lista.
 
-A Investigation Application base já está implementada e preserva a identidade do placement (`sceneId + regionId`). Ela usa cabeçalho nativo do Foundry e mostra imagem, nome, descrição pública e um grid de quatro colunas: `Perícia | Ação | DT | Informação`, com Informação ocupando o espaço elástico. Cada skill é um bloco visual e cada `information[]` possui sua própria linha. Para players, Perícia e Ação ocupam visualmente o grupo, `Examinar` aparece uma vez por skill, `Outra perícia...` aparece ao final e ambos permanecem desabilitados; cada linha mostra sua DT pública ou apenas o indicador de DT oculta, enquanto Informação permanece no estado neutro. Para o GM, Perícia ocupa visualmente o grupo, Ação permanece individual por informação com um `Revelar` desabilitado em cada linha, e a Application mostra todas as DTs, conteúdos e o painel enriquecido `Somente o Mestre`, sem `Examinar` ou `Outra perícia...`.
+A Investigation Application preserva a identidade do placement (`sceneId + regionId`). Ela usa cabeçalho nativo do Foundry e mostra imagem, nome, descrição pública e um grid de quatro colunas: `Perícia | Ação | DT | Informação`, com Informação ocupando o espaço elástico. Cada skill é um bloco visual e cada `information[]` possui sua própria linha. Para players, Perícia e Ação ocupam visualmente o grupo, `Examinar` aparece uma vez por skill e abre o fluxo normal de Agent Check, enquanto `Outra perícia...` permanece desabilitada; cada linha mostra sua DT pública ou apenas o indicador de DT oculta e recebe conteúdo somente depois de revelada. Para o GM, Perícia ocupa visualmente o grupo, Ação permanece individual por informação com `Revelar` funcional ou o estado `Revelada`, e a Application mostra todas as DTs, conteúdos e o painel enriquecido `Somente o Mestre`, sem `Examinar` ou `Outra perícia...`.
 
-Ainda **não** implementado: checks de Examinar; revelação de informações; consumo de PD; estado de informações descobertas; vínculo com Narrative Scene; condições de desbloqueio; perícias secretas; automação para jogadores; compêndio de POIs.
+`Examinar` resolve um único Agent controlado e permitido, com fallback para o personagem configurado do usuário. Skills normais reutilizam sua `AgentCheckSelection`; Aptidão exige escolher uma das especializações canônicas. O Check Dialog, rolagem e chat são exatamente o fluxo existente, sem DT automática do POI e sem reveal automático.
+
+Ainda **não** implementado: `Outra perícia`; ocultar novamente uma informação; consumo de PD; descoberta individual; vínculo com Narrative Scene; condições de desbloqueio; perícias secretas; automação por DT; animação de revelação; compêndio de POIs.
 
 ### Boundary de privacidade
 
 A ItemSheet do POI é ferramenta de autoria do GM. O branch de `_prepareContext` que oculta `gmContext` e `skills` de não-GM é uma boundary de **apresentação**, não de transporte seguro: os POIs permanecem com ownership GM-only e um cliente com acesso ao Item ainda poderia inspecionar `item.system`.
 
-A Investigation Application não entrega o Item bruto ao jogador. A projeção sanitizada é criada no lado do GM por `CONFIG.queries`, usando o usuário identificado pelo contexto da query e revalidando associação e autorização de reveal. Ela contém somente nome, descrição pública enriquecida com `secrets: false`, caminho/URL de `Item.img` e uma linha sanitizada por informação: DT pública ou marcador de DT oculta. Nunca envia valor de DT oculta, `information.content`, `information.id`, `gmContext`, UUID do Item ou o Item bruto. O jogador não resolve o Item. A quantidade de linhas revela deliberadamente quantas informações existem em cada skill; esse trade-off foi aceito para sustentar a UI antes da descoberta persistente. O GM recebe localmente uma projection distinta com DTs e conteúdos completos e `gmContext` enriquecido.
+A Investigation Application não entrega o Item bruto ao jogador. A projeção sanitizada é criada no lado do GM por `CONFIG.queries`, usando o usuário identificado pelo contexto da query e revalidando associação e autorização de reveal. Ela contém somente nome, descrição pública enriquecida com `secrets: false`, caminho/URL de `Item.img` e uma linha sanitizada por informação: DT pública ou marcador de DT oculta, mais `content` somente quando o ID está revelado no placement. Nunca envia valor de DT oculta, conteúdo não revelado, `information.id`, `gmContext`, UUID do Item ou o Item bruto. O jogador não resolve o Item. A quantidade de linhas revela deliberadamente quantas informações existem em cada skill. O GM recebe localmente uma projection distinta com identidade e estado de revelação, DTs e conteúdos completos e `gmContext` enriquecido.
+
+O estado compartilhado usa a flag de Region `pointOfInterestInformationReveal`, com `{itemUuid, informationIds}`. O UUID impede que IDs coincidentes de uma associação antiga revelem conteúdo do novo Item. A flag não armazena conteúdo, mas é replicada: um cliente técnico pode observar IDs aleatórios opacos, quantidade/momento das revelações e correlacionar o mesmo ID entre placements do mesmo Item. Updates dessa flag apenas invalidam Applications abertas; cada player reconsulta a projection autorizada, sem conteúdo em payload de evento ou socket próprio.
 
 Exemplo conceitual:
 
@@ -170,12 +174,12 @@ Os pontos abaixo registram direção futura e **não fazem parte do comportament
 
 1. Poderá existir uma separação entre skill existente no POI e skill sugerida/mostrada pelo GM ao jogador, permitindo mostrar todas, algumas ou nenhuma como dica. Essa configuração não existe no modelo ativo atual.
 2. `Outra perícia...` poderá permitir a tentativa de uma skill não sugerida. A resposta ao cliente não poderá revelar se uma skill escondida possui informações; o julgamento narrativo permanece com o GM.
-3. No MVP futuro de `Examinar`, o player escolherá uma perícia, usará o Check Engine e publicará o resultado no chat. Inicialmente o sistema não precisa comparar automaticamente resultado e DT: o GM decidirá manualmente quais informações revelar. Comparação automática, reveal e PD poderão vir depois.
-4. Em uma próxima etapa, os controles `Revelar` já apresentados na variante GM se tornarão funcionais. O player continuará vendo somente a projeção sanitizada e, depois que existir estado persistente, as informações efetivamente reveladas.
-5. O estado de informação descoberta pertence ao placement/investigação, não ao Item canônico. A persistência ainda será definida; conteúdo secreto não deve ser armazenado em Region flags replicadas aos players.
+3. `Examinar` já usa o Check Engine e publica o resultado normal no chat. O sistema não compara automaticamente resultado e DT: o GM continua decidindo manualmente quais informações revelar. Comparação e reveal automáticos, além de PD, poderão vir depois.
+4. Ocultar novamente e animar a transição de uma informação revelada continuam adiados.
+5. Descoberta individual continua adiada; nesta etapa a revelação é compartilhada entre todos os players autorizados para o placement.
 6. `Interagir` permanece uma ação de RP e não precisa de botão. `Recapitular`, `Compartilhar` e Habilidades/Itens genéricos continuam fora da POI Application por enquanto.
 
-Não automatizar decisões narrativas que pertencem ao GM e não escolher Scene flags, Items, Regions ou outro mecanismo de persistência apenas por conveniência antes do Plan específico da feature.
+Não automatizar decisões narrativas que pertencem ao GM nem ampliar o estado persistido além da revelação manual aprovada.
 
 ---
 
@@ -348,4 +352,4 @@ Direção de evolução:
 
 O Playtest atual é a fonte de verdade.
 
-A Investigation Application já possui variantes visuais player/GM, uma linha por informação e projection player sanitizada. Reveal funcional, sincronização, Examinar e descoberta persistente continuam fora desta entrega.
+A Investigation Application possui variantes player/GM, uma linha por informação, projection player sanitizada, revelação manual compartilhada por placement e `Examinar` integrado ao Agent Check existente. Descoberta individual, ocultar novamente e animação continuam fora desta entrega.

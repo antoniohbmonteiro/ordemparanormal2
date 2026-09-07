@@ -8,11 +8,17 @@ import type {
   PoiInvestigationGmSkillView,
   PoiInvestigationPlayerSkillView,
 } from "../../documents/item/point-of-interest-data";
+import type { AgentCheckSelection } from "../../application/checks/build-agent-check";
+import type { SkillKey } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
+import { resolveInvestigationAgent } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
 import {
   requestPoiInvestigationView,
 } from "../../adapters/foundry/points-of-interest/poi-investigation-query";
 import type { PoiInvestigationResult } from "../../adapters/foundry/points-of-interest/resolve-poi-investigation-view";
+import { revealPoiInformation } from "../../adapters/foundry/points-of-interest/reveal-poi-information";
+import { performAgentCheck } from "../../features/checks/perform-agent-check";
+import { selectInvestigationAptitudeSpecialization } from "./investigation-aptitude-selection";
 
 const INVESTIGATION_TEMPLATE =
   "systems/ordemparanormal2/templates/points-of-interest/investigation-application.hbs";
@@ -32,7 +38,6 @@ export function investigationApplicationKey(sceneId: string, regionId: string): 
 }
 
 interface InvestigationRenderContextBase extends ApplicationRenderContext {
-  readonly actionHintId?: string;
   readonly name: string;
   readonly description: string;
   readonly img: string;
@@ -42,7 +47,9 @@ interface InvestigationRenderContextBase extends ApplicationRenderContext {
 export interface PlayerInvestigationInformationRow {
   readonly isFirst: boolean;
   readonly isHidden: boolean;
+  readonly isRevealed: boolean;
   readonly difficulty?: number;
+  readonly content: string;
 }
 
 export interface PlayerInvestigationSkillViewModel {
@@ -54,8 +61,10 @@ export interface PlayerInvestigationSkillViewModel {
 }
 
 export interface GmInvestigationInformationRow {
+  readonly id: string;
   readonly isFirst: boolean;
   readonly isDifficultyHidden: boolean;
+  readonly isRevealed: boolean;
   readonly difficulty: number;
   readonly content: string;
   readonly revealLabel: string;
@@ -121,6 +130,8 @@ export function buildInvestigationRenderContext(
           information: skill.information.map((entry, index) => ({
             isFirst: index === 0,
             isDifficultyHidden: !entry.showDifficultyToPlayers,
+            id: entry.id,
+            isRevealed: entry.isRevealed,
             difficulty: entry.difficulty,
             content: entry.content,
             revealLabel: `${localize("Reveal")} — ${skill.name}`,
@@ -140,6 +151,8 @@ export function buildInvestigationRenderContext(
         information: skill.information.map((entry, index) => ({
           isFirst: index === 0,
           isHidden: entry.visibility === "hidden",
+          isRevealed: Object.hasOwn(entry, "content"),
+          content: entry.content ?? "",
           ...(entry.visibility === "public" ? { difficulty: entry.difficulty } : {}),
         })),
       })),
@@ -166,8 +179,17 @@ export function releaseInvestigationApplication(sceneId: string, regionId: strin
   open.delete(investigationApplicationKey(sceneId, regionId));
 }
 
+/** Requeries one locally open placement after its replicated Region state changes. */
+export function refreshInvestigationApplication(sceneId: string, regionId: string): void {
+  void open.get(investigationApplicationKey(sceneId, regionId))?.refresh();
+}
+
 export class InvestigationApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static override DEFAULT_OPTIONS = {
+    actions: {
+      examine: InvestigationApplication.#onExamine,
+      revealInformation: InvestigationApplication.#onRevealInformation,
+    },
     classes: ["ordemparanormal2", "op2-poi-investigation"],
     window: { title: `${LOCALIZATION_ROOT}.Title`, resizable: true, contentClasses: ["op2-investigation-content"] },
     position: { width: 820, height: "auto" as const },
@@ -179,7 +201,9 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 
   #params: InvestigationApplicationParams;
   #result: PoiInvestigationResult | null = null;
+  #loadRevision = 0;
   #closed = false;
+  #pendingExaminations = new Set<SkillKey>();
 
   constructor(params: InvestigationApplicationParams) {
     super({
@@ -189,9 +213,9 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   }
 
   protected override async _prepareContext(): Promise<InvestigationRenderContext> {
-    return { ...buildInvestigationRenderContext(this.#params.name, this.#result, key =>
+    return buildInvestigationRenderContext(this.#params.name, this.#result, key =>
       game.i18n.localize(`${LOCALIZATION_ROOT}.${key}`),
-    ), actionHintId: `${this.id}-action-hint` };
+    );
   }
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
@@ -211,16 +235,114 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   }
 
   async #load(): Promise<void> {
+    const revision = ++this.#loadRevision;
+    let result: PoiInvestigationResult;
     try {
-      this.#result = await requestPoiInvestigationView({
+      result = await requestPoiInvestigationView({
         sceneId: this.#params.sceneId,
         regionId: this.#params.regionId,
       });
     } catch (error) {
       console.error(`${SYSTEM_ID} | Failed to load POI investigation`, error);
-      this.#result = { error: "unavailable" };
+      result = { error: "unavailable" };
     }
-    if (!this.#closed) await this.render();
+    if (this.#closed || revision !== this.#loadRevision) return;
+    this.#result = result;
+    await this.render();
+  }
+
+  async refresh(): Promise<void> {
+    if (!this.#closed) await this.#load();
+  }
+
+  static async #onExamine(
+    this: InvestigationApplication,
+    _event: PointerEvent,
+    target: HTMLElement,
+  ): Promise<void> {
+    const view = this.#result && "view" in this.#result ? this.#result.view : null;
+    if (view?.audience !== "player") return;
+    const skill = view.skills.find(({ key }) => key === target.dataset.skill);
+    if (!skill || this.#pendingExaminations.has(skill.key)) return;
+
+    const resolution = resolveInvestigationAgent();
+    if (!resolution.ok) {
+      const key = resolution.reason === "multiple" ? "MultipleAgents" : "NoAgent";
+      ui.notifications.error(game.i18n.localize(`${LOCALIZATION_ROOT}.${key}`));
+      return;
+    }
+
+    const button = target.closest<HTMLButtonElement>("button") ??
+      (target instanceof HTMLButtonElement ? target : null);
+    this.#pendingExaminations.add(skill.key);
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    }
+
+    try {
+      let selection: AgentCheckSelection | null;
+      if (skill.key === "aptitude") {
+        const specialization = await selectInvestigationAptitudeSpecialization();
+        selection = specialization
+          ? { kind: "aptitude", key: specialization }
+          : null;
+      } else {
+        selection = { kind: "skill", key: skill.key };
+      }
+      if (selection) await performAgentCheck(resolution.actor, selection);
+    } catch (error) {
+      console.error(`${SYSTEM_ID} | Failed to examine POI`, error);
+      ui.notifications.error(game.i18n.localize(`${LOCALIZATION_ROOT}.CheckFailed`));
+    } finally {
+      this.#pendingExaminations.delete(skill.key);
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      }
+    }
+  }
+
+  static async #onRevealInformation(
+    this: InvestigationApplication,
+    _event: PointerEvent,
+    target: HTMLElement,
+  ): Promise<void> {
+    const informationId = target.dataset.informationId;
+    const view = this.#result && "view" in this.#result ? this.#result.view : null;
+    if (!informationId || view?.audience !== "gm") return;
+    const information = view.skills
+      .flatMap(skill => skill.information)
+      .find(entry => entry.id === informationId);
+    if (!information || information.isRevealed) return;
+
+    const button = target.closest<HTMLButtonElement>("button") ??
+      (target instanceof HTMLButtonElement ? target : null);
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    }
+    try {
+      const result = await revealPoiInformation({
+        sceneId: this.#params.sceneId,
+        regionId: this.#params.regionId,
+        expectedItemUuid: view.associationItemUuid,
+        informationId,
+      });
+      if (!result.ok) {
+        ui.notifications.error(game.i18n.localize(`${LOCALIZATION_ROOT}.RevealFailed`));
+        return;
+      }
+      await this.refresh();
+    } catch (error) {
+      console.error(`${SYSTEM_ID} | Failed to reveal POI information`, error);
+      ui.notifications.error(game.i18n.localize(`${LOCALIZATION_ROOT}.RevealFailed`));
+    } finally {
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      }
+    }
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {
@@ -233,6 +355,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 interface OpenableApplication {
   render(options: { force: true }): unknown;
   bringToFront(): unknown;
+  refresh(): unknown;
 }
 
 /**

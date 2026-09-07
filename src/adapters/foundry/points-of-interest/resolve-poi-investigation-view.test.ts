@@ -5,10 +5,14 @@ const fromUuid = vi.fn();
 // Mirrors Foundry: empty/blank content enriches to an empty string.
 const enrichHTML = vi.fn(async (html: string) => (html ? `enriched:${html}` : ""));
 
-function region(flags: { association?: unknown; reveal?: unknown }) {
+function region(flags: { association?: unknown; reveal?: unknown; informationReveal?: unknown }) {
   return {
     getFlag: vi.fn((_scope: string, key: string) =>
-      key === "pointOfInterestReveal" ? flags.reveal : flags.association),
+      key === "pointOfInterestReveal"
+        ? flags.reveal
+        : key === "pointOfInterestInformationReveal"
+          ? flags.informationReveal
+          : flags.association),
   };
 }
 
@@ -101,17 +105,18 @@ describe("resolvePoiInvestigationView", () => {
     const asGm = await resolvePoiInvestigationView(req("gm1"));
     expect(asGm).toEqual({ view: {
       audience: "gm",
+      associationItemUuid: "Item.poi",
       name: "Armário Azul",
       description: "enriched:<p>Um armário metálico.</p>",
       img: "icons/svg/eye.svg",
       gmContext: "enriched:SEGREDO DO MESTRE",
       skills: [
         { key: "perception", name: "Percepção", information: [
-          { difficulty: 6, content: "PISTA SECRETA", showDifficultyToPlayers: true },
-          { difficulty: 9, content: "MAIS", showDifficultyToPlayers: false },
+          { id: "1", difficulty: 6, content: "PISTA SECRETA", showDifficultyToPlayers: true, isRevealed: false },
+          { id: "3", difficulty: 9, content: "MAIS", showDifficultyToPlayers: false, isRevealed: false },
         ] },
         { key: "technology", name: "Tecnologia", information: [
-          { difficulty: 2, content: "OUTRA PISTA", showDifficultyToPlayers: false },
+          { id: "2", difficulty: 2, content: "OUTRA PISTA", showDifficultyToPlayers: false, isRevealed: false },
         ] },
       ],
     } });
@@ -135,6 +140,23 @@ describe("resolvePoiInvestigationView", () => {
       "<p>Um armário metálico.</p>",
       expect.objectContaining({ secrets: false }),
     );
+  });
+
+  it("sends only revealed content while keeping hidden difficulty private", async () => {
+    stubWorld(region({
+      ...REVEALED,
+      informationReveal: { itemUuid: "Item.poi", informationIds: ["3"] },
+    }));
+    const result = await resolvePoiInvestigationView(req());
+    expect("view" in result && result.view.skills[0].information).toEqual([
+      { visibility: "public", difficulty: 6 },
+      { visibility: "hidden", content: "MAIS" },
+    ]);
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("PISTA SECRETA");
+    expect(serialized).not.toContain('"difficulty":9');
+    expect(serialized).not.toContain('"id"');
+    expect(serialized).not.toContain("Item.poi");
   });
 
   it("enriches gmContext only for a GM, with secrets enabled", async () => {

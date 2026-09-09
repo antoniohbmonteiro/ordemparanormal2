@@ -19,7 +19,7 @@ interface HarnessOptions {
   readonly alias?: string;
   readonly canUserModify?: boolean;
   readonly user?: { readonly isGM: boolean } | null;
-  readonly author?: { readonly isGM: boolean } | null;
+  readonly author?: { readonly isGM: boolean; readonly name: string } | null;
   readonly timestamp?: number;
   readonly isRoll?: boolean;
   readonly type?: string;
@@ -83,7 +83,10 @@ async function createHarness(options: HarnessOptions = {}) {
     blind = options.blind ?? false;
     flavor = options.flavor ?? "";
     title = options.title ?? "";
-    author = options.author === undefined ? null : options.author;
+    author =
+      options.author === undefined
+        ? { isGM: false, name: "Jogador" }
+        : options.author;
 
     renderHTML(renderOptions?: unknown): Promise<unknown> {
       return superRender(renderOptions);
@@ -202,7 +205,7 @@ describe("OrdemParanormal2ChatMessage", () => {
         content: "<article>Check</article>",
         speakerName: "Agente",
         portrait: { name: "Agente", img: "actors/agent.webp" },
-        canDelete: true,
+        metadataHeader: { authorName: "Jogador", canDelete: true },
       },
     );
     expect(harness.shell.style.setProperty).not.toHaveBeenCalled();
@@ -251,7 +254,50 @@ describe("OrdemParanormal2ChatMessage", () => {
     expect(harness.formatChatMessageTime(timestamp)).toBe("13:58");
     expect(harness.renderTemplate).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ metadata: "13:58" }),
+      expect.objectContaining({
+        metadataHeader: {
+          authorName: "Jogador",
+          timestamp: "13:58",
+          canDelete: true,
+        },
+      }),
+    );
+  });
+
+  it("uses the User author name instead of the Actor or speaker alias", async () => {
+    const harness = await createHarness({
+      flag: createV3Snapshot(),
+      author: { isGM: false, name: " Operador " },
+      speakerActor: { name: "Agente", img: "actors/agent.webp" },
+      alias: "Token em cena",
+    });
+
+    await harness.message.renderHTML();
+
+    expect(harness.renderTemplate).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        metadataHeader: {
+          authorName: "Operador",
+          canDelete: true,
+        },
+      }),
+    );
+  });
+
+  it("omits the author name without falling back to Actor or speaker alias", async () => {
+    const harness = await createHarness({
+      flag: createV3Snapshot(),
+      author: null,
+      speakerActor: { name: "Agente", img: "actors/agent.webp" },
+      alias: "Token em cena",
+    });
+
+    await harness.message.renderHTML();
+
+    expect(harness.renderTemplate).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ metadataHeader: { canDelete: true } }),
     );
   });
 
@@ -288,7 +334,9 @@ describe("OrdemParanormal2ChatMessage", () => {
 
       expect(harness.renderTemplate).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ canDelete: expected }),
+        expect.objectContaining({
+          metadataHeader: expect.objectContaining({ canDelete: expected }),
+        }),
       );
       const shouldCheckPermission = requested ?? isGM;
 
@@ -314,7 +362,9 @@ describe("OrdemParanormal2ChatMessage", () => {
 
     expect(harness.renderTemplate).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ canDelete: false }),
+      expect.objectContaining({
+        metadataHeader: expect.objectContaining({ canDelete: false }),
+      }),
     );
     expect(harness.canUserModify).not.toHaveBeenCalled();
   });
@@ -439,8 +489,16 @@ describe("TEXT tier — safe plain messages", () => {
   });
 
   it.each([
-    ["a GM author", { isGM: true }, "ORDEMPARANORMAL2.ChatMessage.RoleGamemaster"],
-    ["a non-GM author", { isGM: false }, "ORDEMPARANORMAL2.ChatMessage.RolePlayer"],
+    [
+      "a GM author",
+      { isGM: true, name: "Mestre" },
+      "ORDEMPARANORMAL2.ChatMessage.RoleGamemaster",
+    ],
+    [
+      "a non-GM author",
+      { isGM: false, name: "Jogador" },
+      "ORDEMPARANORMAL2.ChatMessage.RolePlayer",
+    ],
   ])("labels an OOC-style message from %s accordingly", async (_, author, subtitleKey) => {
     const harness = await createHarness({
       style: CHAT_MESSAGE_STYLES.OOC,

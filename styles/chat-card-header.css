@@ -5,20 +5,22 @@
   min-width: 0;
   min-height: var(--op2-check-header-height);
   margin: 0 0.68rem;
-  padding: 0.4rem 4.75rem 0.4rem 3.32rem;
+  padding: 0.4rem 0.68rem 0.4rem 3.32rem;
   border-bottom: 1px solid var(--op2-check-divider);
 }
 
 .op2-chat-card__identity {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.op2-chat-card__title,
-.op2-chat-card__subtitle {
+.op2-chat-card__title {
+  display: -webkit-box;
   overflow: hidden;
   margin: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
 }
 
 .op2-chat-card__title {
@@ -31,8 +33,11 @@
 }
 
 .op2-chat-card__subtitle {
+  overflow: hidden;
   margin-top: 0.18rem;
   color: #c7bdb0;
   font-size: 0.76rem;
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

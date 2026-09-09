@@ -42,7 +42,7 @@ describe("Ability chat card presentation", () => {
     expect(template).not.toContain("op2-ability-chat-card__icon");
     expect(template).not.toContain("op2-ability-chat-card__title");
     expect(headerTemplate).toContain(
-      '<h3 class="op2-chat-card__title">{{title}}</h3>',
+      '<h3 class="op2-chat-card__title" title="{{title}}">{{title}}</h3>',
     );
     expect(localization).toMatch(/"Subtitle":\s*"HABILIDADE"/);
   });

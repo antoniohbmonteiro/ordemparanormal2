@@ -73,10 +73,19 @@ describe("Check Chat Card presentation", () => {
     expect(template).not.toContain("descartado");
   });
 
-  it("keeps fixed-time metadata independent from Foundry message internals", () => {
+  it("renders the metadata header before card identity and content", () => {
+    expect(shellTemplate).toContain("op2-chat-message__metadata-header");
+    expect(shellTemplate).toContain("op2-chat-message__author");
+    expect(shellTemplate).toContain("op2-chat-message__metadata-actions");
     expect(shellTemplate).toContain("op2-chat-message__metadata");
     expect(shellTemplate).toMatch(
-      /{{#if metadata}}[\s\S]*?{{metadata}}[\s\S]*?{{#if canDelete}}/,
+      /op2-chat-message__metadata-header[\s\S]*?{{#if metadataHeader\.authorName}}[\s\S]*?{{metadataHeader\.authorName}}[\s\S]*?{{#if metadataHeader\.timestamp}}[\s\S]*?{{metadataHeader\.timestamp}}[\s\S]*?{{#if metadataHeader\.canDelete}}/,
+    );
+    expect(shellTemplate.indexOf("op2-chat-message__metadata-header")).toBeLessThan(
+      shellTemplate.indexOf("op2-chat-message__portrait"),
+    );
+    expect(shellTemplate.indexOf("op2-chat-message__metadata-header")).toBeLessThan(
+      shellTemplate.indexOf("{{#if header}}"),
     );
     expect(shellTemplate).not.toMatch(/ago|atrás|message-timestamp/);
     expect(`${shellTemplate}\n${styles}`).not.toMatch(
@@ -117,7 +126,7 @@ describe("Check Chat Card presentation", () => {
     expect(shellTemplate).toContain("op2-chat-message__portrait");
     expect(shellTemplate).toContain('aria-label="{{speakerName}}"');
     expect(shellTemplate).toContain("{{{content}}}");
-    expect(shellTemplate).toContain("{{#if canDelete}}");
+    expect(shellTemplate).toContain("{{#if metadataHeader.canDelete}}");
     expect(shellTemplate).toContain('data-action="delete-message"');
   });
 
@@ -135,7 +144,7 @@ describe("Check Chat Card presentation", () => {
     expect(template).toContain("{{> chatCardHeader title=name subtitle=subtitle}}");
     expect(template).not.toContain("op2-check-card__header");
     expect(headerTemplate).toContain(
-      '<h3 class="op2-chat-card__title">{{title}}</h3>',
+      '<h3 class="op2-chat-card__title" title="{{title}}">{{title}}</h3>',
     );
     expect(headerTemplate).toMatch(
       /{{#if subtitle}}[\s\S]*?op2-chat-card__subtitle[\s\S]*?{{\/if}}/,
@@ -143,6 +152,10 @@ describe("Check Chat Card presentation", () => {
     expect(headerTemplate).not.toMatch(
       /check result|DT|crítico|description|cost|resource/i,
     );
+    expect(headerStyles).toMatch(
+      /\.op2-chat-card__title\s*{[\s\S]*?display:\s*-webkit-box;[\s\S]*?-webkit-box-orient:\s*vertical;[\s\S]*?-webkit-line-clamp:\s*2;[\s\S]*?white-space:\s*normal;/,
+    );
+    expect(headerStyles).not.toContain("4.75rem");
   });
 
   it("adds Portuguese tooltips to the RA/RB abbreviations without changing their visible text", () => {
@@ -165,15 +178,29 @@ describe("Check Chat Card presentation", () => {
   });
 
   it("centers the unchanged portrait against the real header height", () => {
+    expect(shellStyles).toContain("--op2-chat-metadata-header-height: 2rem;");
     expect(shellStyles).toContain("--op2-check-header-height: 3.5rem;");
     expect(shellStyles).toMatch(
-      /\.op2-chat-message__portrait\s*{[\s\S]*?top:\s*calc\(var\(--op2-check-header-height\) \/ 2\);[\s\S]*?transform:\s*translateY\(-50%\);/,
+      /\.op2-chat-message__portrait\s*{[\s\S]*?top:\s*calc\([\s\S]*?var\(--op2-chat-metadata-header-height\)[\s\S]*?var\(--op2-check-header-height\) \/ 2[\s\S]*?\);[\s\S]*?transform:\s*translateY\(-50%\);/,
     );
     expect(headerStyles).toMatch(
       /\.op2-chat-card__header\s*{[\s\S]*?min-height:\s*var\(--op2-check-header-height\);/,
     );
     expect(shellStyles).toContain("width: 2.7rem;");
     expect(shellStyles).toContain("height: 2.7rem;");
+  });
+
+  it("keeps metadata in normal flow and returns the reserved width to the title", () => {
+    expect(shellStyles).toMatch(
+      /\.op2-chat-message__metadata-header\s*{[\s\S]*?display:\s*flex;[\s\S]*?border-bottom:/,
+    );
+    expect(shellStyles).toMatch(
+      /\.op2-chat-message__author\s*{[\s\S]*?min-width:\s*0;[\s\S]*?text-overflow:\s*ellipsis;[\s\S]*?white-space:\s*nowrap;/,
+    );
+    expect(shellStyles).not.toContain("op2-chat-message__header-actions");
+    expect(headerStyles).toContain(
+      "padding: 0.4rem 0.68rem 0.4rem 3.32rem;",
+    );
   });
 
   it("scopes native root neutralization to the explicit OP2 root class", () => {

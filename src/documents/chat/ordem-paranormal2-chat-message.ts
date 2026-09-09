@@ -21,13 +21,18 @@ interface ChatMessageHeaderViewModel {
   readonly subtitle?: string;
 }
 
+interface ChatMessageMetadataHeaderViewModel {
+  readonly authorName?: string;
+  readonly timestamp?: string;
+  readonly canDelete: boolean;
+}
+
 interface ChatMessageShellViewModel {
   readonly content: string;
   readonly speakerName: string;
   readonly portrait?: ChatMessagePortraitViewModel;
   readonly header?: ChatMessageHeaderViewModel;
-  readonly metadata?: string;
-  readonly canDelete: boolean;
+  readonly metadataHeader: ChatMessageMetadataHeaderViewModel;
 }
 
 export function formatChatMessageTime(timestamp: unknown): string | undefined {
@@ -80,7 +85,13 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
           ...(portraitImg ? { img: portraitImg } : {}),
         }
       : undefined;
-    const metadata = formatChatMessageTime(this.timestamp);
+    const authorName = this.author?.name.trim();
+    const timestamp = formatChatMessageTime(this.timestamp);
+    const metadataHeader: ChatMessageMetadataHeaderViewModel = {
+      ...(authorName ? { authorName } : {}),
+      ...(timestamp ? { timestamp } : {}),
+      canDelete,
+    };
     const header: ChatMessageHeaderViewModel | undefined =
       eligibility.kind === "text"
         ? {
@@ -93,8 +104,7 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
       speakerName,
       ...(portrait ? { portrait } : {}),
       ...(header ? { header } : {}),
-      ...(metadata ? { metadata } : {}),
-      canDelete,
+      metadataHeader,
     };
     const html = await foundry.applications.handlebars.renderTemplate(
       CHAT_MESSAGE_SHELL_TEMPLATE,

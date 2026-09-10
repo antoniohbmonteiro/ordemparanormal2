@@ -520,6 +520,39 @@
         "Roll": "Rolar"
       }
     },
+    "OpposedCheckDialog": {
+      "Title": "TESTE OPOSTO",
+      "Instructions": "Configure os dois participantes",
+      "Versus": "VS",
+      "Empty": "São necessários pelo menos dois participantes válidos para configurar um Teste Oposto.",
+      "Participants": {
+        "Left": "PARTICIPANTE A",
+        "Right": "PARTICIPANTE B"
+      },
+      "Fields": {
+        "Character": "Personagem",
+        "Check": "Teste"
+      },
+      "Groups": {
+        "CurrentScene": "Cena atual",
+        "World": "Outros Agentes",
+        "Attributes": "Atributos",
+        "Skills": "Perícias",
+        "Aptitude": "Especializações de Aptidão"
+      },
+      "Placeholders": {
+        "Character": "Selecione um personagem",
+        "Check": "Selecione um teste"
+      },
+      "Preview": {
+        "NoParticipant": "Nenhum participante",
+        "NoCheck": "Nenhum teste selecionado"
+      },
+      "Actions": {
+        "Cancel": "Cancelar",
+        "Create": "Criar teste"
+      }
+    },
     "CheckCard": {
       "Total": "Total",
       "Difficulty": "DT",

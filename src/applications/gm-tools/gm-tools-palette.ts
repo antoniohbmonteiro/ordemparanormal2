@@ -5,6 +5,8 @@ import type {
 } from "@client/applications/api/handlebars-application.mjs";
 import type Draggable from "@client/applications/ux/draggable.mjs";
 
+import { openOpposedCheckDialog } from "../checks/opposed-check-dialog";
+
 const GM_TOOLS_PALETTE_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/gm-tools-palette.hbs";
 
@@ -56,8 +58,13 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
     );
   }
 
-  // These actions intentionally remain inert until their workflows are defined.
+  // This action intentionally remains inert until its workflow is defined.
   static #onRequestCheck(): void {}
 
-  static #onOpposedCheck(): void {}
+  static async #onOpposedCheck(): Promise<void> {
+    const result = await openOpposedCheckDialog();
+    if (!result) return;
+
+    // Configuration is intentionally ignored until orchestration is implemented.
+  }
 }

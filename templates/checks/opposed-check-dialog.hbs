@@ -1,0 +1,82 @@
+<section class="op2-opposed-check-dialog__body" aria-labelledby="op2-opposed-check-dialog-title">
+  <header class="op2-opposed-check-dialog__header">
+    <h3 id="op2-opposed-check-dialog-title">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Title"}}</h3>
+    <p>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Instructions"}}</p>
+  </header>
+
+  {{#unless hasEnoughParticipants}}
+    <p class="op2-opposed-check-dialog__empty" role="status">
+      {{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Empty"}}
+    </p>
+  {{/unless}}
+
+  <div class="op2-opposed-check-dialog__matchup">
+    <section class="op2-opposed-check-dialog__participant" aria-labelledby="op2-opposed-check-dialog-left-title">
+      <h4 id="op2-opposed-check-dialog-left-title">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Participants.Left"}}</h4>
+      <img class="op2-opposed-check-dialog__portrait" src="icons/svg/mystery-man.svg" alt="" data-participant-portrait="left" />
+      <strong class="op2-opposed-check-dialog__name" data-participant-name="left">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoParticipant"}}</strong>
+      <label>
+        <span>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Fields.Character"}}</span>
+        <select name="leftParticipant" data-participant-select="left">
+          <option value="">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Placeholders.Character"}}</option>
+          {{#each participantGroups}}
+            <optgroup label="{{label}}">
+              {{#each options}}<option value="{{value}}">{{label}}</option>{{/each}}
+            </optgroup>
+          {{/each}}
+        </select>
+      </label>
+      <label>
+        <span>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Fields.Check"}}</span>
+        <select name="leftCheck" data-check-select="left" disabled>
+          <option value="">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Placeholders.Check"}}</option>
+          {{#each checkGroups}}
+            <optgroup label="{{label}}">
+              {{#each options}}<option value="{{value}}">{{label}}</option>{{/each}}
+            </optgroup>
+          {{/each}}
+        </select>
+      </label>
+      <div class="op2-opposed-check-dialog__preview" aria-live="polite">
+        <strong data-check-context="left">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoCheck"}}</strong>
+        <span data-check-formula="left">—</span>
+      </div>
+    </section>
+
+    <div class="op2-opposed-check-dialog__versus" aria-label="{{localize 'ORDEMPARANORMAL2.OpposedCheckDialog.Versus'}}">
+      <span aria-hidden="true">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Versus"}}</span>
+    </div>
+
+    <section class="op2-opposed-check-dialog__participant" aria-labelledby="op2-opposed-check-dialog-right-title">
+      <h4 id="op2-opposed-check-dialog-right-title">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Participants.Right"}}</h4>
+      <img class="op2-opposed-check-dialog__portrait" src="icons/svg/mystery-man.svg" alt="" data-participant-portrait="right" />
+      <strong class="op2-opposed-check-dialog__name" data-participant-name="right">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoParticipant"}}</strong>
+      <label>
+        <span>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Fields.Character"}}</span>
+        <select name="rightParticipant" data-participant-select="right">
+          <option value="">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Placeholders.Character"}}</option>
+          {{#each participantGroups}}
+            <optgroup label="{{label}}">
+              {{#each options}}<option value="{{value}}">{{label}}</option>{{/each}}
+            </optgroup>
+          {{/each}}
+        </select>
+      </label>
+      <label>
+        <span>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Fields.Check"}}</span>
+        <select name="rightCheck" data-check-select="right" disabled>
+          <option value="">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Placeholders.Check"}}</option>
+          {{#each checkGroups}}
+            <optgroup label="{{label}}">
+              {{#each options}}<option value="{{value}}">{{label}}</option>{{/each}}
+            </optgroup>
+          {{/each}}
+        </select>
+      </label>
+      <div class="op2-opposed-check-dialog__preview" aria-live="polite">
+        <strong data-check-context="right">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoCheck"}}</strong>
+        <span data-check-formula="right">—</span>
+      </div>
+    </section>
+  </div>
+</section>

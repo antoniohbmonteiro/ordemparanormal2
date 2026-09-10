@@ -2,7 +2,15 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { openOpposedCheckDialogMock } = vi.hoisted(() => ({
+  openOpposedCheckDialogMock: vi.fn(),
+}));
+
+vi.mock("../checks/opposed-check-dialog", () => ({
+  openOpposedCheckDialog: openOpposedCheckDialogMock,
+}));
 
 interface PaletteInstance {
   _canRender(options: object): boolean | void;
@@ -16,7 +24,7 @@ let setPosition: ReturnType<typeof vi.fn>;
 let GmToolsPaletteClass: {
   new (): PaletteInstance;
   DEFAULT_OPTIONS: {
-    actions: Record<string, () => void>;
+    actions: Record<string, () => void | Promise<void>>;
     position: { top: number; left: number; width: "auto"; height: "auto" };
     window: {
       frame: boolean;
@@ -64,6 +72,10 @@ beforeAll(async () => {
 
 afterAll(() => vi.unstubAllGlobals());
 
+beforeEach(() => {
+  openOpposedCheckDialogMock.mockReset().mockResolvedValue(null);
+});
+
 describe("GmToolsPalette", () => {
   it("uses a compact, positioned frameless application", () => {
     expect(GmToolsPaletteClass.DEFAULT_OPTIONS.position).toEqual({
@@ -104,13 +116,39 @@ describe("GmToolsPalette", () => {
     ]);
   });
 
-  it("defines exactly two inert actions", () => {
+  it("keeps requestCheck inert and opens the Opposed Check Dialog", async () => {
     expect(Object.keys(GmToolsPaletteClass.DEFAULT_OPTIONS.actions)).toEqual([
       "requestCheck",
       "opposedCheck",
     ]);
     expect(GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck()).toBeUndefined();
-    expect(GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck()).toBeUndefined();
+    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
+    expect(openOpposedCheckDialogMock).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it.each([
+    ["cancel", null],
+    [
+      "confirmation",
+      {
+        left: {
+          participant: { kind: "actor", uuid: "Actor.left" },
+          selection: { kind: "skill", key: "fighting" },
+        },
+        right: {
+          participant: { kind: "token", uuid: "Scene.s.Token.right" },
+          selection: { kind: "attribute", key: "physical" },
+        },
+      },
+    ],
+  ])("has no side effects after %s", async (_label, result) => {
+    openOpposedCheckDialogMock.mockResolvedValue(result);
+
+    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
+
+    expect(openOpposedCheckDialogMock).toHaveBeenCalledOnce();
+    expect(globalThis).not.toHaveProperty("Roll");
+    expect(globalThis).not.toHaveProperty("ChatMessage");
   });
 });
 

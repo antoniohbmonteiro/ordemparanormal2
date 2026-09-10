@@ -109,6 +109,7 @@
     "styles/equipment-item-sheet.css",
     "styles/single-embedded-item-picker.css",
     "styles/check-dialog.css",
+    "styles/opposed-check-dialog.css",
     "styles/chat-message-shell.css",
     "styles/chat-card-header.css",
     "styles/check-card.css",

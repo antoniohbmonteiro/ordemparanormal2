@@ -9,7 +9,7 @@ import {
   type AbilityCardViewModel,
 } from "../../../ui/chat/ability-card-view-model";
 import { readAgentAccentColor } from "../actors/read-agent-accent-color";
-import { ensureChatCardPartialsLoaded } from "./ensure-chat-card-partials-loaded";
+import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
 
 const ABILITY_CARD_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/ability-card.hbs`;
@@ -47,7 +47,7 @@ export async function publishAbilityMessage(
   if (ability.type !== ABILITY_ITEM_TYPE) return;
 
   const accentColor = readAgentAccentColor(actor);
-  await ensureChatCardPartialsLoaded();
+  await ensureSharedPartialsLoaded();
   const content = await foundry.applications.handlebars.renderTemplate(
     ABILITY_CARD_TEMPLATE,
     await buildAbilityCardContext(ability),

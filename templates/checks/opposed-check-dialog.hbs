@@ -13,7 +13,7 @@
   <div class="op2-opposed-check-dialog__matchup">
     <section class="op2-opposed-check-dialog__participant" aria-labelledby="op2-opposed-check-dialog-left-title">
       <h4 id="op2-opposed-check-dialog-left-title">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Participants.Left"}}</h4>
-      <img class="op2-opposed-check-dialog__portrait" src="icons/svg/mystery-man.svg" alt="" data-participant-portrait="left" />
+      {{> opposedCheckPortrait name=(localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoParticipant") variant="dialog" side="left"}}
       <strong class="op2-opposed-check-dialog__name" data-participant-name="left">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoParticipant"}}</strong>
       <label>
         <span>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Fields.Character"}}</span>
@@ -49,7 +49,7 @@
 
     <section class="op2-opposed-check-dialog__participant" aria-labelledby="op2-opposed-check-dialog-right-title">
       <h4 id="op2-opposed-check-dialog-right-title">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Participants.Right"}}</h4>
-      <img class="op2-opposed-check-dialog__portrait" src="icons/svg/mystery-man.svg" alt="" data-participant-portrait="right" />
+      {{> opposedCheckPortrait name=(localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoParticipant") variant="dialog" side="right"}}
       <strong class="op2-opposed-check-dialog__name" data-participant-name="right">{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Preview.NoParticipant"}}</strong>
       <label>
         <span>{{localize "ORDEMPARANORMAL2.OpposedCheckDialog.Fields.Character"}}</span>

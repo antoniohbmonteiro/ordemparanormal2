@@ -25,14 +25,17 @@ describe("POI investigation query transport", () => {
 
   it("the handler authorizes against the query context user, not the payload", async () => {
     const queries: Record<string, (data: unknown, ctx: unknown) => unknown> = {};
+    const sender = { id: "real-sender" } as foundry.documents.User;
     vi.stubGlobal("CONFIG", { queries });
     registerPoiInvestigationQuery();
     await queries[POI_INVESTIGATION_QUERY](
       { sceneId: "s", regionId: "r", requesterUserId: "forged" },
-      { user: { id: "real-sender" } },
+      { timeout: 10_000, user: sender },
     );
     expect(resolvePoiInvestigationView).toHaveBeenCalledWith({
-      sceneId: "s", regionId: "r", requesterUserId: "real-sender",
+      sceneId: "s",
+      regionId: "r",
+      requesterUserId: "real-sender",
     });
   });
 

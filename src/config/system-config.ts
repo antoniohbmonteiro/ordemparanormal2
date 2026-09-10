@@ -27,6 +27,8 @@ export const EQUIPMENT_CARD_KIND = "equipment" as const;
 
 export const OPPOSED_CHECK_CARD_KIND = "opposedCheck" as const;
 
+export const OPPOSED_CHECK_STATE_FLAG = "opposedCheck" as const;
+
 export const COMMUNITY_LICENSE_URL =
   "https://ordemparanormal.com.br/licenca" as const;
 

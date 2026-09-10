@@ -30,6 +30,7 @@ export interface CheckDialogAttributeChoice {
 
 export interface CheckDialogOptions {
   readonly attributeChoices?: readonly CheckDialogAttributeChoice[];
+  readonly allowDifficulty?: boolean;
 }
 
 const MIN_STEP_ADJUSTMENT = -4;
@@ -37,6 +38,7 @@ const MAX_STEP_ADJUSTMENT = 4;
 
 interface CheckDialogViewModel {
   readonly name: string;
+  readonly allowDifficulty: boolean;
   readonly components: readonly {
     readonly key: string;
     readonly label: string;
@@ -60,6 +62,7 @@ function buildCheckDialogViewModel(
 ): CheckDialogViewModel {
   return {
     name: input.check.name,
+    allowDifficulty: options?.allowDifficulty !== false,
     components: input.components.map((component) => ({
       key: component.key,
       label: component.label,
@@ -326,10 +329,11 @@ function readDialogResult(
   components: CheckInput["components"],
   extraDice: readonly CheckExtraDieInput[],
   attributeChoices?: readonly CheckDialogAttributeChoice[],
+  allowDifficulty = true,
 ): CheckDialogResult {
   const difficultyField = button.form?.elements.namedItem("difficulty");
 
-  if (!(difficultyField instanceof HTMLInputElement)) {
+  if (allowDifficulty && !(difficultyField instanceof HTMLInputElement)) {
     throw new Error("Missing check difficulty field.");
   }
 
@@ -387,7 +391,7 @@ function readDialogResult(
 
   const copiedExtraDice = extraDice.map((extraDie) => ({ ...extraDie }));
 
-  if (difficultyField.value.trim() === "") {
+  if (!allowDifficulty || !(difficultyField instanceof HTMLInputElement) || difficultyField.value.trim() === "") {
     return {
       ...(selectedAttribute ? { selectedAttribute } : {}),
       stepAdjustments,
@@ -442,6 +446,7 @@ export async function openCheckDialog(
           input.components,
           selectedExtraDice,
           options?.attributeChoices,
+          options?.allowDifficulty !== false,
         ),
     },
     position: {

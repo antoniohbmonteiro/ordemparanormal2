@@ -16,7 +16,7 @@ export interface PoiInvestigationQueryData {
 // second argument, so the shape is declared locally.
 type PoiInvestigationQueryHandler = (
   data: PoiInvestigationQueryData,
-  context: { readonly user: { readonly id: string }; readonly timeout?: number },
+  context: { readonly user: foundry.documents.User; readonly timeout?: number },
 ) => Promise<PoiInvestigationResult>;
 
 const handler: PoiInvestigationQueryHandler = (data, context) =>

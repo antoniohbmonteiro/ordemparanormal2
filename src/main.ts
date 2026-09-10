@@ -1,4 +1,4 @@
-import { ensureChatCardPartialsLoaded } from "./adapters/foundry/chat/ensure-chat-card-partials-loaded";
+import { ensureSharedPartialsLoaded } from "./adapters/foundry/templates/ensure-shared-partials-loaded";
 import { registerActorDefaults } from "./bootstrap/register-actor-defaults";
 import { registerChatMessageDocument } from "./bootstrap/register-chat-message-document";
 import { registerDataModels } from "./bootstrap/register-data-models";
@@ -15,11 +15,12 @@ import { registerPoiCanvas } from "./bootstrap/register-poi-canvas";
 import { registerPoiInvestigation } from "./bootstrap/register-poi-investigation";
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
 import { registerGmTools } from "./bootstrap/register-gm-tools";
+import { registerOpposedChecks } from "./bootstrap/register-opposed-checks";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
   registerChatMessageDocument();
-  void ensureChatCardPartialsLoaded().catch((error) => {
+  void ensureSharedPartialsLoaded().catch((error) => {
     console.error(`${SYSTEM_ID} | Failed to preload chat card partials`, error);
   });
   registerDataModels();
@@ -33,6 +34,7 @@ Hooks.once("init", () => {
   registerNarrativeScenes();
   registerPoiSceneControls();
   registerGmTools();
+  registerOpposedChecks();
   registerInvestigationMode();
   registerPoiRegionConfig();
   registerPoiCanvas();

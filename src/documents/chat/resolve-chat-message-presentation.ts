@@ -1,4 +1,4 @@
-import type { CheckSnapshot } from "../../application/checks/check-snapshot";
+import { isSupportedCheckSnapshot } from "../../application/checks/check-snapshot";
 import {
   ABILITY_CARD_KIND,
   CARD_PRESENTATION_FLAG,
@@ -36,72 +36,6 @@ export function readCheckPresentationAccentColor(
 ): AccentColor | null {
   if (!isRecord(value)) return null;
   return normalizeAccentColor(value.accentColor);
-}
-
-function isSnapshotComponent(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-
-  return (
-    typeof value.kind === "string" &&
-    typeof value.key === "string" &&
-    typeof value.label === "string" &&
-    typeof value.die === "number" &&
-    typeof value.result === "number"
-  );
-}
-
-function isSnapshotExtraDie(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-
-  return (
-    typeof value.id === "string" &&
-    typeof value.die === "number" &&
-    value.source === "situational" &&
-    typeof value.label === "string" &&
-    typeof value.result === "number"
-  );
-}
-
-export function isSupportedCheckSnapshot(
-  value: unknown,
-): value is CheckSnapshot {
-  if (!isRecord(value)) return false;
-  if (
-    value.schemaVersion !== 1 &&
-    value.schemaVersion !== 2 &&
-    value.schemaVersion !== 3
-  ) {
-    return false;
-  }
-  if (!isRecord(value.check)) return false;
-  if (
-    typeof value.check.kind !== "string" ||
-    typeof value.check.key !== "string" ||
-    typeof value.check.name !== "string"
-  ) {
-    return false;
-  }
-  if (
-    !Array.isArray(value.components) ||
-    value.components.length === 0 ||
-    !value.components.every(isSnapshotComponent)
-  ) {
-    return false;
-  }
-  if (typeof value.total !== "number") return false;
-
-  if (
-    value.schemaVersion === 3 &&
-    (!Array.isArray(value.extraDice) || !value.extraDice.every(isSnapshotExtraDie))
-  ) {
-    return false;
-  }
-
-  const hasDifficulty = typeof value.difficulty === "number";
-  const hasOutcome = value.outcome === "success" || value.outcome === "failure";
-  return value.schemaVersion === 1
-    ? !hasDifficulty && !hasOutcome
-    : hasDifficulty === hasOutcome;
 }
 
 export function readCardPresentationFlag(

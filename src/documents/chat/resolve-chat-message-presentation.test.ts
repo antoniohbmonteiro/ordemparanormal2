@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   isSafeTextMessage,
-  isSupportedCheckSnapshot,
   readCardPresentationFlag,
   readCheckPresentationAccentColor,
   resolveChatMessageShellEligibility,
   resolveTextTierSubtitleKey,
 } from "./resolve-chat-message-presentation";
+import { isSupportedCheckSnapshot } from "../../application/checks/check-snapshot";
 
 const CHAT_MESSAGE_STYLES = { OTHER: 0, OOC: 1, IC: 2, EMOTE: 3 } as const;
 

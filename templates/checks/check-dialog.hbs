@@ -2,18 +2,20 @@
   <header class="op2-check-dialog__summary">
     <h3 id="op2-check-dialog-name" class="op2-check-dialog__title">{{name}}</h3>
 
-    <label class="op2-check-dialog__difficulty">
-      <span>{{localize "ORDEMPARANORMAL2.CheckDialog.Fields.Difficulty"}}</span>
-      <input
-        type="number"
-        name="difficulty"
-        min="1"
-        step="1"
-        inputmode="numeric"
-        autocomplete="off"
-        autofocus
-      />
-    </label>
+    {{#if allowDifficulty}}
+      <label class="op2-check-dialog__difficulty">
+        <span>{{localize "ORDEMPARANORMAL2.CheckDialog.Fields.Difficulty"}}</span>
+        <input
+          type="number"
+          name="difficulty"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          autocomplete="off"
+          autofocus
+        />
+      </label>
+    {{/if}}
   </header>
 
   <ol class="op2-check-dialog__components">

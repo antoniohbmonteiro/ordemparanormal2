@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   openCheckDialog: vi.fn(),
   publishCheckMessage: vi.fn(),
   readAgentCheckSource: vi.fn(),
+  showDiceAnimation: vi.fn(),
 }));
 
 vi.mock("../../application/checks/build-agent-check", () => ({
@@ -28,6 +29,9 @@ vi.mock("../../adapters/foundry/chat/publish-check-message", () => ({
 }));
 vi.mock("../../adapters/foundry/dice/execute-foundry-check", () => ({
   executeFoundryCheck: mocks.executeFoundryCheck,
+}));
+vi.mock("../../adapters/foundry/dice/show-dice-animation-if-available", () => ({
+  showDiceAnimationIfAvailable: mocks.showDiceAnimation,
 }));
 
 import {
@@ -95,6 +99,7 @@ describe("perform Agent check", () => {
       execution,
       undefined,
     );
+    expect(mocks.showDiceAnimation).not.toHaveBeenCalled();
     expect(mocks.canUserRollActor).toHaveBeenCalledTimes(2);
   });
 

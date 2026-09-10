@@ -11,7 +11,7 @@ import {
   type EquipmentCardViewModel,
 } from "../../../ui/chat/equipment-card-view-model";
 import { readAgentAccentColor } from "../actors/read-agent-accent-color";
-import { ensureChatCardPartialsLoaded } from "./ensure-chat-card-partials-loaded";
+import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
 
 const EQUIPMENT_CARD_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/equipment-card.hbs`;
@@ -63,7 +63,7 @@ export async function publishEquipmentMessage(
   if (equipment.type !== EQUIPMENT_ITEM_TYPE) return;
 
   const accentColor = readAgentAccentColor(actor);
-  await ensureChatCardPartialsLoaded();
+  await ensureSharedPartialsLoaded();
   const content = await foundry.applications.handlebars.renderTemplate(
     EQUIPMENT_CARD_TEMPLATE,
     await buildEquipmentCardContext(equipment),

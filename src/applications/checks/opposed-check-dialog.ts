@@ -14,6 +14,7 @@ import {
   type OpposedCheckParticipantGroup,
 } from "../../adapters/foundry/actors/opposed-check-participant-catalog";
 import { readAgentCheckSource } from "../../adapters/foundry/actors/read-agent-check-source";
+import { ensureSharedPartialsLoaded } from "../../adapters/foundry/templates/ensure-shared-partials-loaded";
 import { ATTRIBUTE_DEFINITIONS } from "../../config/attributes";
 import { SKILL_DEFINITIONS } from "../../config/skills";
 
@@ -233,8 +234,11 @@ function attachDialogControls(
     const participantSelect = getParticipantSelect(side) as HTMLSelectElement;
     const checkSelect = getCheckSelect(side) as HTMLSelectElement;
     const candidate = candidatesByValue.get(participantSelect.value);
-    const portrait = root.querySelector<HTMLImageElement>(
+    const portrait = root.querySelector<HTMLDivElement>(
       `[data-participant-portrait="${side}"]`,
+    );
+    const portraitImage = root.querySelector<HTMLImageElement>(
+      `[data-participant-portrait-image="${side}"]`,
     );
     const name = root.querySelector<HTMLElement>(
       `[data-participant-name="${side}"]`,
@@ -246,23 +250,27 @@ function attachDialogControls(
       `[data-check-formula="${side}"]`,
     );
 
-    if (!portrait || !name || !context || !formula) {
+    if (!portrait || !portraitImage || !name || !context || !formula) {
       throw new Error("Missing Opposed Check preview controls.");
     }
 
     checkSelect.disabled = !candidate;
     if (!candidate) {
       checkSelect.value = "";
-      portrait.src = "icons/svg/mystery-man.svg";
-      portrait.alt = "";
+      portraitImage.src = "icons/svg/mystery-man.svg";
+      portraitImage.alt = "";
+      portrait.setAttribute("aria-label", localize("Preview.NoParticipant"));
+      portrait.title = localize("Preview.NoParticipant");
       name.textContent = localize("Preview.NoParticipant");
       context.textContent = localize("Preview.NoCheck");
       formula.textContent = "—";
       return;
     }
 
-    portrait.src = candidate.img;
-    portrait.alt = candidate.effectiveActor.name;
+    portraitImage.src = candidate.img;
+    portraitImage.alt = candidate.effectiveActor.name;
+    portrait.setAttribute("aria-label", candidate.effectiveActor.name);
+    portrait.title = candidate.effectiveActor.name;
     name.textContent = candidate.effectiveActor.name;
     name.title = candidate.effectiveActor.name;
 
@@ -325,6 +333,7 @@ function attachDialogControls(
 }
 
 export async function openOpposedCheckDialog(): Promise<OpposedCheckDialogResult | null> {
+  await ensureSharedPartialsLoaded();
   const candidates = listOpposedCheckParticipantCandidates();
   const candidatesByValue = new Map(
     candidates.map((candidate) => [

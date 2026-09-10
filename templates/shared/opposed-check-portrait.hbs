@@ -1,0 +1,13 @@
+<div
+  class="op2-opposed-check-portrait op2-opposed-check-portrait--{{variant}}"
+  role="img"
+  aria-label="{{name}}"
+  title="{{name}}"
+  {{#if side}}data-participant-portrait="{{side}}"{{/if}}
+>
+  <img
+    src="{{#if img}}{{img}}{{else}}icons/svg/mystery-man.svg{{/if}}"
+    alt="{{name}}"
+    {{#if side}}data-participant-portrait-image="{{side}}"{{/if}}
+  />
+</div>

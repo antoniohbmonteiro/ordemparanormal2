@@ -4,12 +4,16 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openOpposedCheckDialogMock } = vi.hoisted(() => ({
+const { openOpposedCheckDialogMock, createOpposedCheckMock } = vi.hoisted(() => ({
   openOpposedCheckDialogMock: vi.fn(),
+  createOpposedCheckMock: vi.fn(),
 }));
 
 vi.mock("../checks/opposed-check-dialog", () => ({
   openOpposedCheckDialog: openOpposedCheckDialogMock,
+}));
+vi.mock("../../features/checks/create-opposed-check", () => ({
+  createOpposedCheck: createOpposedCheckMock,
 }));
 
 interface PaletteInstance {
@@ -74,6 +78,7 @@ afterAll(() => vi.unstubAllGlobals());
 
 beforeEach(() => {
   openOpposedCheckDialogMock.mockReset().mockResolvedValue(null);
+  createOpposedCheckMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("GmToolsPalette", () => {
@@ -141,12 +146,17 @@ describe("GmToolsPalette", () => {
         },
       },
     ],
-  ])("has no side effects after %s", async (_label, result) => {
+  ])("delegates creation after %s", async (label, result) => {
     openOpposedCheckDialogMock.mockResolvedValue(result);
 
     await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
 
     expect(openOpposedCheckDialogMock).toHaveBeenCalledOnce();
+    if (label === "confirmation") {
+      expect(createOpposedCheckMock).toHaveBeenCalledExactlyOnceWith(result);
+    } else {
+      expect(createOpposedCheckMock).not.toHaveBeenCalled();
+    }
     expect(globalThis).not.toHaveProperty("Roll");
     expect(globalThis).not.toHaveProperty("ChatMessage");
   });

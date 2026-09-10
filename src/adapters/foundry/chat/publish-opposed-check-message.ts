@@ -8,7 +8,7 @@ import {
   buildOpposedCheckCardViewModel,
   type OpposedCheckWinnerSide,
 } from "../../../ui/chat/opposed-check-card-view-model";
-import { ensureChatCardPartialsLoaded } from "./ensure-chat-card-partials-loaded";
+import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
 
 const OPPOSED_CHECK_CARD_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/opposed-check-card.hbs`;
@@ -39,7 +39,7 @@ function readParticipant(participant: OpposedCheckMessageParticipant) {
 export async function publishOpposedCheckMessage(
   input: OpposedCheckMessageInput,
 ): Promise<void> {
-  await ensureChatCardPartialsLoaded();
+  await ensureSharedPartialsLoaded();
   const content = await foundry.applications.handlebars.renderTemplate(
     OPPOSED_CHECK_CARD_TEMPLATE,
     buildOpposedCheckCardViewModel({

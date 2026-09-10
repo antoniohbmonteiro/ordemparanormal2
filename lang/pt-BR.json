@@ -567,10 +567,19 @@
     },
     "OpposedCheckCard": {
       "Title": "TESTE OPOSTO: {check}",
+      "GenericTitle": "TESTE OPOSTO",
       "Subtitle": "Conflito entre personagens",
       "Matchup": "Participantes do teste oposto",
       "Versus": "VS",
-      "Wins": "VENCE"
+      "Wins": "VENCE",
+      "Awaiting": "Aguardando rolagem",
+      "Roll": "Rolar",
+      "Rolling": "Rolando…",
+      "EqualTotals": "RESULTADOS IGUAIS",
+      "Errors": {
+        "Create": "Não foi possível criar o Teste Oposto.",
+        "Roll": "Não foi possível concluir esta rolagem do Teste Oposto."
+      }
     },
     "ChatMessage": {
       "Delete": "Excluir mensagem",

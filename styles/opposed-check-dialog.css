@@ -80,16 +80,6 @@
   letter-spacing: 0.1em;
 }
 
-.ordemparanormal2.op2-opposed-check-dialog .op2-opposed-check-dialog__portrait {
-  width: 4rem;
-  height: 4rem;
-  border: 2px solid var(--op2-opposed-dialog-accent);
-  border-radius: 50%;
-  background: var(--op2-opposed-dialog-input);
-  object-fit: cover;
-  object-position: center top;
-}
-
 .ordemparanormal2.op2-opposed-check-dialog .op2-opposed-check-dialog__name {
   overflow: hidden;
   width: 100%;
@@ -188,6 +178,15 @@
 .ordemparanormal2.op2-opposed-check-dialog .form-footer button[data-action="createOpposedCheck"] {
   border-color: var(--op2-opposed-dialog-accent);
   background: linear-gradient(135deg, var(--op2-opposed-dialog-accent-dark), #5e2529);
+}
+
+.ordemparanormal2.op2-opposed-check-dialog .form-footer button[data-action="createOpposedCheck"]:disabled {
+  border-color: var(--op2-opposed-dialog-border);
+  color: var(--op2-opposed-dialog-muted);
+  background: rgba(241, 238, 229, 0.04);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .ordemparanormal2.op2-opposed-check-dialog .form-footer button:focus-visible {

@@ -387,3 +387,13 @@ Therefore:
 - remove obsolete code instead of maintaining compatibility with unreleased internal designs.
 
 The architecture should optimize for **safe change**, not speculative feature count.
+
+## Stateful Opposed Checks
+
+A stateful Opposed Check owns exactly one ChatMessage. Its versioned `flags.ordemparanormal2.opposedCheck` value is persistent truth; the stored content is a shared, control-free fallback. `OrdemParanormal2ChatMessage` delegates per-client button projection and DOM listeners to `ui/chat`, while creation, rolling and authoritative submission remain separate feature use cases. Foundry UUID/User resolution and Query registration remain adapters.
+
+The active GM is the only writer. Other clients call the public User Query API, whose Foundry 14.367 receiving signature is `(data, {timeout, user})`; the handler resolves that authenticated `user` back through `game.users` before checking Actor ownership. A transient queue per message serializes local and queried submissions. No system socket is registered.
+
+Rolls that update an existing card use an optional Foundry adapter to call Dice So Nice's public `showForRoll` API on the originating client. The adapter requests Dice So Nice's native cross-client synchronization and awaits local animation completion before the feature creates and submits the snapshot. If the originating document is already hidden or becomes hidden while waiting, the adapter stops awaiting without canceling the animation, so a background renderer cannot indefinitely block the resolved Check. Missing, inactive or failed presentation never changes or discards the result. Normal Checks continue through `Roll.toMessage` and do not call this adapter.
+
+Shared Foundry Handlebars partials are loaded by the neutral `adapters/foundry/templates` boundary. Neither the Opposed Check Dialog nor other applications depend on a chat-specific adapter merely to render a shared portrait.

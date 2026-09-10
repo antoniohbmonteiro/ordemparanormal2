@@ -156,6 +156,24 @@ describe("check dialog cancellation", () => {
 });
 
 describe("check dialog result", () => {
+  it("omits Difficulty entirely for an Opposed Check interaction", async () => {
+    vi.stubGlobal("HTMLInputElement", MockInputElement);
+    const input = stubDialogInput();
+    input.mockImplementation(async (options: DialogOptions) =>
+      options.ok.callback(
+        {} as SubmitEvent,
+        createSubmitButton("99", { mind: "0", research: "0" }),
+      ),
+    );
+
+    await expect(openCheckDialog(INPUT, { allowDifficulty: false })).resolves.toEqual({
+      stepAdjustments: { mind: 0, research: 0 },
+      extraDice: [],
+    });
+    expect(renderTemplateMock.mock.calls[0]?.[1]).toMatchObject({ allowDifficulty: false });
+    expect(template).toContain("{{#if allowDifficulty}}");
+  });
+
   it.each([
     [
       "",

@@ -7,7 +7,7 @@ import { createCheckSnapshot } from "../../../application/checks/check-snapshot"
 import type { CheckDifficultyResolution } from "../../../core/checks/check";
 import { buildCheckCardViewModel } from "../../../ui/chat/check-card-view-model";
 import type { FoundryCheckExecution } from "../dice/execute-foundry-check";
-import { ensureChatCardPartialsLoaded } from "./ensure-chat-card-partials-loaded";
+import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
 
 const CHECK_CARD_TEMPLATE =
   "systems/ordemparanormal2/templates/chat/check-card.hbs";
@@ -47,7 +47,7 @@ export async function publishCheckMessage(
     execution.result,
     difficultyResolution,
   );
-  await ensureChatCardPartialsLoaded();
+  await ensureSharedPartialsLoaded();
   const content = await foundry.applications.handlebars.renderTemplate(
     CHECK_CARD_TEMPLATE,
     buildCheckCardViewModel(snapshot),

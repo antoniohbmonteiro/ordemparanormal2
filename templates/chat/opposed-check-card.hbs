@@ -3,86 +3,49 @@
 
   <section class="op2-opposed-check-card__matchup" aria-label="{{localize 'ORDEMPARANORMAL2.OpposedCheckCard.Matchup'}}">
     <div class="op2-opposed-check-card__participant op2-opposed-check-card__participant--left">
-      <div class="op2-opposed-check-card__portrait" role="img" aria-label="{{left.name}}" title="{{left.name}}">
-        {{#if left.img}}
-          <img src="{{left.img}}" alt="{{left.name}}" />
-        {{else}}
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-        {{/if}}
-      </div>
+      {{> opposedCheckPortrait name=left.name img=left.img variant="card"}}
       <strong class="op2-opposed-check-card__name" title="{{left.name}}">{{left.name}}</strong>
       <span class="op2-opposed-check-card__context" title="{{left.context}}">{{left.context}}</span>
-      <strong class="op2-opposed-check-card__total">{{left.total}}</strong>
-      <div class="op2-opposed-check-card__analysis">
-        <span title="{{localize 'ORDEMPARANORMAL2.CheckCard.HighestResultTooltip'}}">{{localize "ORDEMPARANORMAL2.CheckCard.HighestResult"}} <strong>{{left.highestResult}}</strong></span>
-        <span class="op2-opposed-check-card__analysis-separator" aria-hidden="true">·</span>
-        <span title="{{localize 'ORDEMPARANORMAL2.CheckCard.LowestResultTooltip'}}">{{localize "ORDEMPARANORMAL2.CheckCard.LowestResult"}} <strong>{{left.lowestResult}}</strong></span>
-      </div>
+      {{#if left.rolled}}
+        <strong class="op2-opposed-check-card__total">{{left.total}}</strong>
+        <div class="op2-opposed-check-card__analysis"><span>{{localize "ORDEMPARANORMAL2.CheckCard.HighestResult"}} <strong>{{left.highestResult}}</strong></span><span class="op2-opposed-check-card__analysis-separator">·</span><span>{{localize "ORDEMPARANORMAL2.CheckCard.LowestResult"}} <strong>{{left.lowestResult}}</strong></span></div>
+      {{else}}
+        <div class="op2-opposed-check-card__pending" data-opposed-side-actions="left"><span>{{localize "ORDEMPARANORMAL2.OpposedCheckCard.Awaiting"}}</span></div>
+      {{/if}}
     </div>
-
-    <div class="op2-opposed-check-card__versus" aria-label="{{localize 'ORDEMPARANORMAL2.OpposedCheckCard.Versus'}}">
-      <span aria-hidden="true">{{localize "ORDEMPARANORMAL2.OpposedCheckCard.Versus"}}</span>
-    </div>
-
+    <div class="op2-opposed-check-card__versus" aria-label="{{localize 'ORDEMPARANORMAL2.OpposedCheckCard.Versus'}}"><span aria-hidden="true">{{localize "ORDEMPARANORMAL2.OpposedCheckCard.Versus"}}</span></div>
     <div class="op2-opposed-check-card__participant op2-opposed-check-card__participant--right">
-      <div class="op2-opposed-check-card__portrait" role="img" aria-label="{{right.name}}" title="{{right.name}}">
-        {{#if right.img}}
-          <img src="{{right.img}}" alt="{{right.name}}" />
-        {{else}}
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-        {{/if}}
-      </div>
+      {{> opposedCheckPortrait name=right.name img=right.img variant="card"}}
       <strong class="op2-opposed-check-card__name" title="{{right.name}}">{{right.name}}</strong>
       <span class="op2-opposed-check-card__context" title="{{right.context}}">{{right.context}}</span>
-      <strong class="op2-opposed-check-card__total">{{right.total}}</strong>
-      <div class="op2-opposed-check-card__analysis">
-        <span title="{{localize 'ORDEMPARANORMAL2.CheckCard.HighestResultTooltip'}}">{{localize "ORDEMPARANORMAL2.CheckCard.HighestResult"}} <strong>{{right.highestResult}}</strong></span>
-        <span class="op2-opposed-check-card__analysis-separator" aria-hidden="true">·</span>
-        <span title="{{localize 'ORDEMPARANORMAL2.CheckCard.LowestResultTooltip'}}">{{localize "ORDEMPARANORMAL2.CheckCard.LowestResult"}} <strong>{{right.lowestResult}}</strong></span>
-      </div>
+      {{#if right.rolled}}
+        <strong class="op2-opposed-check-card__total">{{right.total}}</strong>
+        <div class="op2-opposed-check-card__analysis"><span>{{localize "ORDEMPARANORMAL2.CheckCard.HighestResult"}} <strong>{{right.highestResult}}</strong></span><span class="op2-opposed-check-card__analysis-separator">·</span><span>{{localize "ORDEMPARANORMAL2.CheckCard.LowestResult"}} <strong>{{right.lowestResult}}</strong></span></div>
+      {{else}}
+        <div class="op2-opposed-check-card__pending" data-opposed-side-actions="right"><span>{{localize "ORDEMPARANORMAL2.OpposedCheckCard.Awaiting"}}</span></div>
+      {{/if}}
     </div>
   </section>
 
-  <div class="op2-opposed-check-card__winner">
-    <i class="fa-solid fa-trophy" aria-hidden="true"></i>
-    <strong>{{winner.name}} {{localize "ORDEMPARANORMAL2.OpposedCheckCard.Wins"}}</strong>
-  </div>
+  {{#if winner}}
+    <div class="op2-opposed-check-card__winner"><i class="fa-solid fa-trophy" aria-hidden="true"></i><strong>{{winner.name}} {{localize "ORDEMPARANORMAL2.OpposedCheckCard.Wins"}}</strong></div>
+  {{else if (eq resolution "equalTotals")}}
+    <div class="op2-opposed-check-card__equal"><strong>{{localize "ORDEMPARANORMAL2.OpposedCheckCard.EqualTotals"}}</strong></div>
+  {{/if}}
 
-  <details class="op2-opposed-check-card__breakdown">
-    <summary class="op2-opposed-check-card__summary">
-      <span class="op2-opposed-check-card__formulas">
-        <span><strong title="{{left.name}}">{{left.name}}:</strong> <span>{{left.contributingFormula}}</span></span>
-        <span><strong title="{{right.name}}">{{right.name}}:</strong> <span>{{right.contributingFormula}}</span></span>
-      </span>
-      <i class="fa-solid fa-chevron-down op2-opposed-check-card__chevron" aria-hidden="true"></i>
-    </summary>
-
-    <div class="op2-opposed-check-card__details">
-      <section class="op2-opposed-check-card__dice-group" aria-label="{{left.name}}">
-        <h4 title="{{left.name}}">{{left.name}}</h4>
-        <ol>
-          {{#each left.dice}}
-            <li class="op2-opposed-check-card__die{{#unless contributes}} op2-opposed-check-card__die--excluded{{/unless}}">
-              <span class="op2-opposed-check-card__die-label" title="{{label}}">{{label}}</span>
-              <span>{{dieLabel}}</span>
-              <strong>{{result}}</strong>
-            </li>
-          {{/each}}
-        </ol>
-      </section>
-
-      <section class="op2-opposed-check-card__dice-group" aria-label="{{right.name}}">
-        <h4 title="{{right.name}}">{{right.name}}</h4>
-        <ol>
-          {{#each right.dice}}
-            <li class="op2-opposed-check-card__die{{#unless contributes}} op2-opposed-check-card__die--excluded{{/unless}}">
-              <span class="op2-opposed-check-card__die-label" title="{{label}}">{{label}}</span>
-              <span>{{dieLabel}}</span>
-              <strong>{{result}}</strong>
-            </li>
-          {{/each}}
-        </ol>
-      </section>
-    </div>
-  </details>
+  {{#if hasAnyResult}}
+    <details class="op2-opposed-check-card__breakdown">
+      <summary class="op2-opposed-check-card__summary">
+        <span class="op2-opposed-check-card__formulas">
+          {{#if left.rolled}}<span><strong title="{{left.name}}">{{left.name}}:</strong> <span>{{left.contributingFormula}}</span></span>{{/if}}
+          {{#if right.rolled}}<span><strong title="{{right.name}}">{{right.name}}:</strong> <span>{{right.contributingFormula}}</span></span>{{/if}}
+        </span>
+        <i class="fa-solid fa-chevron-down op2-opposed-check-card__chevron" aria-hidden="true"></i>
+      </summary>
+      <div class="op2-opposed-check-card__details">
+        {{#if left.rolled}}<section class="op2-opposed-check-card__dice-group"><h4 title="{{left.name}}">{{left.name}}</h4><ol>{{#each left.dice}}<li class="op2-opposed-check-card__die{{#unless contributes}} op2-opposed-check-card__die--excluded{{/unless}}"><span class="op2-opposed-check-card__die-label" title="{{label}}">{{label}}</span><span>{{dieLabel}}</span><strong>{{result}}</strong></li>{{/each}}</ol></section>{{/if}}
+        {{#if right.rolled}}<section class="op2-opposed-check-card__dice-group"><h4 title="{{right.name}}">{{right.name}}</h4><ol>{{#each right.dice}}<li class="op2-opposed-check-card__die{{#unless contributes}} op2-opposed-check-card__die--excluded{{/unless}}"><span class="op2-opposed-check-card__die-label" title="{{label}}">{{label}}</span><span>{{dieLabel}}</span><strong>{{result}}</strong></li>{{/each}}</ol></section>{{/if}}
+      </div>
+    </details>
+  {{/if}}
 </article>

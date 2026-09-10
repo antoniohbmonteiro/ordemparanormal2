@@ -4,14 +4,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SKILL_DEFINITIONS } from "../../config/skills";
 
-const { listCandidatesMock } = vi.hoisted(() => ({
+const { listCandidatesMock, ensureSharedPartialsLoadedMock } = vi.hoisted(() => ({
   listCandidatesMock: vi.fn(),
+  ensureSharedPartialsLoadedMock: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock(
   "../../adapters/foundry/actors/opposed-check-participant-catalog",
   () => ({ listOpposedCheckParticipantCandidates: listCandidatesMock }),
 );
+vi.mock("../../adapters/foundry/templates/ensure-shared-partials-loaded", () => ({
+  ensureSharedPartialsLoaded: ensureSharedPartialsLoadedMock,
+}));
 
 import {
   buildOpposedCheckOptions,
@@ -153,6 +157,7 @@ interface PreviewElement {
   title: string;
   src: string;
   alt: string;
+  setAttribute(name: string, value: string): void;
 }
 
 function createDialogHarness(leftValue: string, rightValue: string) {
@@ -167,6 +172,9 @@ function createDialogHarness(leftValue: string, rightValue: string) {
     title: "",
     src: "",
     alt: "",
+    setAttribute(name, value) {
+      if (name === "aria-label") this.title = value;
+    },
   });
   const elements = new Map<string, unknown>([
     ['[data-participant-select="left"]', leftParticipant],
@@ -176,6 +184,8 @@ function createDialogHarness(leftValue: string, rightValue: string) {
     ['[data-action="createOpposedCheck"]', createButton],
     ['[data-participant-portrait="left"]', preview()],
     ['[data-participant-portrait="right"]', preview()],
+    ['[data-participant-portrait-image="left"]', preview()],
+    ['[data-participant-portrait-image="right"]', preview()],
     ['[data-participant-name="left"]', preview()],
     ['[data-participant-name="right"]', preview()],
     ['[data-check-context="left"]', preview()],
@@ -394,8 +404,9 @@ describe("Opposed Check Dialog template and styles", () => {
       /\.op2-opposed-check-dialog__matchup\s*{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 2rem minmax\(0, 1fr\);/s,
     );
     expect(styles).toMatch(
-      /\.op2-opposed-check-dialog__portrait\s*{[^}]*object-position:\s*center top;/s,
+      /button\[data-action="createOpposedCheck"\]:disabled\s*{[^}]*cursor:\s*not-allowed;[^}]*opacity:\s*0\.48;/s,
     );
+    expect(template).toContain("{{> opposedCheckPortrait");
     expect(styles).not.toMatch(/@media[^\{]*max-width/);
   });
 });

@@ -1,10 +1,13 @@
 import { readAgentAccentColor } from "../../adapters/foundry/actors/read-agent-accent-color";
 import { SYSTEM_DEFAULT_ACCENT_COLOR } from "../../core/actors/agent-accent-color";
-import { SYSTEM_ID } from "../../config/system-config";
+import { OPPOSED_CHECK_STATE_FLAG, SYSTEM_ID } from "../../config/system-config";
 import {
   resolveChatMessageShellEligibility,
   resolveTextTierSubtitleKey,
 } from "./resolve-chat-message-presentation";
+import { parseOpposedCheckState } from "../../application/checks/opposed-check-state";
+import { renderOpposedCheckContent } from "../../adapters/foundry/chat/create-opposed-check-message";
+import { activateOpposedCheckChatController } from "../../ui/chat/opposed-check-chat-controller";
 
 const CHAT_MESSAGE_SHELL_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/chat-message-shell.hbs`;
@@ -99,8 +102,14 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
             subtitle: game.i18n.localize(resolveTextTierSubtitleKey(this)),
           }
         : undefined;
+    const opposedCheckState = parseOpposedCheckState(
+      this.getFlag(SYSTEM_ID, OPPOSED_CHECK_STATE_FLAG),
+    );
+    const content = opposedCheckState
+      ? await renderOpposedCheckContent(opposedCheckState)
+      : this.content;
     const context: ChatMessageShellViewModel = {
-      content: this.content,
+      content,
       speakerName,
       ...(portrait ? { portrait } : {}),
       ...(header ? { header } : {}),
@@ -137,6 +146,9 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
       eligibility.kind === "text" ? "op2-chat-message--text" : "op2-chat-message--card",
     );
     root.replaceChildren(shell);
+    if (opposedCheckState) {
+      await activateOpposedCheckChatController(this, shell, opposedCheckState);
+    }
     return root;
   }
 

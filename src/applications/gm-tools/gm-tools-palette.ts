@@ -6,6 +6,7 @@ import type {
 import type Draggable from "@client/applications/ux/draggable.mjs";
 
 import { openOpposedCheckDialog } from "../checks/opposed-check-dialog";
+import { createOpposedCheck } from "../../features/checks/create-opposed-check";
 
 const GM_TOOLS_PALETTE_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/gm-tools-palette.hbs";
@@ -65,6 +66,13 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
     const result = await openOpposedCheckDialog();
     if (!result) return;
 
-    // Configuration is intentionally ignored until orchestration is implemented.
+    try {
+      await createOpposedCheck(result);
+    } catch (error) {
+      console.error("ordemparanormal2 | Failed to create Opposed Check.", error);
+      ui.notifications.error(
+        game.i18n.localize("ORDEMPARANORMAL2.OpposedCheckCard.Errors.Create"),
+      );
+    }
   }
 }

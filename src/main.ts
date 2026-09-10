@@ -14,6 +14,7 @@ import { registerPoiRegionConfig } from "./bootstrap/register-poi-region-config"
 import { registerPoiCanvas } from "./bootstrap/register-poi-canvas";
 import { registerPoiInvestigation } from "./bootstrap/register-poi-investigation";
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
+import { registerGmTools } from "./bootstrap/register-gm-tools";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
@@ -31,6 +32,7 @@ Hooks.once("init", () => {
   registerDebugMode();
   registerNarrativeScenes();
   registerPoiSceneControls();
+  registerGmTools();
   registerInvestigationMode();
   registerPoiRegionConfig();
   registerPoiCanvas();

@@ -20,6 +20,13 @@
       "PointOfInterest": "Ficha de Ponto de Interesse",
       "Equipment": "Ficha de Equipamento"
     },
+    "GmTools": {
+      "Label": "Ferramentas do Mestre",
+      "Actions": {
+        "RequestCheck": "Solicitar teste",
+        "OpposedCheck": "Teste oposto"
+      }
+    },
     "PointOfInterest": {
       "Canvas": {
         "Loading": "Carregando POI…",

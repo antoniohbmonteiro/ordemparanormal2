@@ -105,6 +105,7 @@
     "styles/poi-region-config.css",
     "styles/poi-actions-menu.css",
     "styles/investigation-application.css",
+    "styles/gm-tools-palette.css",
     "styles/equipment-item-sheet.css",
     "styles/single-embedded-item-picker.css",
     "styles/check-dialog.css",

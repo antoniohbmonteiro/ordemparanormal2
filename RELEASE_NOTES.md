@@ -25,7 +25,6 @@ O Mestre pode desenhar POIs com as ferramentas nativas de retângulo, elipse e p
 
 POIs revelados recebem destaque visual próprio, com brilho e resposta ao hover. A visibilidade pode ser liberada para todos os jogadores ou somente para usuários escolhidos. Ao receber acesso pela primeira vez, o jogador também recebe um aviso discreto no chat, sem antecipar qual POI foi revelado.
 
-![Ponto de Interesse destacado no canvas](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.1.1/docs/release-assets/v0.1.1/poi-canvas.png)
 
 Com o Modo Investigação ativo, clicar em um POI visível abre sua tela de investigação. Tokens continuam tendo prioridade sobre o POI, preservando a seleção e movimentação normais do Foundry.
 
@@ -35,7 +34,6 @@ A interface do jogador recebe uma projeção própria e sanitizada. Ela apresent
 
 Cada Perícia pode possuir várias informações. A tela mostra uma linha por informação, exibindo a DT quando ela for pública ou um marcador de olho cortado quando estiver oculta. Informações ainda não reveladas permanecem neutras; quando o Mestre revela uma delas, seu conteúdo aparece na Application aberta.
 
-![Investigation Application na visão do jogador](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.1.1/docs/release-assets/v0.1.1/investigation-player.png)
 
 O botão **Examinar** usa o fluxo normal de checks do sistema: resolve um Agente válido, abre o Check Dialog habitual e publica o resultado pelo card de chat existente. Para Aptidão, o jogador escolhe primeiro uma das especializações canônicas. Nenhuma DT do POI é preenchida automaticamente e a rolagem não revela pistas por conta própria — a decisão continua com o Mestre.
 
@@ -45,7 +43,6 @@ O Mestre vê todas as DTs e informações, além do painel **Somente o Mestre**.
 
 Cada informação possui seu próprio controle **Revelar**. Depois da ação, o estado muda para **Revelada** e permanece associado àquele POI na cena, inclusive depois de fechar e abrir novamente a Application. Jogadores com a janela aberta recebem a atualização por meio da projeção segura, sem que conteúdo privado seja transportado no evento de atualização.
 
-![Investigation Application na visão do Mestre](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.1.1/docs/release-assets/v0.1.1/investigation-gm.png)
 
 ## Limitações atuais
 

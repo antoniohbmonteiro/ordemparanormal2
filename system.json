@@ -112,6 +112,7 @@
     "styles/chat-message-shell.css",
     "styles/chat-card-header.css",
     "styles/check-card.css",
+    "styles/opposed-check-card.css",
     "styles/ability-card.css",
     "styles/equipment-chat-card.css",
     "styles/license-notice.css",

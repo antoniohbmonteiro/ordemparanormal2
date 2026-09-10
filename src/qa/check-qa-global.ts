@@ -6,11 +6,16 @@ import {
   publishCheckScenario,
   type CheckQaScenarioKey,
 } from "./check-scenarios";
+import { publishOpposedCheckScenario } from "./opposed-check-scenario";
 
 interface OrdemParanormal2QaApi {
   publishCheckScenario(
     actor: foundry.documents.Actor,
     scenarioKey: CheckQaScenarioKey,
+  ): Promise<void>;
+  publishOpposedCheckScenario(
+    leftActor: foundry.documents.Actor,
+    rightActor: foundry.documents.Actor,
   ): Promise<void>;
 }
 
@@ -21,6 +26,7 @@ type QaGlobal = typeof globalThis & {
 export function registerCheckQaGlobal(): void {
   (globalThis as QaGlobal).ordemparanormal2Qa = Object.freeze({
     publishCheckScenario,
+    publishOpposedCheckScenario,
   });
 }
 

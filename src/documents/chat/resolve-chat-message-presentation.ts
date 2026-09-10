@@ -4,6 +4,7 @@ import {
   CARD_PRESENTATION_FLAG,
   CHECK_PRESENTATION_FLAG,
   EQUIPMENT_CARD_KIND,
+  OPPOSED_CHECK_CARD_KIND,
   SYSTEM_ID,
 } from "../../config/system-config";
 import {
@@ -11,7 +12,11 @@ import {
   type AccentColor,
 } from "../../core/actors/agent-accent-color";
 
-const KNOWN_CARD_KINDS = [ABILITY_CARD_KIND, EQUIPMENT_CARD_KIND] as const;
+const KNOWN_CARD_KINDS = [
+  ABILITY_CARD_KIND,
+  EQUIPMENT_CARD_KIND,
+  OPPOSED_CHECK_CARD_KIND,
+] as const;
 
 export interface ChatCardPresentationFlag {
   readonly card: (typeof KNOWN_CARD_KINDS)[number];

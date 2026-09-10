@@ -584,6 +584,28 @@ describe("TEXT tier — safe plain messages", () => {
     );
     expect(readAgentAccentColorMock).not.toHaveBeenCalled();
   });
+
+  it("renders a neutral Opposed Check card without an external portrait", async () => {
+    const harness = await createHarness({
+      style: CHAT_MESSAGE_STYLES.OTHER,
+      cardPresentationFlag: { card: "opposedCheck" },
+      speakerActor: null,
+      alias: "Mestre",
+    });
+
+    await harness.message.renderHTML();
+
+    expect(harness.root.classList.add).toHaveBeenCalledWith(
+      "op2-chat-message",
+      "op2-chat-message--card",
+    );
+    expect(harness.renderTemplate).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.not.objectContaining({ portrait: expect.anything() }),
+    );
+    expect(harness.shell.style.setProperty).not.toHaveBeenCalled();
+    expect(readAgentAccentColorMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("NATIVE tier — untouched native rendering", () => {

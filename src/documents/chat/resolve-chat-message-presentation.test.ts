@@ -207,6 +207,18 @@ describe("resolveChatMessageShellEligibility", () => {
     });
   });
 
+  it("recognizes a neutral Opposed Check card through the generic flag", () => {
+    const message = createFakeMessage({
+      style: CHAT_MESSAGE_STYLES.OTHER,
+      flags: { cardPresentation: { card: "opposedCheck" } },
+    });
+
+    expect(resolveChatMessageShellEligibility(message)).toEqual({
+      kind: "card",
+      accentColor: null,
+    });
+  });
+
   it("prefers the legacy Check flag over the generic flag when both are present", () => {
     const message = createFakeMessage({
       flags: {

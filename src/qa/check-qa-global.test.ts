@@ -6,6 +6,7 @@ import {
   synchronizeCheckQaGlobal,
 } from "./check-qa-global";
 import { publishCheckScenario } from "./check-scenarios";
+import { publishOpposedCheckScenario } from "./opposed-check-scenario";
 
 type TestQaGlobal = typeof globalThis & {
   ordemparanormal2Qa?: Record<string, unknown>;
@@ -43,8 +44,11 @@ describe("Check QA global", () => {
     synchronizeCheckQaGlobal();
 
     const qaGlobal = getQaGlobal();
-    expect(qaGlobal).toEqual({ publishCheckScenario });
-    expect(Object.keys(qaGlobal ?? {})).toEqual(["publishCheckScenario"]);
+    expect(qaGlobal).toEqual({ publishCheckScenario, publishOpposedCheckScenario });
+    expect(Object.keys(qaGlobal ?? {})).toEqual([
+      "publishCheckScenario",
+      "publishOpposedCheckScenario",
+    ]);
     expect(Object.isFrozen(qaGlobal)).toBe(true);
   });
 

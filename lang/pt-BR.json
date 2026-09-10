@@ -532,6 +532,13 @@
       "HighestResultTooltip": "Rolagem Alta",
       "LowestResultTooltip": "Rolagem Baixa"
     },
+    "OpposedCheckCard": {
+      "Title": "TESTE OPOSTO: {check}",
+      "Subtitle": "Conflito entre personagens",
+      "Matchup": "Participantes do teste oposto",
+      "Versus": "VS",
+      "Wins": "VENCE"
+    },
     "ChatMessage": {
       "Delete": "Excluir mensagem",
       "DeleteFailed": "Não foi possível excluir a mensagem.",

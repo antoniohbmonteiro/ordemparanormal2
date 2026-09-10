@@ -393,6 +393,9 @@ describe("Opposed Check Dialog template and styles", () => {
     expect(styles).toMatch(
       /\.op2-opposed-check-dialog__matchup\s*{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 2rem minmax\(0, 1fr\);/s,
     );
+    expect(styles).toMatch(
+      /\.op2-opposed-check-dialog__portrait\s*{[^}]*object-position:\s*center top;/s,
+    );
     expect(styles).not.toMatch(/@media[^\{]*max-width/);
   });
 });

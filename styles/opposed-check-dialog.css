@@ -87,6 +87,7 @@
   border-radius: 50%;
   background: var(--op2-opposed-dialog-input);
   object-fit: cover;
+  object-position: center top;
 }
 
 .ordemparanormal2.op2-opposed-check-dialog .op2-opposed-check-dialog__name {

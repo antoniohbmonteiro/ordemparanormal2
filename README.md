@@ -45,10 +45,6 @@
 >
 > **Desenvolvido nativamente para Foundry VTT v14**, aproveitando as APIs públicas atuais da plataforma e a interface do próprio Foundry.
 
-<p align="center">
-  <img src="docs/screenshots/agent-sheet.webp" alt="Ficha de Caio Nunes no sistema Ordem Paranormal 2 para Foundry VTT" width="860">
-</p>
-
 ## O que já funciona
 
 - 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
@@ -63,6 +59,10 @@
 ## Feito para jogar, sem disputar espaço com a interface
 
 A ficha concentra o que importa durante a sessão: **Perfil, Ocupação, PV, PD, atributos, Perícias, Habilidades e Inventário**. O sistema acompanha o playtest sem automatizar regras que ainda não estejam confirmadas publicamente.
+
+<p align="center">
+  <img src="docs/screenshots/agent-sheet.webp" alt="Ficha de Caio Nunes no sistema Ordem Paranormal 2 para Foundry VTT" width="860">
+</p>
 
 ### Checks que mostram o que aconteceu
 

@@ -49,13 +49,24 @@ Do not add a Foundry v13 compatibility layer unless a concrete requirement is ex
 
 Use this order when investigating a change:
 
-1. Current source code, tests, manifests, and pack sources on the working branch.
+1. Current source code, tests, manifests, pack sources, and workflow files on the working branch.
 2. `docs/ARCHITECTURE.md` and `docs/DOMAIN_MODEL.md` for intended boundaries.
 3. `docs/PLAYTEST_FEATURE_NOTES.md` and `docs/ROADMAP.md` for planned or provisional work.
 4. Current public playtest material for rule confirmation.
 5. Current Foundry v14 documentation/API when framework behavior is uncertain.
 
 Documentation may lag behind implementation. If a document conflicts with current shipped code, do not silently code against the stale statement. Identify the drift and preserve current implemented behavior unless the task explicitly changes that behavior.
+
+Release behavior is additionally governed by the current repository files:
+
+- `.github/workflows/release.yml`;
+- `scripts/release/discord-announcement.mjs`;
+- `RELEASE_NOTES.md`;
+- `system.json`;
+- `package.json`;
+- `package-lock.json`.
+
+Do not document or execute a release from memory when these files can be checked directly.
 
 ## Architectural principles
 
@@ -98,49 +109,24 @@ Avoid:
 
 ## Current source organization
 
-The repository currently uses these major boundaries:
+The repository uses explicit boundaries for domain logic, feature orchestration, Foundry adapters, Documents/DataModels, applications/UI, migrations, bootstrap, tests, pack sources, and release tooling.
 
-```text
-src/
-├── main.ts
-├── bootstrap/
-├── config/
-├── core/
-│   ├── abilities/
-│   ├── actors/
-│   ├── checks/
-│   ├── dice/
-│   └── narrative-scenes/
-├── application/
-│   └── checks/
-├── adapters/
-│   └── foundry/
-│       ├── abilities/
-│       ├── actors/
-│       ├── chat/
-│       ├── dice/
-│       ├── items/
-│       ├── narrative-scenes/
-│       ├── occupations/
-│       └── profiles/
-├── documents/
-│   ├── actor/
-│   ├── chat/
-│   └── item/
-├── features/
-│   ├── abilities/
-│   ├── checks/
-│   ├── narrative-scenes/
-│   ├── occupations/
-│   └── profiles/
-├── applications/
-├── migrations/
-├── qa/
-├── ui/
-└── types/
-```
+Before adding or moving code, inspect the current tree. Do not copy a historical folder layout from this document into the repository. The structure evolves incrementally as real responsibilities are added.
 
-This layout is descriptive, not a reason to create speculative folders. Add a new boundary only when a real responsibility requires it.
+Important responsibility boundaries remain:
+
+- `core/` — framework-independent rules where practical;
+- `application/` — typed application orchestration and ports;
+- `features/` — cohesive user-facing workflows;
+- `adapters/foundry/` — Foundry translation and side effects;
+- `documents/` — DataModels and document-specific serialization/derived state;
+- `applications/` and `ui/` — presentation and user intent;
+- `bootstrap/` — Foundry lifecycle registration and wiring;
+- `migrations/` — released persisted-data compatibility;
+- `packs-src/` — editable source for system-owned compendiums;
+- `qa/` and colocated tests — validation of boundaries and behavior.
+
+Add a new boundary only when a real responsibility requires it.
 
 ## Dependency rules
 
@@ -218,6 +204,10 @@ Current Item types:
 - `profile`
 - `occupation`
 - `ability`
+- `pointOfInterest`
+- `equipment`
+
+Do not introduce new Item types from previous Ordem systems or inferred future playtest needs without a concrete approved requirement.
 
 ### Agent persisted state
 
@@ -230,7 +220,7 @@ The current Agent model includes:
 - Físico / Mente / Emoção attributes;
 - skills;
 - independent Aptidão specializations;
-- a legacy occupation string retained only as migration input while direct upgrades require it.
+- embedded Profile, Occupation, Ability, and Equipment Items according to their current boundaries.
 
 Profile and Occupation are represented by embedded Items, not duplicated as active Agent system fields.
 
@@ -265,7 +255,7 @@ d4 < d6 < d8 < d10 < d12
 
 `d20` is exceptional/paranormal and must not enter normal step progression accidentally.
 
-Current check rules:
+Current normal Check rules:
 
 - Attribute checks roll the selected attribute component.
 - Skill checks combine the selected/current attribute component with the skill component.
@@ -286,7 +276,23 @@ Current check rules:
 - With four dice, only the three highest results contribute to the total.
 - All rolled dice, including a non-contributing fourth die, still participate in RA, RB, positive critical, and critical-failure analysis.
 
-Do not invent generic numerical modifiers, rerolls, opposed-check tie rules, Help stacking, or other mechanics that are not confirmed.
+Do not invent generic numerical modifiers, rerolls, Help stacking, or other mechanics that are not confirmed.
+
+## Opposed Checks
+
+Opposed Checks are implemented and are not a future placeholder.
+
+Current confirmed behavior:
+
+- each participant performs their own Check;
+- the higher final total wins;
+- equal totals remain a technical tie state and the UI must not invent a winner;
+- RA, RB, critical state, or other values do not break ties unless a later confirmed rule explicitly says so;
+- the workflow persists and updates one opposed-check ChatMessage instead of publishing independent result messages;
+- ownership and active-GM authorization remain permission boundaries;
+- optional Dice So Nice presentation must not create extra chat messages or block background-safe resolution.
+
+Do not infer additional opposed-check mechanics from combat, previous Ordem systems, or generic RPG conventions.
 
 ## Check history and chat
 
@@ -336,14 +342,11 @@ Only Abilities generated and marked as belonging to the relevant Profile grant m
 
 An Agent may own at most one embedded Occupation Item.
 
-Current Occupation behavior is identity/lifecycle only:
+Current Occupation behavior is identity/lifecycle only unless a confirmed rule implemented in the current branch says otherwise:
 
 - native Item name/image;
 - selection/replacement/removal/editing;
 - reusable world/compendium sources;
-- no Ability grants;
-- no bonuses;
-- no provenance relationships;
 - no name-based mechanics.
 
 Do not infer Occupation mechanics from Ability folder organization or from the previous Ordem system.
@@ -357,6 +360,19 @@ An Ability may contain:
 - at most one optional owned resource with `value` and `max`.
 
 The current automated Ability behavior is deliberately narrow. Costs may consume PD or the resource on the same Ability. Do not create a generic effect DSL/engine just to anticipate future Ability mechanics.
+
+## Equipment boundary
+
+Equipment is an implemented Item type and inventory concern.
+
+Current automated behavior is intentionally narrow:
+
+- Equipment may be embedded in an Agent and listed in the Agent inventory;
+- system-owned equipment sources may live in compendiums;
+- equipment may expose its current structured fields, including optional uses where the current DataModel supports them;
+- publishing or displaying Equipment must not invent consumption, attacks, damage, encumbrance, ammunition, or other mechanics not explicitly implemented and confirmed.
+
+Do not infer full combat or inventory rules from Equipment names or categories.
 
 ## Agent Sheet UX
 
@@ -407,24 +423,38 @@ Do not couple this lifecycle to Foundry Scene documents, Canvas state, Combat, r
 
 The right-sidebar registration is compatibility-sensitive and intentionally isolated behind its Foundry adapter. Do not spread that integration pattern through unrelated code.
 
-## Investigation and other future features
+## Investigation and Points of Interest
 
-Investigation / Points of Interest is planned but its persistence architecture is not yet settled.
+Investigation / Points of Interest is implemented and is not a future placeholder.
 
-When implementing it:
+Current boundaries include:
 
-- re-check current playtest material first;
-- keep public POI information separate from GM-private content;
-- do not send undiscovered private information to a player browser merely to hide it with CSS;
-- do not choose Scene flags, Items, Regions, or another persistence mechanism by convenience before the feature Plan establishes the boundary;
-- keep narrative judgment with the GM where the rules require it.
+- `pointOfInterest` is a reusable Item type;
+- public POI information and GM-only context are separate concerns;
+- investigation placements are associated with Foundry Regions rather than hardcoded scene coordinates or item names;
+- player visibility is controlled by the GM;
+- information may have public or hidden DT presentation according to its stored configuration;
+- revealed information is persistent for the relevant placement/workflow;
+- `Examinar` integrates with the normal Check flow rather than inventing an independent roll engine;
+- narrative interpretation and manual revelation remain with the GM where the workflow requires judgment.
 
-Other currently deferred or incremental areas include:
+Never send GM-private or undiscovered information to a player browser merely to hide it with CSS.
+
+Do not hardcode POI behavior by display name, and do not replace the established Region integration with internal Foundry HTML assumptions.
+
+## GM tools
+
+The project has GM-facing tooling for implemented table workflows, including access to Opposed Checks.
+
+Do not infer that every visible or planned GM action is already functional. Verify the current code and tests before advertising or extending a tool. In particular, planned release-gated workflows such as skill/check requests must only be treated as implemented after their runtime path and permissions are actually validated.
+
+## Deferred or incremental areas
+
+Areas that remain deferred, provisional, or intentionally narrow include:
 
 - contextual Ability behavior such as Foco Mental;
 - Help, with GM approval and provenance;
-- Opposed Checks, with tie behavior still requiring confirmation;
-- Inventory/equipment mechanics;
+- Request de Perícias until its dedicated implementation is complete;
 - definitive combat;
 - threats;
 - rituals/paranormal subsystems beyond confirmed playtest rules.
@@ -443,6 +473,8 @@ If a compatibility-sensitive or internal API is unavoidable:
 - document why it is necessary;
 - keep the rest of the system unaware of it;
 - add focused tests where practical.
+
+Do not enable or introduce a custom system socket unless an explicitly approved requirement needs one. Prefer current public Foundry communication APIs already used by the project.
 
 ## Data migrations
 
@@ -491,26 +523,92 @@ Do not make browser/UI tests the only validation of game rules.
 
 When changing templates/styles, test the relevant native Foundry states too: hover/focus, window controls, permissions, rerenders, resizing, and scroll behavior.
 
+If the production build touches generated LevelDB packs, close Foundry before the final `npm run check`. An open Foundry process can hold files in `packs/` and cause an `EBUSY`/lock failure that is environmental rather than a code failure.
+
 ## Versioning and releases
 
-Early development uses `0.0.x` versions.
+The project follows **Semantic Versioning** during pre-1.0 development.
 
-Before a release, keep all version-bearing files synchronized:
+Use the current pre-1.0 convention:
 
-- `package.json`;
-- `package-lock.json` top-level version;
-- `package-lock.json` root package version;
-- `system.json`.
+- `0.X.0` — a significant functional milestone;
+- `0.X.Y` — maintenance, bug fixes, UX/polish, and incremental improvements within that milestone.
 
-Also:
+Examples:
 
-- update `CHANGELOG.md` for the release;
-- ensure `system.json` download URL matches the same version and expected asset name;
-- do not claim features that are only planned or documented.
+- `0.2.0` for a new functional milestone;
+- `0.2.1` for fixes or polish after that milestone;
+- `0.3.0` for the next significant functional milestone.
 
-The repository release workflow is tag-driven. For a release tag `vX.Y.Z` it validates the manifest/package versions and download URL, runs `npm run check`, builds the system archive, creates/updates the GitHub Release assets, and publishes the package version to Foundry when configured.
+This convention does not promise 1.0 stability. Do not bump a version merely because implementation work was completed. A version bump is part of an explicitly authorized release task.
 
-Do not create/push a release tag or publish a release unless the user explicitly asks for it.
+### Version-bearing files
+
+Before a release, keep all version-bearing values synchronized:
+
+- `package.json` → `version`;
+- `package-lock.json` → top-level `version`;
+- `package-lock.json` → `packages[""].version`;
+- `system.json` → `version`.
+
+For release version `X.Y.Z`:
+
+- expected tag: `vX.Y.Z`;
+- expected archive: `ordemparanormal2-vX.Y.Z.zip`;
+- `system.json.download` must be:
+  `https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/vX.Y.Z/ordemparanormal2-vX.Y.Z.zip`;
+- `system.json.manifest` must remain:
+  `https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json`.
+
+Also close the corresponding `CHANGELOG.md` entry and ensure every public claim describes implemented and validated behavior only.
+
+### `RELEASE_NOTES.md` is release input
+
+`RELEASE_NOTES.md` is not passive documentation. It is an operational input consumed by the release workflow and Discord announcement.
+
+It must be finalized and committed **before** creating or pushing the release tag.
+
+For tag `vX.Y.Z`, the required H1 is exactly:
+
+```text
+# Ordem Paranormal 2 — vX.Y.Z
+```
+
+The release workflow validates that exact heading against the manifest version/tag.
+
+The GitHub Release uses the complete `RELEASE_NOTES.md` as its release body.
+
+The Discord announcement parser also consumes `RELEASE_NOTES.md`:
+
+- the first H1 becomes the announcement title;
+- an exact `## Destaques` section is required;
+- only the content of `## Destaques` is used for the Discord highlights field;
+- the first Markdown image with a public HTTP/HTTPS URL becomes the Discord embed image;
+- that first image must therefore be deliberately selected and publicly accessible;
+- `## Destaques` should remain concise even though the script has safe truncation.
+
+Do not rename `## Destaques` without deliberately updating the parser and its focused tests.
+
+### Tag-driven release workflow
+
+The release workflow supports manual execution for validation/package work, but the publication path is tag-driven.
+
+Pushing a `v*` tag causes the workflow to:
+
+1. install dependencies;
+2. run `npm run check`;
+3. validate synchronized versions, tag name, `RELEASE_NOTES.md`, download URL, and stable manifest URL;
+4. build/package `ordemparanormal2-vX.Y.Z.zip`;
+5. create or update the GitHub Release and upload the ZIP plus `system.json`;
+6. publish the package version to Foundry when the release token is configured;
+7. announce the release on Discord when the webhook is configured.
+
+Therefore:
+
+- all release files must be finalized and committed before the tag points at that commit;
+- never use the tag as a mechanism to "finish the release later";
+- never create or push a release tag unless the user explicitly authorizes it;
+- never publish a release manually as a workaround for a failing validation without understanding and fixing the mismatch first.
 
 ## Git discipline
 
@@ -522,6 +620,7 @@ Examples:
 feat(abilities): add profile grants and core compendiums
 feat(checks): add extra dice support
 fix(sheet): preserve native window controls
+docs(project): update development and release contracts
 ```
 
 Do not:

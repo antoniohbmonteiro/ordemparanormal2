@@ -4,7 +4,38 @@
 
 Build the smallest version that is structurally correct and useful, then expand only when the public playtest gives us enough information.
 
-Early development uses internal `0.0.x` milestones intentionally. A milestone present on `main` is not necessarily a published release; the project should become playable before it becomes heavily automated.
+The initial foundation used internal and public `0.0.x` milestones intentionally. A milestone present on `main` is not necessarily a published release; the project should become playable before it becomes heavily automated.
+
+## Pre-1.0 versioning policy
+
+The project follows SemVer `MAJOR.MINOR.PATCH` while it is pre-1.0, using the `0.X.Y` form without claiming 1.0 stability:
+
+- `0.X.0` marks a relevant functional milestone;
+- `0.X.Y` delivers maintenance, fixes, UX, polish, and other incremental improvements within that milestone.
+
+## Current public releases
+
+### 0.1.0 — Consolidated public baseline ✅
+
+Consolidated the capabilities developed through the `0.0.x` series and established PolyForm Strict License 1.0.0 as the license for the public release, while preserving the licenses of already distributed versions.
+
+### 0.1.1 — Investigation in scene ✅
+
+Delivered the playable Investigation flow with Point of Interest Regions, controlled visibility, distinct player/GM views, persistent manual information reveals, and Examinar through the existing Check Engine.
+
+## Next public milestone 0.2.0 — Table tools
+
+Purpose: deliver the current GM/player table-tooling milestone and its public presentation.
+
+Required before release:
+
+- Testes Opostos completed and validated;
+- GM Tools palette completed and validated;
+- a functional and validated Request de Perícias workflow;
+- the public-presence pass completed;
+- the full automated gate and Foundry v14 smoke test completed.
+
+Request de Perícias is a release gate, not a documentation-only claim. Until it is functional and validated, do not close the `0.2.0` changelog, finalize release claims, bump versions, create a tag, or publish the release. A dedicated Request screenshot is optional and does not block the release.
 
 ## 0.0.1 — Placeholder ✅
 
@@ -226,7 +257,7 @@ Delivered:
 - per-component Check Dialog step adjustments, Ability-owned resource simplification, and the current Agent Sheet layout polish;
 - release packaging validation for the seals and Community License summary.
 
-Licensing transition: development-branch source code is available under PolyForm Strict License 1.0.0 starting with the LICENSE migration. Public releases through v0.0.22 were distributed under MIT, which continues to apply to copies already distributed. Version 0.1.0 will be the first public release distributed under PolyForm Strict.
+Licensing transition: development-branch source code is available under PolyForm Strict License 1.0.0 starting with the LICENSE migration. Public releases through v0.0.22 were distributed under MIT, which continues to apply to copies already distributed. Version 0.1.0 was the first public release distributed under PolyForm Strict.
 
 Acceptance target:
 
@@ -435,22 +466,18 @@ Open questions:
 
 The implementation should grow incrementally: when a confirmed Ability introduces a modifier type the system does not yet support, add the smallest reusable semantic primitive for that class of rule instead of hardcoding behavior by Ability name.
 
-## Later milestones — Investigation
+## Later Investigation milestones
 
-Investigation is expected to become a first-class feature after the Agent/check foundation is stable.
+Version 0.1.1 delivered Investigation as a first-class feature using Foundry Regions, a sanitized player projection, distinct player/GM applications, manual information revelation, and Examinar through the Check Engine.
 
-The Point of Interest **definition** Item (0.0.20, above) is delivered. Remaining scope:
+Possible future scope remains intentionally uncommitted until confirmed by public playtest material:
 
-- the Investigation Application;
-- Examinar flow;
-- Interagir flow;
+- Interagir;
 - Recapitular / Compartilhar;
-- Check Dialog integration and information revelation;
+- automatic Check-to-DT comparison or information revelation;
 - PD consequences;
-- the sanitized player-facing projection of GM-only POI content;
-- investigation-oriented applications or scene tooling for execution state.
-
-Architecture decision must be made at that time regarding Scene data, Regions, flags, dedicated Documents, or application state.
+- individual discovery;
+- a link to the active Narrative Scene.
 
 ## Deferred until new playtest material
 
@@ -468,7 +495,7 @@ Do not port the previous system's ritual model into this project without new-sys
 
 ## Release discipline
 
-Internal milestones do not require a tag or GitHub Release. When a public `0.0.x` release is explicitly approved, it should:
+Internal milestones do not require a tag or GitHub Release. When any public pre-1.0 release is explicitly approved, it should:
 
 - have one clear architectural or user-facing purpose;
 - update `CHANGELOG.md`;

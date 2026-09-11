@@ -44,6 +44,27 @@ npm run check
 
 If Foundry runtime behavior changed, also provide a concise manual Foundry v14 smoke test.
 
+If the final build needs to rebuild generated LevelDB packs, close Foundry first so it does not hold files under `packs/`.
+
+## Release workflow
+
+Before preparing any version bump, release notes, or tag, read the **Versioning and releases** section in `AGENTS.md` and inspect the current `.github/workflows/release.yml`.
+
+Key release contract:
+
+- version bumps are release work and must not happen unless explicitly requested;
+- keep `package.json`, the top-level `package-lock.json` version, `package-lock.json` `packages[""].version`, and `system.json` synchronized;
+- `RELEASE_NOTES.md` must be finalized and committed before the release tag;
+- for `vX.Y.Z`, its H1 must be exactly `# Ordem Paranormal 2 — vX.Y.Z`;
+- the exact `## Destaques` section is consumed automatically by the Discord release announcement;
+- the first Markdown image with a public HTTP/HTTPS URL in `RELEASE_NOTES.md` becomes the Discord embed image, so choose it deliberately;
+- `system.json.download` must point at the versioned `ordemparanormal2-vX.Y.Z.zip`;
+- `system.json.manifest` remains the stable `releases/latest/download/system.json` URL;
+- pushing tag `vX.Y.Z` triggers the publication path that builds the archive, creates/updates the GitHub Release, publishes the Foundry package version when configured, and announces on Discord when configured;
+- never create or push a release tag without explicit user authorization.
+
+Do not "fix" a release after tagging by silently changing release inputs on another commit. Correct mismatches before the tag is created.
+
 ## Commit authorship and attribution
 
 - Never add `Co-Authored-By`, `Co-authored-by`, `Signed-off-by`, `Generated-by`, `Assisted-by`, AI attribution, Claude attribution, Anthropic attribution, or similar attribution trailers to commits unless the user explicitly requests them.
@@ -62,7 +83,7 @@ If Foundry runtime behavior changed, also provide a concise manual Foundry v14 s
 - Preserve unrelated user changes.
 - Do not force-push.
 - Do not create or push tags/releases unless explicitly requested.
-- Do not bump versions unless the task includes a release/version change.
+- Do not bump versions unless the task includes an explicitly authorized release/version change.
 - Do not copy protected official prose or artwork.
 
 ## Delivery

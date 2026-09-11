@@ -1,9 +1,12 @@
 {
   "id": "ordemparanormal2",
   "title": "Ordem Paranormal 2",
-  "description": "Sistema comunitário não oficial para Foundry Virtual Tabletop, em estágio inicial de desenvolvimento, destinado ao suporte das regras públicas de playtest de Ordem Paranormal RPG 2. Este projeto não é afiliado, patrocinado ou endossado pelos detentores de Ordem Paranormal RPG e não distribui textos, artes ou outros conteúdos protegidos do jogo além do permitido pela Licença da Comunidade de Ordem Paranormal ou por autorização aplicável.",
+  "description": "Ordem Paranormal 2 é um sistema comunitário não oficial, desenvolvido nativamente para Foundry VTT v14, que oferece Ficha de Agente, Check Engine, Testes Opostos e investigação em cena para as regras públicas de playtest de Ordem Paranormal RPG 2.",
   "version": "0.1.1",
   "license": "LICENSE",
+  "readme": "https://github.com/antoniohbmonteiro/ordemparanormal2/blob/main/README.md",
+  "bugs": "https://github.com/antoniohbmonteiro/ordemparanormal2/issues",
+  "changelog": "https://github.com/antoniohbmonteiro/ordemparanormal2/blob/main/CHANGELOG.md",
   "compatibility": {
     "minimum": 14,
     "verified": 14
@@ -90,6 +93,13 @@
     {
       "name": "Antonio Henrique Braga Monteiro",
       "url": "https://github.com/antoniohbmonteiro"
+    }
+  ],
+  "media": [
+    {
+      "type": "setup",
+      "url": "systems/ordemparanormal2/assets/media/setup.webp",
+      "caption": "Ordem Paranormal 2 — sistema comunitário não oficial para Foundry VTT v14"
     }
   ],
   "esmodules": [

@@ -75,13 +75,14 @@ Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas ao POI, 
 
 ## O que já funciona
 
-- **Ficha de Agente** com Perfil, Ocupação, PV/PD, atributos, Perícias, Habilidades e Inventário.
-- **Check Engine** com DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat.
-- **Testes Opostos** entre personagens, com controle por ownership, resultado em um único card e integração opcional com Dice So Nice.
-- **Ferramentas do Mestre** com acesso rápido à configuração de Testes Opostos.
-- **Investigação com POIs e Regions**, destaque no canvas, visões de jogador/Mestre e revelação persistente de pistas.
-- **Perfis, Habilidades, Ocupações e Equipamentos** como Items, integrados à ficha e aos compêndios do sistema.
-- **Cena Narrativa** para comunicar a todos o contexto atual da sessão.
+- 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
+- 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat.
+- ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
+- 🧭 **Ferramentas do Mestre** — acesso rápido aos principais fluxos de mesa, incluindo a configuração de Testes Opostos.
+- 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
+- 🧩 **Conteúdo reutilizável** — Perfis, Habilidades, Ocupações e Equipamentos como Items integrados à ficha e aos compêndios.
+- 🎬 **Cena Narrativa** — mantém o contexto atual da sessão visível para todos os jogadores.
+- ⚙️ **Foundry VTT v14-first** — desenvolvido sobre as APIs atuais da plataforma, com integração opcional ao Dice So Nice.
 
 ## Instalação
 

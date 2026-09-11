@@ -67,7 +67,7 @@ Os **Testes Opostos** usam o mesmo Check Engine, podem ser iniciados pela paleta
 
 Pontos de Interesse podem ser associados a **Regions do Foundry**, destacados diretamente no canvas e investigados por jogadores e Mestre em interfaces adequadas a cada papel.
 
-Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas ao POI, mantendo o contexto da investigação na cena.
+Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas aos Pontos de Interesse, mantendo o contexto da investigação na cena.
 
 <p align="center">
   <img src="docs/screenshots/investigation.webp" alt="Cena de investigação com Caio Nunes, Rafael Sato e um Ponto de Interesse destacado no Foundry VTT" width="760">

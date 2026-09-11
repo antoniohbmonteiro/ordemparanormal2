@@ -2,7 +2,7 @@
   "id": "ordemparanormal2",
   "title": "Ordem Paranormal 2",
   "description": "Ordem Paranormal 2 é um sistema comunitário não oficial, desenvolvido nativamente para Foundry VTT v14, que oferece Ficha de Agente, Check Engine, Testes Opostos e investigação em cena para as regras públicas de playtest de Ordem Paranormal RPG 2.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "LICENSE",
   "readme": "https://github.com/antoniohbmonteiro/ordemparanormal2/blob/main/README.md",
   "bugs": "https://github.com/antoniohbmonteiro/ordemparanormal2/issues",
@@ -100,6 +100,41 @@
       "type": "setup",
       "url": "systems/ordemparanormal2/assets/media/setup.webp",
       "caption": "Ordem Paranormal 2 — sistema comunitário não oficial para Foundry VTT v14"
+    },
+    {
+      "type": "cover",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/assets/media/cover.webp",
+      "caption": "Ordem Paranormal 2 — sistema comunitário não oficial"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/docs/screenshots/agent-sheet.webp",
+      "caption": "Ficha de Agente com Perfil, Ocupação, Perícias, Habilidades e Inventário."
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/docs/screenshots/investigation.webp",
+      "caption": "Investigação em cena com Pontos de Interesse integrados a Regions."
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/docs/screenshots/point-of-interest.webp",
+      "caption": "Ponto de Interesse com Perícias, DTs e informações da investigação."
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/docs/screenshots/gm-tools-opposed-dialog.webp",
+      "caption": "Ferramentas do Mestre para configurar Testes Opostos."
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/docs/screenshots/opposed-check-result.webp",
+      "caption": "Teste Oposto resolvido em um único card de chat."
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.2.1/docs/screenshots/check-request.webp",
+      "caption": "Request de Perícia enviado pelo Mestre para resolução do jogador."
     }
   ],
   "esmodules": [
@@ -147,5 +182,5 @@
   "socket": false,
   "url": "https://github.com/antoniohbmonteiro/ordemparanormal2",
   "manifest": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json",
-  "download": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.2.0/ordemparanormal2-v0.2.0.zip"
+  "download": "https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.2.1/ordemparanormal2-v0.2.1.zip"
 }

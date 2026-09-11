@@ -11,6 +11,7 @@ import {
   normalizeAccentColor,
   type AccentColor,
 } from "../../core/actors/agent-accent-color";
+import { readCheckRequestMessageLifecycle } from "../../adapters/foundry/chat/read-check-request-message";
 
 const KNOWN_CARD_KINDS = [
   ABILITY_CARD_KIND,
@@ -101,6 +102,16 @@ export function resolveChatMessageShellEligibility(
 ): ChatMessageShellEligibility | null {
   const checkSnapshot = message.getFlag(SYSTEM_ID, "check");
   if (isSupportedCheckSnapshot(checkSnapshot)) {
+    return {
+      kind: "card",
+      accentColor: readCheckPresentationAccentColor(
+        message.getFlag(SYSTEM_ID, CHECK_PRESENTATION_FLAG),
+      ),
+    };
+  }
+
+  const checkRequest = readCheckRequestMessageLifecycle(message);
+  if (checkRequest?.state.status === "pending") {
     return {
       kind: "card",
       accentColor: readCheckPresentationAccentColor(

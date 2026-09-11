@@ -59,6 +59,12 @@
   text-align: center;
 }
 
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__difficulty input[readonly] {
+  border-color: var(--op2-dialog-border-strong);
+  color: var(--op2-dialog-muted);
+  cursor: default;
+}
+
 .ordemparanormal2.op2-check-dialog .op2-check-dialog__components {
   display: grid;
   gap: 0.2rem;

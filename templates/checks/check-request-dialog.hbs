@@ -1,0 +1,38 @@
+<section class="op2-check-request-dialog__body" aria-labelledby="op2-check-request-dialog-title">
+  <header class="op2-check-request-dialog__header">
+    <h3 id="op2-check-request-dialog-title">{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Title"}}</h3>
+    <p>{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Instructions"}}</p>
+  </header>
+  {{#unless hasParticipants}}
+    <p class="op2-check-request-dialog__empty" role="status">{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Empty"}}</p>
+  {{/unless}}
+  <section class="op2-check-request-dialog__participant" aria-labelledby="op2-check-request-dialog-participant-title">
+    <h4 id="op2-check-request-dialog-participant-title">{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Participant"}}</h4>
+    {{> opposedCheckPortrait name=(localize "ORDEMPARANORMAL2.CheckRequestDialog.Preview.NoParticipant") variant="dialog" side="request"}}
+    <strong class="op2-check-request-dialog__name" data-preview-actor>{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Preview.NoParticipant"}}</strong>
+    <label>
+      <span>{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Fields.Character"}}</span>
+      <select name="participant" data-participant-select>
+        <option value="">{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Placeholders.Character"}}</option>
+        {{#each participantGroups}}
+          <optgroup label="{{label}}">{{#each options}}<option value="{{value}}">{{label}}</option>{{/each}}</optgroup>
+        {{/each}}
+      </select>
+    </label>
+    <label>
+      <span>{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Fields.Skill"}}</span>
+      <select name="skill" data-skill-select disabled>
+        <option value="">{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Placeholders.Skill"}}</option>
+        {{#each skills}}<option value="{{key}}">{{label}}</option>{{/each}}
+      </select>
+    </label>
+    <label>
+      <span>{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Fields.Difficulty"}}</span>
+      <input type="number" name="difficulty" min="1" step="1" inputmode="numeric" autocomplete="off" />
+    </label>
+    <div class="op2-check-request-dialog__preview" aria-live="polite">
+      <strong data-preview-skill>{{localize "ORDEMPARANORMAL2.CheckRequestDialog.Preview.NoSkill"}}</strong>
+      <span data-preview-context>—</span>
+    </div>
+  </section>
+</section>

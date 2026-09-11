@@ -5,12 +5,8 @@ import {
 import { readAgentAccentColor } from "../actors/read-agent-accent-color";
 import { createCheckSnapshot } from "../../../application/checks/check-snapshot";
 import type { CheckDifficultyResolution } from "../../../core/checks/check";
-import { buildCheckCardViewModel } from "../../../ui/chat/check-card-view-model";
 import type { FoundryCheckExecution } from "../dice/execute-foundry-check";
-import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
-
-const CHECK_CARD_TEMPLATE =
-  "systems/ordemparanormal2/templates/chat/check-card.hbs";
+import { renderCheckCardContent } from "./render-check-card-content";
 
 export function isRegisteredMessageMode(value: unknown): value is string {
   return (
@@ -47,11 +43,7 @@ export async function publishCheckMessage(
     execution.result,
     difficultyResolution,
   );
-  await ensureSharedPartialsLoaded();
-  const content = await foundry.applications.handlebars.renderTemplate(
-    CHECK_CARD_TEMPLATE,
-    buildCheckCardViewModel(snapshot),
-  );
+  const content = await renderCheckCardContent(snapshot);
 
   await sendRollToMessage(execution.roll as FoundryRegistryAwareRoll, {
     content,

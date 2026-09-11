@@ -23,6 +23,7 @@ export class AgentCheckPermissionError extends Error {
 
 export interface ResolveAgentCheckInteractionOptions {
   readonly allowDifficulty?: boolean;
+  readonly lockedDifficulty?: number;
 }
 
 export interface ResolvedAgentCheckInteraction {
@@ -42,6 +43,9 @@ export async function resolveAgentCheckInteraction(
   const input = buildAgentCheck(selection, source, localize);
   const dialogOptions = {
     ...(options.allowDifficulty === false ? { allowDifficulty: false } : {}),
+    ...(options.lockedDifficulty !== undefined
+      ? { lockedDifficulty: options.lockedDifficulty }
+      : {}),
     ...(selection.kind === "attribute"
       ? {}
       : { attributeChoices: buildAgentAttributeChoices(source, localize) }),

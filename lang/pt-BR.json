@@ -520,6 +520,33 @@
         "Roll": "Rolar"
       }
     },
+    "CheckRequestDialog": {
+      "Title": "SOLICITAR PERÍCIA",
+      "Instructions": "Configure o teste solicitado",
+      "Empty": "Não há Agentes válidos disponíveis para esta solicitação.",
+      "Participant": "PARTICIPANTE",
+      "Fields": {
+        "Character": "Personagem",
+        "Skill": "Perícia",
+        "Difficulty": "DT opcional"
+      },
+      "Groups": {
+        "CurrentScene": "Cena atual",
+        "World": "Outros Agentes"
+      },
+      "Placeholders": {
+        "Character": "Selecione um Agente",
+        "Skill": "Selecione uma Perícia"
+      },
+      "Preview": {
+        "NoParticipant": "Nenhum Agente selecionado",
+        "NoSkill": "Nenhuma Perícia selecionada"
+      },
+      "Actions": {
+        "Cancel": "Cancelar",
+        "Create": "Criar solicitação"
+      }
+    },
     "OpposedCheckDialog": {
       "Title": "TESTE OPOSTO",
       "Instructions": "Configure os dois participantes",
@@ -579,6 +606,15 @@
       "Errors": {
         "Create": "Não foi possível criar o Teste Oposto.",
         "Roll": "Não foi possível concluir esta rolagem do Teste Oposto."
+      }
+    },
+    "CheckRequestCard": {
+      "Awaiting": "Aguardando rolagem",
+      "Roll": "Rolar",
+      "Rolling": "Rolando…",
+      "Errors": {
+        "Create": "Não foi possível criar a solicitação de Perícia.",
+        "Roll": "Não foi possível concluir esta solicitação de Perícia."
       }
     },
     "ChatMessage": {

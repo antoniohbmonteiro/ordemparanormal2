@@ -174,6 +174,28 @@ describe("check dialog result", () => {
     expect(template).toContain("{{#if allowDifficulty}}");
   });
 
+  it("returns the locked difficulty instead of trusting the form field", async () => {
+    vi.stubGlobal("HTMLInputElement", MockInputElement);
+    const input = stubDialogInput();
+    input.mockImplementation(async (options: DialogOptions) =>
+      options.ok.callback(
+        {} as SubmitEvent,
+        createSubmitButton("999", { mind: "0", research: "0" }),
+      ),
+    );
+
+    await expect(openCheckDialog(INPUT, { lockedDifficulty: 12 })).resolves.toEqual({
+      difficulty: 12,
+      stepAdjustments: { mind: 0, research: 0 },
+      extraDice: [],
+    });
+    expect(renderTemplateMock.mock.calls[0]?.[1]).toMatchObject({
+      difficulty: 12,
+      isDifficultyLocked: true,
+    });
+    expect(template).toContain("readonly");
+  });
+
   it.each([
     [
       "",

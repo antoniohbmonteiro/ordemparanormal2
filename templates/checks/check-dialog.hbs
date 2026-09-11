@@ -8,11 +8,12 @@
         <input
           type="number"
           name="difficulty"
+          {{#if isDifficultyLocked}}value="{{difficulty}}" readonly{{/if}}
           min="1"
           step="1"
           inputmode="numeric"
           autocomplete="off"
-          autofocus
+          {{#unless isDifficultyLocked}}autofocus{{/unless}}
         />
       </label>
     {{/if}}

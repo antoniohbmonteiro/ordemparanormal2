@@ -31,6 +31,7 @@ export interface CheckDialogAttributeChoice {
 export interface CheckDialogOptions {
   readonly attributeChoices?: readonly CheckDialogAttributeChoice[];
   readonly allowDifficulty?: boolean;
+  readonly lockedDifficulty?: number;
 }
 
 const MIN_STEP_ADJUSTMENT = -4;
@@ -39,6 +40,8 @@ const MAX_STEP_ADJUSTMENT = 4;
 interface CheckDialogViewModel {
   readonly name: string;
   readonly allowDifficulty: boolean;
+  readonly difficulty?: number;
+  readonly isDifficultyLocked: boolean;
   readonly components: readonly {
     readonly key: string;
     readonly label: string;
@@ -60,9 +63,22 @@ function buildCheckDialogViewModel(
   input: CheckInput,
   options?: CheckDialogOptions,
 ): CheckDialogViewModel {
+  const lockedDifficulty = options?.lockedDifficulty;
+  if (
+    lockedDifficulty !== undefined &&
+    (!Number.isInteger(lockedDifficulty) || lockedDifficulty < 1)
+  ) {
+    throw new Error("Locked check difficulty must be a positive integer.");
+  }
+  if (lockedDifficulty !== undefined && options?.allowDifficulty === false) {
+    throw new Error("A locked check difficulty cannot be hidden.");
+  }
+
   return {
     name: input.check.name,
     allowDifficulty: options?.allowDifficulty !== false,
+    ...(lockedDifficulty !== undefined ? { difficulty: lockedDifficulty } : {}),
+    isDifficultyLocked: lockedDifficulty !== undefined,
     components: input.components.map((component) => ({
       key: component.key,
       label: component.label,
@@ -330,6 +346,7 @@ function readDialogResult(
   extraDice: readonly CheckExtraDieInput[],
   attributeChoices?: readonly CheckDialogAttributeChoice[],
   allowDifficulty = true,
+  lockedDifficulty?: number,
 ): CheckDialogResult {
   const difficultyField = button.form?.elements.namedItem("difficulty");
 
@@ -391,6 +408,15 @@ function readDialogResult(
 
   const copiedExtraDice = extraDice.map((extraDie) => ({ ...extraDie }));
 
+  if (lockedDifficulty !== undefined) {
+    return {
+      difficulty: lockedDifficulty,
+      ...(selectedAttribute ? { selectedAttribute } : {}),
+      stepAdjustments,
+      extraDice: copiedExtraDice,
+    };
+  }
+
   if (!allowDifficulty || !(difficultyField instanceof HTMLInputElement) || difficultyField.value.trim() === "") {
     return {
       ...(selectedAttribute ? { selectedAttribute } : {}),
@@ -447,6 +473,7 @@ export async function openCheckDialog(
           selectedExtraDice,
           options?.attributeChoices,
           options?.allowDifficulty !== false,
+          options?.lockedDifficulty,
         ),
     },
     position: {

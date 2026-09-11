@@ -1,0 +1,14 @@
+<article class="op2-check-request-card">
+  {{> chatCardHeader title=title subtitle=subtitle}}
+  <section class="op2-check-request-card__body">
+    <span class="op2-check-request-card__status">
+      <i class="fa-regular fa-clock" aria-hidden="true"></i>
+      {{localize "ORDEMPARANORMAL2.CheckRequestCard.Awaiting"}}
+    </span>
+    <strong class="op2-check-request-card__context">{{context}}</strong>
+    {{#if difficulty}}
+      <span class="op2-check-request-card__difficulty">{{localize "ORDEMPARANORMAL2.CheckCard.Difficulty"}} <strong>{{difficulty}}</strong></span>
+    {{/if}}
+    <div class="op2-check-request-card__actions" data-check-request-actions></div>
+  </section>
+</article>

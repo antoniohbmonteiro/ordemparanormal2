@@ -4,9 +4,11 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openOpposedCheckDialogMock, createOpposedCheckMock } = vi.hoisted(() => ({
+const { openOpposedCheckDialogMock, createOpposedCheckMock, openCheckRequestDialogMock, createCheckRequestMock } = vi.hoisted(() => ({
   openOpposedCheckDialogMock: vi.fn(),
   createOpposedCheckMock: vi.fn(),
+  openCheckRequestDialogMock: vi.fn(),
+  createCheckRequestMock: vi.fn(),
 }));
 
 vi.mock("../checks/opposed-check-dialog", () => ({
@@ -14,6 +16,12 @@ vi.mock("../checks/opposed-check-dialog", () => ({
 }));
 vi.mock("../../features/checks/create-opposed-check", () => ({
   createOpposedCheck: createOpposedCheckMock,
+}));
+vi.mock("../checks/check-request-dialog", () => ({
+  openCheckRequestDialog: openCheckRequestDialogMock,
+}));
+vi.mock("../../features/checks/create-check-request", () => ({
+  createCheckRequest: createCheckRequestMock,
 }));
 
 interface PaletteInstance {
@@ -79,6 +87,8 @@ afterAll(() => vi.unstubAllGlobals());
 beforeEach(() => {
   openOpposedCheckDialogMock.mockReset().mockResolvedValue(null);
   createOpposedCheckMock.mockReset().mockResolvedValue(undefined);
+  openCheckRequestDialogMock.mockReset().mockResolvedValue(null);
+  createCheckRequestMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("GmToolsPalette", () => {
@@ -121,14 +131,26 @@ describe("GmToolsPalette", () => {
     ]);
   });
 
-  it("keeps requestCheck inert and opens the Opposed Check Dialog", async () => {
+  it("opens both GM check workflow dialogs", async () => {
     expect(Object.keys(GmToolsPaletteClass.DEFAULT_OPTIONS.actions)).toEqual([
       "requestCheck",
       "opposedCheck",
     ]);
-    expect(GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck()).toBeUndefined();
+    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck();
     await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
+    expect(openCheckRequestDialogMock).toHaveBeenCalledExactlyOnceWith();
     expect(openOpposedCheckDialogMock).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it("creates a Check Request only after confirmation", async () => {
+    const result = {
+      participant: { kind: "actor", uuid: "Actor.agent" },
+      selection: { kind: "skill", key: "fighting" },
+      difficulty: 12,
+    };
+    openCheckRequestDialogMock.mockResolvedValue(result);
+    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck();
+    expect(createCheckRequestMock).toHaveBeenCalledExactlyOnceWith(result);
   });
 
   it.each([

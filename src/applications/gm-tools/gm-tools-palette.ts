@@ -7,6 +7,8 @@ import type Draggable from "@client/applications/ux/draggable.mjs";
 
 import { openOpposedCheckDialog } from "../checks/opposed-check-dialog";
 import { createOpposedCheck } from "../../features/checks/create-opposed-check";
+import { openCheckRequestDialog } from "../checks/check-request-dialog";
+import { createCheckRequest } from "../../features/checks/create-check-request";
 
 const GM_TOOLS_PALETTE_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/gm-tools-palette.hbs";
@@ -59,8 +61,18 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
     );
   }
 
-  // This action intentionally remains inert until its workflow is defined.
-  static #onRequestCheck(): void {}
+  static async #onRequestCheck(): Promise<void> {
+    const result = await openCheckRequestDialog();
+    if (!result) return;
+    try {
+      await createCheckRequest(result);
+    } catch (error) {
+      console.error("ordemparanormal2 | Failed to create Check Request.", error);
+      ui.notifications.error(
+        game.i18n.localize("ORDEMPARANORMAL2.CheckRequestCard.Errors.Create"),
+      );
+    }
+  }
 
   static async #onOpposedCheck(): Promise<void> {
     const result = await openOpposedCheckDialog();

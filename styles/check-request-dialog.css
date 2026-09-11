@@ -1,0 +1,191 @@
+.ordemparanormal2.op2-check-request-dialog {
+  --op2-check-request-dialog-bg: rgba(14, 16, 21, 0.98);
+  --op2-check-request-dialog-panel: rgba(27, 30, 36, 0.82);
+  --op2-check-request-dialog-input: rgba(9, 11, 15, 0.78);
+  --op2-check-request-dialog-text: #f1eee5;
+  --op2-check-request-dialog-muted: #aaa9a4;
+  --op2-check-request-dialog-border: rgba(241, 238, 229, 0.18);
+  --op2-check-request-dialog-accent: #b5474f;
+  --op2-check-request-dialog-accent-dark: #7f252b;
+  color: var(--op2-check-request-dialog-text);
+}
+
+.ordemparanormal2.op2-check-request-dialog .window-content {
+  padding: 0.75rem;
+  background: var(--op2-check-request-dialog-bg);
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__body {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__header {
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--op2-check-request-dialog-border);
+  text-align: center;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__header h3,
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__header p,
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant h4 {
+  margin: 0;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__header h3 {
+  color: #dc6870;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__header p {
+  margin-top: 0.2rem;
+  color: var(--op2-check-request-dialog-muted);
+  font-size: 0.8rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__empty {
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--op2-check-request-dialog-accent);
+  border-radius: 0.35rem;
+  color: #efb4b8;
+  background: rgb(127 37 43 / 22%);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant {
+  display: grid;
+  width: min(100%, 25rem);
+  min-width: 0;
+  grid-template-rows: auto auto auto auto auto auto 1fr;
+  justify-self: center;
+  justify-items: center;
+  gap: 0.42rem;
+  padding: 0.65rem;
+  border: 1px solid var(--op2-check-request-dialog-border);
+  border-radius: 0.45rem;
+  background: var(--op2-check-request-dialog-panel);
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant h4 {
+  color: #dc6870;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__name {
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant label {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 0.2rem;
+  color: var(--op2-check-request-dialog-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant select,
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant input {
+  width: 100%;
+  min-width: 0;
+  height: 2rem;
+  margin: 0;
+  border: 1px solid rgba(241, 238, 229, 0.36);
+  border-radius: 0.35rem;
+  color: var(--op2-check-request-dialog-text);
+  background-color: var(--op2-check-request-dialog-input);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant select {
+  padding: 0 1.7rem 0 0.45rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant input {
+  padding: 0 0.45rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant select:focus-visible,
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant input:focus-visible {
+  border-color: #e36a72;
+  outline: 2px solid #e36a72;
+  outline-offset: 1px;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__participant select:disabled {
+  opacity: 0.5;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__preview {
+  display: grid;
+  align-self: end;
+  width: 100%;
+  min-width: 0;
+  gap: 0.18rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--op2-check-request-dialog-border);
+  text-align: center;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__preview strong,
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__preview span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__preview strong {
+  font-size: 0.78rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .op2-check-request-dialog__preview span {
+  color: var(--op2-check-request-dialog-muted);
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.75rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .form-footer {
+  gap: 0.4rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--op2-check-request-dialog-border);
+}
+
+.ordemparanormal2.op2-check-request-dialog .form-footer button {
+  min-height: 2rem;
+  border: 1px solid rgba(241, 238, 229, 0.36);
+  color: var(--op2-check-request-dialog-text);
+  background: transparent;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.ordemparanormal2.op2-check-request-dialog .form-footer button[data-action="createCheckRequest"] {
+  border-color: var(--op2-check-request-dialog-accent);
+  background: linear-gradient(135deg, var(--op2-check-request-dialog-accent-dark), #5e2529);
+}
+
+.ordemparanormal2.op2-check-request-dialog .form-footer button[data-action="createCheckRequest"]:disabled {
+  border-color: var(--op2-check-request-dialog-border);
+  color: var(--op2-check-request-dialog-muted);
+  background: rgba(241, 238, 229, 0.04);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.ordemparanormal2.op2-check-request-dialog .form-footer button:focus-visible {
+  outline: 2px solid #e36a72;
+  outline-offset: 1px;
+}

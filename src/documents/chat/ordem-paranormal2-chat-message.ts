@@ -8,6 +8,10 @@ import {
 import { parseOpposedCheckState } from "../../application/checks/opposed-check-state";
 import { renderOpposedCheckContent } from "../../adapters/foundry/chat/create-opposed-check-message";
 import { activateOpposedCheckChatController } from "../../ui/chat/opposed-check-chat-controller";
+import { readCheckRequestMessageLifecycle } from "../../adapters/foundry/chat/read-check-request-message";
+import { renderPendingCheckRequestContent } from "../../adapters/foundry/chat/create-check-request-message";
+import { renderCheckCardContent } from "../../adapters/foundry/chat/render-check-card-content";
+import { activateCheckRequestChatController } from "../../ui/chat/check-request-chat-controller";
 
 const CHAT_MESSAGE_SHELL_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/chat-message-shell.hbs`;
@@ -105,9 +109,15 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
     const opposedCheckState = parseOpposedCheckState(
       this.getFlag(SYSTEM_ID, OPPOSED_CHECK_STATE_FLAG),
     );
-    const content = opposedCheckState
-      ? await renderOpposedCheckContent(opposedCheckState)
-      : this.content;
+    const checkRequest = readCheckRequestMessageLifecycle(this);
+    let content = this.content;
+    if (checkRequest) {
+      content = "snapshot" in checkRequest
+        ? await renderCheckCardContent(checkRequest.snapshot)
+        : await renderPendingCheckRequestContent(checkRequest.state);
+    } else if (opposedCheckState) {
+      content = await renderOpposedCheckContent(opposedCheckState);
+    }
     const context: ChatMessageShellViewModel = {
       content,
       speakerName,
@@ -148,6 +158,9 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
     root.replaceChildren(shell);
     if (opposedCheckState) {
       await activateOpposedCheckChatController(this, shell, opposedCheckState);
+    }
+    if (checkRequest?.state.status === "pending") {
+      await activateCheckRequestChatController(this, shell, checkRequest.state);
     }
     return root;
   }

@@ -1,14 +1,12 @@
 import type { AgentCheckSelection } from "./build-agent-check";
+import {
+  areAgentCheckParticipantReferencesEqual,
+  encodeAgentCheckParticipantReference,
+  parseAgentCheckParticipantReference,
+  type AgentCheckParticipantReference,
+} from "./agent-check-participant";
 
-export type OpposedCheckParticipantReference =
-  | {
-      readonly kind: "actor";
-      readonly uuid: `Actor.${string}`;
-    }
-  | {
-      readonly kind: "token";
-      readonly uuid: `Scene.${string}.Token.${string}`;
-    };
+export type OpposedCheckParticipantReference = AgentCheckParticipantReference;
 
 export interface OpposedCheckParticipantConfiguration {
   readonly participant: OpposedCheckParticipantReference;
@@ -24,29 +22,17 @@ export function areOpposedCheckParticipantReferencesEqual(
   left: OpposedCheckParticipantReference,
   right: OpposedCheckParticipantReference,
 ): boolean {
-  return left.kind === right.kind && left.uuid === right.uuid;
+  return areAgentCheckParticipantReferencesEqual(left, right);
 }
 
 export function encodeOpposedCheckParticipantReference(
   reference: OpposedCheckParticipantReference,
 ): string {
-  return `${reference.kind}|${reference.uuid}`;
+  return encodeAgentCheckParticipantReference(reference);
 }
 
 export function parseOpposedCheckParticipantReference(
   value: string,
 ): OpposedCheckParticipantReference {
-  const separatorIndex = value.indexOf("|");
-  const kind = value.slice(0, separatorIndex);
-  const uuid = value.slice(separatorIndex + 1);
-
-  if (kind === "actor" && /^Actor\.[^.]+$/.test(uuid)) {
-    return { kind, uuid: uuid as `Actor.${string}` };
-  }
-
-  if (kind === "token" && /^Scene\.[^.]+\.Token\.[^.]+$/.test(uuid)) {
-    return { kind, uuid: uuid as `Scene.${string}.Token.${string}` };
-  }
-
-  throw new Error("Invalid Opposed Check participant reference.");
+  return parseAgentCheckParticipantReference(value);
 }

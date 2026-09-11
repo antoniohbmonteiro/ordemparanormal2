@@ -16,6 +16,7 @@ import { registerPoiInvestigation } from "./bootstrap/register-poi-investigation
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
 import { registerGmTools } from "./bootstrap/register-gm-tools";
 import { registerOpposedChecks } from "./bootstrap/register-opposed-checks";
+import { registerCheckRequests } from "./bootstrap/register-check-requests";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
@@ -35,6 +36,7 @@ Hooks.once("init", () => {
   registerPoiSceneControls();
   registerGmTools();
   registerOpposedChecks();
+  registerCheckRequests();
   registerInvestigationMode();
   registerPoiRegionConfig();
   registerPoiCanvas();

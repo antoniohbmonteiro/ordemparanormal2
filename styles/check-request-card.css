@@ -1,0 +1,43 @@
+.op2-check-request-card,
+.op2-check-request-card * {
+  box-sizing: border-box;
+}
+
+.op2-check-request-card__body {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem 0.68rem;
+  text-align: center;
+}
+
+.op2-check-request-card__status {
+  color: var(--op2-check-accent-bright);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.op2-check-request-card__context {
+  color: var(--op2-check-text);
+}
+
+.op2-check-request-card__difficulty {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+  color: var(--op2-check-muted);
+  font-size: 0.74rem;
+}
+
+.op2-check-request-card__actions {
+  display: flex;
+  justify-content: center;
+}
+
+.op2-check-request-card__actions button {
+  min-width: 7rem;
+  border-color: var(--op2-check-accent);
+  color: var(--op2-check-text);
+  background: var(--op2-check-accent-soft);
+}

@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-  Ficha de Agente, Check Engine, Testes Opostos, ferramentas de Mestre, investigação em cena, Perfis, Habilidades, Ocupações e Equipamentos.
+  Ficha de Agente, Check Engine, ferramentas de Mestre com Testes Opostos e Request de Perícias, investigação em cena, Perfis, Habilidades, Ocupações e Equipamentos.
 </p>
 
 <p align="center">
@@ -59,6 +59,8 @@ Checks de atributo e Perícia usam a progressão **d4 → d6 → d8 → d10 → 
 
 Os **Testes Opostos** usam o mesmo Check Engine, podem ser iniciados pela paleta de ferramentas do Mestre e preservam o confronto resolvido em uma única mensagem de chat.
 
+O Mestre também pode criar um **Request de Perícias** para um Agent, com DT opcional, e o jogador autorizado resolve o pedido pelo Check normal no mesmo card.
+
 <p align="center">
   <img src="docs/screenshots/checks-and-opposed.webp" alt="Check normal e Teste Oposto entre Caio Nunes e Rafael Sato resolvidos no chat do Foundry VTT" width="297">
 </p>
@@ -78,7 +80,7 @@ Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas aos Pont
 - 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
 - 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat.
 - ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
-- 🧭 **Ferramentas do Mestre** — acesso rápido aos principais fluxos de mesa, incluindo a configuração de Testes Opostos.
+- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos e Request de Perícias.
 - 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
 - 🧩 **Conteúdo reutilizável** — Perfis, Habilidades, Ocupações e Equipamentos como Items integrados à ficha e aos compêndios.
 - 🎬 **Cena Narrativa** — mantém o contexto atual da sessão visível para todos os jogadores.

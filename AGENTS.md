@@ -444,9 +444,16 @@ Do not hardcode POI behavior by display name, and do not replace the established
 
 ## GM tools
 
-The project has GM-facing tooling for implemented table workflows, including access to Opposed Checks.
+The project has GM-facing tooling for implemented table workflows, including access to Opposed Checks and Skill Check Requests.
 
-Do not infer that every visible or planned GM action is already functional. Verify the current code and tests before advertising or extending a tool. In particular, planned release-gated workflows such as skill/check requests must only be treated as implemented after their runtime path and permissions are actually validated.
+The confirmed Skill Check Request workflow is:
+
+- a GM selects an Agent, a Skill, and an optional difficulty;
+- the system creates one pending ChatMessage;
+- an authorized OWNER or GM clicks **Rolar** and uses the normal Check Dialog;
+- the same ChatMessage transitions from pending to the resolved Check result.
+
+Do not infer that every visible or planned GM action is already functional. Verify the current code and tests before advertising or extending a tool, and only treat a workflow as implemented after its runtime path and permissions are validated.
 
 ## Deferred or incremental areas
 
@@ -454,7 +461,6 @@ Areas that remain deferred, provisional, or intentionally narrow include:
 
 - contextual Ability behavior such as Foco Mental;
 - Help, with GM approval and provenance;
-- Request de Perícias until its dedicated implementation is complete;
 - definitive combat;
 - threats;
 - rituals/paranormal subsystems beyond confirmed playtest rules.

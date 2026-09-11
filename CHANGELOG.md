@@ -4,20 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-11
+
 ### Added
 
-- Added permanent showcase screenshots for the Agent Sheet, resolved Checks and Opposed Checks, GM Opposed Check setup, and Investigation in scene using original demonstration characters and artwork.
+- Added Testes Opostos, allowing each participant to perform their own Check while the complete confrontation remains consolidated in one persistent ChatMessage, including an explicit tie state.
+- Added the persistent GM Tools palette with access to Testes Opostos and Request de Perícias.
+- Added Request de Perícias, allowing a GM to choose an Agent, a Skill, and an optional difficulty and publish a pending ChatMessage that an authorized player or GM resolves through the normal Check Dialog.
+- Added permanent showcase screenshots for the Agent Sheet, resolved Checks and Testes Opostos, GM table tools, and Investigation in scene using original demonstration characters and artwork.
 - Added compliant presentation assets for the Foundry Setup screen and the optional GitHub social preview, including the Community License seal and artificial-intelligence notice.
 - Added public `readme`, `bugs`, `changelog`, and Setup media metadata to the system manifest.
 
 ### Changed
 
+- Integrated Testes Opostos and Request de Perícias with persistent ChatMessage lifecycles, OWNER/GM authorization, active-GM coordination where required, and optional Dice So Nice presentation without extra result messages.
 - Reworked the README into a concise public landing page with a visible top compliance block, a single Agent Sheet hero, focused feature sections, installation guidance, pre-1.0 status, and full legal attribution at the end.
 - Clarified the canonical project name, supported playtest, unofficial community status, Foundry VTT v14-first positioning, and pre-1.0 SemVer policy across public metadata and the roadmap.
-
-### Notes
-
-- Request de Perícias remains a mandatory functional gate for v0.2.0 and is not claimed as available by this preparatory public-presence pass.
 
 ## [0.1.1] - 2026-09-07
 

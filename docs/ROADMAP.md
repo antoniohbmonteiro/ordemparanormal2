@@ -23,19 +23,19 @@ Consolidated the capabilities developed through the `0.0.x` series and establish
 
 Delivered the playable Investigation flow with Point of Interest Regions, controlled visibility, distinct player/GM views, persistent manual information reveals, and Examinar through the existing Check Engine.
 
-## Next public milestone 0.2.0 — Table tools
+## Next public milestone 0.2.0 — Table tools (ready for release)
 
 Purpose: deliver the current GM/player table-tooling milestone and its public presentation.
 
-Required before release:
+Completed and validated:
 
-- Testes Opostos completed and validated;
-- GM Tools palette completed and validated;
-- a functional and validated Request de Perícias workflow;
-- the public-presence pass completed;
-- the full automated gate and Foundry v14 smoke test completed.
+- Testes Opostos, with one persistent ChatMessage for the complete confrontation;
+- the GM Tools palette with access to the implemented table workflows;
+- Request de Perícias, from GM configuration to an authorized roll and resolved result in the same ChatMessage;
+- the public-presence pass, including the README showcase and system metadata;
+- the Foundry v14 manual smoke tests for the milestone workflows.
 
-Request de Perícias is a release gate, not a documentation-only claim. Until it is functional and validated, do not close the `0.2.0` changelog, finalize release claims, bump versions, create a tag, or publish the release. A dedicated Request screenshot is optional and does not block the release.
+The milestone is ready for release preparation. Only the final automated release gate and review of the prepared release inputs remain before the separately authorized tag and publication steps.
 
 ## 0.0.1 — Placeholder ✅
 

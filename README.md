@@ -45,13 +45,24 @@
 >
 > **Desenvolvido nativamente para Foundry VTT v14**, aproveitando as APIs públicas atuais da plataforma e a interface do próprio Foundry.
 
-<p align="center">
-  <img src="docs/screenshots/agent-sheet.webp" alt="Ficha de Caio Nunes no sistema Ordem Paranormal 2 para Foundry VTT" width="860">
-</p>
+## O que já funciona
+
+- 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
+- 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat.
+- ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
+- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos e Request de Perícias.
+- 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
+- 🧩 **Conteúdo reutilizável** — Perfis, Habilidades, Ocupações e Equipamentos como Items integrados à ficha e aos compêndios.
+- 🎬 **Cena Narrativa** — mantém o contexto atual da sessão visível para todos os jogadores.
+- ⚙️ **Foundry VTT v14-first** — desenvolvido sobre as APIs atuais da plataforma, com integração opcional ao Dice So Nice.
 
 ## Feito para jogar, sem disputar espaço com a interface
 
 A ficha concentra o que importa durante a sessão: **Perfil, Ocupação, PV, PD, atributos, Perícias, Habilidades e Inventário**. O sistema acompanha o playtest sem automatizar regras que ainda não estejam confirmadas publicamente.
+
+<p align="center">
+  <img src="docs/screenshots/agent-sheet.webp" alt="Ficha de Caio Nunes no sistema Ordem Paranormal 2 para Foundry VTT" width="860">
+</p>
 
 ### Checks que mostram o que aconteceu
 
@@ -74,17 +85,6 @@ Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas aos Pont
 <p align="center">
   <img src="docs/screenshots/investigation.webp" alt="Cena de investigação com Caio Nunes, Rafael Sato e um Ponto de Interesse destacado no Foundry VTT" width="760">
 </p>
-
-## O que já funciona
-
-- 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
-- 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat.
-- ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
-- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos e Request de Perícias.
-- 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
-- 🧩 **Conteúdo reutilizável** — Perfis, Habilidades, Ocupações e Equipamentos como Items integrados à ficha e aos compêndios.
-- 🎬 **Cena Narrativa** — mantém o contexto atual da sessão visível para todos os jogadores.
-- ⚙️ **Foundry VTT v14-first** — desenvolvido sobre as APIs atuais da plataforma, com integração opcional ao Dice So Nice.
 
 ## Instalação
 

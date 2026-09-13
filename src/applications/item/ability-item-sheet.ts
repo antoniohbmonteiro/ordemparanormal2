@@ -133,9 +133,11 @@ export class AbilityItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   }
 
   static async #onOpenUse(this: AbilityItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
-    if (!this.isEditable || !target.dataset.useId) return;
-    await this.#updateQueue;
-    await this.submit();
+    if (!target.dataset.useId) return;
+    if (this.isEditable) {
+      await this.#updateQueue;
+      await this.submit();
+    }
     const use = readAbilitySystem(this.document as foundry.documents.Item).uses?.find(({ id }) => id === target.dataset.useId) ?? null;
     if (use) await this.#openUseEditor(use.id, use);
   }

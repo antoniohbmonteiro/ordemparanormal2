@@ -44,6 +44,9 @@ describe("Ability Item Sheet description", () => {
     expect(template).toContain('data-tab="general"');
     expect(template).toContain('data-tab="uses"');
     expect(template).toContain('data-action="tab"');
+    expect(template).toContain('data-action="openUse" data-use-id="{{id}}"');
+    expect(template).not.toContain('{{#unless @root.editable}} disabled{{/unless}}');
+    expect(template).toContain('{{#if editable}}<button type="button" data-action="createUse"');
     expect(sheet).not.toContain("_onClickTab");
     expect(template).not.toContain('name="system.cost');
     expect(dataModel).toContain("description: new foundry.data.fields.HTMLField({");

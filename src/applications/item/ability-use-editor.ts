@@ -18,8 +18,21 @@ interface AbilityUseEditorContext {
   readonly sources: readonly { readonly value: AbilityCostSource; readonly labelKey: string; readonly selected: boolean; readonly disabled: boolean }[];
   readonly isNew: boolean;
   readonly hasResource: boolean;
+  readonly editable: boolean;
   readonly canMoveUp: boolean;
   readonly canMoveDown: boolean;
+}
+
+interface AbilityUseEditorGame {
+  readonly packs: {
+    get(id: string): { readonly locked: boolean } | undefined;
+  };
+}
+
+function canEditAbility(ability: foundry.documents.Item): boolean {
+  if (!ability.canUserModify(game.user, "update")) return false;
+  if (!ability.pack) return true;
+  return (game as typeof game & AbilityUseEditorGame).packs.get(ability.pack)?.locked === false;
 }
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -101,6 +114,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
       })),
       isNew: this.#baseline === null,
       hasResource,
+      editable: canEditAbility(this.#ability),
       canMoveUp: index > 0,
       canMoveDown: !!uses && index >= 0 && index < uses.length - 1,
     };
@@ -108,6 +122,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static async #onSubmit(this: AbilityUseEditor, event: Event, _form: HTMLFormElement, formData: FormDataExtended): Promise<void> {
     event.preventDefault();
+    if (!canEditAbility(this.#ability)) return;
     const draft = this.#readDraft(formData);
     if (!draft) {
       ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.AbilityUseEditor.Errors.Invalid"));
@@ -125,7 +140,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #onCancel(this: AbilityUseEditor): Promise<void> { await this.close(); }
 
   async #move(direction: "up" | "down"): Promise<void> {
-    if (!this.#baseline || !this.#captureDraft()) return;
+    if (!canEditAbility(this.#ability) || !this.#baseline || !this.#captureDraft()) return;
     const result = await moveAbilityUse(this.#ability, this.#baseline.id, direction);
     if (result.status === "stale") {
       ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.AbilityUseEditor.Errors.Stale"));
@@ -143,7 +158,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #onMoveDown(this: AbilityUseEditor): Promise<void> { await this.#move("down"); }
 
   static async #onRemove(this: AbilityUseEditor): Promise<void> {
-    if (!this.#baseline) return;
+    if (!canEditAbility(this.#ability) || !this.#baseline) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       classes: ["ordemparanormal2"],
       content: `<p>${game.i18n.localize("ORDEMPARANORMAL2.AbilityUseEditor.ConfirmRemove")}</p>`,

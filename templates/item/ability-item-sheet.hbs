@@ -18,7 +18,7 @@
     </section>
     <section class="tab {{tabs.uses.cssClass}}" data-group="sheet" data-tab="uses">
       <header class="op2-ability-sheet__toolbar"><h2>{{localize "ORDEMPARANORMAL2.AbilitySheet.Uses"}}</h2>{{#if editable}}<button type="button" data-action="createUse"><i class="fa-solid fa-plus"></i> {{localize "ORDEMPARANORMAL2.AbilitySheet.Actions.CreateUse"}}</button>{{/if}}</header>
-      {{#if ability.uses}}<div class="op2-ability-sheet__uses">{{#each ability.uses}}<button class="op2-ability-sheet__use" type="button" data-action="openUse" data-use-id="{{id}}"{{#unless @root.editable}} disabled{{/unless}}><span class="op2-ability-sheet__use-name">{{name}}</span><span class="op2-ability-sheet__use-cost">{{costLabel}}</span>{{#if hasMinimumLevel}}<span class="op2-ability-sheet__use-level">{{localize "ORDEMPARANORMAL2.AbilitySheet.Level" level=minimumLevel}}</span>{{/if}}</button>{{/each}}</div>{{else}}<p class="op2-ability-sheet__empty">{{localize "ORDEMPARANORMAL2.AbilitySheet.EmptyUses"}}</p>{{/if}}
+      {{#if ability.uses}}<div class="op2-ability-sheet__uses">{{#each ability.uses}}<button class="op2-ability-sheet__use" type="button" data-action="openUse" data-use-id="{{id}}"><span class="op2-ability-sheet__use-name">{{name}}</span><span class="op2-ability-sheet__use-cost">{{costLabel}}</span>{{#if hasMinimumLevel}}<span class="op2-ability-sheet__use-level">{{localize "ORDEMPARANORMAL2.AbilitySheet.Level" level=minimumLevel}}</span>{{/if}}</button>{{/each}}</div>{{else}}<p class="op2-ability-sheet__empty">{{localize "ORDEMPARANORMAL2.AbilitySheet.EmptyUses"}}</p>{{/if}}
     </section>
   </div>
 </section>

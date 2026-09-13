@@ -48,7 +48,7 @@
 ## O que já funciona
 
 - 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
-- 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat.
+- 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat. Checks também apresentam Habilidades aplicáveis antes da rolagem quando o Agent possui uma Forma de uso compatível.
 - ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
 - 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos e Request de Perícias.
 - 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
@@ -110,9 +110,9 @@ Extraia o pacote da release para:
 
 ## Status do projeto
 
-**Pré-1.0 · desenvolvimento ativo · Foundry VTT v14**
+**Em desenvolvimento ativo · Foundry VTT v14**
 
-O sistema acompanha um RPG em playtest. Mecânicas e modelos são automatizados somente quando existe uma regra pública suficientemente confirmada.
+O sistema é baseado nas regras públicas de playtest de Ordem Paranormal RPG 2 e evolui junto com novas regras e esclarecimentos publicados. O foco é manter uma experiência estável e utilizável no Foundry, automatizando mecânicas confirmadas sem antecipar regras ainda ambíguas.
 
 Durante a fase pré-1.0, o projeto usa SemVer `MAJOR.MINOR.PATCH` na forma `0.X.Y`:
 

@@ -4,16 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-13
+
 ### Added
 
-- Added ordered, rich-text Ability use forms with stable IDs, optional minimum Agent levels, independent costs, and an ApplicationV2 editor.
-- Added the 0/1/N Ability-use flow on the Agent Sheet, including a level-aware selection dialog and executed-use chat cards.
-- Added world-data migration 2 to replace released root Ability costs with `uses[]` without a permanent compatibility model.
+- Added ordered Ability use Forms as their own model: stable ID, rich-text description, independent cost, optional minimum Agent level, and an ApplicationV2 editor to create, edit, reorder, and remove them.
+- Added the 0/1/N Ability-use flow on the Agent Sheet, including a level-aware selection dialog for Forms without a Check integration.
+- Added PRE-ROLL integration between Ability use Forms and the Check Engine: a Check Dialog now resolves which owned Forms are currently applicable to its context, exposes them in a dedicated "Habilidades aplicáveis" picker, and applies a selected Form as an extra die with its cost shown before the roll. This path is reused by normal Checks, Testes Opostos, Request de Perícias, and Examinar.
+- Added `CheckSnapshotV4`, extending `CheckSnapshotV3` with immutable applied-Ability provenance and the confirmed cost for each applied Form; `CheckSnapshotV1`–`V3` remain readable.
+- Added health (PV) as an Ability use cost source, alongside PD and an Ability's own resource.
+- Added world-data migration 2, converting a previously released root Ability `cost` into `uses[]` automatically for world and embedded Ability Items.
+- Added read-only navigation of Ability Item sheets opened from compendiums, including opening an existing use Form for inspection.
+- Added `Foco Mental (Aprimorado)` and `Ímpeto (Aprimorado)` as separate compendium Ability Items, covering Agents that already hold the enhanced versions in the current playtest content. They are independent Items with their own Forms; there is no automatic upgrade from the base version.
+- Added default Prototype Token configuration for newly created Agent Actors: linked actor, Friendly disposition, bars visible to Owner on hover, vision enabled at range 0, and PV/PD as the primary/secondary token bars. Explicitly supplied values are preserved.
+- Added the internal `OP2 Design Sync` Figma tooling for syncing design tokens; development-only, no effect on the released system.
 
 ### Changed
 
-- Ability use edits now re-read and patch the latest persisted collection through a per-Ability queue, preserving disjoint changes from simultaneous local editors.
-- Ímpeto now owns its `0/3` resource and four explicit use forms, available at levels `2/6/2/6`; increasing its maximum to 5 remains manual.
+- Ability use edits now re-read and patch the latest persisted `uses[]` collection through a per-Ability queue, preserving disjoint changes from concurrent local editors.
+
+### Fixed
+
+- Ability uses can now be executed directly from the selection dialog.
 
 ## [0.2.1] - 2026-09-11
 

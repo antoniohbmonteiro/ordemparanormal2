@@ -35,6 +35,13 @@ interface TestSheet {
   readonly document: object;
   readonly isEditable: boolean;
   readonly submit: ReturnType<typeof vi.fn>;
+  readonly controls: {
+    readonly tab: { disabled: boolean };
+    readonly openUse: { disabled: boolean };
+    readonly createUse: { disabled: boolean };
+    readonly addResource: { disabled: boolean };
+  };
+  _toggleDisabled(disabled: boolean): void;
 }
 
 type SheetAction = (
@@ -54,6 +61,18 @@ beforeAll(async () => {
     readonly isEditable: boolean;
     readonly submit = vi.fn(async () => undefined);
     readonly tabGroups = { sheet: "general" };
+    readonly controls = {
+      tab: { disabled: false },
+      openUse: { disabled: false },
+      createUse: { disabled: false },
+      addResource: { disabled: false },
+    };
+    readonly element = {
+      querySelectorAll: (selector: string) =>
+        selector === 'button[data-action="tab"], button[data-action="openUse"]'
+          ? [this.controls.tab, this.controls.openUse]
+          : [],
+    };
 
     constructor(options: { document: object; editable: boolean }) {
       this.document = options.document;
@@ -62,6 +81,9 @@ beforeAll(async () => {
 
     protected async _prepareContext(): Promise<object> { return {}; }
     protected _attachPartListeners(): void {}
+    protected _toggleDisabled(disabled: boolean): void {
+      for (const control of Object.values(this.controls)) control.disabled = disabled;
+    }
     protected async _preClose(): Promise<void> {}
     protected _onClose(): void {}
   }
@@ -120,6 +142,17 @@ describe("AbilityItemSheet use actions", () => {
     expect(sheet.submit).not.toHaveBeenCalled();
     expect(editorInstances).toHaveLength(1);
     expect(editorInstances[0]).toMatchObject({ ability: document, use });
+  });
+
+  it("reenables only tab navigation and existing-use inspection after Foundry disables a read-only sheet", () => {
+    const sheet = new AbilityItemSheetClass({ document: ability(), editable: false });
+
+    sheet._toggleDisabled(true);
+
+    expect(sheet.controls.tab.disabled).toBe(false);
+    expect(sheet.controls.openUse.disabled).toBe(false);
+    expect(sheet.controls.createUse.disabled).toBe(true);
+    expect(sheet.controls.addResource.disabled).toBe(true);
   });
 
   it("keeps create unavailable for a read-only Ability", async () => {

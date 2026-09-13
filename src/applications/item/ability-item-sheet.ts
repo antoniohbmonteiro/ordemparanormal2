@@ -104,6 +104,16 @@ export class AbilityItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     }
   }
 
+  protected override _toggleDisabled(disabled: boolean): void {
+    super._toggleDisabled(disabled);
+    if (!disabled) return;
+    for (const button of this.element.querySelectorAll<HTMLButtonElement>(
+      'button[data-action="tab"], button[data-action="openUse"]',
+    )) {
+      button.disabled = false;
+    }
+  }
+
   async #updateResource(input: HTMLInputElement): Promise<void> {
     const field = input.dataset.resourceField;
     if (field !== "value" && field !== "max") return;

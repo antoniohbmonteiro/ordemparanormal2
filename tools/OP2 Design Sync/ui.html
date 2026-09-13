@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OP2 Design Sync</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, system-ui, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        color: var(--figma-color-text);
+        background: var(--figma-color-bg);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 24px;
+      }
+
+      .section-label {
+        margin: 4px 0 16px;
+        color: var(--figma-color-text-secondary);
+        font-size: 12px;
+      }
+
+      button {
+        width: 100%;
+        min-height: 32px;
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--figma-color-text-onbrand);
+        background: var(--figma-color-bg-brand);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--figma-color-bg-brand-hover);
+      }
+
+      button:focus-visible {
+        outline: 2px solid var(--figma-color-border-brand-strong);
+        outline-offset: 2px;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.6;
+      }
+
+      #status {
+        min-height: 32px;
+        margin: 12px 0 0;
+        color: var(--figma-color-text-secondary);
+        font-size: 11px;
+        line-height: 16px;
+      }
+
+      #status[data-status="success"] {
+        color: var(--figma-color-text-success);
+      }
+
+      #status[data-status="error"] {
+        color: var(--figma-color-text-danger);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>OP2 Design Sync</h1>
+    <p class="section-label">Foundations</p>
+    <button id="sync-foundations" type="button">Sync Foundations</button>
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <script>
+      const syncButton = document.getElementById('sync-foundations');
+      const status = document.getElementById('status');
+
+      syncButton.addEventListener('click', () => {
+        syncButton.disabled = true;
+        status.dataset.status = '';
+        status.textContent = 'Sincronizando…';
+        parent.postMessage({ pluginMessage: { type: 'sync-foundations' } }, '*');
+      });
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+
+        if (!message || message.type !== 'sync-result') {
+          return;
+        }
+
+        syncButton.disabled = false;
+        status.dataset.status = message.status;
+        status.textContent = message.message;
+      };
+    </script>
+  </body>
+</html>

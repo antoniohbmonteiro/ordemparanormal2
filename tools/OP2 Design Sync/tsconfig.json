@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "none",
+    "outFile": "code.js",
+    "lib": ["es2020"],
+    "strict": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./node_modules/@figma"
+    ]
+  },
+  "files": [
+    "src/foundations/tokens.ts",
+    "src/foundations/sync-variables.ts",
+    "src/foundations/build-foundations-page.ts",
+    "src/foundations/sync-foundations.ts",
+    "code.ts"
+  ]
+}

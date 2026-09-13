@@ -15,6 +15,7 @@ export interface OwnedAbilityView {
   readonly useSummary: {
     readonly isEmpty: boolean;
     readonly isSingleNone: boolean;
+    readonly isSingleHealth: boolean;
     readonly isSingleDetermination: boolean;
     readonly isSingleResource: boolean;
     readonly isMultiple: boolean;
@@ -50,6 +51,7 @@ function createUseSummary(collection: AbilityUsesView): OwnedAbilityView["useSum
   return {
     isEmpty: collection.kind === "valid" && collection.count === 0,
     isSingleNone: single?.cost.source === "none",
+    isSingleHealth: single?.cost.source === "health",
     isSingleDetermination: single?.cost.source === "determination",
     isSingleResource: single?.cost.source === "resource",
     isMultiple: collection.kind === "valid" && collection.count > 1,

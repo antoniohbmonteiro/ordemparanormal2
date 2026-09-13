@@ -9,12 +9,42 @@ export type AbilityUseResult =
   | { readonly status: "locked"; readonly currentLevel: number; readonly requiredLevel: number }
   | { readonly status: "forbidden" }
   | { readonly status: "invalid"; readonly reason: "wrong-type" | "not-owned" | "malformed-uses" | "missing-use" | "malformed-level" | "malformed-cost" | "missing-resource" }
-  | { readonly status: "insufficient"; readonly source: "determination" | "resource"; readonly required: number; readonly available: number };
+  | { readonly status: "insufficient"; readonly source: "health" | "determination" | "resource"; readonly required: number; readonly available: number };
 
-function readDetermination(actor: foundry.documents.Actor): number | null {
-  const system = actor.system as unknown as { readonly resources?: { readonly determination?: { readonly value?: unknown } } };
-  const value = system.resources?.determination?.value;
+type AgentResourceCostSource = Extract<AbilityCostSource, "health" | "determination">;
+type AgentResourcePaymentResult =
+  | { readonly status: "success"; readonly source: AgentResourceCostSource; readonly amount: number; readonly remaining: number }
+  | { readonly status: "invalid"; readonly reason: "malformed-cost" }
+  | { readonly status: "insufficient"; readonly source: AgentResourceCostSource; readonly required: number; readonly available: number };
+
+function readAgentResource(actor: foundry.documents.Actor, source: AgentResourceCostSource): number | null {
+  const system = actor.system as unknown as {
+    readonly resources?: {
+      readonly health?: { readonly value?: unknown };
+      readonly determination?: { readonly value?: unknown };
+    };
+  };
+  const value = source === "health"
+    ? system.resources?.health?.value
+    : system.resources?.determination?.value;
   return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : null;
+}
+
+async function payAgentResource(
+  actor: foundry.documents.Actor,
+  source: AgentResourceCostSource,
+  amount: number,
+): Promise<AgentResourcePaymentResult> {
+  const available = readAgentResource(actor, source);
+  if (available === null) return { status: "invalid", reason: "malformed-cost" };
+  if (available < amount) return { status: "insufficient", source, required: amount, available };
+  const remaining = available - amount;
+  if (source === "health") {
+    await actor.update({ "system.resources.health.value": remaining });
+  } else {
+    await actor.update({ "system.resources.determination.value": remaining });
+  }
+  return { status: "success", source, amount, remaining };
 }
 
 function readAgentLevel(actor: foundry.documents.Actor): number | null {
@@ -46,13 +76,9 @@ export async function useAbility(actor: foundry.documents.Actor, ability: foundr
 
   const cost = use.cost;
   if (cost.source === "none") return { status: "success", use, source: "none", amount: 0, remaining: null };
-  if (cost.source === "determination") {
-    const available = readDetermination(actor);
-    if (available === null) return { status: "invalid", reason: "malformed-cost" };
-    if (available < cost.amount) return { status: "insufficient", source: "determination", required: cost.amount, available };
-    const remaining = available - cost.amount;
-    await actor.update({ "system.resources.determination.value": remaining });
-    return { status: "success", use, source: "determination", amount: cost.amount, remaining };
+  if (cost.source === "health" || cost.source === "determination") {
+    const payment = await payAgentResource(actor, cost.source, cost.amount);
+    return payment.status === "success" ? { ...payment, use } : payment;
   }
 
   const resource = readAbilityResource(system.resource);

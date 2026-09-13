@@ -22,4 +22,22 @@ describe("owned Abilities", () => {
     });
     expect(abilities[0]?.resource).toEqual({ value: 3, max: 4 });
   });
+
+  it("resolves a single health cost independently of an owned resource", () => {
+    const [ability] = collectOwnedAbilities([{
+      id: "health", type: "ability", sort: 0, name: "Incansável", img: null,
+      system: {
+        description: "Extra action",
+        uses: [{ id: "extra-action", name: "Ação extra", description: "", cost: { source: "health", amount: 5 }, minimumLevel: null }],
+        resource: null,
+      },
+    }] as unknown as foundry.documents.Item[]);
+
+    expect(ability?.useSummary).toMatchObject({
+      isSingleHealth: true,
+      isSingleDetermination: false,
+      isSingleResource: false,
+      amount: 5,
+    });
+  });
 });

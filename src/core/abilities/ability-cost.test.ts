@@ -4,6 +4,10 @@ import { normalizeAbilityCost, readAbilityCost } from "./ability-cost";
 
 describe("Ability cost", () => {
   it("validates consistent persisted costs", () => {
+    expect(readAbilityCost({ source: "health", amount: 5 })).toEqual({
+      source: "health",
+      amount: 5,
+    });
     expect(readAbilityCost({ source: "determination", amount: 2 })).toEqual({
       source: "determination",
       amount: 2,
@@ -17,6 +21,10 @@ describe("Ability cost", () => {
 
   it("normalizes amounts and forces free costs to zero", () => {
     expect(normalizeAbilityCost("none", 8)).toEqual({ source: "none", amount: 0 });
+    expect(normalizeAbilityCost("health", 5)).toEqual({
+      source: "health",
+      amount: 5,
+    });
     expect(normalizeAbilityCost("determination", 3)).toEqual({
       source: "determination",
       amount: 3,

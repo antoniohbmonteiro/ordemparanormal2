@@ -23,10 +23,12 @@ describe("Ability use dialog", () => {
     const view = await buildAbilityUseDialogView(ability, [
       { id: "d4", name: "Adicionar d4", description: "d4", cost: { source: "resource", amount: 1 }, minimumLevel: 2 },
       { id: "d10", name: "Adicionar d10", description: "d10", cost: { source: "resource", amount: 2 }, minimumLevel: 6 },
+      { id: "extra-action", name: "Ação extra", description: "ação", cost: { source: "health", amount: 5 }, minimumLevel: null },
     ], 2, { value: 0, max: 3 });
-    expect(view.uses).toHaveLength(2);
+    expect(view.uses).toHaveLength(3);
     expect(view.uses[0]).toMatchObject({ locked: false, description: "<enriched>d4</enriched>" });
     expect(view.uses[1]).toMatchObject({ locked: true, requirement: "Requer nível 6" });
+    expect(view.uses[2]).toMatchObject({ locked: false, costLabel: `5 ORDEMPARANORMAL2.AgentSheet.Resources.Health` });
     expect(view.resource).toEqual({ value: 0, max: 3 });
   });
 

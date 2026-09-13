@@ -74,4 +74,9 @@ describe("Agent Sheet Ability card template", () => {
     expect(template).not.toContain("op2-ability-card__description");
     expect(template).not.toContain("editAbility");
   });
+
+  it("renders a single health cost as PV", () => {
+    expect(template).toContain("useSummary.isSingleHealth");
+    expect(template).toContain("ORDEMPARANORMAL2.AgentSheet.Resources.Health");
+  });
 });

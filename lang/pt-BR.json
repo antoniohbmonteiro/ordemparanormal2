@@ -254,6 +254,7 @@
         "Success": "Habilidade usada.",
         "Forbidden": "Você não pode usar Habilidades deste Agente.",
         "Locked": "Esta forma de uso requer nível {level}.",
+        "InsufficientHealth": "PV insuficiente para usar esta Habilidade.",
         "InsufficientDetermination": "PD insuficiente para usar esta Habilidade.",
         "InsufficientResource": "Recurso insuficiente para usar esta Habilidade.",
         "MissingResource": "O recurso configurado para esta Habilidade não existe.",
@@ -347,6 +348,7 @@
       },
       "CostSources": {
         "none": "Sem custo",
+        "health": "PV",
         "determination": "PD",
         "resource": "Recurso"
       },

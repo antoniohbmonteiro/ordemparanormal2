@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readAbilityUses } from "../core/abilities/ability-use";
+
 interface PackEntry {
   readonly _id: string;
   readonly _key: string;
@@ -43,6 +45,52 @@ const ABILITY_DEFINITIONS = [
   ["Prontidão", "prontidao", "abilityfldvigi01"],
   ["Técnica Medicinal", "tecnica-medicinal", "abilityfldoccp01"],
   ["Varredura Ampla", "varredura-ampla", "abilityfldoccp01"],
+] as const;
+
+const ABILITY_USE_DEFINITIONS = {
+  "Avaliação": [
+    ["evaluation-assess", "Avaliar", "determination", 2, null],
+  ],
+  "Foco Emocional": [
+    ["emotional-focus-add-d4", "Adicionar d4", "determination", 2, null],
+  ],
+  "Foco Mental": [
+    ["mental-focus-add-d4", "Adicionar d4", "determination", 2, null],
+    ["mental-focus-add-d8", "Adicionar d8", "determination", 4, null],
+  ],
+  "Ímpeto": [
+    ["impetus-add-d4", "Adicionar d4", "resource", 1, 2],
+    ["impetus-add-d10", "Adicionar d10", "resource", 2, 6],
+    ["impetus-raise-attribute", "Elevar atributo", "resource", 3, 2],
+    ["impetus-extra-action", "Ação extra", "resource", 5, 6],
+  ],
+  "Incansável": [
+    ["tireless-extra-action", "Ação extra", "health", 5, null],
+  ],
+  "Linha de Tiro": [
+    ["line-of-fire-add-d10", "Adicionar d10", "determination", 4, null],
+  ],
+  "Mentoria": [
+    ["mentorship-guide", "Orientar", "none", 0, null],
+  ],
+  "Olhar Infalível": [
+    ["unerring-gaze-reroll", "Rolar novamente", "determination", 2, null],
+  ],
+  "Prontidão": [
+    ["readiness-act-first", "Agir primeiro", "determination", 3, null],
+  ],
+  "Varredura Ampla": [
+    ["wide-scan-investigate", "Investigar com duas perícias", "none", 0, null],
+  ],
+} as const;
+
+const PASSIVE_ABILITY_NAMES = [
+  "Amor Pela Descoberta",
+  "Conhecimento Técnico",
+  "Esforço e Suor",
+  "Estoico",
+  "Para Bellum",
+  "Técnica Medicinal",
 ] as const;
 
 const FOLDER_DEFINITIONS = [
@@ -132,15 +180,39 @@ describe("core compendium sources", () => {
         .map(({ name }) => name),
     ).toEqual(["Foco Mental", "Ímpeto"]);
 
-    const impetus = abilities.find(({ name }) => name === "Ímpeto");
-    expect(impetus?.system.resource).toEqual({ value: 0, max: 3 });
-    expect(impetus?.system.uses).toEqual([
-      expect.objectContaining({ id: "impetus-add-d4", name: "Adicionar d4", cost: { source: "resource", amount: 1 }, minimumLevel: 2 }),
-      expect.objectContaining({ id: "impetus-add-d10", name: "Adicionar d10", cost: { source: "resource", amount: 2 }, minimumLevel: 6 }),
-      expect.objectContaining({ id: "impetus-raise-attribute", name: "Elevar atributo", cost: { source: "resource", amount: 3 }, minimumLevel: 2 }),
-      expect.objectContaining({ id: "impetus-extra-action", name: "Ação extra", cost: { source: "resource", amount: 5 }, minimumLevel: 6 }),
-    ]);
-    expect(abilities.filter(({ name }) => name !== "Ímpeto").every(({ system }) => Array.isArray(system.uses) && system.uses.length === 0)).toBe(true);
+    expect(abilities.find(({ name }) => name === "Ímpeto")?.system.resource)
+      .toEqual({ value: 0, max: 3 });
+
+    const allUseIds: string[] = [];
+    for (const ability of abilities) {
+      const uses = readAbilityUses(ability.system.uses);
+      expect(uses, `${ability.name} has invalid uses`).not.toBeNull();
+      if (!uses) continue;
+      allUseIds.push(...uses.map(({ id }) => id));
+      expect(uses.every(({ description }) => /^<p>.+<\/p>$/.test(description)))
+        .toBe(true);
+
+      const expected = ABILITY_USE_DEFINITIONS[
+        ability.name as keyof typeof ABILITY_USE_DEFINITIONS
+      ];
+      if (!expected) {
+        expect(uses, `${ability.name} must remain passive`).toEqual([]);
+        continue;
+      }
+      expect(uses.map((use) => [
+        use.id,
+        use.name,
+        use.cost.source,
+        use.cost.amount,
+        use.minimumLevel,
+      ])).toEqual(expected);
+    }
+
+    expect(new Set(allUseIds).size).toBe(allUseIds.length);
+    expect(
+      abilities.filter(({ system }) => readAbilityUses(system.uses)?.length === 0)
+        .map(({ name }) => name),
+    ).toEqual(PASSIVE_ABILITY_NAMES);
   });
 
   it("defines reproducible editorial folders inside the Ability pack", async () => {

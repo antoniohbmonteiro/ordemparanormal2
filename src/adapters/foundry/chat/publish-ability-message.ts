@@ -1,6 +1,7 @@
 import { ABILITY_CARD_KIND, ABILITY_ITEM_TYPE, CARD_PRESENTATION_FLAG, SYSTEM_ID } from "../../../config/system-config";
 import type { AbilityUseResult } from "../../../features/abilities/use-ability";
 import { buildAbilityCardViewModel, type AbilityCardViewModel } from "../../../ui/chat/ability-card-view-model";
+import { localizeAbilityCost } from "../../../ui/abilities/ability-cost-label";
 import { readAgentAccentColor } from "../actors/read-agent-accent-color";
 import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
 
@@ -18,7 +19,7 @@ export async function buildAbilityCardContext(ability: foundry.documents.Item, e
   const description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(rawDescription, { relativeTo: ability, secrets: ability.isOwner });
   const subtitle = execution?.use.name ?? game.i18n.localize("ORDEMPARANORMAL2.AbilityCard.Subtitle");
   const costLabel = execution && execution.source !== "none"
-    ? `${execution.amount} ${game.i18n.localize(execution.source === "determination" ? "ORDEMPARANORMAL2.AgentSheet.Resources.Determination" : "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource")}`
+    ? localizeAbilityCost({ source: execution.source, amount: execution.amount })
     : "";
   return buildAbilityCardViewModel({
     name: ability.name,

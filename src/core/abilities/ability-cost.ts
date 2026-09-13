@@ -1,5 +1,6 @@
 export const ABILITY_COST_SOURCES = [
   "none",
+  "health",
   "determination",
   "resource",
 ] as const;

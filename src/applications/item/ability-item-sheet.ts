@@ -5,6 +5,7 @@ import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/ap
 import { enqueueAbilityMutation } from "../../adapters/foundry/abilities/update-ability-uses";
 import { readAbilityResource, EMPTY_ABILITY_RESOURCE, prepareAbilityResourceRemoval, type AbilityResourceData } from "../../core/abilities/ability-resource";
 import { readAbilityUses, type AbilityUseData } from "../../core/abilities/ability-use";
+import { localizeAbilityCost } from "../../ui/abilities/ability-cost-label";
 import { AbilityUseEditor } from "./ability-use-editor";
 
 const ABILITY_SHEET_TEMPLATE = "systems/ordemparanormal2/templates/item/ability-item-sheet.hbs";
@@ -19,13 +20,6 @@ interface AbilityItemSheetContext extends DocumentSheetRenderContext<foundry.doc
     readonly resource: AbilityResourceData | null;
     readonly uses: readonly (AbilityUseData & { readonly costLabel: string; readonly hasMinimumLevel: boolean })[] | null;
   };
-}
-
-function costLabel(use: AbilityUseData): string {
-  if (use.cost.source === "none") return game.i18n.localize("ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost");
-  return `${use.cost.amount} ${game.i18n.localize(use.cost.source === "determination"
-    ? "ORDEMPARANORMAL2.AgentSheet.Resources.Determination"
-    : "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource")}`;
 }
 
 function readAbilitySystem(item: foundry.documents.Item) {
@@ -94,7 +88,7 @@ export class AbilityItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
         description: system.description,
         enrichedDescription,
         resource: system.resource,
-        uses: system.uses?.map((use) => ({ ...use, costLabel: costLabel(use), hasMinimumLevel: use.minimumLevel !== null })) ?? null,
+        uses: system.uses?.map((use) => ({ ...use, costLabel: localizeAbilityCost(use.cost), hasMinimumLevel: use.minimumLevel !== null })) ?? null,
       },
     };
   }

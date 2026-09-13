@@ -47,7 +47,7 @@ describe("AbilityDataModel", () => {
     const use = schema.uses.element as MockSchemaField;
     const cost = use.fields.cost as unknown as MockSchemaField;
     expect(cost.fields.source.options).toMatchObject({
-      choices: ["none", "determination", "resource"],
+      choices: ["none", "health", "determination", "resource"],
       initial: "none",
     });
     expect(cost.fields.amount.options).toMatchObject({ integer: true, min: 0 });
@@ -99,5 +99,9 @@ describe("AbilityDataModel", () => {
       description: "", resource: null,
       uses: [{ ...use, cost: { source: "resource", amount: 1 } }],
     })).toThrow("require an owned resource");
+    expect(() => AbilityDataModel.validateJoint({
+      description: "", resource: null,
+      uses: [{ ...use, cost: { source: "health", amount: 1 } }],
+    })).not.toThrow();
   });
 });

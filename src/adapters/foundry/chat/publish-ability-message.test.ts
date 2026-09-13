@@ -108,6 +108,29 @@ describe("publishAbilityMessage", () => {
     );
   });
 
+  it("publishes a health cost as PV", async () => {
+    const { renderTemplate } = stubFoundry();
+    vi.stubGlobal("game", {
+      i18n: { localize: vi.fn((key: string) => key.endsWith("Health") ? "PV" : key) },
+    });
+
+    await publishAbilityMessage(actor, abilityWith(), {
+      status: "success",
+      use: {
+        id: "extra-action", name: "Ação extra", description: "Realize uma ação extra.",
+        cost: { source: "health", amount: 5 }, minimumLevel: null,
+      },
+      source: "health",
+      amount: 5,
+      remaining: 3,
+    });
+
+    expect(renderTemplate).toHaveBeenCalledWith(
+      "systems/ordemparanormal2/templates/chat/ability-card.hbs",
+      expect.objectContaining({ hasCost: true, costLabel: "5 PV" }),
+    );
+  });
+
   it("snapshots the effective Agent accent color into the card presentation flag", async () => {
     const { create } = stubFoundry();
     const accentedActor = actorWith({

@@ -1,5 +1,6 @@
 import { isAbilityUseAvailable, type AbilityUseData } from "../../core/abilities/ability-use";
 import type { AbilityResourceData } from "../../core/abilities/ability-resource";
+import { localizeAbilityCost } from "../../ui/abilities/ability-cost-label";
 
 const TEMPLATE = "systems/ordemparanormal2/templates/abilities/ability-use-dialog.hbs";
 
@@ -36,11 +37,7 @@ export async function buildAbilityUseDialogView(
     resource,
     uses: uses.map((use, index) => {
       const locked = !isAbilityUseAvailable(use, level);
-      const costLabel = use.cost.source === "none"
-        ? game.i18n.localize("ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost")
-        : `${use.cost.amount} ${game.i18n.localize(use.cost.source === "determination"
-          ? "ORDEMPARANORMAL2.AgentSheet.Resources.Determination"
-          : "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource")}`;
+      const costLabel = localizeAbilityCost(use.cost);
       return {
         id: use.id,
         name: use.name,

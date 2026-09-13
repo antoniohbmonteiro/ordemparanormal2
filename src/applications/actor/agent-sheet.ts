@@ -692,9 +692,11 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (result.status === "insufficient") {
       ui.notifications.warn(
         game.i18n.localize(
-          result.source === "determination"
-            ? "ORDEMPARANORMAL2.AgentSheet.AbilityUse.InsufficientDetermination"
-            : "ORDEMPARANORMAL2.AgentSheet.AbilityUse.InsufficientResource",
+          result.source === "health"
+            ? "ORDEMPARANORMAL2.AgentSheet.AbilityUse.InsufficientHealth"
+            : result.source === "determination"
+              ? "ORDEMPARANORMAL2.AgentSheet.AbilityUse.InsufficientDetermination"
+              : "ORDEMPARANORMAL2.AgentSheet.AbilityUse.InsufficientResource",
         ),
       );
       return;

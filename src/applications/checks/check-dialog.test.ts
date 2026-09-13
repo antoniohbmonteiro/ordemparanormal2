@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { CheckInput } from "../../core/checks/check";
+import { localizeAbilityCost } from "../../ui/abilities/ability-cost-label";
 import { openCheckDialog } from "./check-dialog";
 
 const INPUT: CheckInput = {
@@ -56,6 +57,7 @@ class MockSelectElement {
 }
 
 let renderTemplateMock = vi.fn();
+let dialogWaitMock = vi.fn();
 
 interface DialogOptions {
   readonly ok: {
@@ -73,16 +75,21 @@ interface DialogOptions {
 function stubDialogInput(result: unknown = null) {
   const input = vi.fn().mockResolvedValue(result);
   renderTemplateMock = vi.fn().mockResolvedValue("dialog");
+  dialogWaitMock = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal("foundry", {
     applications: {
-      api: { DialogV2: { input } },
+      api: { DialogV2: { input, wait: dialogWaitMock } },
       handlebars: {
         renderTemplate: renderTemplateMock,
       },
     },
   });
   vi.stubGlobal("game", {
-    i18n: { localize: (key: string) => key },
+    i18n: {
+      localize: (key: string) => key,
+      format: (key: string, data: Record<string, string>) =>
+        `${key} ${Object.values(data).join(" ")}`,
+    },
   });
   return input;
 }
@@ -169,6 +176,7 @@ describe("check dialog result", () => {
     await expect(openCheckDialog(INPUT, { allowDifficulty: false })).resolves.toEqual({
       stepAdjustments: { mind: 0, research: 0 },
       extraDice: [],
+      abilityUses: [],
     });
     expect(renderTemplateMock.mock.calls[0]?.[1]).toMatchObject({ allowDifficulty: false });
     expect(template).toContain("{{#if allowDifficulty}}");
@@ -188,6 +196,7 @@ describe("check dialog result", () => {
       difficulty: 12,
       stepAdjustments: { mind: 0, research: 0 },
       extraDice: [],
+      abilityUses: [],
     });
     expect(renderTemplateMock.mock.calls[0]?.[1]).toMatchObject({
       difficulty: 12,
@@ -201,7 +210,7 @@ describe("check dialog result", () => {
       "",
       "0",
       "0",
-      { stepAdjustments: { mind: 0, research: 0 }, extraDice: [] },
+      { stepAdjustments: { mind: 0, research: 0 }, extraDice: [], abilityUses: [] },
     ],
     [
       "9",
@@ -211,6 +220,7 @@ describe("check dialog result", () => {
         difficulty: 9,
         stepAdjustments: { mind: 0, research: 1 },
         extraDice: [],
+        abilityUses: [],
       },
     ],
     [
@@ -221,6 +231,7 @@ describe("check dialog result", () => {
         difficulty: 12,
         stepAdjustments: { mind: -2, research: 2 },
         extraDice: [],
+        abilityUses: [],
       },
     ],
   ] as const)(
@@ -277,6 +288,7 @@ describe("check dialog result", () => {
       selectedAttribute: "mind",
       stepAdjustments: { mind: 1, acrobatics: 0 },
       extraDice: [],
+      abilityUses: [],
     });
   });
 
@@ -376,6 +388,7 @@ describe("check dialog step adjustment controls", () => {
     hidden = false;
     parent?: MockElement;
     textContent = "";
+    title = "";
     type = "";
     value = "";
 
@@ -396,6 +409,18 @@ describe("check dialog step adjustment controls", () => {
       if (index >= 0) this.parent.children.splice(index, 1);
     }
 
+    querySelectorAll(selector: string): MockElement[] {
+      if (selector === "[data-ability-die-id]") {
+        return this.children.filter((child) => child.dataset.abilityDieId !== undefined);
+      }
+      return [];
+    }
+
+    replaceChildren(...children: MockElement[]): void {
+      this.children.splice(0, this.children.length);
+      this.append(...children);
+    }
+
     setAttribute(): void {}
   }
 
@@ -411,6 +436,10 @@ describe("check dialog step adjustment controls", () => {
     const counter = new MockElement();
     const addedSection = new MockElement();
     const chipList = new MockElement();
+    const abilitySection = new MockElement();
+    const abilityCount = new MockElement();
+    const abilityAdd = new MockElement();
+    const abilitySelected = new MockElement();
     const ownerDocument = {
       createElement: () => new MockElement(),
     };
@@ -428,6 +457,10 @@ describe("check dialog step adjustment controls", () => {
           "[data-extra-dice-added]": addedSection,
           "[data-extra-dice-list]": chipList,
           "[data-attribute-select]": attributeSelect,
+          "[data-check-abilities]": abilitySection,
+          "[data-check-ability-count]": abilityCount,
+          "[data-check-ability-add]": abilityAdd,
+          "[data-check-ability-selected]": abilitySelected,
         })[selector] ?? null,
     } as unknown as HTMLElement;
 
@@ -437,6 +470,9 @@ describe("check dialog step adjustment controls", () => {
       attributeSelect,
       chipList,
       counter,
+      abilityCount,
+      abilityAdd,
+      abilitySelected,
       root,
     };
   };
@@ -614,6 +650,142 @@ describe("check dialog step adjustment controls", () => {
           label: "ORDEMPARANORMAL2.CheckDialog.Situational.Label",
         },
       ],
+      abilityUses: [],
     });
+  });
+
+  const FOCUS_ABILITY_SOURCE = {
+    level: 2, health: 10, determination: 5,
+    abilities: [{ id: "focus", name: "Foco", resource: null, uses: [{
+      id: "d4", name: "Adicionar d4", description: "", minimumLevel: null,
+      cost: { source: "determination" as const, amount: 2 },
+      checkIntegration: { modification: { type: "extraDie" as const, applicability: { type: "any" as const }, die: 4 as const } },
+    }] }],
+  };
+
+  function stubAbilityPicker(): { close: ReturnType<typeof vi.fn>; button: { dataset: Record<string, string> } } {
+    const button = { dataset: { abilityId: "focus", useId: "d4" } };
+    let click: (() => void) | undefined;
+    const close = vi.fn();
+    dialogWaitMock.mockImplementation(async (options: {
+      render?: (
+        event: Event,
+        dialog: { element: { querySelectorAll: () => unknown[] }; close: () => void },
+      ) => void;
+    }) => {
+      options.render?.({} as Event, {
+        element: {
+          querySelectorAll: () => [{
+            ...button,
+            addEventListener: (_type: string, handler: () => void) => { click = handler; },
+          }],
+        },
+        close,
+      });
+      click?.();
+      return undefined;
+    });
+    return { close, button };
+  }
+
+  it("shows only the selectable Forms in the compact picker and adds the chosen Form as a chip with its own die", async () => {
+    vi.stubGlobal("HTMLInputElement", MockInputElement);
+    const input = stubDialogInput();
+    const dialogRoot = createDialogRoot([createControl(8, "mind"), createControl(6, "research")]);
+    const picker = stubAbilityPicker();
+    const costLabel = localizeAbilityCost({ source: "determination", amount: 2 });
+
+    input.mockImplementation(async (options: DialogOptions) => {
+      options.render({} as Event, { element: dialogRoot.root });
+
+      expect(dialogRoot.abilityCount.textContent).toBe("1");
+      expect(dialogRoot.abilityAdd.disabled).toBe(false);
+
+      await dialogRoot.abilityAdd.handlers.get("click")?.();
+
+      const pickerView = renderTemplateMock.mock.calls[1]?.[1] as {
+        options: readonly { abilityName: string; useId: string; costLabel: string; effectLabel: string }[];
+      };
+      expect(pickerView.options).toEqual([
+        expect.objectContaining({ abilityName: "Foco", useId: "d4", costLabel, effectLabel: "d4" }),
+      ]);
+      expect(picker.close).toHaveBeenCalledOnce();
+
+      expect(dialogRoot.abilityCount.textContent).toBe("0");
+      expect(dialogRoot.abilityAdd.disabled).toBe(true);
+      expect(dialogRoot.counter.textContent).toBe("3 / 4");
+
+      const card = dialogRoot.abilitySelected.children[0];
+      const header = card?.children[0];
+      const costRow = card?.children[1];
+      const effectRow = card?.children[2];
+      expect(header?.children[0]?.textContent).toBe("Foco");
+      expect(header?.children[1]?.type).toBe("button");
+      expect(costRow?.children[1]?.textContent).toBe(costLabel);
+      expect(effectRow?.children[1]?.children[1]?.textContent).toBe("d4");
+
+      const dieChip = dialogRoot.chipList.querySelectorAll("[data-ability-die-id]")[0];
+      expect(dieChip?.children).toHaveLength(2);
+      expect(dieChip?.children[0]?.children[1]?.textContent).toBe("d4");
+      expect(dieChip?.children[1]?.textContent).toBe("✦ Foco");
+      expect(dieChip?.children[1]?.type).not.toBe("button");
+      expect(dieChip?.title).toContain("Foco");
+
+      return options.ok.callback({} as SubmitEvent, createSubmitButton("", { mind: "0", research: "0" }));
+    });
+
+    await expect(openCheckDialog(INPUT, { abilitySource: FOCUS_ABILITY_SOURCE })).resolves.toMatchObject({
+      abilityUses: [{ abilityId: "focus", useId: "d4" }],
+    });
+  });
+
+  it("removes the Ability chip and its derived die together, restoring the option", async () => {
+    vi.stubGlobal("HTMLInputElement", MockInputElement);
+    const input = stubDialogInput();
+    const dialogRoot = createDialogRoot([createControl(8, "mind"), createControl(6, "research")]);
+    stubAbilityPicker();
+
+    input.mockImplementation(async (options: DialogOptions) => {
+      options.render({} as Event, { element: dialogRoot.root });
+      await dialogRoot.abilityAdd.handlers.get("click")?.();
+      expect(dialogRoot.abilitySelected.children).toHaveLength(1);
+
+      const removeButton = dialogRoot.abilitySelected.children[0]?.children[0]?.children[1];
+      removeButton?.handlers.get("click")?.();
+
+      expect(dialogRoot.abilitySelected.children).toHaveLength(0);
+      expect(dialogRoot.chipList.querySelectorAll("[data-ability-die-id]")).toHaveLength(0);
+      expect(dialogRoot.counter.textContent).toBe("2 / 4");
+      expect(dialogRoot.abilityCount.textContent).toBe("1");
+      expect(dialogRoot.abilityAdd.disabled).toBe(false);
+
+      return options.ok.callback({} as SubmitEvent, createSubmitButton("", { mind: "0", research: "0" }));
+    });
+
+    await expect(openCheckDialog(INPUT, { abilitySource: FOCUS_ABILITY_SOURCE })).resolves.toMatchObject({
+      abilityUses: [],
+    });
+  });
+
+  it("excludes an unaffordable Ability Form from the picker and the counter", async () => {
+    vi.stubGlobal("HTMLInputElement", MockInputElement);
+    const input = stubDialogInput();
+    const dialogRoot = createDialogRoot([createControl(8, "mind"), createControl(6, "research")]);
+
+    input.mockImplementation(async (options: DialogOptions) => {
+      options.render({} as Event, { element: dialogRoot.root });
+      expect(dialogRoot.abilityCount.textContent).toBe("0");
+      expect(dialogRoot.abilityAdd.disabled).toBe(true);
+      return options.ok.callback({} as SubmitEvent, createSubmitButton("", { mind: "0", research: "0" }));
+    });
+
+    await expect(openCheckDialog(INPUT, { abilitySource: {
+      level: 2, health: 10, determination: 1,
+      abilities: [{ id: "focus", name: "Foco", resource: null, uses: [{
+        id: "d4", name: "Adicionar d4", description: "", minimumLevel: null,
+        cost: { source: "determination", amount: 2 },
+        checkIntegration: { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } },
+      }] }],
+    } })).resolves.toMatchObject({ abilityUses: [] });
   });
 });

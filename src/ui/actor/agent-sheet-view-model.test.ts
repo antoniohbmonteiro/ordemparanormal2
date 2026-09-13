@@ -134,7 +134,7 @@ describe("Agent Sheet view model", () => {
         img: "icons/svg/item-bag.svg",
         description: "",
         useCollection: { kind: "valid", isValid: true, uses: [], count: 0, isEmpty: true, isSingle: false, isMultiple: false },
-        useSummary: { isEmpty: true, isSingleNone: false, isSingleHealth: false, isSingleDetermination: false, isSingleResource: false, isMultiple: false, isInvalid: false, amount: 0, count: 0 },
+        useSummary: { isEmpty: true, isCheckOnly: false, isSingleNone: false, isSingleHealth: false, isSingleDetermination: false, isSingleResource: false, isMultiple: false, isInvalid: false, amount: 0, count: 0 },
         resource: { value, max },
       }),
     );

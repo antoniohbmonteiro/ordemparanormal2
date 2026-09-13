@@ -2,6 +2,9 @@ import { ABILITY_COST_SOURCES } from "../../core/abilities/ability-cost";
 import { readAbilityCost } from "../../core/abilities/ability-cost";
 import { readAbilityResource } from "../../core/abilities/ability-resource";
 import { readAbilityUses } from "../../core/abilities/ability-use";
+import { AGENT_ATTRIBUTE_KEYS } from "../../core/actors/agent-attributes";
+import { NORMAL_DIE_STEPS } from "../../core/dice/die-step";
+import { SKILL_DEFINITIONS } from "../../config/skills";
 
 type RequiredStringField = foundry.data.fields.StringField<
   string,
@@ -35,6 +38,31 @@ type AbilityUseSchema = {
     true,
     true
   >;
+  checkIntegration: foundry.data.fields.SchemaField<
+    AbilityUseCheckIntegrationSchema,
+    foundry.data.fields.SourceFromSchema<AbilityUseCheckIntegrationSchema>,
+    foundry.data.fields.ModelPropsFromSchema<AbilityUseCheckIntegrationSchema>,
+    true,
+    true,
+    true
+  >;
+};
+
+type AbilityUseApplicabilityTypes = {
+  any: Record<never, never>;
+  attribute: { attribute: RequiredStringField };
+  skill: { skill: RequiredStringField };
+};
+
+type AbilityUseModificationTypes = {
+  extraDie: {
+    applicability: foundry.data.fields.TypedSchemaField<AbilityUseApplicabilityTypes>;
+    die: RequiredIntegerField;
+  };
+};
+
+type AbilityUseCheckIntegrationSchema = {
+  modification: foundry.data.fields.TypedSchemaField<AbilityUseModificationTypes>;
 };
 
 type AbilityResourceSchema = {
@@ -70,6 +98,34 @@ function createResourceIntegerField(): RequiredIntegerField {
     min: 0,
     initial: 0,
   });
+}
+
+function createCheckIntegrationField(): AbilityUseSchema["checkIntegration"] {
+  const applicableSkillKeys = SKILL_DEFINITIONS
+    .filter((definition) => !("specializations" in definition))
+    .map(({ key }) => key);
+  return new foundry.data.fields.SchemaField({
+    modification: new foundry.data.fields.TypedSchemaField({
+      extraDie: {
+        applicability: new foundry.data.fields.TypedSchemaField({
+          any: {},
+          attribute: {
+            attribute: new foundry.data.fields.StringField({
+              required: true, nullable: false, blank: false, choices: [...AGENT_ATTRIBUTE_KEYS],
+            }),
+          },
+          skill: {
+            skill: new foundry.data.fields.StringField({
+              required: true, nullable: false, blank: false, choices: applicableSkillKeys,
+            }),
+          },
+        }),
+        die: new foundry.data.fields.NumberField({
+          required: true, nullable: false, integer: true, choices: NORMAL_DIE_STEPS,
+        }),
+      },
+    }),
+  }, { required: true, nullable: true, initial: null }) as unknown as AbilityUseSchema["checkIntegration"];
 }
 
 export class AbilityDataModel extends foundry.abstract.TypeDataModel<
@@ -133,6 +189,7 @@ export class AbilityDataModel extends foundry.abstract.TypeDataModel<
             max: 10,
             initial: null,
           }),
+          checkIntegration: createCheckIntegrationField(),
         }),
         {
           required: true,
@@ -175,10 +232,18 @@ export class AbilityDataModel extends foundry.abstract.TypeDataModel<
               description: "",
               cost,
               minimumLevel: null,
+              checkIntegration: null,
             }]
           : [];
       }
       delete source.cost;
+    }
+    if (Array.isArray(source.uses)) {
+      source.uses = source.uses.map((use) =>
+        use && typeof use === "object" && !Object.hasOwn(use, "checkIntegration")
+          ? { ...use, checkIntegration: null }
+          : use,
+      );
     }
     return super.migrateData(source);
   }

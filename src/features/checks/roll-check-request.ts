@@ -40,6 +40,7 @@ export async function rollCheckRequest(
     result: createCheckSnapshot(
       resolved.execution.result,
       resolved.difficultyResolution,
+      resolved.appliedAbilityUses,
     ),
   });
   return "submitted";

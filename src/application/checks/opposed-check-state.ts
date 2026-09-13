@@ -1,5 +1,5 @@
 import { parseAgentCheckSelection, type AgentCheckSelection } from "./build-agent-check";
-import { isSupportedCheckSnapshot, type CheckSnapshotV3 } from "./check-snapshot";
+import { isSupportedCheckSnapshot, type ModernCheckSnapshot } from "./check-snapshot";
 import {
   areOpposedCheckParticipantReferencesEqual,
   parseOpposedCheckParticipantReference,
@@ -19,7 +19,7 @@ export interface OpposedCheckSideStateV1 {
   readonly participant: OpposedCheckParticipantReference;
   readonly selection: AgentCheckSelection;
   readonly presentation: OpposedCheckParticipantPresentationV1;
-  readonly result?: CheckSnapshotV3;
+  readonly result?: ModernCheckSnapshot;
 }
 
 export interface OpposedCheckStateV1 {
@@ -79,7 +79,7 @@ function parsePresentation(value: unknown): OpposedCheckParticipantPresentationV
 }
 
 export function doesSnapshotMatchSelection(
-  snapshot: CheckSnapshotV3,
+  snapshot: ModernCheckSnapshot,
   selection: AgentCheckSelection,
 ): boolean {
   if (snapshot.difficulty !== undefined || snapshot.outcome !== undefined) return false;
@@ -107,7 +107,7 @@ function parseSide(value: unknown): OpposedCheckSideStateV1 | null {
   if (value.result === undefined) return { participant, selection, presentation };
   if (
     !isSupportedCheckSnapshot(value.result) ||
-    value.result.schemaVersion !== 3 ||
+    (value.result.schemaVersion !== 3 && value.result.schemaVersion !== 4) ||
     !doesSnapshotMatchSelection(value.result, selection)
   ) {
     return null;

@@ -19,6 +19,7 @@ const abilityUse = {
   description: "<p>Descrição</p>",
   cost: { source: "determination" as const, amount: 2 },
   minimumLevel: 3,
+  checkIntegration: null,
 };
 
 interface TestEditor {
@@ -231,5 +232,27 @@ describe("AbilityUseEditor", () => {
       },
     );
     expect(editor.closed).toBe(true);
+  });
+
+  it("saves the supported PRE-ROLL extra-die integration", async () => {
+    const document = ability();
+    const editor = new AbilityUseEditorClass(document, abilityUse);
+    await AbilityUseEditorClass.DEFAULT_OPTIONS.form.handler.call(
+      editor,
+      { preventDefault: vi.fn() },
+      {},
+      { object: {
+        name: "Forma", description: "", costSource: "determination", costAmount: 2,
+        minimumLevel: "", modificationType: "extraDie", applicabilityType: "skill",
+        applicabilitySkill: "fighting", modificationDie: "8",
+      } },
+    );
+    expect(persistence.saveExistingAbilityUse).toHaveBeenCalledWith(
+      document,
+      abilityUse,
+      expect.objectContaining({
+        checkIntegration: { modification: { type: "extraDie", applicability: { type: "skill", skill: "fighting" }, die: 8 } },
+      }),
+    );
   });
 });

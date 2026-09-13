@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CheckSnapshotV3 } from "./check-snapshot";
+import type { CheckSnapshotV3, ModernCheckSnapshot } from "./check-snapshot";
 import {
   doesSnapshotMatchSelection,
   parseOpposedCheckState,
@@ -31,7 +31,7 @@ function snapshot(
   };
 }
 
-function state(left?: CheckSnapshotV3, right?: CheckSnapshotV3): OpposedCheckStateV1 {
+function state(left?: ModernCheckSnapshot, right?: ModernCheckSnapshot): OpposedCheckStateV1 {
   const side = (uuid: `Actor.${string}`, name: string) => ({
     participant: { kind: "actor" as const, uuid },
     selection: { kind: "skill" as const, key: "fighting" as const },
@@ -94,6 +94,12 @@ describe("Opposed Check state", () => {
     expect(resolveOpposedCheck(state(snapshot(9), snapshot(9, "mind")))).toEqual({
       status: "equalTotals",
     });
+  });
+
+  it("reads mixed V3 and V4 sides without changing the envelope", () => {
+    const v3 = snapshot(9);
+    const v4 = { ...snapshot(7), schemaVersion: 4 as const, appliedAbilityUses: [] };
+    expect(parseOpposedCheckState(state(v3, v4))).toEqual(state(v3, v4));
   });
 
   it("does not use RA, RB, or critical state to break equal totals", () => {

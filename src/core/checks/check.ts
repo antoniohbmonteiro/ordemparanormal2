@@ -25,7 +25,7 @@ export interface CheckComponentInput {
 export interface CheckExtraDieInput {
   readonly id: string;
   readonly die: NormalDieStep;
-  readonly source: "situational";
+  readonly source: "situational" | "ability";
   readonly label: string;
 }
 
@@ -166,10 +166,10 @@ function assertValidCheckDice(
 
   for (const extraDie of extraDice) {
     if (!NORMAL_DIE_STEPS.includes(extraDie.die)) {
-      throw new Error("Situational extra dice must use a normal die step.");
+      throw new Error("Check extra dice must use a normal die step.");
     }
 
-    if (extraDie.source !== "situational") {
+    if (extraDie.source !== "situational" && extraDie.source !== "ability") {
       throw new Error("Unsupported check extra die source.");
     }
 

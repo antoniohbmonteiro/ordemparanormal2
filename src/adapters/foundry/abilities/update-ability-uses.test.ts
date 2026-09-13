@@ -10,11 +10,11 @@ import {
 
 const first: AbilityUseData = {
   id: "first", name: "Primeira", description: "A",
-  cost: { source: "none", amount: 0 }, minimumLevel: null,
+  cost: { source: "none", amount: 0 }, minimumLevel: null, checkIntegration: null,
 };
 const second: AbilityUseData = {
   id: "second", name: "Segunda", description: "B",
-  cost: { source: "none", amount: 0 }, minimumLevel: null,
+  cost: { source: "none", amount: 0 }, minimumLevel: null, checkIntegration: null,
 };
 
 function abilityWith(uses: AbilityUseData[]) {

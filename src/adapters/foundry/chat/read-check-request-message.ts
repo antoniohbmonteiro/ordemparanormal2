@@ -4,7 +4,7 @@ import {
 } from "../../../application/checks/check-request-state";
 import {
   isSupportedCheckSnapshot,
-  type CheckSnapshotV3,
+  type ModernCheckSnapshot,
 } from "../../../application/checks/check-snapshot";
 import { resolveCheckDifficulty } from "../../../core/checks/check";
 import { CHECK_REQUEST_STATE_FLAG, SYSTEM_ID } from "../../../config/system-config";
@@ -13,11 +13,11 @@ export type CheckRequestMessageLifecycle =
   | { readonly state: CheckRequestStateV1 & { readonly status: "pending" } }
   | {
       readonly state: CheckRequestStateV1 & { readonly status: "resolved" };
-      readonly snapshot: CheckSnapshotV3;
+      readonly snapshot: ModernCheckSnapshot;
     };
 
 export function doesSnapshotMatchCheckRequest(
-  snapshot: CheckSnapshotV3,
+  snapshot: ModernCheckSnapshot,
   state: CheckRequestStateV1,
 ): boolean {
   if (
@@ -49,7 +49,7 @@ export function readCheckRequestMessageLifecycle(
   }
   if (
     !isSupportedCheckSnapshot(rawSnapshot) ||
-    rawSnapshot.schemaVersion !== 3 ||
+    (rawSnapshot.schemaVersion !== 3 && rawSnapshot.schemaVersion !== 4) ||
     !doesSnapshotMatchCheckRequest(rawSnapshot, state)
   ) return null;
   return { state: { ...state, status: "resolved" }, snapshot: rawSnapshot };

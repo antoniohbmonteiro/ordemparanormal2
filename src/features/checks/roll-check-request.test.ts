@@ -32,9 +32,9 @@ describe("roll Check Request", () => {
     vi.stubGlobal("game", { messages: { get: vi.fn(() => ({})) } });
     mocks.resolveParticipant.mockResolvedValue({});
     mocks.lifecycle.mockReturnValue({ state: baseState });
-    mocks.resolveInteraction.mockResolvedValue({ execution: { roll: {}, result: {} } });
+    mocks.resolveInteraction.mockResolvedValue({ execution: { roll: {}, result: {} }, appliedAbilityUses: [] });
     mocks.animate.mockResolvedValue(undefined);
-    mocks.snapshot.mockReturnValue({ schemaVersion: 3 });
+    mocks.snapshot.mockReturnValue({ schemaVersion: 4, appliedAbilityUses: [] });
     mocks.dispatch.mockResolvedValue(undefined);
   });
 
@@ -42,7 +42,7 @@ describe("roll Check Request", () => {
     await expect(rollCheckRequest("message")).resolves.toBe("submitted");
     expect(mocks.resolveInteraction).toHaveBeenCalledWith({}, baseState.selection, { allowDifficulty: false });
     expect(mocks.animate).toHaveBeenCalledOnce();
-    expect(mocks.dispatch).toHaveBeenCalledWith({ messageId: "message", result: { schemaVersion: 3 } });
+    expect(mocks.dispatch).toHaveBeenCalledWith({ messageId: "message", result: { schemaVersion: 4, appliedAbilityUses: [] } });
     expect(globalThis).not.toHaveProperty("ChatMessage");
   });
 
@@ -52,10 +52,11 @@ describe("roll Check Request", () => {
     mocks.resolveInteraction.mockResolvedValue({
       execution: { roll: {}, result: {} },
       difficultyResolution: { difficulty: 12, outcome: "success" },
+      appliedAbilityUses: [],
     });
     await rollCheckRequest("message");
     expect(mocks.resolveInteraction).toHaveBeenCalledWith({}, state.selection, { lockedDifficulty: 12 });
-    expect(mocks.snapshot).toHaveBeenCalledWith({}, { difficulty: 12, outcome: "success" });
+    expect(mocks.snapshot).toHaveBeenCalledWith({}, { difficulty: 12, outcome: "success" }, []);
   });
 
   it("does not animate or submit when the normal dialog is canceled", async () => {

@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   publishCheckMessage: vi.fn(),
   readAgentCheckSource: vi.fn(),
   showDiceAnimation: vi.fn(),
+  readAgentCheckAbilities: vi.fn(),
+  prepareAbilityUses: vi.fn(),
+  confirmAbilityUses: vi.fn(),
 }));
 
 vi.mock("../../application/checks/build-agent-check", () => ({
@@ -33,6 +36,11 @@ vi.mock("../../adapters/foundry/dice/execute-foundry-check", () => ({
 vi.mock("../../adapters/foundry/dice/show-dice-animation-if-available", () => ({
   showDiceAnimationIfAvailable: mocks.showDiceAnimation,
 }));
+vi.mock("../../adapters/foundry/abilities/read-agent-check-abilities", () => ({ readAgentCheckAbilities: mocks.readAgentCheckAbilities }));
+vi.mock("./check-ability-uses", () => ({
+  prepareCheckAbilityUses: mocks.prepareAbilityUses,
+  confirmCheckAbilityUses: mocks.confirmAbilityUses,
+}));
 
 import {
   AgentCheckPermissionError,
@@ -52,7 +60,11 @@ beforeEach(() => {
   mocks.openCheckDialog.mockResolvedValue({
     stepAdjustments: { mind: 0 },
     extraDice: [],
+    abilityUses: [],
   });
+  mocks.readAgentCheckAbilities.mockReturnValue({ level: 1, health: 0, determination: 0, abilities: [] });
+  mocks.prepareAbilityUses.mockReturnValue({ references: [], applied: [], extraDice: [] });
+  mocks.confirmAbilityUses.mockResolvedValue([]);
   mocks.buildAgentAttributeChoices.mockReturnValue([]);
 });
 
@@ -142,8 +154,8 @@ describe("perform Agent check", () => {
 
     await performAgentCheck(actor, selection);
 
-    expect(mocks.readAgentCheckSource).toHaveBeenCalledTimes(1);
-    expect(mocks.buildAgentCheck).toHaveBeenCalledTimes(1);
+    expect(mocks.readAgentCheckSource).toHaveBeenCalledTimes(2);
+    expect(mocks.buildAgentCheck).toHaveBeenCalledTimes(2);
     expect(mocks.openCheckDialog).toHaveBeenCalledWith(input);
     expect(mocks.executeFoundryCheck).toHaveBeenCalledWith(input);
     expect(mocks.publishCheckMessage).toHaveBeenCalledWith(actor, execution, {
@@ -183,7 +195,7 @@ describe("perform Agent check", () => {
       extraDice: [],
     });
     expect(input.components.map(({ die }) => die)).toEqual([8, 6]);
-    expect(mocks.readAgentCheckSource).toHaveBeenCalledTimes(1);
+    expect(mocks.readAgentCheckSource).toHaveBeenCalledTimes(2);
     expect(mocks.publishCheckMessage).toHaveBeenCalledWith(
       actor,
       execution,
@@ -294,7 +306,7 @@ describe("perform Agent check", () => {
 
     await performAgentCheck(actor, skillSelection);
 
-    expect(mocks.readAgentCheckSource).toHaveBeenCalledTimes(1);
+    expect(mocks.readAgentCheckSource).toHaveBeenCalledTimes(2);
     expect(mocks.buildAgentAttributeChoices).toHaveBeenCalledWith(
       source,
       expect.any(Function),

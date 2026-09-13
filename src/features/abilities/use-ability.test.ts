@@ -12,9 +12,14 @@ function createOwnedAbility(options: {
   determination?: number;
   resource?: object | null;
   owner?: boolean;
+  checkIntegration?: object | null;
 }) {
   const itemUpdate = vi.fn().mockResolvedValue(undefined);
   const actorUpdate = vi.fn().mockResolvedValue(undefined);
+  let ability: foundry.documents.Item;
+  const updateEmbeddedDocuments = vi.fn(async (_type: string, updates: readonly { readonly "system.resource.value": number }[]) => {
+    itemUpdate({ "system.resource.value": updates[0]?.["system.resource.value"] });
+  });
   const actor = {
     isOwner: options.owner ?? true,
     system: {
@@ -25,21 +30,32 @@ function createOwnedAbility(options: {
       },
     },
     update: actorUpdate,
+    updateEmbeddedDocuments,
   } as unknown as foundry.documents.Actor;
   const use = {
     id: "use-1", name: "Forma", description: "<p>Efeito</p>",
     cost: options.cost, minimumLevel: options.minimumLevel ?? null,
+    checkIntegration: options.checkIntegration ?? null,
   };
-  const ability = {
+  ability = {
     id: "ability-1", type: "ability", actor,
     system: { uses: [use], resource: options.resource ?? null },
     update: itemUpdate,
   } as unknown as foundry.documents.Item;
   vi.stubGlobal("game", { user: { isGM: false } });
-  return { actor, ability, use, actorUpdate, itemUpdate };
+  return { actor, ability, use, actorUpdate, itemUpdate, updateEmbeddedDocuments };
 }
 
 describe("useAbility", () => {
+  it("does not execute a PRE-ROLL form through direct Ability use", async () => {
+    const value = createOwnedAbility({
+      cost: { source: "determination", amount: 2 },
+      checkIntegration: { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } },
+    });
+    await expect(useAbility(value.actor, value.ability, "use-1")).resolves.toEqual({ status: "invalid", reason: "check-only" });
+    expect(value.actorUpdate).not.toHaveBeenCalled();
+    expect(value.updateEmbeddedDocuments).not.toHaveBeenCalled();
+  });
   it("pays health exactly without touching determination and refuses partial payment", async () => {
     const paid = createOwnedAbility({
       cost: { source: "health", amount: 5 },

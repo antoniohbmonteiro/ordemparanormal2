@@ -102,4 +102,22 @@
       <ol class="op2-check-dialog__extra-dice" data-extra-dice-list></ol>
     </div>
   </section>
+
+  {{#if hasCheckAbilities}}
+    <section class="op2-check-dialog__abilities" data-check-abilities>
+      <header class="op2-check-dialog__abilities-header">
+        <h4>{{localize "ORDEMPARANORMAL2.CheckDialog.Abilities.Title"}}</h4>
+        <span class="op2-check-dialog__abilities-counter">
+          <strong data-check-ability-count aria-live="polite">0</strong>
+          <button
+            type="button"
+            class="op2-check-dialog__abilities-add"
+            data-check-ability-add
+            aria-label="{{localize 'ORDEMPARANORMAL2.CheckDialog.Abilities.Add'}}"
+          >+</button>
+        </span>
+      </header>
+      <ol class="op2-check-dialog__ability-selected" data-check-ability-selected></ol>
+    </section>
+  {{/if}}
 </section>

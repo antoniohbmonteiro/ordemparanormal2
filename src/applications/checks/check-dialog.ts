@@ -11,15 +11,27 @@ import {
   NORMAL_DIE_STEPS,
   type NormalDieStep,
 } from "../../core/dice/die-step";
+import {
+  resolveCheckAbilityUseState,
+  toggleCheckAbilityUse,
+  type AgentCheckAbilitySource,
+  type AppliedCheckAbilityUse,
+  type CheckAbilityUseOption,
+  type CheckAbilityUseReference,
+} from "../../application/checks/check-ability-use-state";
+import { localizeAbilityCost } from "../../ui/abilities/ability-cost-label";
 
 const CHECK_DIALOG_TEMPLATE =
   "systems/ordemparanormal2/templates/checks/check-dialog.hbs";
+const CHECK_ABILITY_USE_PICKER_TEMPLATE =
+  "systems/ordemparanormal2/templates/checks/check-ability-use-picker.hbs";
 
 export interface CheckDialogResult {
   readonly difficulty?: number;
   readonly selectedAttribute?: AttributeKey;
   readonly stepAdjustments: CheckStepAdjustments;
   readonly extraDice: readonly CheckExtraDieInput[];
+  readonly abilityUses: readonly CheckAbilityUseReference[];
 }
 
 export interface CheckDialogAttributeChoice {
@@ -32,6 +44,7 @@ export interface CheckDialogOptions {
   readonly attributeChoices?: readonly CheckDialogAttributeChoice[];
   readonly allowDifficulty?: boolean;
   readonly lockedDifficulty?: number;
+  readonly abilitySource?: AgentCheckAbilitySource;
 }
 
 const MIN_STEP_ADJUSTMENT = -4;
@@ -57,6 +70,7 @@ interface CheckDialogViewModel {
     readonly die: NormalDieStep;
     readonly label: string;
   }[];
+  readonly hasCheckAbilities: boolean;
 }
 
 function buildCheckDialogViewModel(
@@ -95,6 +109,9 @@ function buildCheckDialogViewModel(
         : {}),
     })),
     diceOptions: NORMAL_DIE_STEPS.map((die) => ({ die, label: `d${die}` })),
+    hasCheckAbilities: options?.abilitySource?.abilities.some((ability) =>
+      ability.uses.some(({ checkIntegration }) => checkIntegration !== null),
+    ) ?? false,
   };
 }
 
@@ -224,6 +241,7 @@ function attachAttributeSelectionControl(
   initialAttributeKey: string,
   attributeChoices: readonly CheckDialogAttributeChoice[],
   controllers: ReadonlyMap<string, StepAdjustmentController>,
+  onChange: (key: AttributeKey) => void = () => undefined,
 ): void {
   const select = root.querySelector<HTMLSelectElement>(
     "[data-attribute-select]",
@@ -242,6 +260,7 @@ function attachAttributeSelectionControl(
     }
 
     controller.setBaseDie(choice.die, choice.label);
+    onChange(choice.key);
   };
 
   select.addEventListener("change", update);
@@ -258,7 +277,9 @@ function attachSituationalDiceControls(
   extraDice: CheckExtraDieInput[],
   situationalLabel: string,
   removeLabel: string,
-): void {
+  getAbilityDieCount: () => number = () => 0,
+  onChange: () => void = () => undefined,
+): { readonly refresh: () => void } {
   const addButtons = root.querySelectorAll<HTMLButtonElement>(
     "[data-extra-die-add]",
   );
@@ -275,11 +296,11 @@ function attachSituationalDiceControls(
   let nextExtraDieId = 1;
 
   const update = (): void => {
-    const dieCount = componentCount + extraDice.length;
+    const dieCount = componentCount + extraDice.length + getAbilityDieCount();
     const atLimit = dieCount >= 4;
     counter.textContent = `${dieCount} / 4`;
     counter.dataset.atLimit = String(atLimit);
-    addedSection.hidden = extraDice.length === 0;
+    addedSection.hidden = extraDice.length === 0 && getAbilityDieCount() === 0;
 
     for (const button of addButtons) button.disabled = atLimit;
   };
@@ -308,6 +329,7 @@ function attachSituationalDiceControls(
       extraDice.splice(index, 1);
       chip.remove();
       update();
+      onChange();
     });
 
     chip.append(icon, label, remove);
@@ -316,7 +338,7 @@ function attachSituationalDiceControls(
 
   for (const button of addButtons) {
     button.addEventListener("click", () => {
-      if (button.disabled || componentCount + extraDice.length >= 4) return;
+      if (button.disabled || componentCount + extraDice.length + getAbilityDieCount() >= 4) return;
 
       const die = Number(button.dataset.extraDieAdd);
 
@@ -334,16 +356,237 @@ function attachSituationalDiceControls(
       extraDice.push(extraDie);
       addChip(extraDie);
       update();
+      onChange();
     });
   }
 
   update();
+  return { refresh: update };
+}
+
+function withSelectedAttribute(input: CheckInput, key: AttributeKey): CheckInput {
+  return {
+    ...input,
+    components: input.components.map((component) => component.kind === "attribute"
+      ? { ...component, key }
+      : component),
+  };
+}
+
+interface CheckAbilityPickerOption {
+  readonly abilityId: string;
+  readonly useId: string;
+  readonly abilityName: string;
+  readonly useName: string;
+  readonly costLabel: string;
+  readonly effectLabel: string;
+  readonly die: NormalDieStep;
+}
+
+function buildAbilityPickerOptions(
+  options: readonly CheckAbilityUseOption[],
+): readonly CheckAbilityPickerOption[] {
+  return options.map((option) => ({
+    abilityId: option.abilityId,
+    useId: option.useId,
+    abilityName: option.abilityName,
+    useName: option.useName,
+    costLabel: localizeAbilityCost(option.cost),
+    effectLabel: `d${option.die}`,
+    die: option.die,
+  }));
+}
+
+async function openCheckAbilityUsePicker(
+  options: readonly CheckAbilityUseOption[],
+): Promise<CheckAbilityUseReference | null> {
+  const content = await foundry.applications.handlebars.renderTemplate(
+    CHECK_ABILITY_USE_PICKER_TEMPLATE,
+    { options: buildAbilityPickerOptions(options) },
+  );
+  const { DialogV2 } = foundry.applications.api;
+  let picked: CheckAbilityUseReference | null = null;
+  await DialogV2.wait({
+    buttons: [{
+      action: "cancel",
+      label: "ORDEMPARANORMAL2.CheckDialog.Actions.Cancel",
+      type: "button",
+      default: true,
+    }],
+    classes: ["ordemparanormal2", "op2-check-ability-picker"],
+    content,
+    modal: true,
+    rejectClose: false,
+    render: (_event, dialog) => {
+      const buttons = dialog.element.querySelectorAll<HTMLButtonElement>("[data-use-id]");
+      for (const button of buttons) {
+        button.addEventListener("click", () => {
+          const abilityId = button.dataset.abilityId;
+          const useId = button.dataset.useId;
+          if (!abilityId || !useId) return;
+          picked = { abilityId, useId };
+          void dialog.close();
+        });
+      }
+    },
+    position: { width: 420 },
+    window: { title: game.i18n.localize("ORDEMPARANORMAL2.CheckDialog.Abilities.PickerTitle") },
+  });
+  return picked;
+}
+
+function abilityDieOriginTooltip(applied: AppliedCheckAbilityUse): string {
+  return [
+    game.i18n.format("ORDEMPARANORMAL2.CheckDialog.Abilities.OriginAddedBy", { ability: applied.abilityName }),
+    game.i18n.format("ORDEMPARANORMAL2.CheckDialog.Abilities.OriginForm", { use: applied.useName }),
+    game.i18n.localize("ORDEMPARANORMAL2.CheckDialog.Abilities.OriginRemoveHint"),
+  ].join("\n");
+}
+
+function renderAbilityDiceChips(
+  root: HTMLElement,
+  chipList: HTMLElement,
+  applied: readonly AppliedCheckAbilityUse[],
+): void {
+  for (const stale of [...chipList.querySelectorAll<HTMLElement>("[data-ability-die-id]")]) {
+    stale.remove();
+  }
+  for (const entry of applied) {
+    const chip = root.ownerDocument.createElement("li");
+    const dieValue = root.ownerDocument.createElement("span");
+    const icon = root.ownerDocument.createElement("span");
+    const label = root.ownerDocument.createElement("strong");
+    const tag = root.ownerDocument.createElement("span");
+
+    chip.className = "op2-check-dialog__extra-die-chip op2-check-dialog__extra-die-chip--ability";
+    chip.dataset.abilityDieId = entry.extraDieId;
+    chip.title = abilityDieOriginTooltip(entry);
+    dieValue.className = "op2-check-dialog__ability-die-value";
+    icon.className = `op2-die-icon op2-die-icon--d${entry.die}`;
+    icon.setAttribute("aria-hidden", "true");
+    label.textContent = `d${entry.die}`;
+    tag.className = "op2-check-dialog__ability-die-tag";
+    tag.textContent = `✦ ${entry.abilityName}`;
+
+    dieValue.append(icon, label);
+    chip.append(dieValue, tag);
+    chipList.append(chip);
+  }
+}
+
+function buildAbilityCard(
+  root: HTMLElement,
+  applied: AppliedCheckAbilityUse,
+  onRemove: () => void,
+): HTMLElement {
+  const card = root.ownerDocument.createElement("li");
+  const header = root.ownerDocument.createElement("div");
+  const name = root.ownerDocument.createElement("strong");
+  const remove = root.ownerDocument.createElement("button");
+  const costRow = root.ownerDocument.createElement("div");
+  const costLabel = root.ownerDocument.createElement("span");
+  const costValue = root.ownerDocument.createElement("span");
+  const effectRow = root.ownerDocument.createElement("div");
+  const effectLabel = root.ownerDocument.createElement("span");
+  const effectValue = root.ownerDocument.createElement("span");
+  const effectIcon = root.ownerDocument.createElement("span");
+  const effectDie = root.ownerDocument.createElement("span");
+
+  card.className = "op2-check-dialog__ability-card";
+
+  header.className = "op2-check-dialog__ability-card-header";
+  name.textContent = applied.abilityName;
+  remove.type = "button";
+  remove.textContent = "×";
+  remove.setAttribute(
+    "aria-label",
+    `${game.i18n.localize("ORDEMPARANORMAL2.CheckDialog.Abilities.Remove")}: ${applied.abilityName}`,
+  );
+  remove.addEventListener("click", onRemove);
+  header.append(name, remove);
+
+  costRow.className = "op2-check-dialog__ability-card-row";
+  costLabel.textContent = game.i18n.localize("ORDEMPARANORMAL2.CheckDialog.Abilities.Cost");
+  costValue.className = "op2-check-dialog__ability-card-value";
+  costValue.textContent = localizeAbilityCost(applied.cost);
+  costRow.append(costLabel, costValue);
+
+  effectRow.className = "op2-check-dialog__ability-card-row";
+  effectLabel.textContent = game.i18n.localize("ORDEMPARANORMAL2.CheckDialog.Abilities.Effect");
+  effectValue.className = "op2-check-dialog__ability-card-value";
+  effectIcon.className = `op2-die-icon op2-die-icon--d${applied.die}`;
+  effectIcon.setAttribute("aria-hidden", "true");
+  effectDie.textContent = `d${applied.die}`;
+  effectValue.append(effectIcon, effectDie);
+  effectRow.append(effectLabel, effectValue);
+
+  card.append(header, costRow, effectRow);
+  return card;
+}
+
+function attachAbilityUseControls(
+  root: HTMLElement,
+  input: CheckInput,
+  source: AgentCheckAbilitySource,
+  situationalDice: readonly CheckExtraDieInput[],
+  selected: CheckAbilityUseReference[],
+  getAttribute: () => AttributeKey,
+  onChange: () => void,
+): { readonly refresh: () => void; readonly count: () => number } {
+  const section = root.querySelector<HTMLElement>("[data-check-abilities]");
+  const countLabel = root.querySelector<HTMLElement>("[data-check-ability-count]");
+  const addButton = root.querySelector<HTMLButtonElement>("[data-check-ability-add]");
+  const selectedRoot = root.querySelector<HTMLElement>("[data-check-ability-selected]");
+  const chipList = root.querySelector<HTMLElement>("[data-extra-dice-list]");
+  if (!section || !countLabel || !addButton || !selectedRoot || !chipList) {
+    throw new Error("Missing applicable Ability controls.");
+  }
+
+  const currentCheck = (): CheckInput => withSelectedAttribute(input, getAttribute());
+  let state = resolveCheckAbilityUseState({ check: currentCheck(), source, situationalDice, selected });
+
+  const refresh = (): void => {
+    state = resolveCheckAbilityUseState({ check: currentCheck(), source, situationalDice, selected });
+    selected.splice(0, selected.length, ...state.selected);
+    section.hidden = state.options.length === 0;
+
+    const selectable = state.options.filter((option) => option.available && !option.selected);
+    countLabel.textContent = String(selectable.length);
+    addButton.disabled = selectable.length === 0;
+
+    selectedRoot.replaceChildren();
+    for (const applied of state.applied) {
+      selectedRoot.append(buildAbilityCard(root, applied, () => applyReference(applied)));
+    }
+
+    renderAbilityDiceChips(root, chipList, state.applied);
+  };
+
+  const applyReference = (reference: CheckAbilityUseReference): void => {
+    state = toggleCheckAbilityUse({ check: currentCheck(), source, situationalDice, selected }, reference);
+    selected.splice(0, selected.length, ...state.selected);
+    refresh();
+    onChange();
+  };
+
+  addButton.addEventListener("click", () => {
+    if (addButton.disabled) return;
+    const selectable = state.options.filter((option) => option.available && !option.selected);
+    if (selectable.length === 0) return;
+    return openCheckAbilityUsePicker(selectable).then((reference) => {
+      if (reference) applyReference(reference);
+    });
+  });
+
+  refresh();
+  return { refresh, count: () => state.selected.length };
 }
 
 function readDialogResult(
   button: HTMLButtonElement,
   components: CheckInput["components"],
   extraDice: readonly CheckExtraDieInput[],
+  abilityUses: readonly CheckAbilityUseReference[],
   attributeChoices?: readonly CheckDialogAttributeChoice[],
   allowDifficulty = true,
   lockedDifficulty?: number,
@@ -414,6 +657,7 @@ function readDialogResult(
       ...(selectedAttribute ? { selectedAttribute } : {}),
       stepAdjustments,
       extraDice: copiedExtraDice,
+      abilityUses: abilityUses.map((reference) => ({ ...reference })),
     };
   }
 
@@ -422,6 +666,7 @@ function readDialogResult(
       ...(selectedAttribute ? { selectedAttribute } : {}),
       stepAdjustments,
       extraDice: copiedExtraDice,
+      abilityUses: abilityUses.map((reference) => ({ ...reference })),
     };
   }
 
@@ -436,6 +681,7 @@ function readDialogResult(
     ...(selectedAttribute ? { selectedAttribute } : {}),
     stepAdjustments,
     extraDice: copiedExtraDice,
+    abilityUses: abilityUses.map((reference) => ({ ...reference })),
   };
 }
 
@@ -445,6 +691,7 @@ export async function openCheckDialog(
 ): Promise<CheckDialogResult | null> {
   validateAttributeChoices(input, options?.attributeChoices);
   const selectedExtraDice: CheckExtraDieInput[] = [];
+  const selectedAbilityUses: CheckAbilityUseReference[] = [];
   const content = await foundry.applications.handlebars.renderTemplate(
     CHECK_DIALOG_TEMPLATE,
     buildCheckDialogViewModel(input, options),
@@ -471,6 +718,7 @@ export async function openCheckDialog(
           button,
           input.components,
           selectedExtraDice,
+          selectedAbilityUses,
           options?.attributeChoices,
           options?.allowDifficulty !== false,
           options?.lockedDifficulty,
@@ -481,6 +729,11 @@ export async function openCheckDialog(
     },
     render: (_event, dialog) => {
       const controllers = attachStepAdjustmentControls(dialog.element);
+      const initialAttribute = input.components.find(({ kind }) => kind === "attribute")?.key;
+      if (!initialAttribute) throw new Error("A Check requires an attribute component.");
+      let selectedAttribute = initialAttribute as AttributeKey;
+      let abilityCount = 0;
+      let refreshAbilities = (): void => undefined;
 
       if (options?.attributeChoices) {
         const attributeComponent = input.components.find(
@@ -496,10 +749,14 @@ export async function openCheckDialog(
           attributeComponent.key,
           options.attributeChoices,
           controllers,
+          (key) => {
+            selectedAttribute = key;
+            refreshAbilities();
+          },
         );
       }
 
-      attachSituationalDiceControls(
+      const situationalController = attachSituationalDiceControls(
         dialog.element,
         input.components.length,
         selectedExtraDice,
@@ -507,7 +764,32 @@ export async function openCheckDialog(
         game.i18n.localize(
           "ORDEMPARANORMAL2.CheckDialog.Actions.RemoveExtraDie",
         ),
+        () => abilityCount,
+        () => refreshAbilities(),
       );
+      if (options?.abilitySource?.abilities.some((ability) =>
+        ability.uses.some(({ checkIntegration }) => checkIntegration !== null)
+      )) {
+        const abilityController = attachAbilityUseControls(
+          dialog.element,
+          input,
+          options.abilitySource,
+          selectedExtraDice,
+          selectedAbilityUses,
+          () => selectedAttribute,
+          () => {
+            abilityCount = abilityController.count();
+            situationalController.refresh();
+          },
+        );
+        abilityCount = abilityController.count();
+        refreshAbilities = () => {
+          abilityController.refresh();
+          abilityCount = abilityController.count();
+          situationalController.refresh();
+        };
+        refreshAbilities();
+      }
     },
     rejectClose: false,
     window: {

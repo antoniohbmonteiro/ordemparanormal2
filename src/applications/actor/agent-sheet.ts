@@ -561,7 +561,8 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           AgentSheet.#notifyAbilityResult({ status: "invalid", reason: "malformed-uses" });
           return;
         }
-        if (uses.length === 0) {
+        const standaloneUses = uses.filter(({ checkIntegration }) => checkIntegration === null);
+        if (standaloneUses.length === 0) {
           await publishAbilityMessage(actor, ability);
           return;
         }
@@ -590,7 +591,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           }
         };
 
-        if (uses.length > 1) {
+        if (standaloneUses.length > 1) {
           const rawLevel = (actor.system as unknown as { readonly level?: unknown }).level;
           if (!Number.isInteger(rawLevel) || Number(rawLevel) < 1 || Number(rawLevel) > 10) {
             AgentSheet.#notifyAbilityResult({ status: "invalid", reason: "malformed-level" });
@@ -598,7 +599,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           }
           await openAbilityUseDialog(
             ability,
-            uses,
+            standaloneUses,
             Number(rawLevel),
             readAbilityResource(abilitySystem.resource),
             executeUse,
@@ -606,7 +607,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           return;
         }
 
-        await executeUse(uses[0]!.id);
+        await executeUse(standaloneUses[0]!.id);
       } catch (error) {
         console.error("ordemparanormal2 | Failed to use Ability", error);
         ui.notifications.error(

@@ -284,9 +284,9 @@ A later public explanation confirmed that the three highest results are summed
 when four dice are rolled. The existing implementation already follows that
 rule.
 
-Explicitly deferred:
+Explicitly deferred at that milestone (delivered by the later PRE-ROLL Ability increment):
 
-- Ability-driven extra dice or automatic costs;
+- Ability-driven extra dice and their automatic costs;
 - Help, opposed checks, rerolls, and generic modifiers.
 
 ## Public milestone 0.0.13 — Alternate Attribute Checks ✅

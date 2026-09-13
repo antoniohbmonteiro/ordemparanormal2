@@ -38,3 +38,5 @@
 .op2-ability-use-editor__actions { display:flex; gap:.4rem; padding:.75rem 1rem; border-top:1px solid rgba(255,255,255,.16); }
 .op2-ability-use-editor__actions button { width:auto; }
 .op2-ability-use-editor__spacer { flex:1; }
+.op2-ability-use-editor__integration { display: grid; gap: 0.5rem; }
+.op2-ability-use-editor__integration[hidden], .op2-ability-use-editor__field[hidden] { display: none; }

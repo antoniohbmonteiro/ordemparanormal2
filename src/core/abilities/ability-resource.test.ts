@@ -56,7 +56,7 @@ describe("Ability resource", () => {
   it("creates an empty resource and resets every referencing use on removal", () => {
     expect(EMPTY_ABILITY_RESOURCE).toEqual({ value: 0, max: 0 });
     const use = {
-      id: "use", name: "Uso", description: "", minimumLevel: null,
+      id: "use", name: "Uso", description: "", minimumLevel: null, checkIntegration: null,
       cost: { source: "resource", amount: 2 } as const,
     };
     expect(
@@ -69,7 +69,7 @@ describe("Ability resource", () => {
 
   it("preserves unrelated uses and confirms only when state would be lost", () => {
     const use = {
-      id: "use", name: "Uso", description: "", minimumLevel: null,
+      id: "use", name: "Uso", description: "", minimumLevel: null, checkIntegration: null,
       cost: { source: "determination", amount: 1 } as const,
     };
     expect(prepareAbilityResourceRemoval([use], { value: 0, max: 0 })).toEqual({

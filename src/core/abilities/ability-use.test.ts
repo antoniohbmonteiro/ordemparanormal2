@@ -17,6 +17,7 @@ const first: AbilityUseData = {
   description: "<p>Texto</p>",
   cost: { source: "none", amount: 0 },
   minimumLevel: null,
+  checkIntegration: null,
 };
 const second: AbilityUseData = {
   id: "second",
@@ -24,6 +25,7 @@ const second: AbilityUseData = {
   description: "",
   cost: { source: "determination", amount: 2 },
   minimumLevel: 2,
+  checkIntegration: null,
 };
 
 describe("Ability uses", () => {
@@ -33,6 +35,9 @@ describe("Ability uses", () => {
     expect(readAbilityUses([first, { ...second, id: "first" }])).toBeNull();
     expect(readAbilityUses([{ ...first, minimumLevel: 11 }])).toBeNull();
     expect(readAbilityUses([{ ...first, cost: { source: "none", amount: 1 } }])).toBeNull();
+    expect(readAbilityUses([{ ...first, checkIntegration: { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "mind" }, die: 8 } } }])).not.toBeNull();
+    expect(readAbilityUses([{ ...first, checkIntegration: { modification: { type: "extraDie", applicability: { type: "skill", skill: "aptitude" }, die: 8 } } }])).toBeNull();
+    expect(readAbilityUses([{ ...first, checkIntegration: { modification: { type: "extraDie", applicability: { type: "any" }, die: 20 } } }])).toBeNull();
   });
 
   it("adds, patches, removes and reorders by stable id", () => {

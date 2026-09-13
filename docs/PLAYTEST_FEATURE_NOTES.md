@@ -44,7 +44,7 @@ rolados, inclusive o quarto dado que não contribui para o total.
 
 ---
 
-## 2. Contextual Ability options in Checks
+## 2. Contextual Ability options in Checks ✅
 
 Automatizar as Habilidades concretas do Playtest conforme necessário,
 sem criar por enquanto um AbilityEffect engine genérico.
@@ -63,7 +63,13 @@ Foco Mental:
 Não hardcodar somente pelo nome visual quando houver uma referência
 canônica melhor disponível.
 
-Adicionar suporte incremental conforme cada Habilidade concreta exigir.
+A primeira primitive implementada é `extraDie`, somente PRE-ROLL, com
+aplicabilidade `any`, atributo efetivo ou Perícia canônica (sem Aptidão).
+Foco Mental, Foco Emocional e as duas Formas de dado de Ímpeto usam esse
+contrato. Custos são agregados, revalidados e registrados no Snapshot V4;
+nenhuma seleção é persistida no Actor.
+
+Adicionar outras primitives somente conforme cada Habilidade concreta exigir.
 
 ---
 

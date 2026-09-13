@@ -23,6 +23,7 @@ export function migrateLegacyAbilitySystem(
     description: "",
     cost,
     minimumLevel: null,
+    checkIntegration: null,
   }];
 }
 

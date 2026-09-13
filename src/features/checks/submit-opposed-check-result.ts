@@ -3,7 +3,7 @@ import {
   parseOpposedCheckState,
   type OpposedCheckSide,
 } from "../../application/checks/opposed-check-state";
-import { isSupportedCheckSnapshot, type CheckSnapshotV3 } from "../../application/checks/check-snapshot";
+import { isSupportedCheckSnapshot, type CheckSnapshotV4 } from "../../application/checks/check-snapshot";
 import { resolveOpposedCheckParticipant } from "../../adapters/foundry/actors/resolve-opposed-check-participant";
 import { canUserRollActor } from "../../adapters/foundry/actors/agent-check-permission";
 import { renderOpposedCheckContent } from "../../adapters/foundry/chat/create-opposed-check-message";
@@ -17,7 +17,7 @@ import {
 export interface SubmitOpposedCheckResultData {
   readonly messageId: string;
   readonly side: OpposedCheckSide;
-  readonly result: CheckSnapshotV3;
+  readonly result: CheckSnapshotV4;
 }
 
 const queues = new Map<string, Promise<void>>();
@@ -46,7 +46,7 @@ export function parseSubmitOpposedCheckResultData(
   if (Object.keys(data).some((key) => !["messageId", "side", "result"].includes(key))) return null;
   if (typeof data.messageId !== "string" || data.messageId.trim() === "") return null;
   if (data.side !== "left" && data.side !== "right") return null;
-  if (!isSupportedCheckSnapshot(data.result) || data.result.schemaVersion !== 3) return null;
+  if (!isSupportedCheckSnapshot(data.result) || data.result.schemaVersion !== 4) return null;
   return { messageId: data.messageId, side: data.side, result: data.result };
 }
 

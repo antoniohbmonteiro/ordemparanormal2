@@ -3,20 +3,17 @@ import type { AbilityCostSource } from "../../core/abilities/ability-cost";
 import { readAbilityCost } from "../../core/abilities/ability-cost";
 import { readAbilityResource } from "../../core/abilities/ability-resource";
 import { isAbilityUseAvailable, readAbilityUses, resolveAbilityUse, type AbilityUseData } from "../../core/abilities/ability-use";
+import { resolveAbilityUseCostPlan } from "../../application/abilities/ability-use-cost-plan";
+import { enqueueActorAbilityCostOperation, payAbilityUseCostPlan } from "../../adapters/foundry/abilities/ability-use-cost-payment";
 
 export type AbilityUseResult =
   | { readonly status: "success"; readonly use: AbilityUseData; readonly source: AbilityCostSource; readonly amount: number; readonly remaining: number | null }
   | { readonly status: "locked"; readonly currentLevel: number; readonly requiredLevel: number }
   | { readonly status: "forbidden" }
-  | { readonly status: "invalid"; readonly reason: "wrong-type" | "not-owned" | "malformed-uses" | "missing-use" | "malformed-level" | "malformed-cost" | "missing-resource" }
+  | { readonly status: "invalid"; readonly reason: "wrong-type" | "not-owned" | "malformed-uses" | "missing-use" | "malformed-level" | "malformed-cost" | "missing-resource" | "check-only" }
   | { readonly status: "insufficient"; readonly source: "health" | "determination" | "resource"; readonly required: number; readonly available: number };
 
 type AgentResourceCostSource = Extract<AbilityCostSource, "health" | "determination">;
-type AgentResourcePaymentResult =
-  | { readonly status: "success"; readonly source: AgentResourceCostSource; readonly amount: number; readonly remaining: number }
-  | { readonly status: "invalid"; readonly reason: "malformed-cost" }
-  | { readonly status: "insufficient"; readonly source: AgentResourceCostSource; readonly required: number; readonly available: number };
-
 function readAgentResource(actor: foundry.documents.Actor, source: AgentResourceCostSource): number | null {
   const system = actor.system as unknown as {
     readonly resources?: {
@@ -28,23 +25,6 @@ function readAgentResource(actor: foundry.documents.Actor, source: AgentResource
     ? system.resources?.health?.value
     : system.resources?.determination?.value;
   return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : null;
-}
-
-async function payAgentResource(
-  actor: foundry.documents.Actor,
-  source: AgentResourceCostSource,
-  amount: number,
-): Promise<AgentResourcePaymentResult> {
-  const available = readAgentResource(actor, source);
-  if (available === null) return { status: "invalid", reason: "malformed-cost" };
-  if (available < amount) return { status: "insufficient", source, required: amount, available };
-  const remaining = available - amount;
-  if (source === "health") {
-    await actor.update({ "system.resources.health.value": remaining });
-  } else {
-    await actor.update({ "system.resources.determination.value": remaining });
-  }
-  return { status: "success", source, amount, remaining };
 }
 
 function readAgentLevel(actor: foundry.documents.Actor): number | null {
@@ -73,18 +53,40 @@ export async function useAbility(actor: foundry.documents.Actor, ability: foundr
   const level = readAgentLevel(actor);
   if (level === null) return { status: "invalid", reason: "malformed-level" };
   if (!isAbilityUseAvailable(use, level)) return { status: "locked", currentLevel: level, requiredLevel: use.minimumLevel! };
+  if (use.checkIntegration) return { status: "invalid", reason: "check-only" };
 
   const cost = use.cost;
   if (cost.source === "none") return { status: "success", use, source: "none", amount: 0, remaining: null };
-  if (cost.source === "health" || cost.source === "determination") {
-    const payment = await payAgentResource(actor, cost.source, cost.amount);
-    return payment.status === "success" ? { ...payment, use } : payment;
-  }
-
-  const resource = readAbilityResource(system.resource);
-  if (!resource) return { status: "invalid", reason: "missing-resource" };
-  if (resource.value < cost.amount) return { status: "insufficient", source: "resource", required: cost.amount, available: resource.value };
-  const remaining = resource.value - cost.amount;
-  await ability.update({ "system.resource.value": remaining });
-  return { status: "success", use, source: "resource", amount: cost.amount, remaining };
+  return enqueueActorAbilityCostOperation(actor, async () => {
+    const currentSystem = ability.system as unknown as { readonly uses?: unknown; readonly resource?: unknown };
+    const currentUses = readAbilityUses(currentSystem.uses);
+    const currentUse = currentUses ? resolveAbilityUse(currentUses, useId) : null;
+    if (!currentUse) return { status: "invalid", reason: "missing-use" } as const;
+    if (currentUse.checkIntegration) return { status: "invalid", reason: "check-only" } as const;
+    const currentLevel = readAgentLevel(actor);
+    if (currentLevel === null) return { status: "invalid", reason: "malformed-level" } as const;
+    if (!isAbilityUseAvailable(currentUse, currentLevel)) return { status: "locked", currentLevel, requiredLevel: currentUse.minimumLevel! } as const;
+    const health = readAgentResource(actor, "health");
+    const determination = readAgentResource(actor, "determination");
+    if (health === null || determination === null) return { status: "invalid", reason: "malformed-cost" } as const;
+    const resource = readAbilityResource(currentSystem.resource);
+    if (currentUse.cost.source === "resource" && !resource) return { status: "invalid", reason: "missing-resource" } as const;
+    const result = resolveAbilityUseCostPlan(
+      [{ abilityId: ability.id!, useId, cost: currentUse.cost }],
+      { health, determination, abilityResources: { [ability.id!]: resource?.value ?? null } },
+    );
+    if (result.status === "insufficient") return {
+      status: "insufficient",
+      source: result.source,
+      required: result.required,
+      available: result.available,
+    } as const;
+    await payAbilityUseCostPlan(actor, result.plan);
+    const remaining = currentUse.cost.source === "health"
+      ? result.plan.health!.remaining
+      : currentUse.cost.source === "determination"
+        ? result.plan.determination!.remaining
+        : result.plan.abilityResources[ability.id!]!.remaining;
+    return { status: "success", use: currentUse, source: currentUse.cost.source, amount: currentUse.cost.amount, remaining } as const;
+  });
 }

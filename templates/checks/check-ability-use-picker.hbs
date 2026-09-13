@@ -1,0 +1,31 @@
+<section class="op2-check-ability-picker__body">
+  {{#each options}}
+    <button
+      type="button"
+      class="op2-check-ability-picker__option"
+      data-ability-id="{{abilityId}}"
+      data-use-id="{{useId}}"
+      aria-label="{{abilityName}} — {{useName}}"
+    >
+      <span class="op2-check-ability-picker__option-content">
+        <span class="op2-check-ability-picker__option-header">
+          <strong class="op2-check-ability-picker__ability-name">{{abilityName}}</strong>
+          <span class="op2-check-ability-picker__add">
+            {{localize "ORDEMPARANORMAL2.CheckDialog.Abilities.AddOption"}}
+          </span>
+        </span>
+        <span class="op2-check-ability-picker__option-row">
+          <span class="op2-check-ability-picker__option-label">{{localize "ORDEMPARANORMAL2.CheckDialog.Abilities.Cost"}}</span>
+          <span class="op2-check-ability-picker__option-value">{{costLabel}}</span>
+        </span>
+        <span class="op2-check-ability-picker__option-row">
+          <span class="op2-check-ability-picker__option-label">{{localize "ORDEMPARANORMAL2.CheckDialog.Abilities.Effect"}}</span>
+          <span class="op2-check-ability-picker__option-value">
+            <span class="op2-die-icon op2-die-icon--d{{die}}" aria-hidden="true"></span>
+            {{effectLabel}}
+          </span>
+        </span>
+      </span>
+    </button>
+  {{/each}}
+</section>

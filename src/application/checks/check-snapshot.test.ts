@@ -62,16 +62,17 @@ describe("check snapshot", () => {
     expect(createCheckSnapshot(result).components).toEqual(result.components);
   });
 
-  it("creates V3 without difficulty fields when the check has no DT", () => {
+  it("creates V4 without difficulty fields when the check has no DT", () => {
     const snapshot = createCheckSnapshot(createResult());
 
-    expect(snapshot.schemaVersion).toBe(3);
+    expect(snapshot.schemaVersion).toBe(4);
+    expect(snapshot.appliedAbilityUses).toEqual([]);
     expect(snapshot).not.toHaveProperty("difficulty");
     expect(snapshot).not.toHaveProperty("outcome");
     expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
   });
 
-  it("creates V3 with paired difficulty and outcome fields", () => {
+  it("creates V4 with paired difficulty and outcome fields", () => {
     const snapshot = createCheckSnapshot(createResult(), {
       difficulty: 12,
       outcome: "success",
@@ -79,7 +80,7 @@ describe("check snapshot", () => {
 
     expect(snapshot).toEqual(
       expect.objectContaining({
-        schemaVersion: 3,
+        schemaVersion: 4,
         difficulty: 12,
         outcome: "success",
       }),
@@ -99,7 +100,7 @@ describe("check snapshot", () => {
     expect(snapshot.extraDice[0]?.label).toBe("Situacional");
   });
 
-  it("validates V3 die results, situational provenance, IDs, and recalculated totals", () => {
+  it("validates V4 die results, provenance, IDs, and recalculated totals", () => {
     const valid = createCheckSnapshot(createResult());
 
     expect(isSupportedCheckSnapshot(valid)).toBe(true);
@@ -123,6 +124,27 @@ describe("check snapshot", () => {
       }),
     ).toBe(false);
     expect(isSupportedCheckSnapshot({ ...valid, total: valid.total + 1 })).toBe(false);
+  });
+
+  it("validates one-to-one Ability provenance while continuing to read V3", () => {
+    const result = createResult();
+    const abilityResult: CheckResult = {
+      ...result,
+      extraDice: [{ id: "ability:focus:d4", die: 4, source: "ability", label: "Foco — Adicionar d4", result: 3 }],
+    };
+    const applied = [{
+      abilityId: "focus", abilityName: "Foco", useId: "d4", useName: "Adicionar d4",
+      extraDieId: "ability:focus:d4", die: 4 as const,
+      cost: { source: "determination" as const, amount: 2 },
+    }];
+    const snapshot = createCheckSnapshot(abilityResult, undefined, applied);
+    expect(isSupportedCheckSnapshot(snapshot)).toBe(true);
+    expect(isSupportedCheckSnapshot({ ...snapshot, appliedAbilityUses: [] })).toBe(false);
+    expect(isSupportedCheckSnapshot({ ...snapshot, appliedAbilityUses: [{ ...applied[0], extraDieId: "forged" }] })).toBe(false);
+
+    const v3 = { ...createCheckSnapshot(result), schemaVersion: 3 as const };
+    const { appliedAbilityUses: _discarded, ...legacy } = v3;
+    expect(isSupportedCheckSnapshot(legacy)).toBe(true);
   });
 
   it("validates the four-die cap, three-highest total, and paired DT fields", () => {

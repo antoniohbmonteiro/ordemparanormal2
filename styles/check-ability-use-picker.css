@@ -1,0 +1,30 @@
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__body { display:grid; gap:.5rem; max-height:430px; padding-right:.25rem; overflow-y:auto; }
+
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option { display:flex; width:100%; height:auto; min-height:0; box-sizing:border-box; align-items:center; justify-content:space-between; gap:.6rem; margin:0; padding:.55rem .7rem; border:1px solid rgba(255,255,255,.16); border-radius:8px; background:rgba(10,12,15,.42); color:inherit; line-height:normal; text-align:left; white-space:normal; cursor:pointer; }
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option:hover,
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option:focus-visible { border-color:rgba(255,255,255,.34); background:rgba(255,255,255,.08); }
+
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option-content { display:grid; min-width:0; flex:1; gap:.3rem; }
+
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option-header { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__ability-name { font-size:.92rem; }
+
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; font-size:.8rem; opacity:.85; }
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__option-value { display:inline-flex; align-items:center; gap:.3rem; font-weight:600; opacity:1; }
+
+.ordemparanormal2.op2-check-ability-picker .op2-check-ability-picker__add { flex:none; font-size:.72rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; opacity:.85; }
+
+.ordemparanormal2.op2-check-ability-picker .op2-die-icon {
+  display: inline-block;
+  width: .85rem;
+  height: .85rem;
+  flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: var(--op2-die-icon) center / contain no-repeat;
+  mask: var(--op2-die-icon) center / contain no-repeat;
+}
+.ordemparanormal2.op2-check-ability-picker .op2-die-icon--d4 { --op2-die-icon: url("../assets/icons/dice/d4.svg"); }
+.ordemparanormal2.op2-check-ability-picker .op2-die-icon--d6 { --op2-die-icon: url("../assets/icons/dice/d6.svg"); }
+.ordemparanormal2.op2-check-ability-picker .op2-die-icon--d8 { --op2-die-icon: url("../assets/icons/dice/d8.svg"); }
+.ordemparanormal2.op2-check-ability-picker .op2-die-icon--d10 { --op2-die-icon: url("../assets/icons/dice/d10.svg"); }
+.ordemparanormal2.op2-check-ability-picker .op2-die-icon--d12 { --op2-die-icon: url("../assets/icons/dice/d12.svg"); }

@@ -7,6 +7,7 @@ import { createCheckSnapshot } from "../../../application/checks/check-snapshot"
 import type { CheckDifficultyResolution } from "../../../core/checks/check";
 import type { FoundryCheckExecution } from "../dice/execute-foundry-check";
 import { renderCheckCardContent } from "./render-check-card-content";
+import type { AppliedCheckAbilityUse } from "../../../application/checks/check-ability-use-state";
 
 export function isRegisteredMessageMode(value: unknown): value is string {
   return (
@@ -37,11 +38,13 @@ export async function publishCheckMessage(
   actor: foundry.documents.Actor,
   execution: FoundryCheckExecution,
   difficultyResolution?: CheckDifficultyResolution,
+  appliedAbilityUses: readonly AppliedCheckAbilityUse[] = [],
 ): Promise<void> {
   const accentColor = readAgentAccentColor(actor);
   const snapshot = createCheckSnapshot(
     execution.result,
     difficultyResolution,
+    appliedAbilityUses,
   );
   const content = await renderCheckCardContent(snapshot);
 

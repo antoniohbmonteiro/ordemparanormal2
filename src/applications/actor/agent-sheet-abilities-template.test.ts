@@ -79,4 +79,9 @@ describe("Agent Sheet Ability card template", () => {
     expect(template).toContain("useSummary.isSingleHealth");
     expect(template).toContain("ORDEMPARANORMAL2.AgentSheet.Resources.Health");
   });
+
+  it("labels Abilities whose forms are available only while configuring Checks", () => {
+    expect(template).toContain("useSummary.isCheckOnly");
+    expect(template).toContain("ORDEMPARANORMAL2.AgentSheet.Abilities.CheckOnly");
+  });
 });

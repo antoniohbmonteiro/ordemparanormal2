@@ -149,6 +149,118 @@
   gap: 0.45rem;
 }
 
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--op2-dialog-border);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities[hidden] { display: none; }
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities-header h4 { margin: 0; font-size: 0.76rem; letter-spacing: 0.1em; }
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities-add {
+  width: 1.5rem;
+  min-height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--op2-dialog-copper);
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--op2-dialog-text);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities-add:not(:disabled):hover {
+  border-color: var(--op2-dialog-accent);
+  color: var(--op2-dialog-accent);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__abilities-add:disabled {
+  border-color: var(--op2-dialog-border);
+  color: var(--op2-dialog-muted);
+  opacity: 0.45;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-selected {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--op2-dialog-accent);
+  border-radius: 0.35rem;
+  background: var(--op2-dialog-panel);
+  font-size: 0.78rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card-header strong {
+  font-size: 0.85rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card-header button {
+  margin: 0;
+  padding: 0 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--op2-dialog-accent);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  color: var(--op2-dialog-muted);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--op2-dialog-text);
+  font-weight: 600;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-card-value .op2-die-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
 .ordemparanormal2.op2-check-dialog .op2-check-dialog__situational-header {
   display: flex;
   align-items: baseline;
@@ -295,6 +407,33 @@
 
 .ordemparanormal2.op2-check-dialog .op2-check-dialog__remove-extra-die:hover {
   color: var(--op2-dialog-text);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__extra-die-chip--ability {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 0;
+  padding: 0.25rem 0.4rem;
+  border-color: var(--op2-dialog-copper);
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-die-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.ordemparanormal2.op2-check-dialog .op2-check-dialog__ability-die-tag {
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.3rem;
+  background: rgba(181, 139, 104, 0.18);
+  color: var(--op2-dialog-copper);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .ordemparanormal2.op2-check-dialog .form-footer {

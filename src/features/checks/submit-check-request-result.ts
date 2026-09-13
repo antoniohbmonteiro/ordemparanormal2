@@ -1,6 +1,6 @@
 import {
   isSupportedCheckSnapshot,
-  type CheckSnapshotV3,
+  type CheckSnapshotV4,
 } from "../../application/checks/check-snapshot";
 import { readAgentAccentColor } from "../../adapters/foundry/actors/read-agent-accent-color";
 import { canUserRollActor } from "../../adapters/foundry/actors/agent-check-permission";
@@ -18,7 +18,7 @@ import {
 
 export interface SubmitCheckRequestResultData {
   readonly messageId: string;
-  readonly result: CheckSnapshotV3;
+  readonly result: CheckSnapshotV4;
 }
 
 const queues = new Map<string, Promise<void>>();
@@ -46,7 +46,7 @@ export function parseSubmitCheckRequestResultData(
   const data = value as Record<string, unknown>;
   if (Object.keys(data).some((key) => !["messageId", "result"].includes(key))) return null;
   if (typeof data.messageId !== "string" || data.messageId.trim() === "") return null;
-  if (!isSupportedCheckSnapshot(data.result) || data.result.schemaVersion !== 3) return null;
+  if (!isSupportedCheckSnapshot(data.result) || data.result.schemaVersion !== 4) return null;
   return { messageId: data.messageId, result: data.result };
 }
 

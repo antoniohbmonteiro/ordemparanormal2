@@ -9,5 +9,9 @@ export async function performAgentCheck(
 ): Promise<void> {
   const resolved = await resolveAgentCheckInteraction(actor, selection);
   if (!resolved) return;
-  await publishCheckMessage(actor, resolved.execution, resolved.difficultyResolution);
+  if (resolved.appliedAbilityUses.length > 0) {
+    await publishCheckMessage(actor, resolved.execution, resolved.difficultyResolution, resolved.appliedAbilityUses);
+  } else {
+    await publishCheckMessage(actor, resolved.execution, resolved.difficultyResolution);
+  }
 }

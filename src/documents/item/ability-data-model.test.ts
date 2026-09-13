@@ -13,6 +13,12 @@ class MockSchemaField {
     readonly options: Record<string, unknown> = {},
   ) {}
 }
+class MockTypedSchemaField {
+  constructor(
+    readonly types: Record<string, unknown>,
+    readonly options: Record<string, unknown> = {},
+  ) {}
+}
 class MockTypeDataModel {
   static migrateData(source: Record<string, unknown>) { return source; }
   static validateJoint(_data: unknown) {}
@@ -28,6 +34,7 @@ beforeAll(async () => {
       NumberField: MockField,
       SchemaField: MockSchemaField,
       StringField: MockField,
+      TypedSchemaField: MockTypedSchemaField,
     } },
   });
   ({ AbilityDataModel } = await import("./ability-data-model"));
@@ -54,6 +61,14 @@ describe("AbilityDataModel", () => {
     expect(use.fields.minimumLevel.options).toMatchObject({
       integer: true, min: 1, max: 10, nullable: true,
     });
+    const integration = use.fields.checkIntegration as unknown as MockSchemaField;
+    expect(integration.options).toMatchObject({ nullable: true, initial: null });
+    const modification = integration.fields.modification as unknown as MockTypedSchemaField;
+    expect(Object.keys(modification.types)).toEqual(["extraDie"]);
+    const extraDie = modification.types.extraDie as { applicability: MockTypedSchemaField; die: MockField };
+    expect(extraDie.die.options).toMatchObject({ choices: [4, 6, 8, 10, 12] });
+    const skill = extraDie.applicability.types.skill as { skill: MockField };
+    expect(skill.skill.options.choices).not.toContain("aptitude");
     expect(schema.uses.options).toMatchObject({ required: true, initial: [] });
     expect(schema.resource.options).toMatchObject({
       required: true,
@@ -80,6 +95,10 @@ describe("AbilityDataModel", () => {
       }),
     ]);
 
+    expect(AbilityDataModel.migrateData({ uses: [{ id: "old" }] }).uses).toEqual([
+      { id: "old", checkIntegration: null },
+    ]);
+
     const authoritative = AbilityDataModel.migrateData({
       cost: { source: "determination", amount: 2 },
       uses: [],
@@ -90,7 +109,7 @@ describe("AbilityDataModel", () => {
   it("jointly rejects duplicate ids and resource costs without a resource", () => {
     const use = {
       id: "use", name: "Uso", description: "",
-      cost: { source: "none", amount: 0 }, minimumLevel: null,
+      cost: { source: "none", amount: 0 }, minimumLevel: null, checkIntegration: null,
     };
     expect(() => AbilityDataModel.validateJoint({
       description: "", resource: null, uses: [use, use],

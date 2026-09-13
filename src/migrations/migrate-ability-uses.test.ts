@@ -19,7 +19,7 @@ describe("Ability uses migration", () => {
   it("preserves an existing valid collection as authoritative", () => {
     const uses = [{
       id: "current", name: "Atual", description: "",
-      cost: { source: "none", amount: 0 }, minimumLevel: null,
+      cost: { source: "none", amount: 0 }, minimumLevel: null, checkIntegration: null,
     }];
     expect(migrateLegacyAbilitySystem({
       uses, cost: { source: "determination", amount: 3 },

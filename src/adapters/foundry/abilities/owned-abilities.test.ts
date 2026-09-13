@@ -40,4 +40,15 @@ describe("owned Abilities", () => {
       amount: 5,
     });
   });
+
+  it("separates PRE-ROLL forms from directly actionable use summaries", () => {
+    const [ability] = collectOwnedAbilities([{
+      id: "focus", type: "ability", sort: 0, name: "Foco Mental", img: null,
+      system: { description: "", resource: null, uses: [{
+        id: "d4", name: "Adicionar d4", description: "", cost: { source: "determination", amount: 2 }, minimumLevel: null,
+        checkIntegration: { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "mind" }, die: 4 } },
+      }] },
+    }] as unknown as foundry.documents.Item[]);
+    expect(ability?.useSummary).toMatchObject({ isEmpty: false, isCheckOnly: true, count: 0 });
+  });
 });

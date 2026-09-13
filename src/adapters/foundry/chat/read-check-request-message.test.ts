@@ -37,6 +37,8 @@ describe("Check Request message lifecycle", () => {
     const resolved = { ...state, status: "resolved" as const };
     expect(readCheckRequestMessageLifecycle(message(resolved, snapshot))).toMatchObject({ snapshot });
     expect(readCheckRequestMessageLifecycle(message(resolved))).toBeNull();
+    const v4 = { ...snapshot, schemaVersion: 4 as const, appliedAbilityUses: [] };
+    expect(readCheckRequestMessageLifecycle(message(resolved, v4))).toMatchObject({ snapshot: v4 });
   });
 
   it("permits an alternate attribute but enforces Skill and DT provenance", () => {

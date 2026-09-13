@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CheckSnapshotV3 } from "../../application/checks/check-snapshot";
+import type { CheckSnapshotV4 } from "../../application/checks/check-snapshot";
 import type { OpposedCheckStateV1 } from "../../application/checks/opposed-check-state";
 
 const mocks = vi.hoisted(() => ({
@@ -14,14 +14,15 @@ vi.mock("../../adapters/foundry/chat/create-opposed-check-message", () => ({ ren
 
 import { parseSubmitOpposedCheckResultData, submitOpposedCheckResult } from "./submit-opposed-check-result";
 
-const result: CheckSnapshotV3 = {
-  schemaVersion: 3,
+const result: CheckSnapshotV4 = {
+  schemaVersion: 4,
   check: { kind: "skill", key: "fighting", name: "Luta" },
   components: [
     { kind: "attribute", key: "mind", label: "Mente", die: 8, result: 5 },
     { kind: "skill", key: "fighting", label: "Luta", die: 6, result: 4 },
   ],
   extraDice: [],
+  appliedAbilityUses: [],
   total: 9,
 };
 
@@ -65,6 +66,11 @@ describe("submit Opposed Check result", () => {
   it("rejects identity fields in the client payload", () => {
     expect(parseSubmitOpposedCheckResultData({ messageId: "m", side: "left", result, userId: "forged" })).toBeNull();
     expect(parseSubmitOpposedCheckResultData({ messageId: "m", side: "left", result, sender: sender })).toBeNull();
+  });
+
+  it("requires V4 for a new side submission", () => {
+    const { appliedAbilityUses: _discarded, ...v3 } = { ...result, schemaVersion: 3 as const };
+    expect(parseSubmitOpposedCheckResultData({ messageId: "m", side: "left", result: v3 })).toBeNull();
   });
 
   it("re-resolves the canonical sender and updates content plus state once", async () => {

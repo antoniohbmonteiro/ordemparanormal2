@@ -14,6 +14,7 @@ export interface OwnedAbilityView {
   readonly useCollection: AbilityUsesView;
   readonly useSummary: {
     readonly isEmpty: boolean;
+    readonly isCheckOnly: boolean;
     readonly isSingleNone: boolean;
     readonly isSingleHealth: boolean;
     readonly isSingleDetermination: boolean;
@@ -47,17 +48,21 @@ function createUsesView(system: unknown): AbilityUsesView {
 }
 
 function createUseSummary(collection: AbilityUsesView): OwnedAbilityView["useSummary"] {
-  const single = collection.kind === "valid" && collection.count === 1 ? collection.uses[0] : undefined;
+  const standalone = collection.kind === "valid"
+    ? collection.uses.filter(({ checkIntegration }) => checkIntegration === null)
+    : [];
+  const single = standalone.length === 1 ? standalone[0] : undefined;
   return {
     isEmpty: collection.kind === "valid" && collection.count === 0,
+    isCheckOnly: collection.kind === "valid" && collection.count > 0 && standalone.length === 0,
     isSingleNone: single?.cost.source === "none",
     isSingleHealth: single?.cost.source === "health",
     isSingleDetermination: single?.cost.source === "determination",
     isSingleResource: single?.cost.source === "resource",
-    isMultiple: collection.kind === "valid" && collection.count > 1,
+    isMultiple: collection.kind === "valid" && standalone.length > 1,
     isInvalid: collection.kind === "invalid",
     amount: single?.cost.amount ?? 0,
-    count: collection.count,
+    count: standalone.length,
   };
 }
 

@@ -256,9 +256,11 @@ later public explanation. All rolled results still participate in RA, RB,
 positive critical, and critical-failure analysis.
 
 `CheckSnapshotV1` and `CheckSnapshotV2` remain frozen in their historical
-component-only shape. New messages use `CheckSnapshotV3`, which adds resolved
-extra dice while preserving a numeric historical total and the paired DT
-outcome when a difficulty was supplied.
+component-only shape, and V3 remains frozen with resolved situational extra
+dice. New messages use `CheckSnapshotV4`, which adds applied Ability-use
+provenance and the confirmed cost. Each Ability-sourced extra die maps
+one-to-one to one provenance record. Historical Check Request and Opposed Check
+envelopes keep their existing versions and can contain V3 or V4 results.
 
 ## NEX
 
@@ -280,14 +282,15 @@ uses[]
 ├── name                   non-empty string
 ├── description            sanitized HTML
 ├── cost
-│   ├── source             none | determination | resource
+│   ├── source             none | health | determination | resource
 │   └── amount             non-negative integer
-└── minimumLevel           null or integer 1..10
+├── minimumLevel           null or integer 1..10
+└── checkIntegration       null or typed PRE-ROLL modification
 ```
 
 `value > max`, empty use collections, and zero-cost forms are valid. A resource cost always consumes the optional resource on the same Ability. Removing a referenced resource resets every resource cost to `none / 0` while preserving IDs, content, levels, and ordering.
 
-Using an Ability has only one current effect: consume the selected form's configured cost. A free form performs no update, PD updates `Agent.system.resources.determination.value`, and a resource cost updates `Ability.system.resource.value`. Minimum level controls availability and is always revalidated at the use-case boundary. Insufficient balances never consume partially. Described effects, rolls, recovery, and broader acquisition automation remain deferred; the only current acquisition automation is an explicit Profile UUID grant.
+Independent Ability use consumes the selected non-integrated form's configured cost. PRE-ROLL forms are instead selected in the Check Dialog and currently support only one `extraDie` modification using `d4..d12`. Applicability is `any`, one effective Agent attribute, or one canonical Skill; Aptitude is structurally distinct and cannot be stored as Skill applicability, though `any` and attribute applicability can include Aptitude Checks. Costs remain pending through Roll evaluation, are aggregated across the selection, and are revalidated before grouped payment. Described post-roll effects, rerolls, recovery, and broader automation remain deferred.
 
 The Agent Sheet does not aggregate Ability resources or move them into `Agent.system`. The temporary Ability-card summary shows only `value/max`; full resource editing remains on the Ability sheet.
 

@@ -237,6 +237,7 @@
       "Abilities": {
         "NoCost": "Sem custo",
         "NoUses": "Sem formas de uso",
+        "CheckOnly": "Disponível nos checks",
         "UseCount": "{count} formas de uso",
         "InvalidUses": "Formas de uso inválidas",
         "Resource": "Recurso",
@@ -526,6 +527,23 @@
         "Added": "Adicionados:",
         "Label": "Situacional"
       },
+      "Abilities": {
+        "Title": "HABILIDADES APLICÁVEIS",
+        "Add": "Adicionar habilidade aplicável",
+        "AddOption": "Adicionar",
+        "PickerTitle": "Adicionar habilidade",
+        "Cost": "Custo",
+        "Effect": "Efeito",
+        "MinimumLevel": "Nível insuficiente",
+        "DiceLimit": "Limite de dados atingido",
+        "InsufficientHealth": "PV insuficiente",
+        "InsufficientDetermination": "PD insuficiente",
+        "InsufficientResource": "Recurso insuficiente",
+        "Remove": "Remover Habilidade aplicável",
+        "OriginAddedBy": "Adicionado por {ability}",
+        "OriginForm": "Forma: {use}",
+        "OriginRemoveHint": "Remova pela habilidade aplicada."
+      },
       "Actions": {
         "AddExtraDie": "Adicionar dado situacional",
         "Cancel": "Cancelar",
@@ -537,7 +555,10 @@
     },
     "AbilityUseEditor": {
       "Title": { "Create": "Criar forma de uso", "Edit": "Editar forma de uso" },
-      "Fields": { "Name": "Nome", "Description": "Descrição", "MinimumLevel": "Nível mínimo" },
+      "Fields": { "Name": "Nome", "Description": "Descrição", "MinimumLevel": "Nível mínimo", "Modification": "Modificação", "Applicability": "Aplicável a", "Attribute": "Atributo", "Skill": "Perícia", "Die": "Dado" },
+      "CheckIntegration": "Integração com checks",
+      "Modifications": { "None": "Nenhuma", "ExtraDie": "Adicionar dado" },
+      "Applicability": { "Any": "Qualquer teste", "Attribute": "Atributo", "Skill": "Perícia" },
       "Actions": { "Save": "Salvar", "Cancel": "Cancelar", "Remove": "Remover", "MoveUp": "Mover para cima", "MoveDown": "Mover para baixo" },
       "ResourceHint": "Adicione primeiro um recurso à Habilidade para usar essa fonte de custo.",
       "RemoveTitle": "Remover forma de uso",

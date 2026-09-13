@@ -48,7 +48,7 @@ describe("roll Opposed Check side", () => {
     extraDice: [],
     total: 9,
   };
-  const snapshot = { ...result, schemaVersion: 3 };
+  const snapshot = { ...result, schemaVersion: 4, appliedAbilityUses: [] };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,6 +64,7 @@ describe("roll Opposed Check side", () => {
         roll,
         result,
       },
+      appliedAbilityUses: [],
     });
   });
 
@@ -75,7 +76,7 @@ describe("roll Opposed Check side", () => {
       { allowDifficulty: false },
     );
     expect(mocks.animate).toHaveBeenCalledExactlyOnceWith(roll);
-    expect(mocks.createSnapshot).toHaveBeenCalledExactlyOnceWith(result);
+    expect(mocks.createSnapshot).toHaveBeenCalledExactlyOnceWith(result, undefined, []);
     expect(mocks.dispatch).toHaveBeenCalledWith({
       messageId: "message",
       side: "left",

@@ -29,6 +29,7 @@ const use = {
   description: "<p>Descrição</p>",
   cost: { source: "none" as const, amount: 0 },
   minimumLevel: null,
+  checkIntegration: null,
 };
 
 interface TestSheet {

@@ -209,6 +209,23 @@ describe("core compendium sources", () => {
     }
 
     expect(new Set(allUseIds).size).toBe(allUseIds.length);
+    const integrations = Object.fromEntries(abilities.map((ability) => [
+      ability.name,
+      readAbilityUses(ability.system.uses)?.filter(({ checkIntegration }) => checkIntegration !== null)
+        .map(({ id, checkIntegration }) => [id, checkIntegration]) ?? [],
+    ]));
+    expect(integrations["Foco Mental"]).toEqual([
+      ["mental-focus-add-d4", { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "mind" }, die: 4 } }],
+      ["mental-focus-add-d8", { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "mind" }, die: 8 } }],
+    ]);
+    expect(integrations["Foco Emocional"]).toEqual([
+      ["emotional-focus-add-d4", { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "emotion" }, die: 4 } }],
+    ]);
+    expect(integrations["Ímpeto"]).toEqual([
+      ["impetus-add-d4", { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } }],
+      ["impetus-add-d10", { modification: { type: "extraDie", applicability: { type: "any" }, die: 10 } }],
+    ]);
+    expect(Object.entries(integrations).filter(([name]) => !["Foco Mental", "Foco Emocional", "Ímpeto"].includes(name)).every(([, values]) => (values as unknown[]).length === 0)).toBe(true);
     expect(
       abilities.filter(({ system }) => readAbilityUses(system.uses)?.length === 0)
         .map(({ name }) => name),

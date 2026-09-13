@@ -21,9 +21,9 @@ describe("Ability use dialog", () => {
     });
     const ability = { name: "Ímpeto", isOwner: true } as unknown as foundry.documents.Item;
     const view = await buildAbilityUseDialogView(ability, [
-      { id: "d4", name: "Adicionar d4", description: "d4", cost: { source: "resource", amount: 1 }, minimumLevel: 2 },
-      { id: "d10", name: "Adicionar d10", description: "d10", cost: { source: "resource", amount: 2 }, minimumLevel: 6 },
-      { id: "extra-action", name: "Ação extra", description: "ação", cost: { source: "health", amount: 5 }, minimumLevel: null },
+      { id: "d4", name: "Adicionar d4", description: "d4", cost: { source: "resource", amount: 1 }, minimumLevel: 2, checkIntegration: null },
+      { id: "d10", name: "Adicionar d10", description: "d10", cost: { source: "resource", amount: 2 }, minimumLevel: 6, checkIntegration: null },
+      { id: "extra-action", name: "Ação extra", description: "ação", cost: { source: "health", amount: 5 }, minimumLevel: null, checkIntegration: null },
     ], 2, { value: 0, max: 3 });
     expect(view.uses).toHaveLength(3);
     expect(view.uses[0]).toMatchObject({ locked: false, description: "<enriched>d4</enriched>" });
@@ -86,7 +86,7 @@ describe("Ability use dialog", () => {
     const ability = { name: "Ímpeto", isOwner: true } as unknown as foundry.documents.Item;
     await expect(openAbilityUseDialog(ability, [{
       id: "d4", name: "Adicionar d4", description: "",
-      cost: { source: "resource", amount: 1 }, minimumLevel: 2,
+      cost: { source: "resource", amount: 1 }, minimumLevel: 2, checkIntegration: null,
     }], 2, { value: 0, max: 3 }, onUse)).resolves.toBe(true);
     expect(onUse).toHaveBeenCalledWith("d4");
     expect(close).toHaveBeenCalledOnce();
@@ -115,7 +115,7 @@ describe("Ability use dialog", () => {
     const ability = { name: "Ímpeto", isOwner: true } as unknown as foundry.documents.Item;
     await expect(openAbilityUseDialog(ability, [{
       id: "d4", name: "Adicionar d4", description: "",
-      cost: { source: "resource", amount: 1 }, minimumLevel: 2,
+      cost: { source: "resource", amount: 1 }, minimumLevel: 2, checkIntegration: null,
     }], 2, { value: 0, max: 3 }, vi.fn().mockResolvedValue(false))).resolves.toBe(false);
     expect(close).not.toHaveBeenCalled();
     expect(useButton.disabled).toBe(false);

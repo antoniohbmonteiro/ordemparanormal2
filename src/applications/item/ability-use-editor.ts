@@ -6,7 +6,10 @@ import { createAbilityUseId } from "../../adapters/foundry/abilities/create-abil
 import { deleteAbilityUse, moveAbilityUse, saveExistingAbilityUse, saveNewAbilityUse } from "../../adapters/foundry/abilities/update-ability-uses";
 import { ABILITY_COST_SOURCES, normalizeAbilityCost, type AbilityCostSource } from "../../core/abilities/ability-cost";
 import { readAbilityResource } from "../../core/abilities/ability-resource";
-import { readAbilityUses, type AbilityUseData } from "../../core/abilities/ability-use";
+import { readAbilityUses, type AbilityUseCheckIntegration, type AbilityUseData } from "../../core/abilities/ability-use";
+import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../../core/actors/agent-attributes";
+import { SKILL_DEFINITIONS, isSkillKey } from "../../config/skills";
+import { NORMAL_DIE_STEPS, type NormalDieStep } from "../../core/dice/die-step";
 
 const TEMPLATE = "systems/ordemparanormal2/templates/item/ability-use-editor.hbs";
 
@@ -21,6 +24,14 @@ interface AbilityUseEditorContext {
   readonly editable: boolean;
   readonly canMoveUp: boolean;
   readonly canMoveDown: boolean;
+  readonly modificationEnabled: boolean;
+  readonly applicabilityType: "any" | "attribute" | "skill";
+  readonly applicabilityIsAny: boolean;
+  readonly applicabilityIsAttribute: boolean;
+  readonly applicabilityIsSkill: boolean;
+  readonly attributes: readonly { readonly value: AttributeKey; readonly selected: boolean; readonly labelKey: string }[];
+  readonly skills: readonly { readonly value: string; readonly label: string; readonly selected: boolean }[];
+  readonly dice: readonly { readonly value: NormalDieStep; readonly selected: boolean }[];
 }
 
 interface AbilityUseEditorGame {
@@ -69,6 +80,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     this.#draft = use ? structuredClone(use) : {
       id: createAbilityUseId(), name: "", description: "",
       cost: { source: "none", amount: 0 }, minimumLevel: null,
+      checkIntegration: null,
     };
     this.#onClosed = onClosed;
   }
@@ -86,7 +98,21 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     if (minimumLevel !== null && (!Number.isInteger(minimumLevel) || minimumLevel < 1 || minimumLevel > 10)) return null;
     const cost = normalizeAbilityCost(source, amount);
     if (cost.source === "resource" && !readAbilityResource((this.#ability.system as unknown as { readonly resource?: unknown }).resource)) return null;
-    return { ...this.#draft, name, description, cost, minimumLevel };
+    let checkIntegration: AbilityUseCheckIntegration | null = null;
+    const modificationType = object.modificationType ?? (this.#draft.checkIntegration ? "extraDie" : "none");
+    if (modificationType === "extraDie") {
+      const die = Number(object.modificationDie);
+      if (!NORMAL_DIE_STEPS.includes(die as NormalDieStep)) return null;
+      const applicabilityType = object.applicabilityType;
+      if (applicabilityType === "any") {
+        checkIntegration = { modification: { type: "extraDie", applicability: { type: "any" }, die: die as NormalDieStep } };
+      } else if (applicabilityType === "attribute" && AGENT_ATTRIBUTE_KEYS.includes(object.applicabilityAttribute as AttributeKey)) {
+        checkIntegration = { modification: { type: "extraDie", applicability: { type: "attribute", attribute: object.applicabilityAttribute as AttributeKey }, die: die as NormalDieStep } };
+      } else if (applicabilityType === "skill" && isSkillKey(object.applicabilitySkill) && object.applicabilitySkill !== "aptitude") {
+        checkIntegration = { modification: { type: "extraDie", applicability: { type: "skill", skill: object.applicabilitySkill }, die: die as NormalDieStep } };
+      } else return null;
+    } else if (modificationType !== "none") return null;
+    return { ...this.#draft, name, description, cost, minimumLevel, checkIntegration };
   }
 
   #captureDraft(): boolean {
@@ -102,6 +128,8 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     const uses = readAbilityUses((this.#ability.system as unknown as { readonly uses?: unknown }).uses);
     const index = uses?.findIndex(({ id }) => id === this.#draft.id) ?? -1;
     const hasResource = readAbilityResource((this.#ability.system as unknown as { readonly resource?: unknown }).resource) !== null;
+    const modification = this.#draft.checkIntegration?.modification;
+    const applicability = modification?.applicability ?? { type: "any" as const };
     return {
       abilityUuid: this.#ability.uuid,
       draft: this.#draft,
@@ -117,7 +145,44 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
       editable: canEditAbility(this.#ability),
       canMoveUp: index > 0,
       canMoveDown: !!uses && index >= 0 && index < uses.length - 1,
+      modificationEnabled: modification?.type === "extraDie",
+      applicabilityType: applicability.type,
+      applicabilityIsAny: applicability.type === "any",
+      applicabilityIsAttribute: applicability.type === "attribute",
+      applicabilityIsSkill: applicability.type === "skill",
+      attributes: AGENT_ATTRIBUTE_KEYS.map((value) => ({
+        value,
+        selected: applicability.type === "attribute" && applicability.attribute === value,
+        labelKey: `ORDEMPARANORMAL2.AgentSheet.Attributes.${value === "physical" ? "Physical" : value === "mind" ? "Mind" : "Emotion"}`,
+      })),
+      skills: SKILL_DEFINITIONS.filter((definition) => !("specializations" in definition)).map((definition) => ({
+        value: definition.key,
+        label: definition.label,
+        selected: applicability.type === "skill" && applicability.skill === definition.key,
+      })),
+      dice: NORMAL_DIE_STEPS.map((value) => ({ value, selected: modification?.die === value })),
     };
+  }
+
+  protected override _attachPartListeners(partId: string, htmlElement: HTMLElement, options: HandlebarsRenderOptions): void {
+    super._attachPartListeners(partId, htmlElement, options);
+    const modification = htmlElement.querySelector<HTMLSelectElement>('[name="modificationType"]');
+    const applicability = htmlElement.querySelector<HTMLSelectElement>('[name="applicabilityType"]');
+    const integration = htmlElement.querySelector<HTMLFieldSetElement>("[data-check-integration]");
+    const attribute = htmlElement.querySelector<HTMLElement>("[data-applicability-attribute]");
+    const skill = htmlElement.querySelector<HTMLElement>("[data-applicability-skill]");
+    if (!modification || !applicability || !integration || !attribute || !skill) return;
+    const update = (): void => {
+      integration.hidden = modification.value !== "extraDie";
+      attribute.hidden = applicability.value !== "attribute";
+      skill.hidden = applicability.value !== "skill";
+      for (const field of integration.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select")) field.disabled = integration.hidden || !canEditAbility(this.#ability);
+      for (const field of attribute.querySelectorAll<HTMLSelectElement>("select")) field.disabled = attribute.hidden || integration.hidden || !canEditAbility(this.#ability);
+      for (const field of skill.querySelectorAll<HTMLSelectElement>("select")) field.disabled = skill.hidden || integration.hidden || !canEditAbility(this.#ability);
+    };
+    modification.addEventListener("change", update);
+    applicability.addEventListener("change", update);
+    update();
   }
 
   static async #onSubmit(this: AbilityUseEditor, event: Event, _form: HTMLFormElement, formData: FormDataExtended): Promise<void> {

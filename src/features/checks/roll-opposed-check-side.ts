@@ -33,7 +33,7 @@ export async function rollOpposedCheckSide(
   await dispatchOpposedCheckResult({
     messageId,
     side,
-    result: createCheckSnapshot(resolved.execution.result),
+    result: createCheckSnapshot(resolved.execution.result, undefined, resolved.appliedAbilityUses),
   });
   return "submitted";
 }

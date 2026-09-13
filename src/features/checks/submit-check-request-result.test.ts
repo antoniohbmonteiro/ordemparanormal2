@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CheckRequestStateV1 } from "../../application/checks/check-request-state";
-import type { CheckSnapshotV3 } from "../../application/checks/check-snapshot";
+import type { CheckSnapshotV4 } from "../../application/checks/check-snapshot";
 
 const mocks = vi.hoisted(() => ({
   canRoll: vi.fn(),
@@ -16,14 +16,15 @@ vi.mock("../../adapters/foundry/chat/render-check-card-content", () => ({ render
 
 import { parseSubmitCheckRequestResultData, submitCheckRequestResult } from "./submit-check-request-result";
 
-const result: CheckSnapshotV3 = {
-  schemaVersion: 3,
+const result: CheckSnapshotV4 = {
+  schemaVersion: 4,
   check: { kind: "skill", key: "fighting", name: "Luta" },
   components: [
     { kind: "attribute", key: "mind", label: "Mente", die: 8, result: 5 },
     { kind: "skill", key: "fighting", label: "Luta", die: 6, result: 4 },
   ],
   extraDice: [],
+  appliedAbilityUses: [],
   total: 9,
   difficulty: 9,
   outcome: "success",
@@ -45,7 +46,7 @@ describe("submit Check Request result", () => {
   const sender = { id: "player", isGM: false } as foundry.documents.User;
   const canonicalSender = { id: "player", isGM: false } as foundry.documents.User;
   let requestState: CheckRequestStateV1;
-  let check: CheckSnapshotV3 | undefined;
+  let check: CheckSnapshotV4 | undefined;
   let update: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -54,7 +55,7 @@ describe("submit Check Request result", () => {
     check = undefined;
     update = vi.fn(async (changes: Record<string, unknown>) => {
       requestState = (changes["flags.ordemparanormal2.checkRequest"] ?? requestState) as CheckRequestStateV1;
-      check = (changes["flags.ordemparanormal2.check"] ?? check) as CheckSnapshotV3;
+      check = (changes["flags.ordemparanormal2.check"] ?? check) as CheckSnapshotV4;
     });
     const message = {
       getFlag: (_scope: string, key: string) => key === "checkRequest" ? requestState : check,
@@ -73,6 +74,11 @@ describe("submit Check Request result", () => {
 
   it("rejects forged identity fields", () => {
     expect(parseSubmitCheckRequestResultData({ messageId: "m", result, userId: "forged" })).toBeNull();
+  });
+
+  it("requires V4 for a new submission", () => {
+    const { appliedAbilityUses: _discarded, ...v3 } = { ...result, schemaVersion: 3 as const };
+    expect(parseSubmitCheckRequestResultData({ messageId: "m", result: v3 })).toBeNull();
   });
 
   it("updates content and both lifecycle flags in the same message", async () => {

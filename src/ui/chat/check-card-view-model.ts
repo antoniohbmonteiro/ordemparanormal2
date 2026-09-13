@@ -2,6 +2,7 @@ import type {
   CheckSnapshot,
   CheckSnapshotV2,
   CheckSnapshotV3,
+  CheckSnapshotV4,
 } from "../../application/checks/check-snapshot";
 import { SYSTEM_ID } from "../../config/system-config";
 import {
@@ -51,19 +52,19 @@ export interface CheckCardViewModel {
 
 function hasDifficultyResolution(
   snapshot: CheckSnapshot,
-): snapshot is (CheckSnapshotV2 | CheckSnapshotV3) & {
+): snapshot is (CheckSnapshotV2 | CheckSnapshotV3 | CheckSnapshotV4) & {
   readonly difficulty: number;
   readonly outcome: CheckOutcome;
 } {
   return (
-    (snapshot.schemaVersion === 2 || snapshot.schemaVersion === 3) &&
+    (snapshot.schemaVersion === 2 || snapshot.schemaVersion === 3 || snapshot.schemaVersion === 4) &&
     typeof snapshot.difficulty === "number" &&
     (snapshot.outcome === "success" || snapshot.outcome === "failure")
   );
 }
 
 function getExtraDice(snapshot: CheckSnapshot) {
-  return snapshot.schemaVersion === 3 ? snapshot.extraDice : [];
+  return snapshot.schemaVersion === 3 || snapshot.schemaVersion === 4 ? snapshot.extraDice : [];
 }
 
 function getComponentIcon(component: CheckSnapshot["components"][number]): {

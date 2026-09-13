@@ -92,7 +92,7 @@ describe("publishAbilityMessage", () => {
       status: "success",
       use: {
         id: "use", name: "Adicionar d4", description: "Efeito da forma",
-        cost: { source: "resource", amount: 1 }, minimumLevel: 2,
+        cost: { source: "resource", amount: 1 }, minimumLevel: 2, checkIntegration: null,
       },
       source: "resource",
       amount: 1,
@@ -118,7 +118,7 @@ describe("publishAbilityMessage", () => {
       status: "success",
       use: {
         id: "extra-action", name: "Ação extra", description: "Realize uma ação extra.",
-        cost: { source: "health", amount: 5 }, minimumLevel: null,
+        cost: { source: "health", amount: 5 }, minimumLevel: null, checkIntegration: null,
       },
       source: "health",
       amount: 5,

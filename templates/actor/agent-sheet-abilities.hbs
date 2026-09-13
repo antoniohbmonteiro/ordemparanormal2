@@ -6,7 +6,7 @@
         <img src="{{img}}" alt="" />
         <span class="op2-ability-card__body">
           <span class="op2-ability-card__name">{{name}}</span>
-          <span class="op2-ability-card__cost">{{#if cost.isNone}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost"}}{{/if}}{{#if cost.isDetermination}}{{cost.amount}} {{localize "ORDEMPARANORMAL2.AgentSheet.Resources.Determination"}}{{/if}}{{#if cost.isResource}}{{cost.amount}} {{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource"}}{{/if}}{{#if cost.isInvalid}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.InvalidCost"}}{{/if}}</span>
+          <span class="op2-ability-card__cost">{{#if useSummary.isEmpty}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.NoUses"}}{{/if}}{{#if useSummary.isSingleNone}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost"}}{{/if}}{{#if useSummary.isSingleDetermination}}{{useSummary.amount}} {{localize "ORDEMPARANORMAL2.AgentSheet.Resources.Determination"}}{{/if}}{{#if useSummary.isSingleResource}}{{useSummary.amount}} {{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource"}}{{/if}}{{#if useSummary.isMultiple}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.UseCount" count=useSummary.count}}{{/if}}{{#if useSummary.isInvalid}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.InvalidUses"}}{{/if}}</span>
         </span>
       </div>
       {{#if resource}}

@@ -13,7 +13,7 @@ export const ACTIVE_NARRATIVE_SCENE_SETTING_KEY =
 export const DATA_MIGRATION_VERSION_SETTING_KEY =
   "dataMigrationVersion" as const;
 
-export const CURRENT_DATA_MIGRATION_VERSION = 1 as const;
+export const CURRENT_DATA_MIGRATION_VERSION = 2 as const;
 
 export const LEGACY_OCCUPATION_FLAG = "legacyOccupation" as const;
 

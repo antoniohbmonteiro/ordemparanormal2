@@ -7,12 +7,16 @@ describe("ability card view model", () => {
     const model = buildAbilityCardViewModel({
       name: "Primeiro Socorro",
       img: "icons/svg/aura.svg",
+      subtitle: "Forma",
       description: "<p>Recupera <strong>PV</strong>.</p>",
     });
 
     expect(model).toEqual({
       name: "Primeiro Socorro",
       img: "icons/svg/aura.svg",
+      subtitle: "Forma",
+      hasCost: false,
+      costLabel: "",
       hasDescription: true,
       description: "<p>Recupera <strong>PV</strong>.</p>",
     });
@@ -22,6 +26,7 @@ describe("ability card view model", () => {
     const model = buildAbilityCardViewModel({
       name: "Golpe",
       img: "",
+      subtitle: "Forma",
       description: "   \n  ",
     });
 

@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added ordered, rich-text Ability use forms with stable IDs, optional minimum Agent levels, independent costs, and an ApplicationV2 editor.
+- Added the 0/1/N Ability-use flow on the Agent Sheet, including a level-aware selection dialog and executed-use chat cards.
+- Added world-data migration 2 to replace released root Ability costs with `uses[]` without a permanent compatibility model.
+
+### Changed
+
+- Ability use edits now re-read and patch the latest persisted collection through a per-Ability queue, preserving disjoint changes from simultaneous local editors.
+- Ímpeto now owns its `0/3` resource and four explicit use forms, available at levels `2/6/2/6`; increasing its maximum to 5 remains manual.
+
 ## [0.2.1] - 2026-09-11
 
 ### Added

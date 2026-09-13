@@ -268,21 +268,26 @@ Do not assume percentage storage merely because the previous system used percent
 
 ## Ability Items and resources
 
-Abilities are embedded `ability` Items with plain-text description, structured cost, and at most one optional owned resource:
+Abilities are `ability` Items with a rich-text general description, an ordered collection of use forms, and at most one optional owned resource:
 
 ```text
 description
-cost
-├── source                 none | determination | resource
-└── amount                 non-negative integer
 resource                   object or null
 ├── value                  non-negative integer
 └── max                    non-negative integer
+uses[]
+├── id                     non-empty unique string
+├── name                   non-empty string
+├── description            sanitized HTML
+├── cost
+│   ├── source             none | determination | resource
+│   └── amount             non-negative integer
+└── minimumLevel           null or integer 1..10
 ```
 
-`value > max` and zero-cost Abilities are valid. A resource cost always consumes the optional resource on the same Ability. Removing a resource used by the cost resets the complete cost to `none / 0`.
+`value > max`, empty use collections, and zero-cost forms are valid. A resource cost always consumes the optional resource on the same Ability. Removing a referenced resource resets every resource cost to `none / 0` while preserving IDs, content, levels, and ordering.
 
-Using an Ability has only one current effect: consume its configured cost. A free Ability performs no update, PD updates `Agent.system.resources.determination.value`, and a resource cost updates `Ability.system.resource.value`. Insufficient balances never consume partially. Rolls, chat messages, effects, recovery, and broader acquisition automation remain deferred; the only current acquisition automation is an explicit Profile UUID grant.
+Using an Ability has only one current effect: consume the selected form's configured cost. A free form performs no update, PD updates `Agent.system.resources.determination.value`, and a resource cost updates `Ability.system.resource.value`. Minimum level controls availability and is always revalidated at the use-case boundary. Insufficient balances never consume partially. Described effects, rolls, recovery, and broader acquisition automation remain deferred; the only current acquisition automation is an explicit Profile UUID grant.
 
 The Agent Sheet does not aggregate Ability resources or move them into `Agent.system`. The temporary Ability-card summary shows only `value/max`; full resource editing remains on the Ability sheet.
 
@@ -340,6 +345,8 @@ The `0.0.7` transition intentionally removes the development-only `system.profil
 The `0.0.8` transition relies on the `abilityGrants: []` field default for existing Profiles. Existing Abilities are never inferred, marked, or adopted by name.
 
 The Occupation transition is versioned independently in a hidden world setting whose default is `0`. Migration 1 creates a local embedded Occupation from each non-empty legacy string before clearing that string. Conflicting pre-existing data is preserved and never resolved by name.
+
+Migration 2 replaces the released Ability root `cost` with `uses[]` in world and embedded Ability Items. A meaningful valid legacy cost becomes one stable `legacy-use`; free, inconsistent, or non-positive legacy costs become an empty collection. Existing `uses` are authoritative, no Ability is inferred by name, and imported legacy sources use the same DataModel transformation.
 
 ### Investigation presentation
 

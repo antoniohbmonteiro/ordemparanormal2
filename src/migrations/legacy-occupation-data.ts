@@ -1,12 +1,10 @@
-import {
-  CURRENT_DATA_MIGRATION_VERSION,
-  LEGACY_OCCUPATION_FLAG,
-  SYSTEM_ID,
-} from "../config/system-config";
+import { LEGACY_OCCUPATION_FLAG, SYSTEM_ID } from "../config/system-config";
+
+const OCCUPATION_MIGRATION_VERSION = 1 as const;
 
 export interface LegacyOccupationData {
   readonly value: string;
-  readonly migrationVersion: typeof CURRENT_DATA_MIGRATION_VERSION;
+  readonly migrationVersion: typeof OCCUPATION_MIGRATION_VERSION;
 }
 
 export const LEGACY_OCCUPATION_FLAG_PATH =
@@ -15,7 +13,7 @@ export const LEGACY_OCCUPATION_FLAG_PATH =
 export function createLegacyOccupationData(
   value: string,
 ): LegacyOccupationData {
-  return { value, migrationVersion: CURRENT_DATA_MIGRATION_VERSION };
+  return { value, migrationVersion: OCCUPATION_MIGRATION_VERSION };
 }
 
 export function readLegacyOccupationData(
@@ -24,7 +22,7 @@ export function readLegacyOccupationData(
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<LegacyOccupationData>;
   return typeof candidate.value === "string" &&
-    candidate.migrationVersion === CURRENT_DATA_MIGRATION_VERSION
+    candidate.migrationVersion === OCCUPATION_MIGRATION_VERSION
     ? { value: candidate.value, migrationVersion: candidate.migrationVersion }
     : null;
 }

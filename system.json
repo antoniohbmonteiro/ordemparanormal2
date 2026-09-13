@@ -18,7 +18,9 @@
     "Item": {
       "profile": {},
       "occupation": {},
-      "ability": {},
+      "ability": {
+        "htmlFields": ["description", "uses.description"]
+      },
       "pointOfInterest": {
         "htmlFields": ["publicDescription", "gmContext"]
       },
@@ -145,6 +147,7 @@
     "styles/profile-item-sheet.css",
     "styles/occupation-item-sheet.css",
     "styles/ability-item-sheet.css",
+    "styles/ability-use-dialog.css",
     "styles/point-of-interest-item-sheet.css",
     "styles/poi-scene-controls.css",
     "styles/poi-region-config.css",

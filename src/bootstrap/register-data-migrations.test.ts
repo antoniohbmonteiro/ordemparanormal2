@@ -7,12 +7,13 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 
-function stubGame(version: number, active = true, actors: unknown[] = []) {
+function stubGame(version: number, active = true, actors: unknown[] = [], items: unknown[] = []) {
   const get = vi.fn(() => version);
   const set = vi.fn(async () => undefined);
   vi.stubGlobal("game", {
     user: { isActiveGM: active },
     actors,
+    items,
     settings: { get, set },
   });
   return { get, set };
@@ -36,13 +37,13 @@ describe("data migration runner", () => {
     );
   });
 
-  it("runs 0 -> migration 1 -> persists 1", async () => {
+  it("runs pending migrations and persists version 2", async () => {
     const settings = stubGame(0);
     await runPendingDataMigrations();
     expect(settings.set).toHaveBeenCalledWith(
       "ordemparanormal2",
       "dataMigrationVersion",
-      1,
+      2,
     );
   });
 
@@ -51,11 +52,11 @@ describe("data migration runner", () => {
     await runPendingDataMigrations();
     expect(inactive.get).not.toHaveBeenCalled();
 
-    const current = stubGame(1);
+    const current = stubGame(2);
     await runPendingDataMigrations();
     expect(current.set).not.toHaveBeenCalled();
 
-    const future = stubGame(2);
+    const future = stubGame(3);
     await runPendingDataMigrations();
     expect(future.set).not.toHaveBeenCalled();
   });
@@ -70,6 +71,17 @@ describe("data migration runner", () => {
     };
     const settings = stubGame(0, true, [actor]);
     await expect(runPendingDataMigrations()).rejects.toThrow("failed");
+    expect(settings.set).not.toHaveBeenCalled();
+  });
+
+  it("does not advance the setting when migration 2 fails", async () => {
+    const ability = {
+      type: "ability",
+      toObject: () => ({ system: { cost: { source: "none", amount: 0 } } }),
+      update: vi.fn().mockRejectedValue(new Error("ability migration failed")),
+    };
+    const settings = stubGame(1, true, [], [ability]);
+    await expect(runPendingDataMigrations()).rejects.toThrow("ability migration failed");
     expect(settings.set).not.toHaveBeenCalled();
   });
 });

@@ -70,7 +70,7 @@ describe("Agent Sheet Ability card template", () => {
   });
 
   it("does not render an explicit Use control or reserve description height", () => {
-    expect(template).not.toContain("AgentSheet.Abilities.Use");
+    expect(template).not.toContain("AgentSheet.Abilities.Use\"");
     expect(template).not.toContain("op2-ability-card__description");
     expect(template).not.toContain("editAbility");
   });

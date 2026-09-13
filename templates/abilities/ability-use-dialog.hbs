@@ -1,0 +1,17 @@
+<section class="op2-ability-use-dialog__body">
+  <header class="op2-ability-use-dialog__header">
+    <h3>{{abilityName}}</h3>
+    {{#if hasResource}}<span>{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource"}}: {{resource.value}} / {{resource.max}}</span>{{/if}}
+  </header>
+  <div class="op2-ability-use-dialog__uses">
+    {{#each uses}}
+      <button class="op2-ability-use-dialog__use{{#if locked}} is-locked{{/if}}" type="button" data-use-id="{{id}}"{{#if locked}} disabled{{/if}}>
+        <span class="op2-ability-use-dialog__use-content">
+          <span class="op2-ability-use-dialog__use-header"><strong>{{name}}</strong><span>{{costLabel}}</span></span>
+          {{#if hasDescription}}<span class="op2-ability-use-dialog__description">{{{description}}}</span>{{/if}}
+          {{#if locked}}<span class="op2-ability-use-dialog__requirement">{{requirement}}</span>{{/if}}
+        </span>
+      </button>
+    {{/each}}
+  </div>
+</section>

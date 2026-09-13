@@ -36,7 +36,7 @@ beforeAll(async () => {
 describe("Ability chat card presentation", () => {
   it("uses the shared chat card header instead of its own icon+name header", () => {
     expect(template).toContain(
-      '{{> chatCardHeader title=name subtitle=(localize "ORDEMPARANORMAL2.AbilityCard.Subtitle")}}',
+      '{{> chatCardHeader title=name subtitle=subtitle}}',
     );
     expect(template).not.toContain("op2-ability-chat-card__header");
     expect(template).not.toContain("op2-ability-chat-card__icon");

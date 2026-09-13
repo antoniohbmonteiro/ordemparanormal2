@@ -53,28 +53,32 @@ describe("Ability resource", () => {
     expect(readAbilityResource(value)).toBeNull();
   });
 
-  it("creates an empty resource and resets a referencing cost on removal", () => {
+  it("creates an empty resource and resets every referencing use on removal", () => {
     expect(EMPTY_ABILITY_RESOURCE).toEqual({ value: 0, max: 0 });
+    const use = {
+      id: "use", name: "Uso", description: "", minimumLevel: null,
+      cost: { source: "resource", amount: 2 } as const,
+    };
     expect(
-      prepareAbilityResourceRemoval(
-        { source: "resource", amount: 2 },
-        { value: 0, max: 0 },
-      ),
+      prepareAbilityResourceRemoval([use], { value: 0, max: 0 }),
     ).toEqual({
       confirmationRequired: true,
-      cost: { source: "none", amount: 0 },
+      uses: [{ ...use, cost: { source: "none", amount: 0 } }],
     });
   });
 
-  it("preserves an unrelated cost and confirms only when state would be lost", () => {
-    const cost = { source: "determination", amount: 1 } as const;
-    expect(prepareAbilityResourceRemoval(cost, { value: 0, max: 0 })).toEqual({
+  it("preserves unrelated uses and confirms only when state would be lost", () => {
+    const use = {
+      id: "use", name: "Uso", description: "", minimumLevel: null,
+      cost: { source: "determination", amount: 1 } as const,
+    };
+    expect(prepareAbilityResourceRemoval([use], { value: 0, max: 0 })).toEqual({
       confirmationRequired: false,
-      cost,
+      uses: [use],
     });
-    expect(prepareAbilityResourceRemoval(cost, { value: 1, max: 3 })).toEqual({
+    expect(prepareAbilityResourceRemoval([use], { value: 1, max: 3 })).toEqual({
       confirmationRequired: true,
-      cost,
+      uses: [use],
     });
   });
 });

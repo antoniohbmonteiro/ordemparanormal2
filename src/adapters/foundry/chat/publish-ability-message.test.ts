@@ -19,6 +19,9 @@ function stubFoundry(renderTemplate = vi.fn().mockResolvedValue("<article>card</
       ux: { TextEditor: { implementation: { enrichHTML } } },
     },
   });
+  vi.stubGlobal("game", {
+    i18n: { localize: vi.fn((key: string) => key.endsWith("Subtitle") ? "HABILIDADE" : key) },
+  });
   vi.stubGlobal("ChatMessage", { getSpeaker, create });
   return { renderTemplate, create, getSpeaker, loadTemplates };
 }
@@ -56,8 +59,11 @@ describe("publishAbilityMessage", () => {
       {
         name: "Primeiro Socorro",
         img: "icons/svg/aura.svg",
+        subtitle: "HABILIDADE",
         hasDescription: true,
         description: "<enriched>Recupera PV.</enriched>",
+        hasCost: false,
+        costLabel: "",
       },
     );
     expect(getSpeaker).toHaveBeenCalledWith({ actor });
@@ -78,6 +84,28 @@ describe("publishAbilityMessage", () => {
     await publishAbilityMessage(actor, abilityWith({ type: "profile" }));
 
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("publishes the enriched executed form with its name and cost", async () => {
+    const { renderTemplate } = stubFoundry();
+    await publishAbilityMessage(actor, abilityWith(), {
+      status: "success",
+      use: {
+        id: "use", name: "Adicionar d4", description: "Efeito da forma",
+        cost: { source: "resource", amount: 1 }, minimumLevel: 2,
+      },
+      source: "resource",
+      amount: 1,
+      remaining: 2,
+    });
+    expect(renderTemplate).toHaveBeenCalledWith(
+      "systems/ordemparanormal2/templates/chat/ability-card.hbs",
+      expect.objectContaining({
+        subtitle: "Adicionar d4",
+        description: "<enriched>Efeito da forma</enriched>",
+        hasCost: true,
+      }),
+    );
   });
 
   it("snapshots the effective Agent accent color into the card presentation flag", async () => {
@@ -112,6 +140,9 @@ describe("publishAbilityMessage", () => {
         handlebars: { renderTemplate, loadTemplates },
         ux: { TextEditor: { implementation: { enrichHTML } } },
       },
+    });
+    vi.stubGlobal("game", {
+      i18n: { localize: vi.fn((key: string) => key.endsWith("Subtitle") ? "HABILIDADE" : key) },
     });
     vi.stubGlobal("ChatMessage", {
       getSpeaker: vi.fn(() => ({})),

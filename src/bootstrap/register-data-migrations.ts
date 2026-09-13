@@ -4,9 +4,11 @@ import {
   SYSTEM_ID,
 } from "../config/system-config";
 import { migrateAgentOccupations } from "../migrations/migrate-agent-occupation";
+import { migrateAbilityUses } from "../migrations/migrate-ability-uses";
 
 interface MigrationGame {
   readonly actors: Iterable<foundry.documents.Actor>;
+  readonly items: Iterable<foundry.documents.Item>;
 }
 
 interface DataMigration {
@@ -20,6 +22,10 @@ function migrations(): readonly DataMigration[] {
     {
       version: 1,
       run: () => migrateAgentOccupations(migrationGame.actors),
+    },
+    {
+      version: 2,
+      run: () => migrateAbilityUses(migrationGame.items, migrationGame.actors),
     },
   ];
 }

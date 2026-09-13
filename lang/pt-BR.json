@@ -236,6 +236,9 @@
       },
       "Abilities": {
         "NoCost": "Sem custo",
+        "NoUses": "Sem formas de uso",
+        "UseCount": "{count} formas de uso",
+        "InvalidUses": "Formas de uso inválidas",
         "Resource": "Recurso",
         "InvalidCost": "Custo inválido",
         "DecreaseResource": "Reduzir recurso da Habilidade",
@@ -250,6 +253,7 @@
       "AbilityUse": {
         "Success": "Habilidade usada.",
         "Forbidden": "Você não pode usar Habilidades deste Agente.",
+        "Locked": "Esta forma de uso requer nível {level}.",
         "InsufficientDetermination": "PD insuficiente para usar esta Habilidade.",
         "InsufficientResource": "Recurso insuficiente para usar esta Habilidade.",
         "MissingResource": "O recurso configurado para esta Habilidade não existe.",
@@ -329,10 +333,18 @@
     "AbilitySheet": {
       "Cost": "Custo",
       "Resource": "Recurso",
+      "Uses": "FORMAS DE USO",
+      "EmptyUses": "Esta Habilidade ainda não possui formas de uso.",
+      "Level": "Nível {level}",
       "EmptyResource": "Esta Habilidade não possui recurso próprio.",
       "RemoveResourceTitle": "Remover recurso",
       "ConfirmRemoveResource": "Este recurso contém dados. Deseja removê-lo e descartar seu estado?",
       "ConfirmRemoveCostResource": "Este recurso é usado pelo custo da Habilidade. Removê-lo também redefinirá o custo para Sem custo. Deseja continuar?",
+      "Tabs": {
+        "Label": "Seções da Habilidade",
+        "General": "Geral",
+        "Uses": "Formas de uso"
+      },
       "CostSources": {
         "none": "Sem custo",
         "determination": "PD",
@@ -349,7 +361,8 @@
       },
       "Actions": {
         "AddResource": "Adicionar recurso",
-        "RemoveResource": "Remover recurso"
+        "RemoveResource": "Remover recurso",
+        "CreateUse": "Criar"
       },
       "Errors": {
         "InvalidResource": "Os valores do recurso devem ser números inteiros não negativos.",
@@ -519,6 +532,19 @@
         "RemoveExtraDie": "Remover dado situacional",
         "Roll": "Rolar"
       }
+    },
+    "AbilityUseEditor": {
+      "Title": { "Create": "Criar forma de uso", "Edit": "Editar forma de uso" },
+      "Fields": { "Name": "Nome", "Description": "Descrição", "MinimumLevel": "Nível mínimo" },
+      "Actions": { "Save": "Salvar", "Cancel": "Cancelar", "Remove": "Remover", "MoveUp": "Mover para cima", "MoveDown": "Mover para baixo" },
+      "ResourceHint": "Adicione primeiro um recurso à Habilidade para usar essa fonte de custo.",
+      "RemoveTitle": "Remover forma de uso",
+      "ConfirmRemove": "Deseja remover esta forma de uso?",
+      "Errors": { "Invalid": "Preencha os campos da forma de uso com valores válidos.", "Stale": "Esta forma de uso foi alterada ou removida em outro editor.", "SaveFailed": "Não foi possível salvar a forma de uso." }
+    },
+    "AbilityUseDialog": {
+      "RequiresLevel": "Requer nível {level}",
+      "Actions": { "Cancel": "Cancelar" }
     },
     "CheckRequestDialog": {
       "Title": "SOLICITAR PERÍCIA",

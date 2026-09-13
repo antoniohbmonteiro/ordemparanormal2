@@ -1,5 +1,7 @@
 <article class="op2-ability-chat-card">
-  {{> chatCardHeader title=name subtitle=(localize "ORDEMPARANORMAL2.AbilityCard.Subtitle")}}
+  {{> chatCardHeader title=name subtitle=subtitle}}
+
+  {{#if hasCost}}<p class="op2-ability-chat-card__cost">{{costLabel}}</p>{{/if}}
 
   {{#if hasDescription}}
     <details class="op2-ability-chat-card__description">

@@ -49,6 +49,9 @@ import {
   useAbility,
   type AbilityUseResult,
 } from "../../features/abilities/use-ability";
+import { readAbilityResource } from "../../core/abilities/ability-resource";
+import { readAbilityUses } from "../../core/abilities/ability-use";
+import { openAbilityUseDialog } from "../abilities/ability-use-dialog";
 import {
   buildAgentSheetViewModel,
   type AgentSheetSystemData,
@@ -549,19 +552,61 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
 
       try {
-        const result = await useAbility(actor, ability);
-        AgentSheet.#notifyAbilityResult(result);
-        if (result.status === "success") {
-          try {
-            await publishAbilityMessage(actor, ability);
-          } catch (error) {
-            console.error(
-              "ordemparanormal2 | Failed to post Ability chat card",
-              error,
-            );
-          }
-          await this.render({ force: true });
+        const abilitySystem = ability.system as unknown as {
+          readonly uses?: unknown;
+          readonly resource?: unknown;
+        };
+        const uses = readAbilityUses(abilitySystem.uses);
+        if (!uses) {
+          AgentSheet.#notifyAbilityResult({ status: "invalid", reason: "malformed-uses" });
+          return;
         }
+        if (uses.length === 0) {
+          await publishAbilityMessage(actor, ability);
+          return;
+        }
+
+        const executeUse = async (useId: string): Promise<boolean> => {
+          try {
+            const result = await useAbility(actor, ability, useId);
+            AgentSheet.#notifyAbilityResult(result);
+            if (result.status !== "success") return false;
+            try {
+              await publishAbilityMessage(actor, ability, result);
+            } catch (error) {
+              console.error(
+                "ordemparanormal2 | Failed to post Ability chat card",
+                error,
+              );
+            }
+            await this.render({ force: true });
+            return true;
+          } catch (error) {
+            console.error("ordemparanormal2 | Failed to use Ability", error);
+            ui.notifications.error(
+              game.i18n.localize("ORDEMPARANORMAL2.AgentSheet.AbilityUse.Failed"),
+            );
+            return false;
+          }
+        };
+
+        if (uses.length > 1) {
+          const rawLevel = (actor.system as unknown as { readonly level?: unknown }).level;
+          if (!Number.isInteger(rawLevel) || Number(rawLevel) < 1 || Number(rawLevel) > 10) {
+            AgentSheet.#notifyAbilityResult({ status: "invalid", reason: "malformed-level" });
+            return;
+          }
+          await openAbilityUseDialog(
+            ability,
+            uses,
+            Number(rawLevel),
+            readAbilityResource(abilitySystem.resource),
+            executeUse,
+          );
+          return;
+        }
+
+        await executeUse(uses[0]!.id);
       } catch (error) {
         console.error("ordemparanormal2 | Failed to use Ability", error);
         ui.notifications.error(
@@ -633,6 +678,14 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (result.status === "forbidden") {
       ui.notifications.warn(
         game.i18n.localize("ORDEMPARANORMAL2.AgentSheet.AbilityUse.Forbidden"),
+      );
+      return;
+    }
+    if (result.status === "locked") {
+      ui.notifications.warn(
+        game.i18n.format("ORDEMPARANORMAL2.AgentSheet.AbilityUse.Locked", {
+          level: result.requiredLevel,
+        }),
       );
       return;
     }

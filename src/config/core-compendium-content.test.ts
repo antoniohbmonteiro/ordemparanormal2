@@ -113,13 +113,13 @@ describe("core compendium sources", () => {
         img: `systems/ordemparanormal2/assets/icons/abilities/${slug}.svg`,
         folder,
         system: {
-          cost: { source: "none", amount: 0 },
-          resource: null,
+          uses: expect.any(Array),
         },
         effects: [],
       });
 
       const description = ability.system.description;
+      expect(ability.system).not.toHaveProperty("cost");
       expect(description).toEqual(expect.any(String));
       expect(description).toMatch(/^<p>.+<\/p>$/);
     }
@@ -133,12 +133,14 @@ describe("core compendium sources", () => {
     ).toEqual(["Foco Mental", "Ímpeto"]);
 
     const impetus = abilities.find(({ name }) => name === "Ímpeto");
-    expect(impetus?.system.description).toContain(
-      "apagar 2 espaços para adicionar +d10",
-    );
-    expect(impetus?.system.description).not.toContain(
-      "apagar 3 espaços para adicionar +d10",
-    );
+    expect(impetus?.system.resource).toEqual({ value: 0, max: 3 });
+    expect(impetus?.system.uses).toEqual([
+      expect.objectContaining({ id: "impetus-add-d4", name: "Adicionar d4", cost: { source: "resource", amount: 1 }, minimumLevel: 2 }),
+      expect.objectContaining({ id: "impetus-add-d10", name: "Adicionar d10", cost: { source: "resource", amount: 2 }, minimumLevel: 6 }),
+      expect.objectContaining({ id: "impetus-raise-attribute", name: "Elevar atributo", cost: { source: "resource", amount: 3 }, minimumLevel: 2 }),
+      expect.objectContaining({ id: "impetus-extra-action", name: "Ação extra", cost: { source: "resource", amount: 5 }, minimumLevel: 6 }),
+    ]);
+    expect(abilities.filter(({ name }) => name !== "Ímpeto").every(({ system }) => Array.isArray(system.uses) && system.uses.length === 0)).toBe(true);
   });
 
   it("defines reproducible editorial folders inside the Ability pack", async () => {

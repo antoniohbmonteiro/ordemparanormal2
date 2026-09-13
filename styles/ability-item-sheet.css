@@ -6,15 +6,35 @@
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__image { width: 72px; height: 72px; border: 1px solid var(--op2-ability-border); border-radius: 8px; object-fit: cover; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__name,
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__description,
-.ordemparanormal2.ability-item-sheet .op2-ability-sheet__cost label,
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__resource label { display: flex; min-width: 0; flex-direction: column; gap: .25rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__tabs { display:flex; border-bottom:1px solid var(--op2-ability-border); }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__tabs > button { flex:1; width:auto; margin:0; padding:.55rem; border:0; border-radius:0; text-align:center; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__body { min-height: 0; padding: 1rem; overflow-y: auto; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__body > .tab:not(.active) { display:none; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__description prose-mirror { min-height: 9rem; text-transform: none; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__description .editor-content { min-height: 8rem; padding: .5rem; }
-.ordemparanormal2.ability-item-sheet .op2-ability-sheet__cost { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; margin: 1rem 0; border: 1px solid var(--op2-ability-border); border-radius: 8px; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__resource-section { margin-top:1rem; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__toolbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--op2-ability-border); }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__toolbar h2 { margin: 0; font-size: .9rem; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__toolbar button { width: auto; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__resource { display: grid; grid-template-columns: 82px 82px 36px; align-items: end; gap: .5rem; margin-top: .5rem; padding: .65rem; border: 1px solid var(--op2-ability-border); border-radius: 8px; background: var(--op2-ability-panel); }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__remove { min-width: 0; margin: 0; padding: .4rem; }
 .ordemparanormal2.ability-item-sheet .op2-ability-sheet__empty { color: var(--color-text-subtle,#aaa); text-align: center; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__uses { display:grid; gap:.5rem; margin-top:.65rem; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__use { display:grid; width:100%; height:auto; min-height:0; box-sizing:border-box; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:.6rem; margin:0; padding:.65rem .75rem; border:1px solid var(--op2-ability-border); border-radius:8px; background:var(--op2-ability-panel); color:inherit; line-height:normal; text-align:left; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__use-name { overflow:hidden; font-weight:700; line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__use-cost { color:var(--color-text-subtle,#aaa); white-space:nowrap; }
+.ordemparanormal2.ability-item-sheet .op2-ability-sheet__use-level { padding:.15rem .4rem; border:1px solid var(--op2-ability-border); border-radius:999px; font-size:.72rem; white-space:nowrap; }
+
+.ordemparanormal2.ability-use-editor .window-content { padding:0; }
+.op2-ability-use-editor-content { overflow:hidden; }
+.op2-ability-use-editor { display:flex; height:100%; min-height:0; flex-direction:column; }
+.op2-ability-use-editor__body { display:grid; min-height:0; gap:.75rem; padding:1rem; overflow-y:auto; }
+.op2-ability-use-editor__field { display:flex; min-width:0; flex-direction:column; gap:.25rem; font-size:.72rem; font-weight:700; text-transform:uppercase; }
+.op2-ability-use-editor__description prose-mirror { min-height:10rem; text-transform:none; }
+.op2-ability-use-editor__description .editor-content { min-height:9rem; padding:.5rem; }
+.op2-ability-use-editor__cost { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; border:1px solid rgba(255,255,255,.16); border-radius:8px; }
+.op2-ability-use-editor__hint { margin:0; color:var(--color-text-subtle,#aaa); font-size:.85rem; }
+.op2-ability-use-editor__actions { display:flex; gap:.4rem; padding:.75rem 1rem; border-top:1px solid rgba(255,255,255,.16); }
+.op2-ability-use-editor__actions button { width:auto; }
+.op2-ability-use-editor__spacer { flex:1; }

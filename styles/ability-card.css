@@ -9,6 +9,7 @@
   overflow: hidden;
   color: var(--op2-check-text);
 }
+.op2-ability-chat-card__cost { margin:.5rem 0; color:var(--op2-check-muted); font-weight:700; }
 
 .op2-ability-chat-card__description {
   border-top: 1px solid var(--op2-check-divider);

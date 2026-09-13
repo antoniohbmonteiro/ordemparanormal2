@@ -1,7 +1,7 @@
 import {
   FREE_ABILITY_COST,
-  type AbilityCostData,
 } from "./ability-cost";
+import type { AbilityUseData } from "./ability-use";
 
 export interface AbilityResourceData {
   readonly value: number;
@@ -15,7 +15,7 @@ export const EMPTY_ABILITY_RESOURCE: AbilityResourceData = {
 
 export interface AbilityResourceRemoval {
   readonly confirmationRequired: boolean;
-  readonly cost: AbilityCostData;
+  readonly uses: readonly AbilityUseData[];
 }
 
 export type AbilityResourceAdjustment = -1 | 1;
@@ -32,13 +32,17 @@ export function adjustAbilityResourceValue(
 }
 
 export function prepareAbilityResourceRemoval(
-  cost: AbilityCostData,
+  uses: readonly AbilityUseData[],
   resource: AbilityResourceData,
 ): AbilityResourceRemoval {
-  const referenced = cost.source === "resource";
+  const referenced = uses.some(({ cost }) => cost.source === "resource");
   return {
     confirmationRequired: referenced || resource.value > 0 || resource.max > 0,
-    cost: referenced ? FREE_ABILITY_COST : cost,
+    uses: uses.map((use) =>
+      use.cost.source === "resource"
+        ? { ...use, cost: FREE_ABILITY_COST }
+        : use,
+    ),
   };
 }
 

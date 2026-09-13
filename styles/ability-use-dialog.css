@@ -1,0 +1,14 @@
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.25rem 0 .75rem; border-bottom:1px solid rgba(255,255,255,.16); }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__header h3 { margin:0; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__uses { display:grid; gap:.5rem; margin-top:.75rem; padding-right:.25rem; max-height:430px; overflow-y:auto; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use { display:flex; width:100%; height:auto; min-height:0; box-sizing:border-box; align-items:stretch; justify-content:flex-start; gap:.6rem; margin:0; padding:.7rem .75rem; border:1px solid rgba(255,255,255,.16); border-radius:8px; background:rgba(10,12,15,.42); color:inherit; line-height:normal; text-align:left; white-space:normal; cursor:pointer; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use:not(:disabled):hover,
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use:not(:disabled):focus-visible { border-color:rgba(255,255,255,.34); background:rgba(255,255,255,.08); }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use.is-locked { opacity:.58; cursor:not-allowed; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use-content { display:grid; min-width:0; flex:1; gap:.35rem; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use-header { display:flex; align-items:baseline; justify-content:space-between; gap:.75rem; line-height:1.25; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__use-header > span { flex:none; white-space:nowrap; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__description { display:block; font-size:.9rem; line-height:1.35; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__description > :first-child { margin-top:0; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__description > :last-child { margin-bottom:0; }
+.ordemparanormal2.op2-ability-use-dialog .op2-ability-use-dialog__requirement { color:var(--color-level-error,#ff6b6b); font-weight:700; line-height:1.25; }

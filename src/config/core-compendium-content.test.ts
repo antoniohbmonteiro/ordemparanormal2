@@ -45,6 +45,8 @@ const ABILITY_DEFINITIONS = [
   ["Prontidão", "prontidao", "abilityfldvigi01"],
   ["Técnica Medicinal", "tecnica-medicinal", "abilityfldoccp01"],
   ["Varredura Ampla", "varredura-ampla", "abilityfldoccp01"],
+  ["Foco Mental (Aprimorado)", "foco-mental", "abilityfldoccp01"],
+  ["Ímpeto (Aprimorado)", "impeto", "abilityfldexec01"],
 ] as const;
 
 const ABILITY_USE_DEFINITIONS = {
@@ -56,13 +58,19 @@ const ABILITY_USE_DEFINITIONS = {
   ],
   "Foco Mental": [
     ["mental-focus-add-d4", "Adicionar d4", "determination", 2, null],
+  ],
+  "Foco Mental (Aprimorado)": [
     ["mental-focus-add-d8", "Adicionar d8", "determination", 4, null],
   ],
   "Ímpeto": [
-    ["impetus-add-d4", "Adicionar d4", "resource", 1, 2],
-    ["impetus-add-d10", "Adicionar d10", "resource", 2, 6],
-    ["impetus-raise-attribute", "Elevar atributo", "resource", 3, 2],
-    ["impetus-extra-action", "Ação extra", "resource", 5, 6],
+    ["impetus-add-d4", "Adicionar d4", "resource", 1, null],
+    ["impetus-raise-attribute", "Elevar atributo", "resource", 3, null],
+  ],
+  "Ímpeto (Aprimorado)": [
+    ["impetus-add-d4", "Adicionar d4", "resource", 1, null],
+    ["impetus-add-d10", "Adicionar d10", "resource", 2, null],
+    ["impetus-raise-attribute", "Elevar atributo", "resource", 3, null],
+    ["impetus-extra-action", "Ação extra", "resource", 5, null],
   ],
   "Incansável": [
     ["tireless-extra-action", "Ação extra", "health", 5, null],
@@ -147,7 +155,7 @@ describe("core compendium sources", () => {
       .filter(isItemSource)
       .sort((left, right) => left._id.localeCompare(right._id));
 
-    expect(entries).toHaveLength(20);
+    expect(entries).toHaveLength(22);
     expect(abilities).toHaveLength(ABILITY_DEFINITIONS.length);
 
     for (const [index, ability] of abilities.entries()) {
@@ -178,17 +186,17 @@ describe("core compendium sources", () => {
           String(system.description).includes("<strong>Upgrade:</strong>"),
         )
         .map(({ name }) => name),
-    ).toEqual(["Foco Mental", "Ímpeto"]);
+    ).toEqual([]);
 
     expect(abilities.find(({ name }) => name === "Ímpeto")?.system.resource)
       .toEqual({ value: 0, max: 3 });
+    expect(abilities.find(({ name }) => name === "Ímpeto (Aprimorado)")?.system.resource)
+      .toEqual({ value: 0, max: 5 });
 
-    const allUseIds: string[] = [];
     for (const ability of abilities) {
       const uses = readAbilityUses(ability.system.uses);
       expect(uses, `${ability.name} has invalid uses`).not.toBeNull();
       if (!uses) continue;
-      allUseIds.push(...uses.map(({ id }) => id));
       expect(uses.every(({ description }) => /^<p>.+<\/p>$/.test(description)))
         .toBe(true);
 
@@ -208,7 +216,6 @@ describe("core compendium sources", () => {
       ])).toEqual(expected);
     }
 
-    expect(new Set(allUseIds).size).toBe(allUseIds.length);
     const integrations = Object.fromEntries(abilities.map((ability) => [
       ability.name,
       readAbilityUses(ability.system.uses)?.filter(({ checkIntegration }) => checkIntegration !== null)
@@ -216,6 +223,8 @@ describe("core compendium sources", () => {
     ]));
     expect(integrations["Foco Mental"]).toEqual([
       ["mental-focus-add-d4", { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "mind" }, die: 4 } }],
+    ]);
+    expect(integrations["Foco Mental (Aprimorado)"]).toEqual([
       ["mental-focus-add-d8", { modification: { type: "extraDie", applicability: { type: "attribute", attribute: "mind" }, die: 8 } }],
     ]);
     expect(integrations["Foco Emocional"]).toEqual([
@@ -223,9 +232,12 @@ describe("core compendium sources", () => {
     ]);
     expect(integrations["Ímpeto"]).toEqual([
       ["impetus-add-d4", { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } }],
+    ]);
+    expect(integrations["Ímpeto (Aprimorado)"]).toEqual([
+      ["impetus-add-d4", { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } }],
       ["impetus-add-d10", { modification: { type: "extraDie", applicability: { type: "any" }, die: 10 } }],
     ]);
-    expect(Object.entries(integrations).filter(([name]) => !["Foco Mental", "Foco Emocional", "Ímpeto"].includes(name)).every(([, values]) => (values as unknown[]).length === 0)).toBe(true);
+    expect(Object.entries(integrations).filter(([name]) => !["Foco Mental", "Foco Mental (Aprimorado)", "Foco Emocional", "Ímpeto", "Ímpeto (Aprimorado)"].includes(name)).every(([, values]) => (values as unknown[]).length === 0)).toBe(true);
     expect(
       abilities.filter(({ system }) => readAbilityUses(system.uses)?.length === 0)
         .map(({ name }) => name),

@@ -11,6 +11,8 @@
     "minimum": 14,
     "verified": 14
   },
+  "primaryTokenAttribute": "resources.health",
+  "secondaryTokenAttribute": "resources.determination",
   "documentTypes": {
     "Actor": {
       "agent": {}

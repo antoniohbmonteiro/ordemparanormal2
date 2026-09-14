@@ -4,7 +4,7 @@ Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ord
 
 **Contém material gerado por inteligência artificial.**
 
-![Capa de Ordem Paranormal 2](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.3.0/assets/media/cover.webp)
+![Habilidades aplicáveis antes da rolagem](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.3.0/docs/release-assets/v0.3.0/ability-check-pre-roll.png)
 
 ## Destaques
 
@@ -37,6 +37,8 @@ Uma Habilidade agora pode ter várias Formas de uso, cada uma com nome, descriç
 - um recurso próprio da Habilidade.
 
 As Formas com integração automática entram no Check apropriado pela seção Habilidades aplicáveis; as demais continuam disponíveis pelo fluxo direto de uso de Habilidade na Ficha de Agente.
+
+![Configuração de integração de Formas de uso com Checks](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.3.0/docs/release-assets/v0.3.0/ability-use-check-integration.png)
 
 ## Habilidades aprimoradas (Ato 2)
 

@@ -5,7 +5,7 @@ import { isPoiSelectionActive } from "../adapters/foundry/points-of-interest/poi
 import { listenPoiSceneContextMenu } from "../adapters/foundry/points-of-interest/poi-scene-context-menu";
 import { openPoiActionsMenu } from "../adapters/foundry/points-of-interest/poi-actions-menu";
 import { listenPoiSceneClick } from "../adapters/foundry/points-of-interest/poi-scene-click";
-import { isTokenInteractionAt } from "../adapters/foundry/points-of-interest/poi-token-blocking";
+import { isTokenInteractionAt } from "../adapters/foundry/canvas/token-interaction-blocking";
 import { openInvestigationApplication } from "../applications/points-of-interest/investigation-application";
 
 export function registerPoiCanvas(): void {

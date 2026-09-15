@@ -1,0 +1,30 @@
+<section
+  class="tab {{tabClasses}} op2-poi-region-association"
+  data-group="sheet"
+  data-tab="point-of-interest"
+>
+  {{#if poiRegion.canConfigure}}
+    <p class="op2-poi-region-association__status" role="status">
+      {{poiRegion.status}}
+    </p>
+    <div class="op2-poi-region-association__actions">
+      <button
+        type="button"
+        data-op2-action="choose-poi"
+        {{disabled poiRegion.choosing}}
+      >
+        <i class="fa-solid fa-magnifying-glass" inert></i>
+        {{localize "ORDEMPARANORMAL2.PointOfInterest.RegionConfig.Choose"}}
+      </button>
+      <button
+        type="button"
+        data-op2-action="remove-poi"
+        {{disabled poiRegion.removeDisabled}}
+      >
+        <i class="fa-solid fa-link-slash" inert></i>
+        {{localize "ORDEMPARANORMAL2.PointOfInterest.RegionConfig.Remove"}}
+      </button>
+    </div>
+    <p class="op2-poi-region-association__hint">{{poiRegion.hint}}</p>
+  {{/if}}
+</section>

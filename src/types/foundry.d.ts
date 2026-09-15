@@ -29,6 +29,93 @@ interface FoundryApplicationSheetsWithItemSheetV2 {
   readonly ItemSheetV2: typeof FoundryItemSheetV2Base;
 }
 
+// Foundry v14 exposes TileConfig, but @dfreds/foundry-types 14.366.1 omits it.
+declare abstract class FoundryTileConfigBase extends foundry.applications.api.DocumentSheetV2 {
+  static DEFAULT_OPTIONS: Record<string, unknown>;
+  static PARTS: Record<string, { readonly template: string }>;
+  static TABS: {
+    readonly sheet: {
+      readonly initial: string;
+      readonly labelPrefix?: string;
+      readonly tabs: readonly {
+        readonly id: string;
+        readonly icon?: string;
+        readonly label?: string;
+      }[];
+    };
+  };
+  readonly document: foundry.documents.TileDocument;
+  protected _prepareContext(options: unknown): Promise<Record<string, unknown>>;
+  protected _preparePartContext(
+    partId: string,
+    context: Record<string, unknown>,
+    options: unknown,
+  ): Promise<Record<string, unknown>>;
+  protected _onRender(context: object, options: unknown): Promise<void>;
+  protected _onClose(options: unknown): void;
+  protected _attachPartListeners(
+    partId: string,
+    htmlElement: HTMLElement,
+    options: unknown,
+  ): void;
+  protected _renderHTML(context: object, options: unknown): Promise<unknown>;
+  protected _replaceHTML(
+    result: unknown,
+    content: HTMLElement,
+    options: unknown,
+  ): void;
+}
+
+interface FoundryApplicationSheetsWithTileConfig {
+  readonly TileConfig: typeof FoundryTileConfigBase;
+}
+
+// Foundry v14 exposes RegionConfig, but @dfreds/foundry-types 14.366.1 omits it.
+declare abstract class FoundryRegionConfigBase extends foundry.applications.api.DocumentSheetV2 {
+  static DEFAULT_OPTIONS: Record<string, unknown>;
+  static PARTS: Record<string, { readonly template: string }>;
+  static TABS: {
+    readonly sheet: {
+      readonly initial: string;
+      readonly labelPrefix?: string;
+      readonly tabs: readonly {
+        readonly id: string;
+        readonly icon?: string;
+        readonly label?: string;
+      }[];
+    };
+  };
+  readonly document: foundry.documents.RegionDocument;
+  protected _prepareContext(options: unknown): Promise<Record<string, unknown>>;
+  protected _preparePartContext(
+    partId: string,
+    context: Record<string, unknown>,
+    options: unknown,
+  ): Promise<Record<string, unknown>>;
+  protected _onRender(context: object, options: unknown): Promise<void>;
+  protected _onClose(options: unknown): void;
+  protected _attachPartListeners(
+    partId: string,
+    htmlElement: HTMLElement,
+    options: unknown,
+  ): void;
+  protected _renderHTML(context: object, options: unknown): Promise<unknown>;
+  protected _replaceHTML(
+    result: unknown,
+    content: HTMLElement,
+    options: unknown,
+  ): void;
+}
+
+interface FoundryApplicationSheetsWithRegionConfig {
+  readonly RegionConfig: typeof FoundryRegionConfigBase;
+}
+
+// Narrow public-v14 surface missing from the installed declarations.
+interface FoundryDocumentsWithModifyBatch {
+  modifyBatch(operations: readonly unknown[]): Promise<unknown>;
+}
+
 declare const CONFIG: {
   readonly ui: Record<string, unknown>;
   readonly Actor: {

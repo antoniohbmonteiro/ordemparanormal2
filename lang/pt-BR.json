@@ -18,7 +18,51 @@
       "Occupation": "Ficha de Ocupação",
       "Ability": "Ficha de Habilidade",
       "PointOfInterest": "Ficha de Ponto de Interesse",
-      "Equipment": "Ficha de Equipamento"
+      "Equipment": "Ficha de Equipamento",
+      "Tile": "Configuração de Tile — Ordem Paranormal 2",
+      "Region": "Configuração de Região — Ordem Paranormal 2"
+    },
+    "TileInteraction": {
+      "Tab": "Interação",
+      "Fields": {
+        "Enabled": "Ativar controle interativo"
+      },
+      "Hint": "Fora da camada de Tiles, um clique alterna as portas e a visibilidade dos Tiles associados.",
+      "Walls": {
+        "Title": "Portas controladas",
+        "Hint": "Selecione ao menos uma porta ou porta secreta. O estado dessas paredes define a próxima ação.",
+        "Empty": "Nenhuma porta selecionada."
+      },
+      "Tiles": {
+        "Title": "Tiles associados",
+        "Hint": "Tiles opcionais que serão mostrados ao abrir e ocultados ao fechar.",
+        "Empty": "Nenhum Tile associado."
+      },
+      "Targets": {
+        "Door": "Porta",
+        "SecretDoor": "Porta secreta",
+        "InvalidWall": "Parede inválida",
+        "Tile": "Tile",
+        "Unavailable": "Referência indisponível"
+      },
+      "Actions": {
+        "SelectOnMap": "Selecionar no mapa",
+        "UseSelected": "Usar selecionados",
+        "RemoveWall": "Remover porta",
+        "RemoveTile": "Remover Tile"
+      },
+      "Warnings": {
+        "SceneNotDisplayed": "Exiba a Scene deste Tile antes de selecionar targets no mapa.",
+        "InvalidWallsIgnored": "{count} paredes que não são portas ou portas secretas foram ignoradas.",
+        "EmptyWallSelection": "Selecione ao menos uma porta ou porta secreta. A seleção vazia não alterou a configuração.",
+        "IgnoredReferences": "{count} referências configuradas foram ignoradas porque não estão mais disponíveis ou são inválidas.",
+        "NoValidWalls": "Este controle não possui nenhuma porta ou porta secreta válida.",
+        "InvalidConfiguration": "A configuração de interação deste Tile é inválida."
+      },
+      "Errors": {
+        "GmOnly": "Apenas GMs podem configurar esta interação.",
+        "ExecutionFailed": "Não foi possível executar a interação deste Tile. Nenhuma alteração foi aplicada."
+      }
     },
     "GmTools": {
       "Label": "Ferramentas do Mestre",

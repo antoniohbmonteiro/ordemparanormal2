@@ -1,0 +1,104 @@
+<section
+  class="tab {{tabClasses}} op2-tile-interaction"
+  data-group="sheet"
+  data-tab="interaction"
+>
+  {{#if tileInteraction.canConfigure}}
+    <div class="form-group">
+      <label for="{{rootId}}-op2-interaction-enabled">
+        {{localize "ORDEMPARANORMAL2.TileInteraction.Fields.Enabled"}}
+      </label>
+      <div class="form-fields">
+        <input
+          id="{{rootId}}-op2-interaction-enabled"
+          type="checkbox"
+          data-op2-enabled
+          {{checked tileInteraction.enabled}}
+        >
+      </div>
+      <p class="hint">{{localize "ORDEMPARANORMAL2.TileInteraction.Hint"}}</p>
+    </div>
+
+    <fieldset>
+      <legend>{{localize "ORDEMPARANORMAL2.TileInteraction.Walls.Title"}}</legend>
+      <p class="hint">{{localize "ORDEMPARANORMAL2.TileInteraction.Walls.Hint"}}</p>
+      <div class="op2-tile-interaction__targets">
+        {{#each tileInteraction.wallTargets as |target|}}
+          <div class="op2-tile-interaction__target {{#if target.unavailable}}is-unavailable{{/if}}">
+            <span>
+              <strong>{{target.label}}</strong>
+              <small>{{target.detail}}</small>
+            </span>
+            <button
+              type="button"
+              class="icon fa-solid fa-trash"
+              data-op2-action="remove-wall"
+              data-target-id="{{target.id}}"
+              aria-label="{{localize 'ORDEMPARANORMAL2.TileInteraction.Actions.RemoveWall'}}"
+              data-tooltip="{{localize 'ORDEMPARANORMAL2.TileInteraction.Actions.RemoveWall'}}"
+            ></button>
+          </div>
+        {{else}}
+          <p class="op2-tile-interaction__empty">{{localize "ORDEMPARANORMAL2.TileInteraction.Walls.Empty"}}</p>
+        {{/each}}
+      </div>
+      <div class="op2-tile-interaction__actions">
+        <button type="button" data-op2-action="select-walls">
+          <i class="fa-solid fa-vector-square" inert></i>
+          {{localize "ORDEMPARANORMAL2.TileInteraction.Actions.SelectOnMap"}}
+        </button>
+        <button
+          type="button"
+          data-op2-action="use-walls"
+          {{#unless tileInteraction.selectingWalls}}hidden{{/unless}}
+        >
+          <i class="fa-solid fa-check" inert></i>
+          {{localize "ORDEMPARANORMAL2.TileInteraction.Actions.UseSelected"}}
+        </button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>{{localize "ORDEMPARANORMAL2.TileInteraction.Tiles.Title"}}</legend>
+      <p class="hint">{{localize "ORDEMPARANORMAL2.TileInteraction.Tiles.Hint"}}</p>
+      <div class="op2-tile-interaction__targets">
+        {{#each tileInteraction.tileTargets as |target|}}
+          <div class="op2-tile-interaction__target {{#if target.unavailable}}is-unavailable{{/if}}">
+            <span>
+              <strong>{{target.label}}</strong>
+              <small>{{target.detail}}</small>
+            </span>
+            <button
+              type="button"
+              class="icon fa-solid fa-trash"
+              data-op2-action="remove-tile"
+              data-target-id="{{target.id}}"
+              aria-label="{{localize 'ORDEMPARANORMAL2.TileInteraction.Actions.RemoveTile'}}"
+              data-tooltip="{{localize 'ORDEMPARANORMAL2.TileInteraction.Actions.RemoveTile'}}"
+            ></button>
+          </div>
+        {{else}}
+          <p class="op2-tile-interaction__empty">{{localize "ORDEMPARANORMAL2.TileInteraction.Tiles.Empty"}}</p>
+        {{/each}}
+      </div>
+      <div class="op2-tile-interaction__actions">
+        <button type="button" data-op2-action="select-tiles">
+          <i class="fa-solid fa-vector-square" inert></i>
+          {{localize "ORDEMPARANORMAL2.TileInteraction.Actions.SelectOnMap"}}
+        </button>
+        <button
+          type="button"
+          data-op2-action="use-tiles"
+          {{#unless tileInteraction.selectingTiles}}hidden{{/unless}}
+        >
+          <i class="fa-solid fa-check" inert></i>
+          {{localize "ORDEMPARANORMAL2.TileInteraction.Actions.UseSelected"}}
+        </button>
+      </div>
+    </fieldset>
+  {{else}}
+    <p class="notification warning">
+      {{localize "ORDEMPARANORMAL2.TileInteraction.Errors.GmOnly"}}
+    </p>
+  {{/if}}
+</section>

@@ -10,13 +10,13 @@ import { registerDataMigrations } from "./bootstrap/register-data-migrations";
 import { registerAgentOccupationCreationHook } from "./bootstrap/register-agent-occupation-creation-hook";
 import { registerNarrativeScenes } from "./bootstrap/register-narrative-scenes";
 import { registerPoiSceneControls } from "./bootstrap/register-poi-scene-controls";
-import { registerPoiRegionConfig } from "./bootstrap/register-poi-region-config";
 import { registerPoiCanvas } from "./bootstrap/register-poi-canvas";
 import { registerPoiInvestigation } from "./bootstrap/register-poi-investigation";
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
 import { registerGmTools } from "./bootstrap/register-gm-tools";
 import { registerOpposedChecks } from "./bootstrap/register-opposed-checks";
 import { registerCheckRequests } from "./bootstrap/register-check-requests";
+import { registerTileInteractions } from "./bootstrap/register-tile-interactions";
 import { SYSTEM_ID } from "./config/system-config";
 
 Hooks.once("init", () => {
@@ -37,8 +37,8 @@ Hooks.once("init", () => {
   registerGmTools();
   registerOpposedChecks();
   registerCheckRequests();
+  registerTileInteractions();
   registerInvestigationMode();
-  registerPoiRegionConfig();
   registerPoiCanvas();
   registerPoiInvestigation();
 

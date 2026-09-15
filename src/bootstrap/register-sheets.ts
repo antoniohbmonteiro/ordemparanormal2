@@ -4,6 +4,8 @@ import { AbilityItemSheet } from "../applications/item/ability-item-sheet";
 import { OccupationItemSheet } from "../applications/item/occupation-item-sheet";
 import { PointOfInterestItemSheet } from "../applications/item/point-of-interest-item-sheet";
 import { EquipmentItemSheet } from "../applications/item/equipment-item-sheet";
+import { InteractiveTileConfig } from "../applications/tile/interactive-tile-config";
+import { InteractiveRegionConfig } from "../applications/region/interactive-region-config";
 import {
   ABILITY_ITEM_TYPE,
   AGENT_ACTOR_TYPE,
@@ -15,6 +17,28 @@ import {
 } from "../config/system-config";
 
 export function registerSheets(): void {
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(
+    foundry.documents.RegionDocument,
+    SYSTEM_ID,
+    InteractiveRegionConfig,
+    {
+      makeDefault: true,
+      label: "ORDEMPARANORMAL2.Sheets.Region",
+      themes: null,
+    },
+  );
+
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(
+    foundry.documents.TileDocument,
+    SYSTEM_ID,
+    InteractiveTileConfig,
+    {
+      makeDefault: true,
+      label: "ORDEMPARANORMAL2.Sheets.Tile",
+      themes: null,
+    },
+  );
+
   foundry.applications.apps.DocumentSheetConfig.registerSheet(
     foundry.documents.Actor,
     SYSTEM_ID,

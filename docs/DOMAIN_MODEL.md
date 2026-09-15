@@ -105,7 +105,7 @@ flags.ordemparanormal2.pointOfInterest = { itemUuid: string, name?: string }
 
 The UUID comes from a non-embedded world or compendium Item of type `pointOfInterest`. `name` is a **safe display-name snapshot** written by the GM's picker (which already resolves it) — it is the POI's name only, never a projection of `system`, `gmContext`, `information` or `publicDescription`. It exists so the player renderer can label a revealed POI without resolving the Item at all. It can go stale if the Item is renamed after association; the GM refreshes it by re-selecting the POI in RegionConfig. Legacy associations without `name` render a neutral fallback label for players. No Item image or geometry is copied into this flag. Several Regions may reference the same Item. A structurally valid reference remains an association when its Item is unavailable; resolution is separate and opening a sheet never repairs or deletes flags automatically.
 
-GM association editing lives in the native RegionConfig. Choosing, replacing and removing affect a local sheet draft; the native Update Region submit persists the draft alongside the other form fields. Closing discards it. The form uses public `FormDataExtended.set` and `ForcedReplacement`/`ForcedDeletion` operators at this flag key only, preserving sibling flags and namespaces. Rerenders preserve pending drafts; closing also closes the picker and invalidates delayed results. Only canonical persisted Region documents receive the section; palette and preview documents do not.
+GM association editing lives in a dedicated `Ponto de Interesse` tab added by the system's registered RegionConfig subclass, which preserves the four core tabs and parts. Choosing, replacing and removing affect a local sheet draft; the native Update Region submit persists the draft alongside the other form fields. Closing discards it. The form uses public `FormDataExtended.set` and `ForcedReplacement`/`ForcedDeletion` operators at this flag key only, preserving sibling flags and namespaces. Rerenders preserve pending drafts; closing also closes the picker and invalidates delayed results. Only canonical persisted Region documents expose the association controls; palette and preview documents do not.
 
 ### Region reveal
 
@@ -333,6 +333,39 @@ The player projection contains `audience: "player"`, name, enriched description,
 **Information reveal state.** The Region flag `pointOfInterestInformationReveal` stores only `{itemUuid, informationIds}`. Its association UUID binds the state to the current Item; a mismatch reads as empty, so reused information ids cannot carry reveal into a reassociated POI. The flag is replicated and therefore exposes opaque random ids, reveal count/timing, and possible same-Item cross-placement correlation, but never content or hidden DT values. A GM-local, permission-backed Region update performs the mutation after revalidating Scene, Region, association, Item type/UUID and information membership. The replicated `updateRegion` is only an invalidation signal: open clients query the sanitized view again instead of receiving content in an event payload.
 
 Potential investigation **execution** state (which information a given investigation has revealed, per Actor/scene) should be evaluated separately as scene/region/application state when that feature is planned. It must reference stable information ids, and it must not live on the POI Item.
+
+## Tile interactions
+
+A Foundry Tile may opt into a GM-only control interaction through the
+`flags.ordemparanormal2.tileInteraction` flag. The flag stores only whether the
+control is enabled and the embedded Wall/Tile IDs belonging to the controller's
+parent Scene. It does not store an open state.
+Enabling the control does not require a Wall target: a click on an enabled
+controller with no configured Walls is accepted but makes no document changes.
+
+The selected Door and Secret Door Walls are the authoritative state. If every
+valid controlled Wall is open, the next interaction closes all of them and
+hides the associated Tiles. Otherwise—including a closed, locked, or mixed
+group—the next interaction opens every valid Wall and shows the associated
+Tiles. Only each Wall's `ds` and each associated Tile's `hidden` field may
+change; Wall types and movement, sight, light, and sound restrictions remain
+untouched. A missing or invalid reference is ignored, and no Tile changes occur
+when no valid controlled Wall remains.
+
+The workflow is intentionally a narrow Scene-local control, not a trigger or
+effect engine. It does not introduce scripts, macros, Regions, delays,
+animations, or a system socket. Wall and Tile updates share one atomic Foundry
+batch so clients never observe a successfully persisted mixed state.
+
+The canvas observer uses the current Application.canvas surface when available,
+falling back to Application.view only for Foundry v14 clients bundled with
+PixiJS 7. A native TileConfig preview can make the original placeable report
+not visible while its mesh retains valid hit-test geometry; this preview state
+does not disable the control outside the Tiles editing layer.
+
+The TileConfig extension keeps unsaved target selection in an application-local
+draft. Only the native Tile form submission persists the full flag replacement;
+closing the configuration window discards draft changes.
 
 ## Source-of-truth rule
 

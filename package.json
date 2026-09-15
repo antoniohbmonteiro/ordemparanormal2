@@ -24,5 +24,8 @@
     "typescript": "~7.0.2",
     "vite": "~8.2.2",
     "vitest": "~4.1.10"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.3.289"
   }
 }

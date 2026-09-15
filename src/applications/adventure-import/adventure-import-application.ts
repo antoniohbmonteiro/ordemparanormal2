@@ -1,22 +1,40 @@
-import type { ApplicationRenderOptions } from "@client/applications/_types.mjs";
+import type { ApplicationClosingOptions, ApplicationRenderOptions } from "@client/applications/_types.mjs";
 import type {
   HandlebarsRenderOptions,
   HandlebarsTemplatePart,
 } from "@client/applications/api/handlebars-application.mjs";
+
+import type { AdventureImportIssueCode } from "../../core/adventure-import/recognition-status";
+import type { PdfEditionId, ZipPackageId } from "../../core/adventure-import/known-adventure-sources";
+import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
+import type { ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
+import {
+  analyzeAdventureSources,
+  analyzePdfSource,
+  type AdventureSourceAnalysis,
+} from "../../features/adventure-import/analyze-adventure-sources";
+import { openAdventureImportPasswordDialog } from "./adventure-import-password-dialog";
 
 const ADVENTURE_IMPORT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/adventure-import.hbs";
 
 type FileSlot = "pdf" | "actOne" | "actTwo";
 
-// Temporary display data; no selected file is inspected to produce this preview.
-const MOCK_ANALYSIS_RESULT = [
-  { labelKey: "Characters", count: 12, icon: "fa-solid fa-user" },
-  { labelKey: "Abilities", count: 86, icon: "fa-solid fa-wand-sparkles" },
-  { labelKey: "Scenes", count: 14, icon: "fa-solid fa-map" },
-  { labelKey: "PointsOfInterest", count: 9, icon: "fa-solid fa-magnifying-glass-location" },
-  { labelKey: "Assets", count: 28, icon: "fa-solid fa-image" },
-] as const;
+type SourceStatusModifier = "recognized" | "password-required" | "unsupported" | "unknown" | "invalid";
+
+interface SourceStatusViewModel {
+  readonly label: string;
+  readonly modifier: SourceStatusModifier;
+  readonly icon: string;
+  readonly text: string;
+  readonly issues: readonly string[];
+}
+
+interface InventoryRowViewModel {
+  readonly icon: string;
+  readonly label: string;
+  readonly summary: string;
+}
 
 interface AdventureImportRenderContext {
   readonly tabs?: never;
@@ -24,8 +42,140 @@ interface AdventureImportRenderContext {
   readonly actOneName: string;
   readonly actTwoName: string;
   readonly canAnalyze: boolean;
-  readonly hasPreview: boolean;
-  readonly preview: readonly { label: string; count: number; summary: string; icon: string }[];
+  readonly hasAnalysis: boolean;
+  readonly statuses: readonly SourceStatusViewModel[];
+  readonly inventory: readonly InventoryRowViewModel[];
+}
+
+const localize = (key: string): string => game.i18n.localize(`ORDEMPARANORMAL2.AdventureImport.${key}`);
+const format = (key: string, data: Record<string, string>): string =>
+  game.i18n.format(`ORDEMPARANORMAL2.AdventureImport.${key}`, data);
+
+const EDITION_LABEL_KEY: Record<PdfEditionId | ZipPackageId, string> = {
+  "playtest-alpha-v1.0": "Analysis.Edition.PlaytestAlphaV10",
+  "playtest-alpha-v1.1": "Analysis.Edition.PlaytestAlphaV11",
+  "ato-i-extras": "Analysis.Edition.AtoIExtras",
+  "ato-ii-extras": "Analysis.Edition.AtoIIExtras",
+};
+
+const ISSUE_LOCALIZATION_KEY: Record<AdventureImportIssueCode, string> = {
+  "pdf-header-missing": "PdfHeaderMissing",
+  "pdf-incorrect-password": "PdfIncorrectPassword",
+  "pdf-parse-failed": "PdfParseFailed",
+  "zip-eocd-not-found": "ZipEocdNotFound",
+  "zip-zip64-unsupported": "ZipZip64Unsupported",
+  "zip-encrypted-entries-unsupported": "ZipEncryptedEntriesUnsupported",
+  "zip-wrong-act-slot": "ZipWrongActSlot",
+};
+
+function editionLabel(id: PdfEditionId | ZipPackageId): string {
+  return localize(EDITION_LABEL_KEY[id]);
+}
+
+function localizeIssues(issues: PdfSourceAnalysis["issues"] | ZipSourceAnalysis["issues"]): readonly string[] {
+  return issues.map((issue) => localize(`Analysis.Issues.${ISSUE_LOCALIZATION_KEY[issue.code]}`));
+}
+
+function buildPdfStatusViewModel(analysis: PdfSourceAnalysis | null): SourceStatusViewModel | null {
+  if (!analysis) return null;
+
+  const label = localize("Analysis.Pdf.Label");
+  const issues = localizeIssues(analysis.issues);
+
+  if (analysis.passwordRequired) {
+    const edition = analysis.edition ? editionLabel(analysis.edition) : null;
+    return {
+      label,
+      modifier: "password-required",
+      icon: "fa-solid fa-lock",
+      text: edition
+        ? format("Analysis.Pdf.RecognizedPasswordRequired", { edition })
+        : localize("Analysis.Pdf.PasswordRequired"),
+      issues,
+    };
+  }
+
+  switch (analysis.status) {
+    case "recognized":
+      return {
+        label,
+        modifier: "recognized",
+        icon: "fa-solid fa-check",
+        text: format("Analysis.Pdf.Recognized", { edition: analysis.edition ? editionLabel(analysis.edition) : "" }),
+        issues,
+      };
+    case "unsupported":
+      return { label, modifier: "unsupported", icon: "fa-solid fa-triangle-exclamation", text: localize("Analysis.Pdf.Unsupported"), issues };
+    case "unknown":
+      return { label, modifier: "unknown", icon: "fa-solid fa-circle-question", text: localize("Analysis.Pdf.Unknown"), issues };
+    case "invalid":
+      return { label, modifier: "invalid", icon: "fa-solid fa-circle-xmark", text: localize("Analysis.Pdf.Invalid"), issues };
+  }
+}
+
+function buildZipStatusViewModel(label: string, analysis: ZipSourceAnalysis | null): SourceStatusViewModel | null {
+  if (!analysis) return null;
+
+  const issues = localizeIssues(analysis.issues);
+
+  switch (analysis.status) {
+    case "recognized":
+      return { label, modifier: "recognized", icon: "fa-solid fa-check", text: localize("Analysis.Zip.Recognized"), issues };
+    case "unsupported":
+      return {
+        label,
+        modifier: "unsupported",
+        icon: "fa-solid fa-triangle-exclamation",
+        text: format("Analysis.Zip.Unsupported", { edition: analysis.edition ? editionLabel(analysis.edition) : "" }),
+        issues,
+      };
+    case "unknown":
+      return { label, modifier: "unknown", icon: "fa-solid fa-circle-question", text: localize("Analysis.Zip.Unknown"), issues };
+    case "invalid":
+      return { label, modifier: "invalid", icon: "fa-solid fa-circle-xmark", text: localize("Analysis.Zip.Invalid"), issues };
+  }
+}
+
+function appendActInventoryRows(
+  rows: InventoryRowViewModel[],
+  actLabel: string,
+  analysis: ZipSourceAnalysis | null,
+): void {
+  if (!analysis?.inventory) return;
+
+  rows.push({
+    icon: "fa-solid fa-folder-tree",
+    label: actLabel,
+    summary: format("Analysis.Inventory.TotalFiles", { count: String(analysis.inventory.totalFiles) }),
+  });
+  for (const folder of analysis.inventory.topLevelFolders) {
+    rows.push({
+      icon: "fa-solid fa-folder",
+      label: `${actLabel} · ${folder.name}`,
+      summary: format("Analysis.Inventory.TotalFiles", { count: String(folder.fileCount) }),
+    });
+  }
+}
+
+function buildInventoryRows(analysis: AdventureSourceAnalysis | null): readonly InventoryRowViewModel[] {
+  if (!analysis) return [];
+
+  const rows: InventoryRowViewModel[] = [];
+
+  if (analysis.pdf.facts.parseAttempt.status === "success") {
+    rows.push({
+      icon: "fa-solid fa-file-lines",
+      label: localize("Analysis.Pdf.Label"),
+      summary: format("Analysis.Inventory.PageCount", {
+        count: String(analysis.pdf.facts.parseAttempt.facts.pageCount),
+      }),
+    });
+  }
+
+  appendActInventoryRows(rows, localize("ActOne"), analysis.actOne);
+  appendActInventoryRows(rows, localize("ActTwo"), analysis.actTwo);
+
+  return rows;
 }
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -60,11 +210,18 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     actOne: null,
     actTwo: null,
   };
-  #hasPreview = false;
+  #password: string | null = null;
+  #analysis: AdventureSourceAnalysis | null = null;
 
   protected override _canRender(options: ApplicationRenderOptions): boolean | void {
     if (!game.user.isGM) return false;
     return super._canRender(options);
+  }
+
+  protected override _onClose(options: ApplicationClosingOptions): void {
+    this.#password = null;
+    this.#analysis = null;
+    super._onClose(options);
   }
 
   protected override async _prepareContext(): Promise<AdventureImportRenderContext> {
@@ -73,19 +230,13 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       actOneName: this.#files.actOne?.name ?? "",
       actTwoName: this.#files.actTwo?.name ?? "",
       canAnalyze: this.#files.pdf !== null,
-      hasPreview: this.#hasPreview,
-      preview: this.#hasPreview
-        ? MOCK_ANALYSIS_RESULT.map(({ labelKey, count, icon }) => ({
-            label: game.i18n.localize(
-              `ORDEMPARANORMAL2.AdventureImport.MockPreview.${labelKey}`,
-            ),
-            summary: `${count} ${game.i18n.localize(
-              `ORDEMPARANORMAL2.AdventureImport.MockPreview.Unit.${labelKey}`,
-            )}`,
-            count,
-            icon,
-          }))
-        : [],
+      hasAnalysis: this.#analysis !== null,
+      statuses: [
+        buildPdfStatusViewModel(this.#analysis?.pdf ?? null),
+        buildZipStatusViewModel(localize("ActOne"), this.#analysis?.actOne ?? null),
+        buildZipStatusViewModel(localize("ActTwo"), this.#analysis?.actTwo ?? null),
+      ].filter((status): status is SourceStatusViewModel => status !== null),
+      inventory: buildInventoryRows(this.#analysis),
     };
   }
 
@@ -106,7 +257,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         const file = input.files?.[0];
         if (!file) return;
         this.#files[slot] = file;
-        this.#hasPreview = false;
+        this.#analysis = null;
+        if (slot === "pdf") this.#password = null;
         void this.render().catch((error) => {
           console.error("ordemparanormal2 | Failed to update Adventure Import preview.", error);
         });
@@ -136,15 +288,30 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
 
   static async #onAnalyzeFiles(this: AdventureImportApplication): Promise<void> {
     if (!game.user.isGM || !this.#files.pdf) return;
-    this.#hasPreview = true;
+
+    let analysis = await analyzeAdventureSources({
+      pdf: this.#files.pdf,
+      actOne: this.#files.actOne,
+      actTwo: this.#files.actTwo,
+      password: this.#password,
+    });
+
+    if (analysis.pdf.passwordRequired && this.#password === null) {
+      const password = await openAdventureImportPasswordDialog();
+      if (password !== null && this.#files.pdf) {
+        const pdfRetry = await analyzePdfSource(this.#files.pdf, password);
+        if (pdfRetry.facts.parseAttempt.status === "success") this.#password = password;
+        analysis = { ...analysis, pdf: pdfRetry };
+      }
+    }
+
+    this.#analysis = analysis;
     await this.render();
   }
 
   static #onImportPreview(this: AdventureImportApplication): void {
-    if (!game.user.isGM || !this.#hasPreview) return;
-    ui.notifications.info(
-      game.i18n.localize("ORDEMPARANORMAL2.AdventureImport.MockPreview.NoImport"),
-    );
+    if (!game.user.isGM || !this.#analysis) return;
+    ui.notifications.info(localize("Actions.ImportNotice"));
   }
 }
 

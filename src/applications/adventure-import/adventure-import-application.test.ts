@@ -4,7 +4,54 @@ import Handlebars from "handlebars";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AdventureSourceAnalysis } from "../../features/adventure-import/analyze-adventure-sources";
+import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
+
 type Slot = "pdf" | "actOne" | "actTwo";
+
+const mocks = vi.hoisted(() => ({
+  analyzeAdventureSources: vi.fn(),
+  analyzePdfSource: vi.fn(),
+  openAdventureImportPasswordDialog: vi.fn(),
+}));
+
+vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
+  analyzeAdventureSources: mocks.analyzeAdventureSources,
+  analyzePdfSource: mocks.analyzePdfSource,
+}));
+
+vi.mock("./adventure-import-password-dialog", () => ({
+  openAdventureImportPasswordDialog: mocks.openAdventureImportPasswordDialog,
+}));
+
+function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): PdfSourceAnalysis {
+  return {
+    status: "recognized",
+    passwordRequired: false,
+    matchMethod: "hash",
+    edition: "playtest-alpha-v1.1",
+    facts: {
+      pre: {
+        byteLength: 100,
+        sha256: "known-hash",
+        pdfVersion: "1.7",
+        encryption: { present: false },
+        trailerId: null,
+        plaintextCatalogHints: null,
+      },
+      parseAttempt: {
+        status: "success",
+        facts: { pageCount: 104, producer: null, creator: null, lang: null, versionStampTag: null },
+      },
+    },
+    issues: [],
+    ...overrides,
+  };
+}
+
+function emptyAnalysis(pdf: PdfSourceAnalysis): AdventureSourceAnalysis {
+  return { pdf, actOne: null, actTwo: null };
+}
 
 class MockFileInput {
   readonly dataset: { fileSlot: Slot };
@@ -54,6 +101,7 @@ class MockApplicationV2 {
   constructor() { instances.push(this); }
   protected _canRender(): boolean { return true; }
   protected _attachPartListeners(): void {}
+  protected _onClose(): void {}
 
   addEventListener(type: string, listener: (event: Event) => void): void {
     const existing = this.listeners.get(type) ?? [];
@@ -67,13 +115,26 @@ class MockApplicationV2 {
   }
 }
 
+interface TestStatus {
+  label: string;
+  modifier: string;
+  text: string;
+  issues: readonly string[];
+}
+
+interface TestInventoryRow {
+  label: string;
+  summary: string;
+}
+
 interface TestContext {
   pdfName: string;
   actOneName: string;
   actTwoName: string;
   canAnalyze: boolean;
-  hasPreview: boolean;
-  preview: readonly { label: string; count: number }[];
+  hasAnalysis: boolean;
+  statuses: readonly TestStatus[];
+  inventory: readonly TestInventoryRow[];
 }
 
 interface TestApplication {
@@ -83,6 +144,7 @@ interface TestApplication {
   _canRender(options: object): boolean;
   _prepareContext(): Promise<TestContext>;
   _attachPartListeners(partId: string, htmlElement: object, options: object): void;
+  _onClose(options: object): void;
 }
 
 type TestAction = (this: TestApplication, event: PointerEvent, target: HTMLElement) => void | Promise<void>;
@@ -95,6 +157,8 @@ let Application: {
 const info = vi.fn();
 const settingsSet = vi.fn();
 const documentCreate = vi.fn();
+const localize = vi.fn((key: string) => key);
+const format = vi.fn((key: string, data: Record<string, string>) => `${key}(${Object.values(data).join(",")})`);
 
 beforeAll(async () => {
   vi.stubGlobal("foundry", {
@@ -108,7 +172,7 @@ beforeAll(async () => {
   vi.stubGlobal("Item", { create: documentCreate });
   vi.stubGlobal("game", {
     user: { isGM: true },
-    i18n: { localize: (key: string) => key },
+    i18n: { localize, format },
     settings: { set: settingsSet },
   });
   module = await import("./adventure-import-application");
@@ -118,7 +182,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.stubGlobal("game", {
     user: { isGM: true },
-    i18n: { localize: (key: string) => key },
+    i18n: { localize, format },
     settings: { set: settingsSet },
   });
   for (const app of instances) app.emitClose();
@@ -127,6 +191,11 @@ beforeEach(() => {
   info.mockClear();
   settingsSet.mockClear();
   documentCreate.mockClear();
+  localize.mockClear();
+  format.mockClear();
+  mocks.analyzeAdventureSources.mockReset();
+  mocks.analyzePdfSource.mockReset();
+  mocks.openAdventureImportPasswordDialog.mockReset();
 });
 
 afterAll(() => vi.unstubAllGlobals());
@@ -212,6 +281,7 @@ describe("Adventure Import Application", () => {
     expect(second.text).not.toHaveBeenCalled();
     expect((await new Application()._prepareContext()).pdfName).toBe("");
     expect(settingsSet).not.toHaveBeenCalled();
+    expect(mocks.analyzeAdventureSources).not.toHaveBeenCalled();
   });
 
   it("selects the two ZIPs independently and keeps the other ZIP on replacement", async () => {
@@ -236,22 +306,150 @@ describe("Adventure Import Application", () => {
     expect(two.arrayBuffer).not.toHaveBeenCalled();
   });
 
-  it("shows mock analysis only after selecting a PDF and clears stale preview", async () => {
+  it("runs the real analysis only after a PDF is selected and clicking Analisar, and clears it on reselection", async () => {
     const app = new Application();
     attach(app);
     await action(app, "analyzeFiles");
-    expect((await app._prepareContext()).hasPreview).toBe(false);
+    expect(mocks.analyzeAdventureSources).not.toHaveBeenCalled();
+    expect((await app._prepareContext()).hasAnalysis).toBe(false);
+
+    mocks.analyzeAdventureSources.mockResolvedValue(emptyAnalysis(unencryptedRecognizedPdf()));
     const pdf = file("playtest.pdf");
     app.inputs.pdf.select(pdf);
     await action(app, "analyzeFiles");
+
+    expect(mocks.analyzeAdventureSources).toHaveBeenCalledExactlyOnceWith({
+      pdf, actOne: null, actTwo: null, password: null,
+    });
     const result = await app._prepareContext();
-    expect(result.hasPreview).toBe(true);
-    expect(result.preview).toHaveLength(5);
-    expect(result.preview.map(entry => entry.count)).toEqual([12, 86, 14, 9, 28]);
+    expect(result.hasAnalysis).toBe(true);
+    expect(result.statuses).toHaveLength(1);
+    expect(result.statuses[0].modifier).toBe("recognized");
     expect(pdf.arrayBuffer).not.toHaveBeenCalled();
     expect(pdf.text).not.toHaveBeenCalled();
+
     app.inputs.actOne.select(file("ato-um.zip"));
-    expect((await app._prepareContext()).hasPreview).toBe(false);
+    expect((await app._prepareContext()).hasAnalysis).toBe(false);
+  });
+
+  it("shows real per-folder inventory counts derived from the mocked analysis, never invented numbers", async () => {
+    const app = new Application();
+    attach(app);
+    mocks.analyzeAdventureSources.mockResolvedValue({
+      pdf: unencryptedRecognizedPdf(),
+      actOne: {
+        act: "actOne",
+        status: "recognized",
+        matchMethod: "hash",
+        edition: "ato-i-extras",
+        inventory: {
+          totalFiles: 43,
+          totalBytes: 93000000,
+          topLevelFolders: [{ name: "Handouts", fileCount: 14 }, { name: "Tokens", fileCount: 10 }],
+        },
+        issues: [],
+      },
+      actTwo: null,
+    });
+    app.inputs.pdf.select(file("playtest.pdf"));
+    await action(app, "analyzeFiles");
+    const result = await app._prepareContext();
+    expect(result.statuses).toHaveLength(2);
+    expect(result.inventory.map((row) => row.summary)).toContain("ORDEMPARANORMAL2.AdventureImport.Analysis.Inventory.PageCount(104)");
+    expect(result.inventory.map((row) => row.summary)).toContain("ORDEMPARANORMAL2.AdventureImport.Analysis.Inventory.TotalFiles(43)");
+    expect(result.inventory.map((row) => row.summary)).toContain("ORDEMPARANORMAL2.AdventureImport.Analysis.Inventory.TotalFiles(14)");
+  });
+
+  it("opens the password dialog every time it is needed, never blocked by a prior cancel, and only stores a password that actually unlocked the file", async () => {
+    const app = new Application();
+    attach(app);
+    const pdf = file("protegido.pdf");
+    app.inputs.pdf.select(pdf);
+
+    const passwordRequiredAnalysis = () => emptyAnalysis(unencryptedRecognizedPdf({
+      passwordRequired: true,
+      facts: {
+        pre: {
+          byteLength: 1, sha256: "known-hash", pdfVersion: "1.7",
+          encryption: { present: true }, trailerId: null, plaintextCatalogHints: null,
+        },
+        parseAttempt: { status: "not-attempted" },
+      },
+    }));
+
+    mocks.analyzeAdventureSources.mockImplementation(async () => passwordRequiredAnalysis());
+
+    // 1st click: password required, dialog opens, user cancels.
+    mocks.openAdventureImportPasswordDialog.mockResolvedValueOnce(null);
+    await action(app, "analyzeFiles");
+    expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledOnce();
+    expect(mocks.analyzePdfSource).not.toHaveBeenCalled();
+    expect((await app._prepareContext()).hasAnalysis).toBe(true);
+
+    // 2nd click: still no password stored, dialog opens again (cancel did not block retrying),
+    // this time the user types the wrong password.
+    mocks.openAdventureImportPasswordDialog.mockResolvedValueOnce("senha-errada");
+    mocks.analyzePdfSource.mockResolvedValueOnce(unencryptedRecognizedPdf({
+      passwordRequired: true,
+      facts: {
+        pre: {
+          byteLength: 1, sha256: "known-hash", pdfVersion: "1.7",
+          encryption: { present: true }, trailerId: null, plaintextCatalogHints: null,
+        },
+        parseAttempt: { status: "incorrect-password" },
+      },
+      issues: [{ code: "pdf-incorrect-password", severity: "warning" }],
+    }));
+    await action(app, "analyzeFiles");
+    expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(2);
+    expect(mocks.analyzePdfSource).toHaveBeenCalledExactlyOnceWith(pdf, "senha-errada");
+    expect((await app._prepareContext()).statuses[0].issues).toContain(
+      "ORDEMPARANORMAL2.AdventureImport.Analysis.Issues.PdfIncorrectPassword",
+    );
+
+    // 3rd click: analyzeAdventureSources is called again with password still null (never stored),
+    // so the dialog opens a third time — this time with the correct password.
+    mocks.openAdventureImportPasswordDialog.mockResolvedValueOnce("senha-certa");
+    mocks.analyzePdfSource.mockResolvedValueOnce(unencryptedRecognizedPdf({ passwordRequired: false }));
+    await action(app, "analyzeFiles");
+    expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(3, { pdf, actOne: null, actTwo: null, password: null });
+    expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(3);
+    expect(mocks.analyzePdfSource).toHaveBeenNthCalledWith(2, pdf, "senha-certa");
+    expect((await app._prepareContext()).statuses[0].modifier).toBe("recognized");
+
+    // 4th click: the now-stored password is reused automatically; the dialog does not reopen.
+    await action(app, "analyzeFiles");
+    expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(4, { pdf, actOne: null, actTwo: null, password: "senha-certa" });
+    expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not reopen the password dialog after a generic parse failure, and does not store a password for it", async () => {
+    const app = new Application();
+    attach(app);
+    const pdf = file("corrompido.pdf");
+    app.inputs.pdf.select(pdf);
+    mocks.analyzeAdventureSources.mockResolvedValue(emptyAnalysis(unencryptedRecognizedPdf({
+      passwordRequired: false,
+      facts: {
+        pre: {
+          byteLength: 1, sha256: "known-hash", pdfVersion: "1.7",
+          encryption: { present: true }, trailerId: null, plaintextCatalogHints: null,
+        },
+        parseAttempt: { status: "failed" },
+      },
+      issues: [{ code: "pdf-parse-failed", severity: "error" }],
+    })));
+
+    await action(app, "analyzeFiles");
+    expect(mocks.openAdventureImportPasswordDialog).not.toHaveBeenCalled();
+    await action(app, "analyzeFiles");
+    expect(mocks.openAdventureImportPasswordDialog).not.toHaveBeenCalled();
+  });
+
+  it("discards the in-memory password when the window closes", async () => {
+    const app = new Application();
+    attach(app);
+    app._onClose({});
   });
 
   it("never mutates the World when the visible import action is clicked", async () => {
@@ -259,19 +457,18 @@ describe("Adventure Import Application", () => {
     attach(app);
     await action(app, "importPreview");
     expect(info).not.toHaveBeenCalled();
+    mocks.analyzeAdventureSources.mockResolvedValue(emptyAnalysis(unencryptedRecognizedPdf()));
     app.inputs.pdf.select(file("playtest.pdf"));
     await action(app, "analyzeFiles");
     await action(app, "importPreview");
-    expect(info).toHaveBeenCalledExactlyOnceWith(
-      "ORDEMPARANORMAL2.AdventureImport.MockPreview.NoImport",
-    );
+    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportNotice");
     expect(settingsSet).not.toHaveBeenCalled();
     expect(documentCreate).not.toHaveBeenCalled();
   });
 });
 
 describe("Adventure Import prototype template and styles", () => {
-  it("renders names, empty state, and mock preview for two acts", async () => {
+  it("renders empty state and real per-source status rows", async () => {
     const template = await readFile(
       fileURLToPath(new URL("../../../templates/applications/adventure-import.hbs", import.meta.url)), "utf8",
     );
@@ -285,6 +482,7 @@ describe("Adventure Import prototype template and styles", () => {
     expect(empty.match(/AdventureImport\.EmptyFile/g)).toHaveLength(3);
     expect(empty).toMatch(/data-action="analyzeFiles"\s+disabled/);
     expect(empty).toMatch(/data-action="importPreview"\s+disabled/);
+
     app.inputs.pdf.select(file("A&B.pdf"));
     app.inputs.actOne.select(file("ato-um.zip"));
     const selected = render(await app._prepareContext());
@@ -292,10 +490,12 @@ describe("Adventure Import prototype template and styles", () => {
     expect(selected).toContain("ato-um.zip");
     expect(selected).toContain("op2-adventure-import__selection-check");
     expect(selected).not.toMatch(/data-action="analyzeFiles"\s+disabled/);
+
+    mocks.analyzeAdventureSources.mockResolvedValue(emptyAnalysis(unencryptedRecognizedPdf()));
     await action(app, "analyzeFiles");
     const analyzed = render(await app._prepareContext());
-    expect(analyzed.match(/op2-adventure-import__mock-entry/g)).toHaveLength(5);
-    expect(analyzed).toContain("AdventureImport.MockPreview.Characters");
+    expect(analyzed.match(/class="op2-adventure-import__status-row /g)).toHaveLength(1);
+    expect(analyzed).toContain("op2-adventure-import__status-row--recognized");
     expect(analyzed).not.toContain("AdventureImport.EmptyContent");
     expect(analyzed).not.toMatch(/data-action="importPreview"\s+disabled/);
     expect(template.match(/AdventureImport\.Act(?:One|Two)/g)).toHaveLength(2);
@@ -316,7 +516,7 @@ describe("Adventure Import prototype template and styles", () => {
     expect((JSON.parse(manifestText) as { styles: string[] }).styles).toContain("styles/adventure-import.css");
     expect(css).toContain(".op2-adventure-import__body button");
     expect(css).not.toMatch(/\.ordemparanormal2\.op2-adventure-import\s+button(?:\s|:|\{)/);
-    expect(source).not.toMatch(/_getHeaderControls|FileReader|arrayBuffer\(|\.text\(|\.create\(|settings\.set|localStorage/);
+    expect(source).not.toMatch(/_getHeaderControls|FileReader|\.create\(|settings\.set|localStorage/);
     expect(css).toContain("max-height: calc(100dvh - 24px)");
     expect(css).toContain("container-type: inline-size");
     const locale = JSON.parse(localeText) as Record<string, unknown>;

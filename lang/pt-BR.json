@@ -86,27 +86,56 @@
       "DetectedContent": "Conteúdo detectado",
       "EmptyFile": "Nenhum arquivo selecionado",
       "EmptyContent": "Selecione e analise os arquivos para ver o conteúdo disponível para importação.",
-      "MockPreview": {
-        "Note": "Prévia ilustrativa; as contagens abaixo são demonstrativas.",
-        "Characters": "Personagens",
-        "Abilities": "Habilidades",
-        "Scenes": "Cenas",
-        "PointsOfInterest": "Pontos de Interesse",
-        "Assets": "Assets",
-        "Unit": {
-          "Characters": "itens",
-          "Abilities": "itens",
-          "Scenes": "cenas",
-          "PointsOfInterest": "itens",
-          "Assets": "arquivos"
+      "Analysis": {
+        "Note": "Contagens reais, derivadas da estrutura dos arquivos selecionados.",
+        "Pdf": {
+          "Label": "PDF",
+          "Recognized": "Reconhecido — {edition}",
+          "RecognizedPasswordRequired": "Reconhecido — {edition} (protegido por senha)",
+          "PasswordRequired": "Protegido por senha",
+          "Unsupported": "Fonte não suportada",
+          "Unknown": "Fonte não reconhecida",
+          "Invalid": "Arquivo inválido"
         },
-        "NoImport": "Esta é uma prévia ilustrativa. Nenhum conteúdo foi importado."
+        "Zip": {
+          "Recognized": "Pacote reconhecido",
+          "Unsupported": "Este arquivo é o pacote de {edition}, não deste ato",
+          "Unknown": "Pacote não reconhecido",
+          "Invalid": "Arquivo inválido"
+        },
+        "Edition": {
+          "PlaytestAlphaV10": "Playtest Alpha v1.0",
+          "PlaytestAlphaV11": "Playtest Alpha v1.1",
+          "AtoIExtras": "Ato I",
+          "AtoIIExtras": "Ato II"
+        },
+        "Issues": {
+          "PdfHeaderMissing": "O arquivo não parece ser um PDF válido.",
+          "PdfIncorrectPassword": "Senha incorreta.",
+          "PdfParseFailed": "Não foi possível ler o conteúdo do PDF.",
+          "ZipEocdNotFound": "O arquivo não parece ser um ZIP válido.",
+          "ZipZip64Unsupported": "Este ZIP usa um formato (ZIP64) que ainda não é suportado.",
+          "ZipEncryptedEntriesUnsupported": "Este ZIP contém arquivos protegidos por senha, o que ainda não é suportado.",
+          "ZipWrongActSlot": "Este arquivo corresponde ao pacote de outro ato."
+        },
+        "Inventory": {
+          "PageCount": "{count} páginas",
+          "TotalFiles": "{count} arquivos"
+        }
+      },
+      "PasswordDialog": {
+        "Title": "Senha do PDF",
+        "Instructions": "Este PDF é protegido por senha. A senha é usada apenas nesta análise e nunca é salva.",
+        "Label": "Senha",
+        "Confirm": "Confirmar",
+        "Cancel": "Cancelar"
       },
       "Actions": {
         "SelectPdf": "Selecionar PDF",
         "SelectZip": "Selecionar ZIP",
         "Analyze": "Analisar arquivos",
-        "Import": "Importar para este Mundo"
+        "Import": "Importar para este Mundo",
+        "ImportNotice": "Nenhum conteúdo foi importado. Esta etapa só analisa os arquivos selecionados."
       },
       "Errors": {
         "Open": "Não foi possível abrir a janela de importação de aventura."

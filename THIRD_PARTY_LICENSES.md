@@ -73,3 +73,7 @@ The dice SVG assets preserve the original glyph paths and white fills, with the 
 | `d12.svg` | Dice 12 | Skoll | [Game-icons.net](https://game-icons.net/1x1/skoll/d12.html) |
 
 Game-icons.net's attribution guidance is available on its [About page](https://game-icons.net/about.html). All listed glyph pages identify the named author and the CC BY 3.0 license.
+
+## PDF.js (pdfjs-dist)
+
+The Adventure Importer's PDF analysis uses [pdfjs-dist](https://www.npmjs.com/package/pdfjs-dist) (version pinned in `package.json`), the packaged distribution of [PDF.js](https://mozilla.github.io/pdf.js/), Copyright © Mozilla Foundation and contributors, licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). A copy of the license is bundled with the package at `node_modules/pdfjs-dist/LICENSE`. The library is consumed unmodified, as published; the `pdfjs-dist` package as distributed on npm does not include a separate `NOTICE` file, so none is reproduced here beyond this attribution.

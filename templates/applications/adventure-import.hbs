@@ -40,19 +40,30 @@
 
   <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-detected-heading">
     <h2 id="op2-adventure-import-detected-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.DetectedContent"}}</h2>
-    {{#if hasPreview}}
-      <div class="op2-adventure-import__mock-preview">
-        <p class="op2-adventure-import__mock-note">{{localize "ORDEMPARANORMAL2.AdventureImport.MockPreview.Note"}}</p>
-        {{#each preview}}
-          <div class="op2-adventure-import__mock-entry">
-            <span class="op2-adventure-import__mock-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
-            <i class="op2-adventure-import__mock-icon {{icon}}" aria-hidden="true"></i>
-            <span class="op2-adventure-import__mock-text">
-              <span class="op2-adventure-import__mock-label">{{label}}</span>
-              <span class="op2-adventure-import__mock-summary">{{summary}}</span>
+    {{#if hasAnalysis}}
+      <div class="op2-adventure-import__analysis">
+        {{#each statuses}}
+          <div class="op2-adventure-import__status-row op2-adventure-import__status-row--{{modifier}}">
+            <span class="op2-adventure-import__status-icon" aria-hidden="true"><i class="{{icon}}"></i></span>
+            <span class="op2-adventure-import__status-text">
+              <span class="op2-adventure-import__status-label">{{label}}</span>
+              <span class="op2-adventure-import__status-value">{{text}}</span>
+              {{#each issues}}<span class="op2-adventure-import__status-issue">{{this}}</span>{{/each}}
             </span>
           </div>
         {{/each}}
+        {{#if inventory.length}}
+          <div class="op2-adventure-import__inventory">
+            <p class="op2-adventure-import__inventory-note">{{localize "ORDEMPARANORMAL2.AdventureImport.Analysis.Note"}}</p>
+            {{#each inventory}}
+              <div class="op2-adventure-import__inventory-row">
+                <i class="op2-adventure-import__inventory-icon {{icon}}" aria-hidden="true"></i>
+                <span class="op2-adventure-import__inventory-label">{{label}}</span>
+                <span class="op2-adventure-import__inventory-summary">{{summary}}</span>
+              </div>
+            {{/each}}
+          </div>
+        {{/if}}
       </div>
     {{else}}
       <div class="op2-adventure-import__empty-content">
@@ -63,6 +74,6 @@
 
   <footer class="op2-adventure-import__actions">
     <button type="button" data-action="analyzeFiles" {{#unless canAnalyze}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
-    <button type="button" data-action="importPreview" {{#unless hasPreview}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
+    <button type="button" data-action="importPreview" {{#unless hasAnalysis}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
   </footer>
 </div>

@@ -7,6 +7,8 @@
   --op2-border: rgba(255, 255, 255, .1);
   --op2-accent: #7f252b;
   --op2-positive: #3c8f56;
+  --op2-warning: #b8862f;
+  --op2-danger: #a4383f;
   min-width: min(440px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px);
@@ -42,7 +44,7 @@
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-list,
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row,
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__empty-content,
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-preview {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__analysis {
   border: 1px solid var(--op2-border);
   border-radius: 8px;
   background: var(--op2-panel-bg);
@@ -159,56 +161,118 @@
   text-align: center;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-preview {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__analysis {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .55rem 1.3rem;
+  gap: .55rem;
   padding: .8rem 1rem;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-note {
-  grid-column: 1 / -1;
-  margin: 0 0 .15rem;
-  color: var(--op2-text-muted);
-  font-size: .8rem;
-}
-
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-entry {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-row {
   display: grid;
   min-width: 0;
-  grid-template-columns: auto auto minmax(0, 1fr);
-  align-items: center;
-  gap: .5rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .55rem;
   font-size: .88rem;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-icon {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-icon {
+  display: inline-flex;
   flex: none;
-  width: 1.1rem;
-  color: var(--op2-text-muted);
-  font-size: .82rem;
-  text-align: center;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin-top: .1rem;
+  border-radius: 50%;
+  background: var(--op2-text-muted);
+  color: #fff;
+  font-size: .68rem;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-text {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-row--recognized .op2-adventure-import__status-icon {
+  background: var(--op2-positive);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-row--password-required .op2-adventure-import__status-icon,
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-row--unsupported .op2-adventure-import__status-icon {
+  background: var(--op2-warning);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-row--invalid .op2-adventure-import__status-icon {
+  background: var(--op2-danger);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-text {
   display: grid;
   min-width: 0;
   gap: .1rem;
-  margin-inline-start: .25rem;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-label {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-label {
+  min-width: 0;
+  color: var(--op2-text-muted);
+  font-size: .74rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-value {
   min-width: 0;
   color: var(--op2-text);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-summary {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-issue {
+  display: block;
   min-width: 0;
   color: var(--op2-text-muted);
   font-size: .76rem;
-  opacity: .9;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory {
+  padding-top: .5rem;
+  border-top: 1px solid var(--op2-border);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-note {
+  margin: 0 0 .4rem;
+  color: var(--op2-text-muted);
+  font-size: .78rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+  padding: .18rem 0;
+  font-size: .82rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-icon {
+  flex: none;
+  width: 1.1rem;
+  color: var(--op2-text-muted);
+  font-size: .78rem;
+  text-align: center;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-label {
+  min-width: 0;
+  color: var(--op2-text);
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-summary {
+  min-width: 0;
+  color: var(--op2-text-muted);
+  text-align: right;
+  white-space: nowrap;
 }
 
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__body button {
@@ -258,7 +322,12 @@
     grid-column: 1 / -1;
   }
 
-  .ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-preview {
-    grid-template-columns: minmax(0, 1fr);
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-summary {
+    grid-column: 2;
+    text-align: left;
   }
 }

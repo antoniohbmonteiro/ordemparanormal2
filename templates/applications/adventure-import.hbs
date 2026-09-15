@@ -8,8 +8,11 @@
     <h2 id="op2-adventure-import-main-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.MainMaterial"}}</h2>
     <div class="op2-adventure-import__file-row">
       <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.PlaytestPdf"}}</span>
-      <button type="button" disabled>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf"}}</button>
-      <span class="op2-adventure-import__file-empty">{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}</span>
+      <button type="button" data-action="selectPdf">{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf"}}</button>
+      <input type="file" accept=".pdf" data-file-slot="pdf" hidden />
+      <span class="op2-adventure-import__file-empty{{#if pdfName}} op2-adventure-import__file-selected{{/if}}">
+        {{#if pdfName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{pdfName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
+      </span>
     </div>
   </section>
 
@@ -18,26 +21,48 @@
     <div class="op2-adventure-import__file-list">
       <div class="op2-adventure-import__file-row">
         <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.ActOne"}}</span>
-        <button type="button" disabled>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
-        <span class="op2-adventure-import__file-empty">{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}</span>
+        <button type="button" data-action="selectZip" data-file-slot="actOne">{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
+        <input type="file" accept=".zip" data-file-slot="actOne" hidden />
+        <span class="op2-adventure-import__file-empty{{#if actOneName}} op2-adventure-import__file-selected{{/if}}">
+          {{#if actOneName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{actOneName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
+        </span>
       </div>
       <div class="op2-adventure-import__file-row">
         <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.ActTwo"}}</span>
-        <button type="button" disabled>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
-        <span class="op2-adventure-import__file-empty">{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}</span>
+        <button type="button" data-action="selectZip" data-file-slot="actTwo">{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
+        <input type="file" accept=".zip" data-file-slot="actTwo" hidden />
+        <span class="op2-adventure-import__file-empty{{#if actTwoName}} op2-adventure-import__file-selected{{/if}}">
+          {{#if actTwoName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{actTwoName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
+        </span>
       </div>
     </div>
   </section>
 
   <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-detected-heading">
     <h2 id="op2-adventure-import-detected-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.DetectedContent"}}</h2>
-    <div class="op2-adventure-import__empty-content">
-      {{localize "ORDEMPARANORMAL2.AdventureImport.EmptyContent"}}
-    </div>
+    {{#if hasPreview}}
+      <div class="op2-adventure-import__mock-preview">
+        <p class="op2-adventure-import__mock-note">{{localize "ORDEMPARANORMAL2.AdventureImport.MockPreview.Note"}}</p>
+        {{#each preview}}
+          <div class="op2-adventure-import__mock-entry">
+            <span class="op2-adventure-import__mock-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+            <i class="op2-adventure-import__mock-icon {{icon}}" aria-hidden="true"></i>
+            <span class="op2-adventure-import__mock-text">
+              <span class="op2-adventure-import__mock-label">{{label}}</span>
+              <span class="op2-adventure-import__mock-summary">{{summary}}</span>
+            </span>
+          </div>
+        {{/each}}
+      </div>
+    {{else}}
+      <div class="op2-adventure-import__empty-content">
+        {{localize "ORDEMPARANORMAL2.AdventureImport.EmptyContent"}}
+      </div>
+    {{/if}}
   </section>
 
   <footer class="op2-adventure-import__actions">
-    <button type="button" disabled>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
-    <button type="button" disabled>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
+    <button type="button" data-action="analyzeFiles" {{#unless canAnalyze}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
+    <button type="button" data-action="importPreview" {{#unless hasPreview}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
   </footer>
 </div>

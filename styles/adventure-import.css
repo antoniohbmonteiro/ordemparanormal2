@@ -6,6 +6,7 @@
   --op2-text-muted: #a7acb5;
   --op2-border: rgba(255, 255, 255, .1);
   --op2-accent: #7f252b;
+  --op2-positive: #3c8f56;
   min-width: min(440px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px);
@@ -40,7 +41,8 @@
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__notice,
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-list,
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row,
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__empty-content {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__empty-content,
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-preview {
   border: 1px solid var(--op2-border);
   border-radius: 8px;
   background: var(--op2-panel-bg);
@@ -117,6 +119,36 @@
   overflow-wrap: anywhere;
 }
 
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-selected {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  color: var(--op2-text);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__selection-check,
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: var(--op2-positive);
+  color: #fff;
+  font-size: .62rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row input[type="file"][hidden] {
+  display: none !important;
+}
+
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row button {
   white-space: nowrap;
 }
@@ -127,7 +159,59 @@
   text-align: center;
 }
 
-.ordemparanormal2.op2-adventure-import button {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem 1.3rem;
+  padding: .8rem 1rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-note {
+  grid-column: 1 / -1;
+  margin: 0 0 .15rem;
+  color: var(--op2-text-muted);
+  font-size: .8rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-entry {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: .5rem;
+  font-size: .88rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-icon {
+  flex: none;
+  width: 1.1rem;
+  color: var(--op2-text-muted);
+  font-size: .82rem;
+  text-align: center;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-text {
+  display: grid;
+  min-width: 0;
+  gap: .1rem;
+  margin-inline-start: .25rem;
+  line-height: 1.2;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-label {
+  min-width: 0;
+  color: var(--op2-text);
+  font-weight: 600;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-summary {
+  min-width: 0;
+  color: var(--op2-text-muted);
+  font-size: .76rem;
+  opacity: .9;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__body button {
   width: auto;
   min-width: 0;
   margin: 0;
@@ -137,7 +221,7 @@
   font: inherit;
 }
 
-.ordemparanormal2.op2-adventure-import button:disabled {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__body button:disabled {
   cursor: not-allowed;
   opacity: .55;
   box-shadow: none;
@@ -172,5 +256,9 @@
 
   .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-empty {
     grid-column: 1 / -1;
+  }
+
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__mock-preview {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

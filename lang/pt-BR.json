@@ -86,6 +86,22 @@
       "DetectedContent": "Conteúdo detectado",
       "EmptyFile": "Nenhum arquivo selecionado",
       "EmptyContent": "Selecione e analise os arquivos para ver o conteúdo disponível para importação.",
+      "MockPreview": {
+        "Note": "Prévia ilustrativa; as contagens abaixo são demonstrativas.",
+        "Characters": "Personagens",
+        "Abilities": "Habilidades",
+        "Scenes": "Cenas",
+        "PointsOfInterest": "Pontos de Interesse",
+        "Assets": "Assets",
+        "Unit": {
+          "Characters": "itens",
+          "Abilities": "itens",
+          "Scenes": "cenas",
+          "PointsOfInterest": "itens",
+          "Assets": "arquivos"
+        },
+        "NoImport": "Esta é uma prévia ilustrativa. Nenhum conteúdo foi importado."
+      },
       "Actions": {
         "SelectPdf": "Selecionar PDF",
         "SelectZip": "Selecionar ZIP",

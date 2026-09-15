@@ -154,6 +154,7 @@ declare const CONFIG: {
 };
 
 declare const game: {
+  readonly world: { readonly id: string };
   readonly i18n: {
     format(key: string, data?: Record<string, unknown>): string;
     localize(key: string): string;

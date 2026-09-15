@@ -10,8 +10,8 @@ let workerConfigured = false;
 // that every GM loads on every session start.
 async function loadPdfJs() {
   const [pdfjs, workerUrl] = await Promise.all([
-    import("pdfjs-dist"),
-    import("pdfjs-dist/build/pdf.worker.mjs?url"),
+    import("pdfjs-dist/legacy/build/pdf.mjs"),
+    import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
   ]);
   if (!workerConfigured) {
     pdfjs.GlobalWorkerOptions.workerSrc = workerUrl.default;

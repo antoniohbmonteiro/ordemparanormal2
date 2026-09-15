@@ -12,14 +12,14 @@ const mocks = vi.hoisted(() => {
   return { getDocument: vi.fn(), PasswordException: MockPasswordException };
 });
 
-vi.mock("pdfjs-dist", () => ({
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   getDocument: mocks.getDocument,
   GlobalWorkerOptions: { workerSrc: "" },
   PasswordException: mocks.PasswordException,
   PasswordResponses: { NEED_PASSWORD: 1, INCORRECT_PASSWORD: 2 },
 }));
 
-vi.mock("pdfjs-dist/build/pdf.worker.mjs?url", () => ({ default: "worker.mjs" }));
+vi.mock("pdfjs-dist/legacy/build/pdf.worker.mjs?url", () => ({ default: "worker.mjs" }));
 
 import { readPdfParsedFacts } from "./read-pdf-parsed-facts";
 
@@ -87,6 +87,28 @@ describe("readPdfParsedFacts", () => {
 
     const result = await readPdfParsedFacts(new ArrayBuffer(0), null);
     expect(result).toEqual({ status: "password-required" });
+    expect(destroy).toHaveBeenCalledOnce();
+  });
+
+  it("passes an accepted password to PDF.js and parses a v1.0 document", async () => {
+    const destroy = vi.fn(async () => undefined);
+    getDocumentMock.mockReturnValue({
+      promise: Promise.resolve(fakeDocument({
+        pages: [fakePage("Pacote #1 | Jan/2020 | v1.0", "pt-BR")],
+      })),
+      destroy,
+    });
+
+    const result = await readPdfParsedFacts(new ArrayBuffer(0), "correct-password");
+
+    expect(getDocumentMock).toHaveBeenCalledWith({
+      data: new Uint8Array(0),
+      password: "correct-password",
+    });
+    expect(result).toMatchObject({
+      status: "success",
+      facts: { versionStampTag: "Pacote #1 | Jan/2020 | v1.0" },
+    });
     expect(destroy).toHaveBeenCalledOnce();
   });
 

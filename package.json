@@ -26,6 +26,7 @@
     "vitest": "~4.1.10"
   },
   "dependencies": {
+    "@zip.js/zip.js": "2.15.0",
     "pdfjs-dist": "6.3.289"
   }
 }

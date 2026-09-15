@@ -135,7 +135,16 @@
         "SelectZip": "Selecionar ZIP",
         "Analyze": "Analisar arquivos",
         "Import": "Importar para este Mundo",
-        "ImportNotice": "Nenhum conteúdo foi importado. Esta etapa só analisa os arquivos selecionados."
+        "ImportNotice": "Nenhum conteúdo foi importado. Esta etapa só analisa os arquivos selecionados.",
+        "Preparing": "Validando os ZIPs antes de enviar os arquivos…",
+        "Progress": "Enviando arquivos: {completed} de {total}",
+        "ImportSuccess": "{count} arquivos da aventura foram armazenados neste Mundo.",
+        "ImportFailure": "Importação interrompida após {count} arquivos confirmados: {detail}",
+        "ValidationFailure": "Falha na validação do ZIP ou de seus arquivos",
+        "DirectoryFailure": "Não foi possível criar a pasta de destino",
+        "ExtractionFailure": "Não foi possível extrair o arquivo do ZIP",
+        "UploadFailure": "Não foi possível confirmar o arquivo no storage",
+        "UnexpectedFailure": "Ocorreu um erro inesperado"
       },
       "Errors": {
         "Open": "Não foi possível abrir a janela de importação de aventura."

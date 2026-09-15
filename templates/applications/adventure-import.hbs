@@ -8,7 +8,7 @@
     <h2 id="op2-adventure-import-main-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.MainMaterial"}}</h2>
     <div class="op2-adventure-import__file-row">
       <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.PlaytestPdf"}}</span>
-      <button type="button" data-action="selectPdf">{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf"}}</button>
+      <button type="button" data-action="selectPdf" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf"}}</button>
       <input type="file" accept=".pdf" data-file-slot="pdf" hidden />
       <span class="op2-adventure-import__file-empty{{#if pdfName}} op2-adventure-import__file-selected{{/if}}">
         {{#if pdfName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{pdfName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
@@ -21,7 +21,7 @@
     <div class="op2-adventure-import__file-list">
       <div class="op2-adventure-import__file-row">
         <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.ActOne"}}</span>
-        <button type="button" data-action="selectZip" data-file-slot="actOne">{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
+        <button type="button" data-action="selectZip" data-file-slot="actOne" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
         <input type="file" accept=".zip" data-file-slot="actOne" hidden />
         <span class="op2-adventure-import__file-empty{{#if actOneName}} op2-adventure-import__file-selected{{/if}}">
           {{#if actOneName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{actOneName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
@@ -29,7 +29,7 @@
       </div>
       <div class="op2-adventure-import__file-row">
         <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.ActTwo"}}</span>
-        <button type="button" data-action="selectZip" data-file-slot="actTwo">{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
+        <button type="button" data-action="selectZip" data-file-slot="actTwo" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
         <input type="file" accept=".zip" data-file-slot="actTwo" hidden />
         <span class="op2-adventure-import__file-empty{{#if actTwoName}} op2-adventure-import__file-selected{{/if}}">
           {{#if actTwoName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{actTwoName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
@@ -73,7 +73,8 @@
   </section>
 
   <footer class="op2-adventure-import__actions">
+    {{#if progress}}<p class="op2-adventure-import__progress" role="status" aria-live="polite">{{progress}}</p>{{/if}}
     <button type="button" data-action="analyzeFiles" {{#unless canAnalyze}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
-    <button type="button" data-action="importPreview" {{#unless hasAnalysis}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
+    <button type="button" data-action="importAssets" {{#unless canImport}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
   </footer>
 </div>

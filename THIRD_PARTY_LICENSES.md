@@ -77,3 +77,7 @@ Game-icons.net's attribution guidance is available on its [About page](https://g
 ## PDF.js (pdfjs-dist)
 
 The Adventure Importer's PDF analysis uses [pdfjs-dist](https://www.npmjs.com/package/pdfjs-dist) (version pinned in `package.json`), the packaged distribution of [PDF.js](https://mozilla.github.io/pdf.js/), Copyright © Mozilla Foundation and contributors, licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). A copy of the license is bundled with the package at `node_modules/pdfjs-dist/LICENSE`. The library is consumed unmodified, as published; the `pdfjs-dist` package as distributed on npm does not include a separate `NOTICE` file, so none is reproduced here beyond this attribution.
+
+## zip.js (@zip.js/zip.js)
+
+The Adventure Importer extracts user-selected ZIP entries with [zip.js](https://github.com/gildas-lormeau/zip.js) version 2.15.0, Copyright © Gildas Lormeau and contributors, licensed under BSD-3-Clause. The library is consumed unmodified. Its license is included in the installed package at `node_modules/@zip.js/zip.js/LICENSE`.

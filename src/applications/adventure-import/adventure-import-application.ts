@@ -13,6 +13,12 @@ import {
   analyzePdfSource,
   type AdventureSourceAnalysis,
 } from "../../features/adventure-import/analyze-adventure-sources";
+import { createAdventureAssetStorage } from "../../adapters/foundry/adventure-asset-storage";
+import {
+  materializeAdventureAssets,
+  MaterializationError,
+  type MaterializationResult,
+} from "../../features/adventure-import/materialize-adventure-assets";
 import { openAdventureImportPasswordDialog } from "./adventure-import-password-dialog";
 
 const ADVENTURE_IMPORT_TEMPLATE =
@@ -43,6 +49,9 @@ interface AdventureImportRenderContext {
   readonly actTwoName: string;
   readonly canAnalyze: boolean;
   readonly hasAnalysis: boolean;
+  readonly canImport: boolean;
+  readonly isImporting: boolean;
+  readonly progress: string;
   readonly statuses: readonly SourceStatusViewModel[];
   readonly inventory: readonly InventoryRowViewModel[];
 }
@@ -187,7 +196,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       selectPdf: AdventureImportApplication.#onSelectPdf,
       selectZip: AdventureImportApplication.#onSelectZip,
       analyzeFiles: AdventureImportApplication.#onAnalyzeFiles,
-      importPreview: AdventureImportApplication.#onImportPreview,
+      importAssets: AdventureImportApplication.#onImportAssets,
     },
     classes: ["ordemparanormal2", "op2-adventure-import"],
     position: { width: 800, height: "auto" as const },
@@ -212,6 +221,9 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   };
   #password: string | null = null;
   #analysis: AdventureSourceAnalysis | null = null;
+  #result: MaterializationResult | null = null;
+  #isImporting = false;
+  #progress = "";
 
   protected override _canRender(options: ApplicationRenderOptions): boolean | void {
     if (!game.user.isGM) return false;
@@ -221,6 +233,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   protected override _onClose(options: ApplicationClosingOptions): void {
     this.#password = null;
     this.#analysis = null;
+    this.#result = null;
     super._onClose(options);
   }
 
@@ -229,8 +242,14 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       pdfName: this.#files.pdf?.name ?? "",
       actOneName: this.#files.actOne?.name ?? "",
       actTwoName: this.#files.actTwo?.name ?? "",
-      canAnalyze: this.#files.pdf !== null,
+      canAnalyze: this.#files.pdf !== null && !this.#isImporting,
       hasAnalysis: this.#analysis !== null,
+      canImport: !this.#isImporting && Boolean(
+        (this.#files.actOne && this.#analysis?.actOne?.status === "recognized" && this.#analysis.actOne.edition === "ato-i-extras")
+        || (this.#files.actTwo && this.#analysis?.actTwo?.status === "recognized" && this.#analysis.actTwo.edition === "ato-ii-extras"),
+      ),
+      isImporting: this.#isImporting,
+      progress: this.#progress,
       statuses: [
         buildPdfStatusViewModel(this.#analysis?.pdf ?? null),
         buildZipStatusViewModel(localize("ActOne"), this.#analysis?.actOne ?? null),
@@ -254,10 +273,12 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       const slot = input.dataset.fileSlot;
       if (slot !== "pdf" && slot !== "actOne" && slot !== "actTwo") continue;
       input.addEventListener("change", () => {
+        if (this.#isImporting) return;
         const file = input.files?.[0];
         if (!file) return;
         this.#files[slot] = file;
         this.#analysis = null;
+        this.#result = null;
         if (slot === "pdf") this.#password = null;
         void this.render().catch((error) => {
           console.error("ordemparanormal2 | Failed to update Adventure Import preview.", error);
@@ -267,7 +288,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   }
 
   #openFilePicker(slot: FileSlot): void {
-    if (!game.user.isGM) return;
+    if (!game.user.isGM || this.#isImporting) return;
     this.element.querySelector<HTMLInputElement>(
       `input[type='file'][data-file-slot='${slot}']`,
     )?.click();
@@ -287,7 +308,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   }
 
   static async #onAnalyzeFiles(this: AdventureImportApplication): Promise<void> {
-    if (!game.user.isGM || !this.#files.pdf) return;
+    if (!game.user.isGM || !this.#files.pdf || this.#isImporting) return;
 
     let analysis = await analyzeAdventureSources({
       pdf: this.#files.pdf,
@@ -309,9 +330,47 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     await this.render();
   }
 
-  static #onImportPreview(this: AdventureImportApplication): void {
-    if (!game.user.isGM || !this.#analysis) return;
-    ui.notifications.info(localize("Actions.ImportNotice"));
+  static async #onImportAssets(this: AdventureImportApplication): Promise<void> {
+    if (!game.user.isGM || this.#isImporting || !this.#analysis) return;
+    const files = { actOne: this.#files.actOne, actTwo: this.#files.actTwo };
+    const analysis = this.#analysis;
+    if (!files.actOne && !files.actTwo) return;
+
+    this.#isImporting = true;
+    this.#progress = localize("Actions.Preparing");
+    await this.render();
+    try {
+      this.#result = await materializeAdventureAssets({
+        ...files,
+        actOneAnalysis: analysis.actOne,
+        actTwoAnalysis: analysis.actTwo,
+        storage: createAdventureAssetStorage(),
+        mimeTypes: CONST.UPLOADABLE_FILE_EXTENSIONS,
+        onProgress: async (completed, total) => {
+          this.#progress = format("Actions.Progress", { completed: String(completed), total: String(total) });
+          await this.render();
+        },
+      });
+      ui.notifications.info(format("Actions.ImportSuccess", { count: String(this.#result.assets.length) }));
+    } catch (error) {
+      this.#result = error instanceof MaterializationError ? { assets: error.confirmedAssets } : null;
+      const stageKey = error instanceof MaterializationError
+        ? { preflight: "ValidationFailure", directory: "DirectoryFailure", extract: "ExtractionFailure", upload: "UploadFailure" }[error.stage]
+        : "UnexpectedFailure";
+      const actLabel = error instanceof MaterializationError && error.act
+        ? localize(error.act === "actOne" ? "ActOne" : "ActTwo")
+        : "";
+      const detail = `${localize(`Actions.${stageKey}`)}${actLabel ? ` · ${actLabel}` : ""}`
+        + `${error instanceof MaterializationError && error.entryPath ? ` · ${error.entryPath}` : ""}`;
+      ui.notifications.error(format("Actions.ImportFailure", {
+        count: String(this.#result?.assets.length ?? 0), detail,
+      }));
+      console.error("ordemparanormal2 | Adventure asset materialization failed.", error);
+    } finally {
+      this.#isImporting = false;
+      this.#progress = "";
+      await this.render();
+    }
   }
 }
 

@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   analyzeAdventureSources: vi.fn(),
   analyzePdfSource: vi.fn(),
   openAdventureImportPasswordDialog: vi.fn(),
+  materializeAdventureAssets: vi.fn(),
+  createAdventureAssetStorage: vi.fn(),
 }));
 
 vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
@@ -22,6 +24,13 @@ vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
 
 vi.mock("./adventure-import-password-dialog", () => ({
   openAdventureImportPasswordDialog: mocks.openAdventureImportPasswordDialog,
+}));
+vi.mock("../../features/adventure-import/materialize-adventure-assets", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../features/adventure-import/materialize-adventure-assets")>();
+  return { ...original, materializeAdventureAssets: mocks.materializeAdventureAssets };
+});
+vi.mock("../../adapters/foundry/adventure-asset-storage", () => ({
+  createAdventureAssetStorage: mocks.createAdventureAssetStorage,
 }));
 
 function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): PdfSourceAnalysis {
@@ -133,6 +142,7 @@ interface TestContext {
   actTwoName: string;
   canAnalyze: boolean;
   hasAnalysis: boolean;
+  canImport: boolean;
   statuses: readonly TestStatus[];
   inventory: readonly TestInventoryRow[];
 }
@@ -155,6 +165,7 @@ let Application: {
   PARTS: object;
 };
 const info = vi.fn();
+const errorNotification = vi.fn();
 const settingsSet = vi.fn();
 const documentCreate = vi.fn();
 const localize = vi.fn((key: string) => key);
@@ -167,7 +178,8 @@ beforeAll(async () => {
       HandlebarsApplicationMixin: <T>(Base: T): T => Base,
     } },
   });
-  vi.stubGlobal("ui", { notifications: { info } });
+  vi.stubGlobal("ui", { notifications: { info, error: errorNotification } });
+  vi.stubGlobal("CONST", { UPLOADABLE_FILE_EXTENSIONS: { png: "image/png" } });
   vi.stubGlobal("Actor", { create: documentCreate });
   vi.stubGlobal("Item", { create: documentCreate });
   vi.stubGlobal("game", {
@@ -189,6 +201,7 @@ beforeEach(() => {
   instances.length = 0;
   onRender = null;
   info.mockClear();
+  errorNotification.mockClear();
   settingsSet.mockClear();
   documentCreate.mockClear();
   localize.mockClear();
@@ -196,6 +209,8 @@ beforeEach(() => {
   mocks.analyzeAdventureSources.mockReset();
   mocks.analyzePdfSource.mockReset();
   mocks.openAdventureImportPasswordDialog.mockReset();
+  mocks.materializeAdventureAssets.mockReset();
+  mocks.createAdventureAssetStorage.mockReset().mockReturnValue({ worldId: "test-world" });
 });
 
 afterAll(() => vi.unstubAllGlobals());
@@ -452,16 +467,40 @@ describe("Adventure Import Application", () => {
     app._onClose({});
   });
 
-  it("never mutates the World when the visible import action is clicked", async () => {
+  it("does not materialize without a recognized ZIP", async () => {
     const app = new Application();
     attach(app);
-    await action(app, "importPreview");
+    await action(app, "importAssets");
     expect(info).not.toHaveBeenCalled();
     mocks.analyzeAdventureSources.mockResolvedValue(emptyAnalysis(unencryptedRecognizedPdf()));
     app.inputs.pdf.select(file("playtest.pdf"));
     await action(app, "analyzeFiles");
-    await action(app, "importPreview");
-    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportNotice");
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled();
+    expect(settingsSet).not.toHaveBeenCalled();
+    expect(documentCreate).not.toHaveBeenCalled();
+  });
+
+  it("runs materialization for a recognized ZIP without creating documents", async () => {
+    const app = new Application();
+    attach(app);
+    const zip = file("ato-um.zip");
+    app.inputs.pdf.select(file("playtest.pdf"));
+    app.inputs.actOne.select(zip);
+    mocks.analyzeAdventureSources.mockResolvedValue({
+      pdf: unencryptedRecognizedPdf({ status: "invalid" }),
+      actOne: { act: "actOne", status: "recognized", matchMethod: "hash", edition: "ato-i-extras", inventory: null, issues: [] },
+      actTwo: null,
+    });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [{ act: "actOne", originalEntryPath: "a.png", storedPath: "worlds/test/a.png" }] });
+    await action(app, "analyzeFiles");
+    expect((await app._prepareContext()).canImport).toBe(true);
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).toHaveBeenCalledOnce();
+    expect(mocks.materializeAdventureAssets.mock.calls[0][0]).toMatchObject({
+      actOne: zip, actOneAnalysis: { status: "recognized" }, mimeTypes: { png: "image/png" },
+    });
+    expect(info).toHaveBeenCalledOnce();
     expect(settingsSet).not.toHaveBeenCalled();
     expect(documentCreate).not.toHaveBeenCalled();
   });
@@ -481,7 +520,7 @@ describe("Adventure Import prototype template and styles", () => {
     expect(empty).toContain("AdventureImport.EmptyContent");
     expect(empty.match(/AdventureImport\.EmptyFile/g)).toHaveLength(3);
     expect(empty).toMatch(/data-action="analyzeFiles"\s+disabled/);
-    expect(empty).toMatch(/data-action="importPreview"\s+disabled/);
+    expect(empty).toMatch(/data-action="importAssets"\s+disabled/);
 
     app.inputs.pdf.select(file("A&B.pdf"));
     app.inputs.actOne.select(file("ato-um.zip"));
@@ -497,7 +536,7 @@ describe("Adventure Import prototype template and styles", () => {
     expect(analyzed.match(/class="op2-adventure-import__status-row /g)).toHaveLength(1);
     expect(analyzed).toContain("op2-adventure-import__status-row--recognized");
     expect(analyzed).not.toContain("AdventureImport.EmptyContent");
-    expect(analyzed).not.toMatch(/data-action="importPreview"\s+disabled/);
+    expect(analyzed).toMatch(/data-action="importAssets"\s+disabled/);
     expect(template.match(/AdventureImport\.Act(?:One|Two)/g)).toHaveLength(2);
   });
 

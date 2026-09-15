@@ -68,7 +68,32 @@
       "Label": "Ferramentas do Mestre",
       "Actions": {
         "RequestCheck": "Solicitar teste",
-        "OpposedCheck": "Teste oposto"
+        "OpposedCheck": "Teste oposto",
+        "ImportAdventure": "Importar Aventura"
+      }
+    },
+    "AdventureImport": {
+      "Title": "Importar Aventura",
+      "Notice": {
+        "Ownership": "Este sistema não distribui conteúdo oficial. Se você possui legalmente o material, poderá selecionar seus arquivos locais para preparar a aventura no seu Mundo.",
+        "LocalProcessing": "Os arquivos serão processados localmente e usados apenas para criar conteúdo no seu próprio Mundo do Foundry."
+      },
+      "MainMaterial": "Material principal",
+      "PlaytestPdf": "PDF do Playtest",
+      "ExtrasByAct": "Extras por ato",
+      "ActOne": "Ato I",
+      "ActTwo": "Ato II",
+      "DetectedContent": "Conteúdo detectado",
+      "EmptyFile": "Nenhum arquivo selecionado",
+      "EmptyContent": "Selecione e analise os arquivos para ver o conteúdo disponível para importação.",
+      "Actions": {
+        "SelectPdf": "Selecionar PDF",
+        "SelectZip": "Selecionar ZIP",
+        "Analyze": "Analisar arquivos",
+        "Import": "Importar para este Mundo"
+      },
+      "Errors": {
+        "Open": "Não foi possível abrir a janela de importação de aventura."
       }
     },
     "PointOfInterest": {

@@ -1,0 +1,176 @@
+.ordemparanormal2.op2-adventure-import {
+  --op2-sheet-bg: rgba(18, 20, 24, .96);
+  --op2-panel-bg: rgba(27, 30, 36, .92);
+  --op2-input-bg: rgba(11, 13, 16, .72);
+  --op2-text: #f1f2f4;
+  --op2-text-muted: #a7acb5;
+  --op2-border: rgba(255, 255, 255, .1);
+  --op2-accent: #7f252b;
+  min-width: min(440px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  color: var(--op2-text);
+}
+
+.ordemparanormal2.op2-adventure-import .window-content {
+  min-height: 0;
+  max-height: calc(100dvh - 72px);
+  padding: 0;
+  overflow: hidden;
+  background: var(--op2-sheet-bg);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import-content {
+  min-height: 0;
+  max-height: inherit;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__body {
+  display: grid;
+  min-height: 0;
+  max-height: calc(100dvh - 72px);
+  gap: .8rem;
+  padding: .9rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__notice,
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-list,
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row,
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__empty-content {
+  border: 1px solid var(--op2-border);
+  border-radius: 8px;
+  background: var(--op2-panel-bg);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__notice {
+  padding: .65rem 1rem;
+  border-color: color-mix(in srgb, var(--op2-accent) 40%, var(--op2-border));
+  background: color-mix(in srgb, var(--op2-accent) 8%, var(--op2-panel-bg));
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__notice p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__notice p + p {
+  margin-top: .3rem;
+  color: var(--op2-text-muted);
+  font-size: .8rem;
+  line-height: 1.35;
+  opacity: .84;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__section h2 {
+  margin: 0 0 .55rem;
+  padding: 0 0 .35rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--op2-accent) 38%, var(--op2-border));
+  color: var(--op2-text);
+  font-size: 1.04rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+  opacity: 1;
+  text-shadow: none;
+  filter: none;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__section[aria-labelledby="op2-adventure-import-detected-heading"] {
+  margin-top: .3rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-list {
+  overflow: hidden;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-list .op2-adventure-import__file-row {
+  border: 0;
+  border-radius: 0;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-list .op2-adventure-import__file-row + .op2-adventure-import__file-row {
+  border-top: 1px solid var(--op2-border);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(90px, .85fr) auto minmax(180px, 1.35fr);
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .75rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-label {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-empty {
+  min-width: 0;
+  color: var(--op2-text-muted);
+  font-size: .85rem;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row button {
+  white-space: nowrap;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__empty-content {
+  padding: 1.5rem 1rem;
+  color: var(--op2-text-muted);
+  text-align: center;
+}
+
+.ordemparanormal2.op2-adventure-import button {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--op2-border);
+  background: var(--op2-input-bg);
+  color: var(--op2-text);
+  font: inherit;
+}
+
+.ordemparanormal2.op2-adventure-import button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+  box-shadow: none;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  padding-top: .8rem;
+  border-top: 1px solid var(--op2-border);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__actions button {
+  min-height: 2.3rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__actions button:last-child {
+  border-color: color-mix(in srgb, var(--op2-accent) 55%, var(--op2-border));
+  background: color-mix(in srgb, var(--op2-accent) 25%, var(--op2-input-bg));
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__actions button:last-child:disabled {
+  border-color: color-mix(in srgb, var(--op2-accent) 22%, var(--op2-border));
+  background: color-mix(in srgb, var(--op2-accent) 8%, var(--op2-input-bg));
+}
+
+@container (max-width: 570px) {
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-empty {
+    grid-column: 1 / -1;
+  }
+}

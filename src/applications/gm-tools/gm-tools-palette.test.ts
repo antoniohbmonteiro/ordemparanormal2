@@ -4,11 +4,16 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openOpposedCheckDialogMock, createOpposedCheckMock, openCheckRequestDialogMock, createCheckRequestMock } = vi.hoisted(() => ({
+const { openOpposedCheckDialogMock, createOpposedCheckMock, openCheckRequestDialogMock, createCheckRequestMock, openAdventureImporterMock } = vi.hoisted(() => ({
   openOpposedCheckDialogMock: vi.fn(),
   createOpposedCheckMock: vi.fn(),
   openCheckRequestDialogMock: vi.fn(),
   createCheckRequestMock: vi.fn(),
+  openAdventureImporterMock: vi.fn(),
+}));
+
+vi.mock("../adventure-import/adventure-import-application", () => ({
+  openAdventureImporter: openAdventureImporterMock,
 }));
 
 vi.mock("../checks/opposed-check-dialog", () => ({
@@ -89,6 +94,7 @@ beforeEach(() => {
   createOpposedCheckMock.mockReset().mockResolvedValue(undefined);
   openCheckRequestDialogMock.mockReset().mockResolvedValue(null);
   createCheckRequestMock.mockReset().mockResolvedValue(undefined);
+  openAdventureImporterMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("GmToolsPalette", () => {
@@ -131,15 +137,18 @@ describe("GmToolsPalette", () => {
     ]);
   });
 
-  it("opens both GM check workflow dialogs", async () => {
+  it("delegates all three GM actions", async () => {
     expect(Object.keys(GmToolsPaletteClass.DEFAULT_OPTIONS.actions)).toEqual([
       "requestCheck",
       "opposedCheck",
+      "importAdventure",
     ]);
     await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck();
     await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
+    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.importAdventure();
     expect(openCheckRequestDialogMock).toHaveBeenCalledExactlyOnceWith();
     expect(openOpposedCheckDialogMock).toHaveBeenCalledExactlyOnceWith();
+    expect(openAdventureImporterMock).toHaveBeenCalledExactlyOnceWith();
   });
 
   it("creates a Check Request only after confirmation", async () => {
@@ -191,23 +200,27 @@ describe("GM Tools Palette template and assets", () => {
       "utf8",
     );
     expect(css).toMatch(/\.ordemparanormal2\.op2-gm-tools-palette\s*\{[^}]*position:\s*fixed;/s);
+    expect(css).toContain("grid-template-columns: 10px repeat(3, 36px)");
+    expect(css).toMatch(/button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
+    expect(css).toMatch(/img\s*\{[^}]*width:\s*1\.62rem;[^}]*height:\s*1\.62rem;/s);
   });
 
-  it("renders one grip and exactly two accessible actions", async () => {
+  it("renders one grip and exactly three accessible actions", async () => {
     const template = await readFile(
       fileURLToPath(new URL("../../../templates/applications/gm-tools-palette.hbs", import.meta.url)),
       "utf8",
     );
     const actions = [...template.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]);
 
-    expect(actions).toEqual(["requestCheck", "opposedCheck"]);
+    expect(actions).toEqual(["requestCheck", "opposedCheck", "importAdventure"]);
     expect(template.match(/data-drag-handle/g)).toHaveLength(1);
     expect(template).toContain("assets/icons/gm-tools/rolling-dices.svg");
     expect(template).toContain("assets/icons/gm-tools/sword-clash.svg");
-    expect(template.match(/aria-hidden="true"/g)).toHaveLength(3);
-    expect(template.match(/alt=""/g)).toHaveLength(2);
-    expect(template.match(/aria-label=/g)).toHaveLength(3);
-    expect(template.match(/title=/g)).toHaveLength(2);
+    expect(template).toContain("assets/icons/gm-tools/adventure-import.svg");
+    expect(template.match(/aria-hidden="true"/g)).toHaveLength(4);
+    expect(template.match(/alt=""/g)).toHaveLength(3);
+    expect(template.match(/aria-label=/g)).toHaveLength(4);
+    expect(template.match(/title=/g)).toHaveLength(3);
     expect(template).not.toMatch(/fa-(?:solid|regular|brands)|d20|DialogV2|ChatMessage|socket|Actor/i);
   });
 
@@ -220,5 +233,14 @@ describe("GM Tools Palette template and assets", () => {
     );
     expect(asset.toString()).toContain('viewBox="0 0 512 512"');
     expect(createHash("sha256").update(asset).digest("hex")).toBe(expectedHash);
+  });
+
+  it("uses a matching monochrome asset for Adventure Import", async () => {
+    const asset = await readFile(
+      fileURLToPath(new URL("../../../assets/icons/gm-tools/adventure-import.svg", import.meta.url)),
+      "utf8",
+    );
+    expect(asset).toContain('viewBox="0 0 512 512"');
+    expect(asset).toContain('fill="#fff"');
   });
 });

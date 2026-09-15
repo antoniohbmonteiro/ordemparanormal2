@@ -9,6 +9,7 @@ import { openOpposedCheckDialog } from "../checks/opposed-check-dialog";
 import { createOpposedCheck } from "../../features/checks/create-opposed-check";
 import { openCheckRequestDialog } from "../checks/check-request-dialog";
 import { createCheckRequest } from "../../features/checks/create-check-request";
+import { openAdventureImporter } from "../adventure-import/adventure-import-application";
 
 const GM_TOOLS_PALETTE_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/gm-tools-palette.hbs";
@@ -21,6 +22,7 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       requestCheck: GmToolsPalette.#onRequestCheck,
       opposedCheck: GmToolsPalette.#onOpposedCheck,
+      importAdventure: GmToolsPalette.#onImportAdventure,
     },
     classes: ["ordemparanormal2", "op2-gm-tools-palette"],
     position: { top: 80, left: 220, width: "auto" as const, height: "auto" as const },
@@ -84,6 +86,17 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
       console.error("ordemparanormal2 | Failed to create Opposed Check.", error);
       ui.notifications.error(
         game.i18n.localize("ORDEMPARANORMAL2.OpposedCheckCard.Errors.Create"),
+      );
+    }
+  }
+
+  static async #onImportAdventure(): Promise<void> {
+    try {
+      await openAdventureImporter();
+    } catch (error) {
+      console.error("ordemparanormal2 | Failed to open Adventure Importer.", error);
+      ui.notifications.error(
+        game.i18n.localize("ORDEMPARANORMAL2.AdventureImport.Errors.Open"),
       );
     }
   }

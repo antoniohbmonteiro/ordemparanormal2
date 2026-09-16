@@ -108,6 +108,24 @@ describe("Adventure asset storage", () => {
     )).resolves.toBe(storedPath);
   });
 
+  it("looks up an existing encoded asset without uploading and retains the browse path", async () => {
+    const directory = `${ROOT}/Tokens`;
+    const storedPath = `${ROOT}/Tokens/Personagem%20-%20K%C3%AAnia.png`;
+    setup([directory], [storedPath]);
+    await expect(createAdventureAssetStorage().findExisting(
+      directory, "Personagem - Kênia.png",
+    )).resolves.toBe(storedPath);
+    expect(browse).toHaveBeenCalledWith("data", directory);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("distinguishes missing files from a failed browse", async () => {
+    setup([ROOT], []);
+    const storage = createAdventureAssetStorage();
+    await expect(storage.findExisting(ROOT, "missing.png")).resolves.toBeNull();
+    await expect(storage.findExisting(`${ROOT}/missing`, "missing.png")).rejects.toThrow(/ENOENT/);
+  });
+
   it("matches UTF-8 percent-encoded accents in both directory and filename", async () => {
     const directory = `${ROOT}/Arquivos para o público - Ato I/Tokens`;
     const storedPath = `${ROOT}/Arquivos%20para%20o%20p%C3%BAblico%20-%20Ato%20I/Tokens/Personagem%20-%20K%C3%AAnia.png`;

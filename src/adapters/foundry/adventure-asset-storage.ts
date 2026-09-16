@@ -1,7 +1,11 @@
 import { safeZipEntryPath } from "../../core/adventure-import/safe-zip-entry-path";
 
-export interface AdventureAssetStorage {
+export interface AdventureAssetLookup {
   readonly worldId: string;
+  findExisting(directory: string, basename: string): Promise<string | null>;
+}
+
+export interface AdventureAssetStorage extends AdventureAssetLookup {
   ensureDirectories(directories: readonly string[]): Promise<void>;
   uploadAndConfirm(directory: string, file: File): Promise<string>;
 }
@@ -27,6 +31,14 @@ function matchesExpectedPath(candidate: string, expected: string): boolean {
 export function createAdventureAssetStorage(): AdventureAssetStorage {
   const FilePicker = foundry.applications.apps.FilePicker;
   const confirmedDirectories = new Set<string>();
+
+  async function findExisting(directory: string, basename: string): Promise<string | null> {
+    const safeBasename = safeZipEntryPath(basename).basename;
+    if (safeBasename !== basename) throw new Error(`Expected a filename: ${basename}`);
+    const listing = await FilePicker.browse("data", directory);
+    const expected = normalizeStoragePath(`${directory}/${safeBasename}`);
+    return listing.files.find((candidate) => matchesExpectedPath(candidate, expected)) ?? null;
+  }
 
   async function ensureDirectory(target: string): Promise<void> {
     if (confirmedDirectories.has(target)) return;
@@ -54,6 +66,7 @@ export function createAdventureAssetStorage(): AdventureAssetStorage {
 
   return {
     worldId: game.world.id,
+    findExisting,
     async ensureDirectories(directories) {
       for (const directory of directories) {
         const parts = directory.split("/");
@@ -67,10 +80,8 @@ export function createAdventureAssetStorage(): AdventureAssetStorage {
       const basename = safeZipEntryPath(file.name).basename;
       const expected = `${directory}/${basename}`;
       await FilePicker.upload("data", directory, file, {}, { notify: false });
-      const listing = await FilePicker.browse("data", directory);
-      const normalizedExpected = normalizeStoragePath(expected);
-      const storedPath = listing.files.find((candidate) => matchesExpectedPath(candidate, normalizedExpected));
-      if (storedPath === undefined) {
+      const storedPath = await findExisting(directory, basename);
+      if (storedPath === null) {
         throw new Error(`Uploaded file was not found at expected path: ${expected}`);
       }
       return storedPath;

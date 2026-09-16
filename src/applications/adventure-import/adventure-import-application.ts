@@ -17,6 +17,7 @@ import { createAdventureAssetStorage } from "../../adapters/foundry/adventure-as
 import {
   materializeAdventureAssets,
   MaterializationError,
+  type MaterializedAsset,
   type MaterializationResult,
 } from "../../features/adventure-import/materialize-adventure-assets";
 import { openAdventureImportPasswordDialog } from "./adventure-import-password-dialog";
@@ -222,6 +223,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   #password: string | null = null;
   #analysis: AdventureSourceAnalysis | null = null;
   #result: MaterializationResult | null = null;
+  #confirmedOnFailure: readonly MaterializedAsset[] = [];
   #isImporting = false;
   #progress = "";
 
@@ -234,6 +236,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     this.#password = null;
     this.#analysis = null;
     this.#result = null;
+    this.#confirmedOnFailure = [];
     super._onClose(options);
   }
 
@@ -279,6 +282,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         this.#files[slot] = file;
         this.#analysis = null;
         this.#result = null;
+        this.#confirmedOnFailure = [];
         if (slot === "pdf") this.#password = null;
         void this.render().catch((error) => {
           console.error("ordemparanormal2 | Failed to update Adventure Import preview.", error);
@@ -340,6 +344,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     this.#progress = localize("Actions.Preparing");
     await this.render();
     try {
+      this.#result = null;
+      this.#confirmedOnFailure = [];
       this.#result = await materializeAdventureAssets({
         ...files,
         actOneAnalysis: analysis.actOne,
@@ -353,7 +359,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       });
       ui.notifications.info(format("Actions.ImportSuccess", { count: String(this.#result.assets.length) }));
     } catch (error) {
-      this.#result = error instanceof MaterializationError ? { assets: error.confirmedAssets } : null;
+      this.#result = null;
+      this.#confirmedOnFailure = error instanceof MaterializationError ? error.confirmedAssets : [];
       const stageKey = error instanceof MaterializationError
         ? { preflight: "ValidationFailure", directory: "DirectoryFailure", extract: "ExtractionFailure", upload: "UploadFailure" }[error.stage]
         : "UnexpectedFailure";
@@ -363,7 +370,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       const detail = `${localize(`Actions.${stageKey}`)}${actLabel ? ` · ${actLabel}` : ""}`
         + `${error instanceof MaterializationError && error.entryPath ? ` · ${error.entryPath}` : ""}`;
       ui.notifications.error(format("Actions.ImportFailure", {
-        count: String(this.#result?.assets.length ?? 0), detail,
+        count: String(this.#confirmedOnFailure.length), detail,
       }));
       console.error("ordemparanormal2 | Adventure asset materialization failed.", error);
     } finally {

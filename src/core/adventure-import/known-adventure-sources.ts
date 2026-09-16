@@ -2,6 +2,11 @@ export type PdfEditionId = "playtest-alpha-v1.0" | "playtest-alpha-v1.1";
 
 export type ZipPackageId = "ato-i-extras" | "ato-ii-extras";
 
+export const ZIP_PACKAGE_BY_ACT = {
+  actOne: "ato-i-extras",
+  actTwo: "ato-ii-extras",
+} as const satisfies Record<"actOne" | "actTwo", ZipPackageId>;
+
 export interface KnownPdfEncryptionProfile {
   readonly v: number;
   readonly r: number;

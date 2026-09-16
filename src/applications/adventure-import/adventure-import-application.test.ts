@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import type { AdventureSourceAnalysis } from "../../features/adventure-import/analyze-adventure-sources";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
+import { MaterializationError } from "../../features/adventure-import/materialize-adventure-assets";
 
 type Slot = "pdf" | "actOne" | "actTwo";
 
@@ -492,7 +493,10 @@ describe("Adventure Import Application", () => {
       actOne: { act: "actOne", status: "recognized", matchMethod: "hash", edition: "ato-i-extras", inventory: null, issues: [] },
       actTwo: null,
     });
-    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [{ act: "actOne", originalEntryPath: "a.png", storedPath: "worlds/test/a.png" }] });
+    mocks.materializeAdventureAssets.mockResolvedValue({
+      assets: [{ act: "actOne", originalEntryPath: "a.png", storedPath: "worlds/test/a.png" }],
+      materializedActs: ["actOne"],
+    });
     await action(app, "analyzeFiles");
     expect((await app._prepareContext()).canImport).toBe(true);
     await action(app, "importAssets");
@@ -502,6 +506,32 @@ describe("Adventure Import Application", () => {
     });
     expect(info).toHaveBeenCalledOnce();
     expect(settingsSet).not.toHaveBeenCalled();
+    expect(documentCreate).not.toHaveBeenCalled();
+  });
+
+  it("counts confirmed progress on failure without forging a successful result", async () => {
+    const app = new Application();
+    attach(app);
+    app.inputs.pdf.select(file("playtest.pdf"));
+    app.inputs.actOne.select(file("ato-um.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({
+      pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", matchMethod: "hash", edition: "ato-i-extras", inventory: null, issues: [] },
+      actTwo: null,
+    });
+    mocks.materializeAdventureAssets.mockRejectedValue(new MaterializationError(
+      "upload failed", "actOne", "two.png",
+      [{ act: "actOne", originalEntryPath: "one.png", storedPath: "worlds/test/one.png" }],
+      "upload",
+    ));
+    await action(app, "analyzeFiles");
+    await action(app, "importAssets");
+    expect(errorNotification).toHaveBeenCalledOnce();
+    expect(format).toHaveBeenCalledWith(
+      "ORDEMPARANORMAL2.AdventureImport.Actions.ImportFailure",
+      expect.objectContaining({ count: "1" }),
+    );
+    expect(info).not.toHaveBeenCalled();
     expect(documentCreate).not.toHaveBeenCalled();
   });
 });

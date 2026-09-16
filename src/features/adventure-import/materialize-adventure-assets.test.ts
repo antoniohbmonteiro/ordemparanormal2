@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   },
   openZipArchive: vi.fn(),
 }));
-vi.mock("../../core/adventure-import/known-adventure-sources", () => ({ KNOWN_ZIP_PACKAGES: mocks.hashes }));
+vi.mock("../../core/adventure-import/known-adventure-sources", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../core/adventure-import/known-adventure-sources")>();
+  return { ...original, KNOWN_ZIP_PACKAGES: mocks.hashes };
+});
 vi.mock("../../adapters/files/open-zip-archive", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../adapters/files/open-zip-archive")>();
   return { ...original, openZipArchive: mocks.openZipArchive };
@@ -45,6 +48,7 @@ function storage(): AdventureAssetStorage & { uploads: { directory: string; file
   const created: string[][] = [];
   return {
     worldId: "test-world", uploads, created,
+    async findExisting() { return null; },
     async ensureDirectories(dirs) { created.push([...dirs]); },
     async uploadAndConfirm(directory, file) {
       uploads.push({ directory, file });
@@ -79,6 +83,7 @@ describe("materializeAdventureAssets", () => {
       storage: target, mimeTypes: MIME,
     };
     const first = await materializeAdventureAssets(input);
+    expect(first.materializedActs).toEqual(["actOne", "actTwo"]);
     expect(first.assets.map((asset) => asset.storedPath)).toEqual([
       "worlds/test-world/ordemparanormal2/adventures/playtest-alpha/act-1/Ato I/Retratos/ação.PNG",
       "worlds/test-world/ordemparanormal2/adventures/playtest-alpha/act-1/Ato I/Handouts/nota.pdf",
@@ -96,6 +101,7 @@ describe("materializeAdventureAssets", () => {
     expect(target.created[1]).not.toContain("worlds/test-world/ordemparanormal2/adventures/playtest-alpha/act-2/Ato II");
     const second = await materializeAdventureAssets(input);
     expect(second.assets).toEqual(first.assets);
+    expect(second.materializedActs).toEqual(first.materializedActs);
     expect(target.uploads).toHaveLength(8);
   });
 
@@ -176,6 +182,7 @@ describe("materializeAdventureAssets", () => {
     expect(error).toBeInstanceOf(MaterializationError);
     expect(error).toMatchObject({ act: "actOne", entryPath: "two.png" });
     expect((error as MaterializationError).confirmedAssets).toHaveLength(1);
+    expect(error).not.toHaveProperty("materializedActs");
     expect(target.uploads).toHaveLength(1);
   });
 });

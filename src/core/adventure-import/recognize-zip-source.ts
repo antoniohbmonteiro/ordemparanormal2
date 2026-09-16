@@ -1,4 +1,4 @@
-import type { KnownZipPackage, ZipPackageId } from "./known-adventure-sources";
+import { ZIP_PACKAGE_BY_ACT, type KnownZipPackage, type ZipPackageId } from "./known-adventure-sources";
 import type { AdventureImportIssue, MatchMethod, RecognitionStatus } from "./recognition-status";
 import { normalizeZipFileEntries } from "./zip-fingerprint";
 import type { ZipCentralDirectoryEntry } from "./zip-central-directory-entry";
@@ -19,11 +19,6 @@ export interface ZipSourceAnalysis {
   readonly inventory: ZipInventorySummary | null;
   readonly issues: readonly AdventureImportIssue[];
 }
-
-const ACT_PACKAGE_ID: Record<AdventureAct, ZipPackageId> = {
-  actOne: "ato-i-extras",
-  actTwo: "ato-ii-extras",
-};
 
 function otherAct(act: AdventureAct): AdventureAct {
   return act === "actOne" ? "actTwo" : "actOne";
@@ -66,7 +61,7 @@ export function recognizeZipSource(
 
   const inventory = buildInventory(entries);
 
-  const ownPackageId = ACT_PACKAGE_ID[act];
+  const ownPackageId = ZIP_PACKAGE_BY_ACT[act];
   if (fingerprintHash === knownPackages[ownPackageId].fingerprintHash) {
     return {
       act,
@@ -78,7 +73,7 @@ export function recognizeZipSource(
     };
   }
 
-  const otherPackageId = ACT_PACKAGE_ID[otherAct(act)];
+  const otherPackageId = ZIP_PACKAGE_BY_ACT[otherAct(act)];
   if (fingerprintHash === knownPackages[otherPackageId].fingerprintHash) {
     return {
       act,

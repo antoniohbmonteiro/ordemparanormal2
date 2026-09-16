@@ -2,10 +2,11 @@ import { sha256Hex } from "../../adapters/files/compute-sha256";
 import { openZipArchive, type OpenZipArchive, type ExtractableZipEntry } from "../../adapters/files/open-zip-archive";
 import { readZipCentralDirectory } from "../../adapters/files/read-zip-central-directory";
 import type { AdventureAssetStorage } from "../../adapters/foundry/adventure-asset-storage";
-import { KNOWN_ZIP_PACKAGES } from "../../core/adventure-import/known-adventure-sources";
+import { KNOWN_ZIP_PACKAGES, ZIP_PACKAGE_BY_ACT } from "../../core/adventure-import/known-adventure-sources";
 import { assertDistinctZipPaths, safeZipEntryPath, type SafeZipEntryPath } from "../../core/adventure-import/safe-zip-entry-path";
 import { recognizeZipSource, type AdventureAct, type ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
 import { buildCanonicalZipFingerprintInput } from "../../core/adventure-import/zip-fingerprint";
+import { adventureActRoot } from "./adventure-asset-layout";
 
 export interface MaterializedAsset {
   readonly act: AdventureAct;
@@ -15,6 +16,7 @@ export interface MaterializedAsset {
 
 export interface MaterializationResult {
   readonly assets: readonly MaterializedAsset[];
+  readonly materializedActs: readonly AdventureAct[];
 }
 
 export type MaterializationStage = "preflight" | "directory" | "extract" | "upload";
@@ -57,9 +59,6 @@ interface PreparedAct {
   readonly files: readonly PreparedFile[];
 }
 
-const EXPECTED_EDITION = { actOne: "ato-i-extras", actTwo: "ato-ii-extras" } as const;
-const ACT_FOLDER = { actOne: "act-1", actTwo: "act-2" } as const;
-
 function mimeForFile(path: SafeZipEntryPath, mimeTypes: Readonly<Record<string, string>>): string {
   const extension = path.basename.match(/\.([^.]+)$/)?.[1]?.toLowerCase();
   const mime = extension ? mimeTypes[extension] : undefined;
@@ -81,7 +80,7 @@ async function prepareAct(
   if (issues.some((issue) => issue.severity === "error")) throw new Error(`Invalid ZIP for ${act}`);
   const fingerprint = await sha256Hex(new TextEncoder().encode(buildCanonicalZipFingerprintInput(manifest)));
   const recognition = recognizeZipSource(manifest, fingerprint, act, KNOWN_ZIP_PACKAGES, issues);
-  if (recognition.status !== "recognized" || recognition.edition !== EXPECTED_EDITION[act]) {
+  if (recognition.status !== "recognized" || recognition.edition !== ZIP_PACKAGE_BY_ACT[act]) {
     throw new Error(`ZIP is no longer recognized for ${act}`);
   }
 
@@ -106,7 +105,7 @@ async function prepareAct(
     );
     return {
       act,
-      root: `worlds/${storage.worldId}/ordemparanormal2/adventures/playtest-alpha/${ACT_FOLDER[act]}`,
+      root: adventureActRoot(storage.worldId, act),
       archive,
       paths,
       files,
@@ -134,7 +133,7 @@ export async function materializeAdventureAssets(input: MaterializeAdventureAsse
     ["actTwo", input.actTwo, input.actTwoAnalysis],
   ] as const).filter((candidate): candidate is readonly [AdventureAct, File, ZipSourceAnalysis] =>
     candidate[1] !== null && candidate[2]?.status === "recognized"
-      && candidate[2].edition === EXPECTED_EDITION[candidate[0]],
+      && candidate[2].edition === ZIP_PACKAGE_BY_ACT[candidate[0]],
   );
   if (selected.length === 0) throw new MaterializationError("No recognized ZIP selected", null, null, [], "preflight");
 
@@ -171,7 +170,7 @@ export async function materializeAdventureAssets(input: MaterializeAdventureAsse
         await input.onProgress?.(confirmed.length, total);
       }
     }
-    return { assets: confirmed };
+    return { assets: confirmed, materializedActs: selected.map(([act]) => act) };
   } catch (error) {
     throw new MaterializationError(
       error instanceof Error ? error.message : String(error), currentAct, currentEntry, [...confirmed],

@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import type { AdventureSourceAnalysis } from "../../features/adventure-import/analyze-adventure-sources";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import { MaterializationError } from "../../features/adventure-import/materialize-adventure-assets";
+import { HandoutImportError } from "../../features/adventure-import/import-adventure-handouts";
 
 type Slot = "pdf" | "actOne" | "actTwo";
 
@@ -16,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   openAdventureImportPasswordDialog: vi.fn(),
   materializeAdventureAssets: vi.fn(),
   createAdventureAssetStorage: vi.fn(),
+  importAdventureHandouts: vi.fn(),
+  createAdventureHandoutJournalPort: vi.fn(),
 }));
 
 vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
@@ -32,6 +35,13 @@ vi.mock("../../features/adventure-import/materialize-adventure-assets", async (i
 });
 vi.mock("../../adapters/foundry/adventure-asset-storage", () => ({
   createAdventureAssetStorage: mocks.createAdventureAssetStorage,
+}));
+vi.mock("../../features/adventure-import/import-adventure-handouts", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-handouts")>();
+  return { ...original, importAdventureHandouts: mocks.importAdventureHandouts };
+});
+vi.mock("../../adapters/foundry/adventure-handout-journals", () => ({
+  createAdventureHandoutJournalPort: mocks.createAdventureHandoutJournalPort,
 }));
 
 function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): PdfSourceAnalysis {
@@ -144,6 +154,7 @@ interface TestContext {
   canAnalyze: boolean;
   hasAnalysis: boolean;
   canImport: boolean;
+  isImporting: boolean;
   statuses: readonly TestStatus[];
   inventory: readonly TestInventoryRow[];
 }
@@ -184,7 +195,8 @@ beforeAll(async () => {
   vi.stubGlobal("Actor", { create: documentCreate });
   vi.stubGlobal("Item", { create: documentCreate });
   vi.stubGlobal("game", {
-    user: { isGM: true },
+    user: { isGM: true, id: "gm" },
+    users: { activeGM: { id: "gm" } },
     i18n: { localize, format },
     settings: { set: settingsSet },
   });
@@ -194,7 +206,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.stubGlobal("game", {
-    user: { isGM: true },
+    user: { isGM: true, id: "gm" },
+    users: { activeGM: { id: "gm" } },
     i18n: { localize, format },
     settings: { set: settingsSet },
   });
@@ -212,6 +225,8 @@ beforeEach(() => {
   mocks.openAdventureImportPasswordDialog.mockReset();
   mocks.materializeAdventureAssets.mockReset();
   mocks.createAdventureAssetStorage.mockReset().mockReturnValue({ worldId: "test-world" });
+  mocks.importAdventureHandouts.mockReset().mockResolvedValue({ created: 0, updated: 0, unchanged: 0 });
+  mocks.createAdventureHandoutJournalPort.mockReset().mockReturnValue({ isAuthorized: () => true });
 });
 
 afterAll(() => vi.unstubAllGlobals());
@@ -480,9 +495,57 @@ describe("Adventure Import Application", () => {
     expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled();
     expect(settingsSet).not.toHaveBeenCalled();
     expect(documentCreate).not.toHaveBeenCalled();
+    expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
   });
 
-  it("runs materialization for a recognized ZIP without creating documents", async () => {
+  it("imports handouts automatically after both selected Acts finish sending their files", async () => {
+    const app = new Application();
+    attach(app);
+    app.inputs.pdf.select(file("playtest.pdf"));
+    app.inputs.actOne.select(file("ato-um.zip"));
+    app.inputs.actTwo.select(file("ato-dois.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({
+      pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] },
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null, issues: [] },
+    });
+    let finishSending!: () => void;
+    mocks.materializeAdventureAssets.mockImplementation(() => new Promise(resolve => {
+      finishSending = () => resolve({ assets: [], materializedActs: ["actOne", "actTwo"] });
+    }));
+    await action(app, "analyzeFiles");
+    const importing = action(app, "importAssets");
+    await vi.waitFor(() => expect(mocks.materializeAdventureAssets).toHaveBeenCalledOnce());
+    expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
+    expect((await app._prepareContext()).canImport).toBe(false);
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).toHaveBeenCalledOnce();
+    finishSending();
+    await importing;
+    expect(mocks.importAdventureHandouts).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureHandouts.mock.calls[0][0]).toMatchObject({
+      acts: ["actOne", "actTwo"], lookup: { worldId: "test-world" },
+      definition: expect.objectContaining({ id: "playtest-alpha" }),
+    });
+    expect(info).toHaveBeenCalledOnce();
+    expect(Application.DEFAULT_OPTIONS.actions).not.toHaveProperty("importHandouts");
+  });
+
+  it("does not dispatch adventure import from an inactive GM", async () => {
+    const app = new Application();
+    attach(app);
+    vi.stubGlobal("game", {
+      user: { isGM: true, id: "other-gm" }, users: { activeGM: { id: "gm" } },
+      i18n: { localize, format },
+    });
+    expect((await app._prepareContext()).canImport).toBe(false);
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled();
+    expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
+  });
+
+  it("coordinates separate use-cases only for the recognized selected Act", async () => {
     const app = new Application();
     attach(app);
     const zip = file("ato-um.zip");
@@ -507,6 +570,8 @@ describe("Adventure Import Application", () => {
     expect(info).toHaveBeenCalledOnce();
     expect(settingsSet).not.toHaveBeenCalled();
     expect(documentCreate).not.toHaveBeenCalled();
+    expect(mocks.importAdventureHandouts).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureHandouts.mock.calls[0][0]).toMatchObject({ acts: ["actOne"] });
   });
 
   it("counts confirmed progress on failure without forging a successful result", async () => {
@@ -533,6 +598,35 @@ describe("Adventure Import Application", () => {
     );
     expect(info).not.toHaveBeenCalled();
     expect(documentCreate).not.toHaveBeenCalled();
+    expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
+    expect((await app._prepareContext()).canImport).toBe(true);
+  });
+
+  it("reports a handout failure after sending files and allows the same import action to retry", async () => {
+    const app = new Application();
+    attach(app);
+    app.inputs.pdf.select(file("playtest.pdf"));
+    app.inputs.actTwo.select(file("ato-dois.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({
+      pdf: unencryptedRecognizedPdf(), actOne: null,
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null, issues: [] },
+    });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actTwo"] });
+    mocks.importAdventureHandouts.mockRejectedValueOnce(new HandoutImportError(
+      "operation-failed", "page", "actTwo", "actTwo.handout.01.print",
+      { created: 1, updated: 0, unchanged: 0 }, "database failed",
+    ));
+    await action(app, "analyzeFiles");
+    await action(app, "importAssets");
+    expect(info).not.toHaveBeenCalled();
+    expect(format).toHaveBeenCalledWith("ORDEMPARANORMAL2.AdventureImport.Actions.HandoutsImportFailure", {
+      detail: "ORDEMPARANORMAL2.AdventureImport.Actions.HandoutsFailure.operation-failed · ORDEMPARANORMAL2.AdventureImport.ActTwo · Handout 01 — impressão",
+    });
+    expect(await app._prepareContext()).toMatchObject({ isImporting: false, canImport: true });
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).toHaveBeenCalledTimes(2);
+    expect(mocks.importAdventureHandouts).toHaveBeenCalledTimes(2);
+    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportSuccess");
   });
 });
 
@@ -551,6 +645,7 @@ describe("Adventure Import prototype template and styles", () => {
     expect(empty.match(/AdventureImport\.EmptyFile/g)).toHaveLength(3);
     expect(empty).toMatch(/data-action="analyzeFiles"\s+disabled/);
     expect(empty).toMatch(/data-action="importAssets"\s+disabled/);
+    expect(empty).not.toContain('data-action="importHandouts"');
 
     app.inputs.pdf.select(file("A&B.pdf"));
     app.inputs.actOne.select(file("ato-um.zip"));
@@ -578,10 +673,13 @@ describe("Adventure Import prototype template and styles", () => {
       readFile(fileURLToPath(new URL("../../../system.json", import.meta.url)), "utf8"),
       readFile(fileURLToPath(new URL("../../../lang/pt-BR.json", import.meta.url)), "utf8"),
     ]);
-    const inputs = [...template.matchAll(/<input\b[^>]*>/g)].map(match => match[0]);
+    const inputs = [...template.matchAll(/<input\b[^>]*type="file"[^>]*>/g)].map(match => match[0]);
     expect(inputs).toHaveLength(3);
     expect(inputs.every(input => /\bhidden\b/.test(input))).toBe(true);
     expect(inputs.map(input => input.match(/accept="([^"]+)"/)?.[1])).toEqual([".pdf", ".zip", ".zip"]);
+    expect(template).not.toContain('type="checkbox"');
+    expect(template).not.toContain("Handouts.Title");
+    expect([...template.matchAll(/data-action="(?:analyzeFiles|importAssets)"/g)]).toHaveLength(2);
     expect((JSON.parse(manifestText) as { styles: string[] }).styles).toContain("styles/adventure-import.css");
     expect(css).toContain(".op2-adventure-import__body button");
     expect(css).not.toMatch(/\.ordemparanormal2\.op2-adventure-import\s+button(?:\s|:|\{)/);
@@ -589,6 +687,8 @@ describe("Adventure Import prototype template and styles", () => {
     expect(css).toContain("max-height: calc(100dvh - 24px)");
     expect(css).toContain("container-type: inline-size");
     const locale = JSON.parse(localeText) as Record<string, unknown>;
+    const adventureLocale = (locale.ORDEMPARANORMAL2 as Record<string, unknown>).AdventureImport;
+    expect(JSON.stringify(adventureLocale)).not.toMatch(/Journal|worldStorage|storage|materializa|provenance|Document/);
     for (const [, key] of template.matchAll(/localize "([^"]+)"/g)) {
       const value = key.split(".").reduce<unknown>((current, segment) =>
         typeof current === "object" && current !== null

@@ -320,6 +320,10 @@
 }
 
 @container (max-width: 570px) {
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ordemparanormal2.op2-adventure-import .op2-adventure-import__file-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }

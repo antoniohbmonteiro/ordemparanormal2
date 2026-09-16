@@ -13,8 +13,17 @@ export interface AdventureAssetReference {
   };
 }
 
+export interface AdventureHandoutReference {
+  readonly id: string;
+  readonly act: AdventureAct;
+  readonly assetId: string;
+  readonly label: string;
+  readonly pageType: "image" | "pdf";
+}
+
 export interface AdventureDefinition {
   readonly id: "playtest-alpha";
   readonly packageIds: Readonly<Record<AdventureAct, ZipPackageId>>;
   readonly assets: readonly AdventureAssetReference[];
+  readonly handouts: readonly AdventureHandoutReference[];
 }

@@ -155,6 +155,9 @@ declare const CONFIG: {
 
 declare const game: {
   readonly world: { readonly id: string };
+  readonly journal: foundry.documents.collections.Journal;
+  readonly folders: foundry.documents.collections.Folders;
+  readonly users: { readonly activeGM: foundry.documents.User | null };
   readonly i18n: {
     format(key: string, data?: Record<string, unknown>): string;
     localize(key: string): string;

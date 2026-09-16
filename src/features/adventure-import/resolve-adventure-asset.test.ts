@@ -17,6 +17,7 @@ const definition: AdventureDefinition = {
       act: "actTwo", originalEntryPath: "Retratos/Personagem - Kênia.png",
     } },
   ],
+  handouts: [],
 };
 
 const stored = "worlds/test-world/act-1/Retratos/Personagem%20-%20K%C3%AAnia.png";

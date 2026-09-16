@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ZIP_PACKAGE_BY_ACT } from "../../core/adventure-import/known-adventure-sources";
 import { safeZipEntryPath } from "../../core/adventure-import/safe-zip-entry-path";
 import { PLAYTEST_ALPHA_ADVENTURE } from "./playtest-alpha";
+import { validateHandoutDefinition } from "../../features/adventure-import/import-adventure-handouts";
 
 describe("playtest alpha definition", () => {
   it("has unique semantic IDs and safe original entries for the two recognized ZIPs", () => {
@@ -18,5 +19,16 @@ describe("playtest alpha definition", () => {
       .toBe("Arquivos para o público - Ato I/Handouts/Handout 06 - Estante de Livros.jpg");
     expect(PLAYTEST_ALPHA_ADVENTURE.assets.some((asset) => asset.source.originalEntryPath.includes("Audio EMF")))
       .toBe(false);
+  });
+
+  it("maps every image and PDF handout to one explicit logical document", () => {
+    expect(validateHandoutDefinition(PLAYTEST_ALPHA_ADVENTURE)).toEqual([]);
+    expect(PLAYTEST_ALPHA_ADVENTURE.handouts).toHaveLength(26);
+    expect(PLAYTEST_ALPHA_ADVENTURE.handouts.filter((handout) => handout.act === "actOne")).toHaveLength(18);
+    expect(PLAYTEST_ALPHA_ADVENTURE.handouts.filter((handout) => handout.act === "actTwo")).toHaveLength(8);
+    expect(PLAYTEST_ALPHA_ADVENTURE.handouts.filter((handout) => handout.pageType === "pdf")).toEqual([
+      expect.objectContaining({ id: "actTwo.handout.01.print", assetId: "actTwo.handout.01.print" }),
+      expect.objectContaining({ id: "actTwo.handout.01.fillable", assetId: "actTwo.handout.01.fillable" }),
+    ]);
   });
 });

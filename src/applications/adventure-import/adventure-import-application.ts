@@ -14,6 +14,11 @@ import {
   type AdventureSourceAnalysis,
 } from "../../features/adventure-import/analyze-adventure-sources";
 import { createAdventureAssetStorage } from "../../adapters/foundry/adventure-asset-storage";
+import { createAdventureHandoutJournalPort } from "../../adapters/foundry/adventure-handout-journals";
+import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
+import {
+  HandoutImportError, importAdventureHandouts,
+} from "../../features/adventure-import/import-adventure-handouts";
 import {
   materializeAdventureAssets,
   MaterializationError,
@@ -247,7 +252,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       actTwoName: this.#files.actTwo?.name ?? "",
       canAnalyze: this.#files.pdf !== null && !this.#isImporting,
       hasAnalysis: this.#analysis !== null,
-      canImport: !this.#isImporting && Boolean(
+      canImport: !this.#isImporting && game.user.isGM
+        && game.users.activeGM?.id === game.user.id && Boolean(
         (this.#files.actOne && this.#analysis?.actOne?.status === "recognized" && this.#analysis.actOne.edition === "ato-i-extras")
         || (this.#files.actTwo && this.#analysis?.actTwo?.status === "recognized" && this.#analysis.actTwo.edition === "ato-ii-extras"),
       ),
@@ -335,15 +341,16 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   }
 
   static async #onImportAssets(this: AdventureImportApplication): Promise<void> {
-    if (!game.user.isGM || this.#isImporting || !this.#analysis) return;
+    if (!game.user.isGM || game.users.activeGM?.id !== game.user.id || this.#isImporting || !this.#analysis) return;
     const files = { actOne: this.#files.actOne, actTwo: this.#files.actTwo };
     const analysis = this.#analysis;
-    if (!files.actOne && !files.actTwo) return;
+    if (!((files.actOne && analysis.actOne?.status === "recognized" && analysis.actOne.edition === "ato-i-extras")
+      || (files.actTwo && analysis.actTwo?.status === "recognized" && analysis.actTwo.edition === "ato-ii-extras"))) return;
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
-    await this.render();
     try {
+      await this.render();
       this.#result = null;
       this.#confirmedOnFailure = [];
       this.#result = await materializeAdventureAssets({
@@ -357,8 +364,30 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
-      ui.notifications.info(format("Actions.ImportSuccess", { count: String(this.#result.assets.length) }));
+      this.#progress = localize("Actions.HandoutsPreparing");
+      await this.render();
+      await importAdventureHandouts({
+        definition: PLAYTEST_ALPHA_ADVENTURE,
+        acts: this.#result.materializedActs,
+        lookup: createAdventureAssetStorage(),
+        journals: createAdventureHandoutJournalPort(),
+        onProgress: async (completed, total) => {
+          this.#progress = format("Actions.HandoutsProgress", { completed: String(completed), total: String(total) });
+          await this.render();
+        },
+      });
+      ui.notifications.info(localize("Actions.ImportSuccess"));
     } catch (error) {
+      if (this.#result) {
+        const detail = error instanceof HandoutImportError
+          ? localize(`Actions.HandoutsFailure.${error.code}`)
+            + `${error.act ? ` · ${localize(error.act === "actOne" ? "ActOne" : "ActTwo")}` : ""}`
+            + `${error.documentId ? ` · ${PLAYTEST_ALPHA_ADVENTURE.handouts.find((handout) => handout.id === error.documentId)?.label ?? ""}` : ""}`
+          : localize("Actions.UnexpectedFailure");
+        ui.notifications.error(format("Actions.HandoutsImportFailure", { detail }));
+        console.error("ordemparanormal2 | Adventure handout import failed.", error);
+        return;
+      }
       this.#result = null;
       this.#confirmedOnFailure = error instanceof MaterializationError ? error.confirmedAssets : [];
       const stageKey = error instanceof MaterializationError
@@ -379,6 +408,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       await this.render();
     }
   }
+
 }
 
 let importer: AdventureImportApplication | null = null;

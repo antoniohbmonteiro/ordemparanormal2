@@ -361,6 +361,18 @@ Compatibility shims must have a concrete need and an expiration rationale.
 
 ## Error handling
 
+### Adventure Agent preset import
+
+`AdventureDefinition.actors` contains only unique `{presetId}` references. Ten schema-version-1 JSON mechanical presets are imported explicitly by the playtest-alpha catalog; its mechanical revision is independent from the schema version. The pure validator uses the caller's skill registry and rejects incomplete statistics and unknown properties. PDF v1.0/v1.1 recognition and successful reading remain required, using the shared lazy PDF.js loader. Neither PDF nor ZIP images supply mechanical data at runtime; no parser, OCR, layout, name matching or narrative extraction is involved.
+
+The single world-import action materializes assets, imports handouts, prepares all selected Actors, obtains at most one conflict decision, and then writes Actors sequentially. Scope comes exclusively from the current `materializedActs` (five per Act). Portrait/token paths are confirmed through the Definition and existing world-storage resolver. Canonical references use exact system-compendium UUIDs supplied by the shared Item catalog, then the existing portable snapshots. Profile grant preparation/application reuse the Profile feature boundary with pre-resolved sources.
+
+Abilities in a preset are the complete desired set. Effective Profile grants must be included. Heitor's explicit preset replacement changes only his embedded Executor snapshot from base Ímpeto to Ímpeto (Aprimorado); canonical Executor and normal consumers remain unchanged. Manual Abilities of the exact UUID satisfy references without adoption. New grant Items receive `profileGrant` provenance at creation; other imported Items receive `adventureImport` provenance at creation.
+
+Actor identity is importer/adventure/document ID, never name. `flags.ordemparanormal2.adventureImport` stores contract version, preset revision, edition, Act, asset IDs and incomplete/complete status. Completed baselines contain SHA-256 digests of persisted managed projections and embedded Item inventories, plus manually satisfied UUIDs without their payload. Divergence compares current source against the last applied baseline, independently of source updates. Actor names, current resources, accent, folder/ownership/sort, other token configuration, manual Items, effects and unrelated flags remain preserved. Only managed fields and importer-owned obsolete Abilities reconcile.
+
+All predictable validation, canonical/model checks, provenance conflicts and divergence detection precede Actor-stage Folder/Actor/Item writes. Structural conflicts block the batch. The single dialog can preserve entire divergent Actors, restore managed data, or cancel before writes. Execution guards concurrency, active-GM authorization and relevant preflight state. Each Actor is marked incomplete before changes; complete and baseline are persisted only after confirmed operations. Operational failure stops immediately, retains previous results without destructive rollback, and recovers on rerun through identity and the same conflict dialog.
+
 Core/domain functions should fail with typed or explicit invalid states rather than user notifications.
 
 Presentation/integration layers own user-visible error reporting.

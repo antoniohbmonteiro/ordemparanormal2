@@ -206,12 +206,12 @@ async function reconcileAgentProfileAbilities(
   await deleteObsoleteProfileAbilities(actor, reconciliation);
 }
 
-interface ProfileAbilityReconciliation {
+export interface ProfileAbilityReconciliation {
   readonly missingSnapshots: ReturnType<typeof createAbilitySnapshot>[];
   readonly obsoleteIds: string[];
 }
 
-function prepareAgentProfileAbilityReconciliation(
+export function prepareAgentProfileAbilityReconciliation(
   actor: foundry.documents.Actor,
   profileItemId: string,
   uniqueGrants: readonly ProfileAbilityGrantData[],
@@ -261,21 +261,27 @@ function prepareAgentProfileAbilityReconciliation(
   };
 }
 
-async function createMissingProfileAbilities(
+export async function createMissingProfileAbilities(
   actor: foundry.documents.Actor,
   reconciliation: ProfileAbilityReconciliation,
+  keepId = false,
 ): Promise<void> {
   if (reconciliation.missingSnapshots.length > 0) {
-    await actor.createEmbeddedDocuments("Item", reconciliation.missingSnapshots);
+    const created = keepId
+      ? await actor.createEmbeddedDocuments("Item", reconciliation.missingSnapshots, { keepId: true })
+      : await actor.createEmbeddedDocuments("Item", reconciliation.missingSnapshots);
+    if (keepId && created.length !== reconciliation.missingSnapshots.length) throw new Error("Profile Ability creation was not confirmed.");
   }
 }
 
-async function deleteObsoleteProfileAbilities(
+export async function deleteObsoleteProfileAbilities(
   actor: foundry.documents.Actor,
   reconciliation: ProfileAbilityReconciliation,
+  confirm = false,
 ): Promise<void> {
   if (reconciliation.obsoleteIds.length > 0) {
-    await actor.deleteEmbeddedDocuments("Item", reconciliation.obsoleteIds);
+    const deleted = await actor.deleteEmbeddedDocuments("Item", reconciliation.obsoleteIds);
+    if (confirm && deleted.length !== reconciliation.obsoleteIds.length) throw new Error("Profile Ability deletion was not confirmed.");
   }
 }
 

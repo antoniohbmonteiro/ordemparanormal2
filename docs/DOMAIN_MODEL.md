@@ -44,6 +44,10 @@ Resource values and maxima are integer `NumberField`s with `min: 0`, initialized
 
 PV and PD are the only universal Agent resources. Ímpeto is not stored under Agent resources; the Ability that provides it owns its optional resource state.
 
+Adventure Agent imports use complete versioned mechanical presets, validated against the skill registry. New Actors initialize PV/PD current values to explicit preset maxima; reimport preserves current values without a clamp or capacity calculation. Names initialize exactly from the preset and later renames remain preserved. Managed statistics, images and portable canonical embedded selections reconcile against a completed persisted baseline. Optional Ability resource structure is canonical; an existing current value survives when both representations have a resource. Manual Abilities and unrelated Items, effects, flags and token settings remain outside importer ownership.
+
+The preset Ability list is complete, including effective Profile grants. Heitor explicitly replaces his embedded Executor grant with Ímpeto (Aprimorado), whose UUID is used in `profileGrant` and whose canonical resource maximum is five. This is an import-local snapshot override; the canonical Executor still grants base Ímpeto. Manual exact-UUID Abilities satisfy a desired reference without changing their provenance; base Ímpeto does not satisfy the improved UUID. No global equivalence, UUID-to-UUID resource transfer, or name-based mechanic is introduced.
+
 ## Profile Items
 
 An Agent may own zero or one embedded Profile Item, and that embedded Item is the exclusive source of truth for the selected Profile. The Actor stores no Profile string, source UUID, or synchronization reference.

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "actTwo.val",
+  "act": "actTwo",
+  "name": "Val",
+  "level": 6,
+  "resources": {
+    "healthMax": 18,
+    "determinationMax": 32
+  },
+  "attributes": {
+    "physical": 6,
+    "mind": 10,
+    "emotion": 8
+  },
+  "skills": {
+    "acrobatics": 4,
+    "athletics": 4,
+    "crime": 4,
+    "discipline": 10,
+    "deception": 6,
+    "stealth": 4,
+    "intimidation": 4,
+    "intuition": 8,
+    "fighting": 4,
+    "machinery": 4,
+    "medicine": 10,
+    "occultism": 8,
+    "perception": 6,
+    "persuasion": 8,
+    "research": 6,
+    "marksmanship": 10,
+    "survival": 4,
+    "technology": 10,
+    "vigor": 4,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 4,
+      "bureaucracy": 4,
+      "exactSciences": 10,
+      "humanities": 4,
+      "tactics": 4
+    }
+  },
+  "profile": {
+    "name": "Vigilante",
+    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000003"
+  },
+  "occupation": {
+    "name": "Médico",
+    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000003"
+  },
+  "abilities": [
+    {
+      "name": "Prontidão",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000014"
+    },
+    {
+      "name": "Técnica Medicinal",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000015"
+    },
+    {
+      "name": "Varredura Ampla",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000016"
+    }
+  ],
+  "portraitAssetId": "actTwo.val.portrait",
+  "tokenAssetId": "actTwo.val.token"
+}

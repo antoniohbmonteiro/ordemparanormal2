@@ -9,6 +9,7 @@ import {
 
 const definition: AdventureDefinition = {
   id: "playtest-alpha",
+  actors: [],
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },
   assets: [
     { id: "one.image", kind: "handout", label: "Imagem", source: { act: "actOne", originalEntryPath: "Handouts/a.png" } },

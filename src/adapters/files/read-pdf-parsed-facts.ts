@@ -1,24 +1,8 @@
 import type { PdfParseAttempt } from "../../core/adventure-import/pdf-source-facts";
+import { loadPdfJs } from "./pdfjs-document";
 
 const VERSION_STAMP_PATTERN = /Pacote\s*#\d+\s*\|[^|]*\|\s*v\d+\.\d+/;
 const VERSION_STAMP_SCAN_PAGE_LIMIT = 5;
-
-let workerConfigured = false;
-
-// Dynamically imported so pdfjs-dist (a sizeable library) lands in its own chunk,
-// loaded only when a PDF is actually analyzed, instead of bloating the main bundle
-// that every GM loads on every session start.
-async function loadPdfJs() {
-  const [pdfjs, workerUrl] = await Promise.all([
-    import("pdfjs-dist/legacy/build/pdf.mjs"),
-    import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
-  ]);
-  if (!workerConfigured) {
-    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl.default;
-    workerConfigured = true;
-  }
-  return pdfjs;
-}
 
 export async function readPdfParsedFacts(bytes: ArrayBuffer, password: string | null): Promise<PdfParseAttempt> {
   const { getDocument, PasswordException, PasswordResponses } = await loadPdfJs();

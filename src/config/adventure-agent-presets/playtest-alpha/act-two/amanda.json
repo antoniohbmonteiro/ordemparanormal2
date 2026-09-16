@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "actTwo.amanda",
+  "act": "actTwo",
+  "name": "Amanda",
+  "level": 6,
+  "resources": {
+    "healthMax": 26,
+    "determinationMax": 26
+  },
+  "attributes": {
+    "physical": 8,
+    "mind": 8,
+    "emotion": 8
+  },
+  "skills": {
+    "acrobatics": 4,
+    "athletics": 4,
+    "crime": 6,
+    "discipline": 6,
+    "deception": 6,
+    "stealth": 4,
+    "intimidation": 4,
+    "intuition": 8,
+    "fighting": 4,
+    "machinery": 6,
+    "medicine": 6,
+    "occultism": 4,
+    "perception": 10,
+    "persuasion": 4,
+    "research": 10,
+    "marksmanship": 4,
+    "survival": 4,
+    "technology": 10,
+    "vigor": 4,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 4,
+      "bureaucracy": 8,
+      "exactSciences": 8,
+      "humanities": 4,
+      "tactics": 4
+    }
+  },
+  "profile": {
+    "name": "Analista",
+    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000002"
+  },
+  "occupation": {
+    "name": "Cientista",
+    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000002"
+  },
+  "abilities": [
+    {
+      "name": "Avaliação",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000002"
+    },
+    {
+      "name": "Olhar Infalível",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000012"
+    },
+    {
+      "name": "Foco Mental (Aprimorado)",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000017"
+    }
+  ],
+  "portraitAssetId": "actTwo.amanda.portrait",
+  "tokenAssetId": "actTwo.amanda.token"
+}

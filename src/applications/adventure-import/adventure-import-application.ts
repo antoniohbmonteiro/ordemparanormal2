@@ -26,6 +26,11 @@ import {
   type MaterializationResult,
 } from "../../features/adventure-import/materialize-adventure-assets";
 import { openAdventureImportPasswordDialog } from "./adventure-import-password-dialog";
+import { PLAYTEST_ALPHA_AGENT_PRESETS, PLAYTEST_ALPHA_PRESET_REVISION } from "../../config/adventure-agent-presets/playtest-alpha";
+import { usableAdventurePdf } from "../../features/adventure-import/prepare-adventure-agents";
+import { AgentImportError, importAdventureAgents } from "../../features/adventure-import/import-adventure-agents";
+import { createAdventureAgentActorPort } from "../../adapters/foundry/adventure-agent-actors";
+import { openAdventureImportAgentConflictDialog } from "./adventure-import-agent-conflict-dialog";
 
 const ADVENTURE_IMPORT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/adventure-import.hbs";
@@ -253,6 +258,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       canAnalyze: this.#files.pdf !== null && !this.#isImporting,
       hasAnalysis: this.#analysis !== null,
       canImport: !this.#isImporting && game.user.isGM
+        && usableAdventurePdf(this.#analysis?.pdf ?? null)
         && game.users.activeGM?.id === game.user.id && Boolean(
         (this.#files.actOne && this.#analysis?.actOne?.status === "recognized" && this.#analysis.actOne.edition === "ato-i-extras")
         || (this.#files.actTwo && this.#analysis?.actTwo?.status === "recognized" && this.#analysis.actTwo.edition === "ato-ii-extras"),
@@ -344,11 +350,13 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     if (!game.user.isGM || game.users.activeGM?.id !== game.user.id || this.#isImporting || !this.#analysis) return;
     const files = { actOne: this.#files.actOne, actTwo: this.#files.actTwo };
     const analysis = this.#analysis;
+    if (!usableAdventurePdf(analysis.pdf)) return;
     if (!((files.actOne && analysis.actOne?.status === "recognized" && analysis.actOne.edition === "ato-i-extras")
       || (files.actTwo && analysis.actTwo?.status === "recognized" && analysis.actTwo.edition === "ato-ii-extras"))) return;
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
+    let actorStage = false;
     try {
       await this.render();
       this.#result = null;
@@ -376,8 +384,36 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
+      actorStage = true;
+      this.#progress = localize("Actions.AgentsPreparing");
+      await this.render();
+      const actorPort = createAdventureAgentActorPort();
+      const agents = await importAdventureAgents({
+        definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_AGENT_PRESETS, revision: PLAYTEST_ALPHA_PRESET_REVISION,
+        acts: this.#result.materializedActs, pdf: analysis.pdf, lookup: createAdventureAssetStorage(),
+        actors: { ...actorPort, isAuthorized: () => actorPort.isAuthorized() && this.#analysis === analysis },
+        decide: openAdventureImportAgentConflictDialog,
+        onProgress: async (completed, total) => {
+          this.#progress = format("Actions.AgentsProgress", { completed: String(completed), total: String(total) });
+          await this.render();
+        },
+      });
+      if (agents.cancelled) { ui.notifications.warn(localize("Actions.AgentsCancelled")); return; }
+      if (agents.preserved) {
+        ui.notifications.info(format("Actions.AgentsSummary", { created: String(agents.created), updated: String(agents.updated), unchanged: String(agents.unchanged), preserved: String(agents.preserved) }));
+        return;
+      }
       ui.notifications.info(localize("Actions.ImportSuccess"));
     } catch (error) {
+      if (actorStage) {
+        const detail = error instanceof AgentImportError ? error.message : localize("Actions.UnexpectedFailure");
+        const counts = error instanceof AgentImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
+        ui.notifications.error(format("Actions.AgentsImportFailure", { detail,
+          stage: error instanceof AgentImportError ? localize(`Actions.AgentStages.${error.stage}`) : "",
+          agent: error instanceof AgentImportError && error.agent ? `${localize(error.agent.preset.act === "actOne" ? "ActOne" : "ActTwo")} · ${error.agent.preset.name}` : "",
+          completed: String(counts.created + counts.updated + counts.unchanged), preserved: String(counts.preserved) }));
+        return;
+      }
       if (this.#result) {
         const detail = error instanceof HandoutImportError
           ? localize(`Actions.HandoutsFailure.${error.code}`)

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "actTwo.heitor",
+  "act": "actTwo",
+  "name": "Heitor",
+  "level": 6,
+  "resources": {
+    "healthMax": 34,
+    "determinationMax": 20
+  },
+  "attributes": {
+    "physical": 10,
+    "mind": 6,
+    "emotion": 8
+  },
+  "skills": {
+    "acrobatics": 4,
+    "athletics": 10,
+    "crime": 4,
+    "discipline": 6,
+    "deception": 4,
+    "stealth": 6,
+    "intimidation": 6,
+    "intuition": 4,
+    "fighting": 10,
+    "machinery": 4,
+    "medicine": 4,
+    "occultism": 4,
+    "perception": 10,
+    "persuasion": 4,
+    "research": 6,
+    "marksmanship": 8,
+    "survival": 4,
+    "technology": 4,
+    "vigor": 8,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 4,
+      "bureaucracy": 4,
+      "exactSciences": 4,
+      "humanities": 4,
+      "tactics": 8
+    }
+  },
+  "profile": {
+    "name": "Executor",
+    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000001"
+  },
+  "occupation": {
+    "name": "Policial",
+    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000006"
+  },
+  "abilities": [
+    {
+      "name": "Ímpeto (Aprimorado)",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000018"
+    },
+    {
+      "name": "Incansável",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000009"
+    },
+    {
+      "name": "Linha de Tiro",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000010"
+    }
+  ],
+  "portraitAssetId": "actTwo.heitor.portrait",
+  "tokenAssetId": "actTwo.heitor.token",
+  "profileGrantReplacements": [
+    {
+      "grantUuid": "Compendium.ordemparanormal2.abilities.Item.ability000000008",
+      "replacementUuid": "Compendium.ordemparanormal2.abilities.Item.ability000000018"
+    }
+  ]
+}

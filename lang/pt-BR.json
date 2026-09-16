@@ -149,16 +149,36 @@
         "ImportNotice": "Nenhum conteúdo foi importado. Esta etapa só analisa os arquivos selecionados.",
         "Preparing": "Validando os ZIPs antes de enviar os arquivos…",
         "Progress": "Enviando arquivos: {completed} de {total}",
-        "ImportSuccess": "A aventura foi importada para este Mundo, incluindo seus handouts.",
+        "ImportSuccess": "A aventura foi importada para este Mundo, incluindo handouts e agentes.",
         "ImportFailure": "Importação interrompida após {count} arquivos confirmados: {detail}",
         "ValidationFailure": "Falha na validação do ZIP ou de seus arquivos",
         "DirectoryFailure": "Não foi possível criar a pasta de destino",
         "ExtractionFailure": "Não foi possível extrair o arquivo do ZIP",
         "UploadFailure": "Não foi possível confirmar o envio do arquivo para este Mundo",
-        "UnexpectedFailure": "Ocorreu um erro inesperado"
+        "UnexpectedFailure": "Ocorreu um erro inesperado",
+        "AgentsPreparing": "Preparando agentes…",
+        "AgentsProgress": "Importando agentes {completed} de {total}",
+        "AgentsCancelled": "A etapa de agentes foi cancelada. Assets e handouts já importados foram mantidos.",
+        "AgentsSummary": "Agentes: {created} criados, {updated} atualizados, {unchanged} sem alterações e {preserved} preservados.",
+        "AgentsImportFailure": "A etapa de agentes foi interrompida. Etapa: {stage}. {agent} {detail} Progresso confirmado: {completed}; preservados: {preserved}. Assets, handouts e agentes concluídos foram mantidos. Execute novamente para continuar.",
+        "AgentStages": {
+          "preflight": "Preparação",
+          "confirmation": "Confirmação",
+          "folder": "Pasta",
+          "actor": "Actor",
+          "items": "Items",
+          "baseline": "Conclusão"
+        }
       },
       "Errors": {
         "Open": "Não foi possível abrir a janela de importação de aventura."
+      },
+      "AgentConflict": {
+        "Title": "Agentes modificados ou incompletos",
+        "Preserve": "Preservar agentes modificados",
+        "Restore": "Restaurar dados importados",
+        "Explanation": "Estes agentes têm dados gerenciados alterados ou uma importação incompleta. Preservar não modifica nenhum dado desses agentes. Restaurar reaplica a mecânica, as imagens e as seleções canônicas importadas.",
+        "Resources": "Nome, pasta, permissões, estado de jogo, configurações do token e Items manuais serão preservados. Recursos de Habilidades podem ter seu formato restaurado, incluindo criação ou remoção do recurso. Quando o recurso existe nas duas representações, seu valor atual é preservado, sem limitar ao máximo. Fechar cancela a etapa de agentes."
       }
     },
     "PointOfInterest": {

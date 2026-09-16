@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "actOne.victor",
+  "act": "actOne",
+  "name": "Victor",
+  "level": 2,
+  "resources": {
+    "healthMax": 14,
+    "determinationMax": 14
+  },
+  "attributes": {
+    "physical": 8,
+    "mind": 6,
+    "emotion": 8
+  },
+  "skills": {
+    "acrobatics": 4,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 4,
+      "bureaucracy": 4,
+      "exactSciences": 4,
+      "humanities": 6,
+      "tactics": 4
+    },
+    "athletics": 6,
+    "crime": 4,
+    "discipline": 6,
+    "deception": 4,
+    "stealth": 4,
+    "intimidation": 4,
+    "intuition": 4,
+    "fighting": 4,
+    "machinery": 4,
+    "medicine": 4,
+    "occultism": 4,
+    "perception": 6,
+    "persuasion": 4,
+    "research": 8,
+    "marksmanship": 4,
+    "survival": 4,
+    "technology": 4,
+    "vigor": 6
+  },
+  "profile": {
+    "name": "Vigilante",
+    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000003"
+  },
+  "occupation": {
+    "name": "Professor",
+    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000007"
+  },
+  "abilities": [
+    {
+      "name": "Prontidão",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000014"
+    },
+    {
+      "name": "Mentoria",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000011"
+    }
+  ],
+  "portraitAssetId": "actOne.victor.portrait",
+  "tokenAssetId": "actOne.victor.token"
+}

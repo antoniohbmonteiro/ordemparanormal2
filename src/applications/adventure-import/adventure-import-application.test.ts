@@ -12,6 +12,7 @@ import { HandoutImportError } from "../../features/adventure-import/import-adven
 type Slot = "pdf" | "actOne" | "actTwo";
 
 const mocks = vi.hoisted(() => ({
+  importAdventureAgents: vi.fn(),
   analyzeAdventureSources: vi.fn(),
   analyzePdfSource: vi.fn(),
   openAdventureImportPasswordDialog: vi.fn(),
@@ -43,6 +44,13 @@ vi.mock("../../features/adventure-import/import-adventure-handouts", async (impo
 vi.mock("../../adapters/foundry/adventure-handout-journals", () => ({
   createAdventureHandoutJournalPort: mocks.createAdventureHandoutJournalPort,
 }));
+
+vi.mock("../../features/adventure-import/import-adventure-agents", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-agents")>();
+  return { ...original, importAdventureAgents: mocks.importAdventureAgents };
+});
+vi.mock("../../adapters/foundry/adventure-agent-actors", () => ({ createAdventureAgentActorPort: () => ({ isAuthorized: () => true }) }));
+vi.mock("./adventure-import-agent-conflict-dialog", () => ({ openAdventureImportAgentConflictDialog: vi.fn() }));
 
 function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): PdfSourceAnalysis {
   return {
@@ -205,6 +213,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  mocks.importAdventureAgents.mockReset().mockResolvedValue({ created: 10, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
   vi.stubGlobal("game", {
     user: { isGM: true, id: "gm" },
     users: { activeGM: { id: "gm" } },
@@ -528,6 +537,8 @@ describe("Adventure Import Application", () => {
       acts: ["actOne", "actTwo"], lookup: { worldId: "test-world" },
       definition: expect.objectContaining({ id: "playtest-alpha" }),
     });
+    expect(mocks.importAdventureAgents).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureAgents.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 1 });
     expect(info).toHaveBeenCalledOnce();
     expect(Application.DEFAULT_OPTIONS.actions).not.toHaveProperty("importHandouts");
   });
@@ -545,6 +556,26 @@ describe("Adventure Import Application", () => {
     expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
   });
 
+  it("blocks Actor and asset writes when a recognized PDF was not successfully read", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actOne.select(file("ato-um.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf({ facts: { pre: unencryptedRecognizedPdf().facts.pre, parseAttempt: { status: "failed" } } }),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", issues: [], inventory: null }, actTwo: null });
+    await action(app, "analyzeFiles"); expect((await app._prepareContext()).canImport).toBe(false);
+    await action(app, "importAssets"); expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled(); expect(mocks.importAdventureAgents).not.toHaveBeenCalled();
+  });
+  it("reports Actor cancellation and failures separately from handouts", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actOne.select(file("ato-um.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", issues: [], inventory: null }, actTwo: null });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actOne"] });
+    await action(app, "analyzeFiles"); mocks.importAdventureAgents.mockResolvedValueOnce({ cancelled: true });
+    await action(app, "importAssets"); expect(info).not.toHaveBeenCalled();
+    mocks.importAdventureAgents.mockRejectedValueOnce(new Error("Actor failure"));
+    await action(app, "importAssets"); expect(format).toHaveBeenCalledWith("ORDEMPARANORMAL2.AdventureImport.Actions.AgentsImportFailure", expect.anything());
+    expect(info).not.toHaveBeenCalled();
+  });
   it("coordinates separate use-cases only for the recognized selected Act", async () => {
     const app = new Application();
     attach(app);
@@ -552,7 +583,7 @@ describe("Adventure Import Application", () => {
     app.inputs.pdf.select(file("playtest.pdf"));
     app.inputs.actOne.select(zip);
     mocks.analyzeAdventureSources.mockResolvedValue({
-      pdf: unencryptedRecognizedPdf({ status: "invalid" }),
+      pdf: unencryptedRecognizedPdf(),
       actOne: { act: "actOne", status: "recognized", matchMethod: "hash", edition: "ato-i-extras", inventory: null, issues: [] },
       actTwo: null,
     });

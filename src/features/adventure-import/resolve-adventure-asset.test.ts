@@ -8,6 +8,7 @@ import {
 
 const definition: AdventureDefinition = {
   id: "playtest-alpha",
+  actors: [],
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },
   assets: [
     { id: "one.kenia.portrait", kind: "portrait", label: "Kênia", source: {

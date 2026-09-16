@@ -5,6 +5,18 @@ import type { AdventureDefinition } from "../../core/adventure-import/adventure-
 export const PLAYTEST_ALPHA_ADVENTURE = {
   id: "playtest-alpha",
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },
+  actors: [
+    { presetId: "actOne.kenia" },
+    { presetId: "actOne.edgar" },
+    { presetId: "actOne.alan" },
+    { presetId: "actOne.eloisa" },
+    { presetId: "actOne.victor" },
+    { presetId: "actTwo.val" },
+    { presetId: "actTwo.raven" },
+    { presetId: "actTwo.antonio" },
+    { presetId: "actTwo.amanda" },
+    { presetId: "actTwo.heitor" },
+  ],
   assets: [
     { id: "actOne.basement.map", kind: "map", label: "Porão", source: { act: "actOne", originalEntryPath: "Arquivos para o público - Ato I/Mapas/Mapa 01 - O Porão.jpg" } },
     { id: "actOne.basement.secretRoomMap", kind: "map", label: "Porão e sala secreta", source: { act: "actOne", originalEntryPath: "Arquivos para o público - Ato I/Mapas/Mapa 02 - O Porão + Sala Secreta.jpg" } },

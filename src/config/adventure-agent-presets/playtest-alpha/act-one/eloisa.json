@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "actOne.eloisa",
+  "act": "actOne",
+  "name": "Eloisa",
+  "level": 2,
+  "resources": {
+    "healthMax": 12,
+    "determinationMax": 14
+  },
+  "attributes": {
+    "physical": 8,
+    "mind": 8,
+    "emotion": 6
+  },
+  "skills": {
+    "acrobatics": 6,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 4,
+      "bureaucracy": 4,
+      "exactSciences": 4,
+      "humanities": 4,
+      "tactics": 4
+    },
+    "athletics": 4,
+    "crime": 6,
+    "discipline": 6,
+    "deception": 4,
+    "stealth": 4,
+    "intimidation": 4,
+    "intuition": 8,
+    "fighting": 4,
+    "machinery": 4,
+    "medicine": 4,
+    "occultism": 4,
+    "perception": 6,
+    "persuasion": 4,
+    "research": 6,
+    "marksmanship": 4,
+    "survival": 4,
+    "technology": 6,
+    "vigor": 4
+  },
+  "profile": {
+    "name": "Analista",
+    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000002"
+  },
+  "occupation": {
+    "name": "Artista",
+    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000001"
+  },
+  "abilities": [
+    {
+      "name": "Avaliação",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000002"
+    },
+    {
+      "name": "Foco Emocional",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000006"
+    }
+  ],
+  "portraitAssetId": "actOne.eloisa.portrait",
+  "tokenAssetId": "actOne.eloisa.token"
+}

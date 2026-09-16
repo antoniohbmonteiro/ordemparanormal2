@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "actOne.kenia",
+  "act": "actOne",
+  "name": "Kênia",
+  "level": 2,
+  "resources": {
+    "healthMax": 12,
+    "determinationMax": 12
+  },
+  "attributes": {
+    "physical": 6,
+    "mind": 10,
+    "emotion": 6
+  },
+  "skills": {
+    "acrobatics": 6,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 6,
+      "bureaucracy": 4,
+      "exactSciences": 4,
+      "humanities": 4,
+      "tactics": 4
+    },
+    "athletics": 6,
+    "crime": 4,
+    "discipline": 6,
+    "deception": 4,
+    "stealth": 4,
+    "intimidation": 4,
+    "intuition": 6,
+    "fighting": 4,
+    "machinery": 4,
+    "medicine": 4,
+    "occultism": 4,
+    "perception": 6,
+    "persuasion": 4,
+    "research": 6,
+    "marksmanship": 4,
+    "survival": 4,
+    "technology": 8,
+    "vigor": 6
+  },
+  "profile": {
+    "name": "Analista",
+    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000002"
+  },
+  "occupation": {
+    "name": "Profissional de Escritório",
+    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000008"
+  },
+  "abilities": [
+    {
+      "name": "Avaliação",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000002"
+    },
+    {
+      "name": "Conhecimento Técnico",
+      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000003"
+    }
+  ],
+  "portraitAssetId": "actOne.kenia.portrait",
+  "tokenAssetId": "actOne.kenia.token"
+}

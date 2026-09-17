@@ -31,6 +31,10 @@ import { usableAdventurePdf } from "../../features/adventure-import/prepare-adve
 import { AgentImportError, importAdventureAgents } from "../../features/adventure-import/import-adventure-agents";
 import { createAdventureAgentActorPort } from "../../adapters/foundry/adventure-agent-actors";
 import { openAdventureImportAgentConflictDialog } from "./adventure-import-agent-conflict-dialog";
+import { PLAYTEST_ALPHA_SCENE_PRESETS } from "../../config/adventure-scene-presets/playtest-alpha";
+import { createAdventureScenePort } from "../../adapters/foundry/adventure-scenes";
+import { importAdventureScenes, SceneImportError } from "../../features/adventure-import/import-adventure-scenes";
+import { openAdventureImportSceneConflictDialog } from "./adventure-import-scene-conflict-dialog";
 
 const ADVENTURE_IMPORT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/adventure-import.hbs";
@@ -356,7 +360,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
-    let actorStage = false;
+    let stage: "assets" | "handouts" | "actors" | "scenes" = "assets";
     try {
       await this.render();
       this.#result = null;
@@ -372,6 +376,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
+      stage = "handouts";
       this.#progress = localize("Actions.HandoutsPreparing");
       await this.render();
       await importAdventureHandouts({
@@ -384,7 +389,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
-      actorStage = true;
+      stage = "actors";
       this.#progress = localize("Actions.AgentsPreparing");
       await this.render();
       const actorPort = createAdventureAgentActorPort();
@@ -399,13 +404,38 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         },
       });
       if (agents.cancelled) { ui.notifications.warn(localize("Actions.AgentsCancelled")); return; }
-      if (agents.preserved) {
-        ui.notifications.info(format("Actions.AgentsSummary", { created: String(agents.created), updated: String(agents.updated), unchanged: String(agents.unchanged), preserved: String(agents.preserved) }));
+      const summaries: string[] = [];
+      if (agents.preserved) summaries.push(format("Actions.AgentsSummary", { created: String(agents.created), updated: String(agents.updated), unchanged: String(agents.unchanged), preserved: String(agents.preserved) }));
+      if (PLAYTEST_ALPHA_SCENE_PRESETS.some(p => this.#result!.materializedActs.includes(p.act))) {
+        stage = "scenes";
+        this.#progress = localize("Actions.ScenesPreparing");
+        await this.render();
+        const scenePort = createAdventureScenePort();
+        const scenes = await importAdventureScenes({ definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_SCENE_PRESETS,
+          materialization: this.#result, scenes: { ...scenePort, isAuthorized: () => scenePort.isAuthorized() && this.#analysis === analysis },
+          decide: openAdventureImportSceneConflictDialog,
+          onProgress: async (completed, total) => {
+            this.#progress = format("Actions.ScenesProgress", { completed: String(completed), total: String(total) });
+            await this.render();
+          },
+        });
+        if (scenes.cancelled) {
+          ui.notifications.warn([localize("Actions.ScenesCancelled"), ...summaries].join(" "));
+          return;
+        }
+        summaries.push(format("Actions.ScenesSummary", { created: String(scenes.created), updated: String(scenes.updated), unchanged: String(scenes.unchanged), preserved: String(scenes.preserved) }));
+      }
+      ui.notifications.info([localize("Actions.ImportSuccess"), ...summaries].join(" "));
+    } catch (error) {
+      if (stage === "scenes") {
+        const counts = error instanceof SceneImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
+        ui.notifications.error(format("Actions.ScenesImportFailure", { detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure"),
+          stage: error instanceof SceneImportError ? localize(`Actions.SceneStages.${error.stage}`) : "",
+          completed: String(counts.created + counts.updated + counts.unchanged), preserved: String(counts.preserved) }));
+        console.error("ordemparanormal2 | Adventure Scene import failed.", error);
         return;
       }
-      ui.notifications.info(localize("Actions.ImportSuccess"));
-    } catch (error) {
-      if (actorStage) {
+      if (stage === "actors") {
         const detail = error instanceof AgentImportError ? error.message : localize("Actions.UnexpectedFailure");
         const counts = error instanceof AgentImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
         ui.notifications.error(format("Actions.AgentsImportFailure", { detail,

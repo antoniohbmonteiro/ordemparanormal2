@@ -12,6 +12,7 @@ import { HandoutImportError } from "../../features/adventure-import/import-adven
 type Slot = "pdf" | "actOne" | "actTwo";
 
 const mocks = vi.hoisted(() => ({
+  importAdventureScenes: vi.fn(),
   importAdventureAgents: vi.fn(),
   analyzeAdventureSources: vi.fn(),
   analyzePdfSource: vi.fn(),
@@ -51,6 +52,12 @@ vi.mock("../../features/adventure-import/import-adventure-agents", async (import
 });
 vi.mock("../../adapters/foundry/adventure-agent-actors", () => ({ createAdventureAgentActorPort: () => ({ isAuthorized: () => true }) }));
 vi.mock("./adventure-import-agent-conflict-dialog", () => ({ openAdventureImportAgentConflictDialog: vi.fn() }));
+vi.mock("../../features/adventure-import/import-adventure-scenes", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-scenes")>();
+  return { ...original, importAdventureScenes: mocks.importAdventureScenes };
+});
+vi.mock("../../adapters/foundry/adventure-scenes", () => ({ createAdventureScenePort: () => ({ isAuthorized: () => true }) }));
+vi.mock("./adventure-import-scene-conflict-dialog", () => ({ openAdventureImportSceneConflictDialog: vi.fn() }));
 
 function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): PdfSourceAnalysis {
   return {
@@ -186,6 +193,7 @@ let Application: {
 };
 const info = vi.fn();
 const errorNotification = vi.fn();
+const warn = vi.fn();
 const settingsSet = vi.fn();
 const documentCreate = vi.fn();
 const localize = vi.fn((key: string) => key);
@@ -198,7 +206,7 @@ beforeAll(async () => {
       HandlebarsApplicationMixin: <T>(Base: T): T => Base,
     } },
   });
-  vi.stubGlobal("ui", { notifications: { info, error: errorNotification } });
+  vi.stubGlobal("ui", { notifications: { info, error: errorNotification, warn } });
   vi.stubGlobal("CONST", { UPLOADABLE_FILE_EXTENSIONS: { png: "image/png" } });
   vi.stubGlobal("Actor", { create: documentCreate });
   vi.stubGlobal("Item", { create: documentCreate });
@@ -214,6 +222,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mocks.importAdventureAgents.mockReset().mockResolvedValue({ created: 10, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
+  mocks.importAdventureScenes.mockReset().mockResolvedValue({ created: 1, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
   vi.stubGlobal("game", {
     user: { isGM: true, id: "gm" },
     users: { activeGM: { id: "gm" } },
@@ -225,6 +234,7 @@ beforeEach(() => {
   onRender = null;
   info.mockClear();
   errorNotification.mockClear();
+  warn.mockClear();
   settingsSet.mockClear();
   documentCreate.mockClear();
   localize.mockClear();
@@ -539,6 +549,10 @@ describe("Adventure Import Application", () => {
     });
     expect(mocks.importAdventureAgents).toHaveBeenCalledOnce();
     expect(mocks.importAdventureAgents.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 1 });
+    expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureScenes.mock.calls[0][0]).toMatchObject({ materialization: { materializedActs: ["actOne", "actTwo"] } });
+    expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureAgents.mock.invocationCallOrder[0]);
+    expect(mocks.importAdventureAgents.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureScenes.mock.invocationCallOrder[0]);
     expect(info).toHaveBeenCalledOnce();
     expect(Application.DEFAULT_OPTIONS.actions).not.toHaveProperty("importHandouts");
   });
@@ -554,6 +568,41 @@ describe("Adventure Import Application", () => {
     await action(app, "importAssets");
     expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled();
     expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
+  });
+
+  it("continues to Scenes with complete preserved Actors and retains their summary", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actOne.select(file("act-one.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] }, actTwo: null });
+    mocks.importAdventureAgents.mockResolvedValueOnce({ created: 0, updated: 0, unchanged: 4, preserved: 1, cancelled: false });
+    mocks.materializeAdventureAssets.mockResolvedValueOnce({ assets: [], materializedActs: ["actOne"] });
+    await action(app, "analyzeFiles"); await action(app, "importAssets");
+    expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("Actions.AgentsSummary"));
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("Actions.ScenesSummary"));
+  });
+
+  it("skips Scenes when only Act II was materialized", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actTwo.select(file("act-two.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(), actOne: null,
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null, issues: [] } });
+    mocks.materializeAdventureAssets.mockResolvedValueOnce({ assets: [], materializedActs: ["actTwo"] });
+    await action(app, "analyzeFiles"); await action(app, "importAssets");
+    expect(mocks.importAdventureAgents).toHaveBeenCalledOnce(); expect(mocks.importAdventureScenes).not.toHaveBeenCalled();
+  });
+
+  it("reports Scene cancellation and failures independently of the Actor stage", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actOne.select(file("act-one.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] }, actTwo: null });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actOne"] });
+    await action(app, "analyzeFiles"); mocks.importAdventureScenes.mockResolvedValueOnce({ cancelled: true });
+    await action(app, "importAssets"); expect(info).not.toHaveBeenCalled(); expect(warn).toHaveBeenCalledWith(expect.stringContaining("ScenesCancelled"));
+    mocks.importAdventureScenes.mockRejectedValueOnce(new Error("Scene failed"));
+    await action(app, "importAssets"); expect(errorNotification).toHaveBeenCalledWith(expect.stringContaining("ScenesImportFailure")); expect(info).not.toHaveBeenCalled();
   });
 
   it("blocks Actor and asset writes when a recognized PDF was not successfully read", async () => {

@@ -8,6 +8,7 @@ import {
 } from "./import-adventure-handouts";
 
 const definition: AdventureDefinition = {
+  scenes: [],
   id: "playtest-alpha",
   actors: [],
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },

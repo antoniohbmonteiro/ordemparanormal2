@@ -48,6 +48,14 @@ Adventure Agent imports use complete versioned mechanical presets, validated aga
 
 The preset Ability list is complete, including effective Profile grants. Heitor explicitly replaces his embedded Executor grant with Ímpeto (Aprimorado), whose UUID is used in `profileGrant` and whose canonical resource maximum is five. This is an import-local snapshot override; the canonical Executor still grants base Ímpeto. Manual exact-UUID Abilities satisfy a desired reference without changing their provenance; base Ímpeto does not satisfy the improved UUID. No global equivalence, UUID-to-UUID resource transfer, or name-based mechanic is introduced.
 
+## Adventure Scene ownership
+
+Adventure Scene presets are presentation/configuration data, independent from the active Narrative Scene rule state. The current preset imports only the Act I basement, through the same assets/handouts/Actors pipeline. Token references use imported Agent provenance rather than names or authoring Actor IDs. Scene and embedded identities have separate versioned import provenance, revision and a completed managed baseline.
+
+Reimport preserves manual content and runtime placement/state, including during restoration of managed configuration. New or recreated documents initialize their state from the preset. Only importer-owned obsolete embedded documents can be removed, subject to manual-reference checks. Baseline divergence concerns managed configuration and inventory, not normal movement, door toggles or fog exploration. A Scene can receive manual Regions/POIs later without recreation; this feature creates none.
+
+Revision 1 contains 168 Walls (three regular and six secret doors), three system-icon interaction Tiles, five linked Agents, one Level and three labels. The bookshelf's opened-furniture texture is deferred because it comes from official Act II artwork. No furniture Tile, crop processing, Act II ZIP requirement or dangling Tile reference is introduced; its two doors remain interactive. Future preset revisions can add the missing visual through the existing incremental reconciliation.
+
 ## Profile Items
 
 An Agent may own zero or one embedded Profile Item, and that embedded Item is the exclusive source of truth for the selected Profile. The Actor stores no Profile string, source UUID, or synchronization reference.

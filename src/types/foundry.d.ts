@@ -155,6 +155,7 @@ declare const CONFIG: {
 
 declare const game: {
   readonly actors: foundry.documents.collections.Actors;
+  readonly scenes: foundry.documents.collections.Scenes;
   readonly world: { readonly id: string };
   readonly journal: foundry.documents.collections.Journal;
   readonly folders: foundry.documents.collections.Folders;

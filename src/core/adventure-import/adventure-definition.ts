@@ -27,9 +27,11 @@ export interface AdventureDefinition {
   readonly assets: readonly AdventureAssetReference[];
   readonly handouts: readonly AdventureHandoutReference[];
   readonly actors: readonly AdventureAgentReference[];
+  readonly scenes: readonly AdventureSceneReference[];
 }
 
 export interface AdventureAgentReference { readonly presetId: string }
+export interface AdventureSceneReference { readonly presetId: string }
 
 export function validateAdventureAgentReferences(
   definition: AdventureDefinition,

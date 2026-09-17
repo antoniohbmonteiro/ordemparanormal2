@@ -1,0 +1,134 @@
+import { describe, expect, it, vi } from "vitest";
+import { importFlag } from "../../core/adventure-import/adventure-agent-reconciliation";
+import { SCENE_COLLECTIONS, type AdventureSceneSource } from "../../core/adventure-import/adventure-scene-reconciliation";
+import { importAdventureScenes, SceneImportError } from "./import-adventure-scenes";
+import { sceneImportFixture } from "./adventure-scene-test-fixtures";
+
+describe("Scene import workflow", () => {
+  it("creates the reviewed Scene with semantic Actor bindings and is a write-free rerun", async () => {
+    const f = sceneImportFixture();
+    expect(await importAdventureScenes(f.input)).toMatchObject({ created: 1 });
+    const s = f.world[0];
+    expect(s.levels).toHaveLength(1); expect(s.walls).toHaveLength(168); expect(s.tiles).toHaveLength(3); expect(s.tokens).toHaveLength(5); expect(s.drawings).toHaveLength(3);
+    expect(s.levels[0].background).toMatchObject({ src: "worlds/test/actOne.basement.completeMap.png" });
+    for (const t of s.tokens) expect(f.actors.find(a => a._id === t.actorId)?.flags?.ordemparanormal2).toMatchObject({ adventureImport: { documentId: `actOne.${String(t.name).toLowerCase().replace("ê", "e")}` } });
+    expect(f.flag()).toMatchObject({ state: "complete", presetRevision: 1, baseline: { embedded: expect.any(Array) } });
+    f.clearWrites();
+    expect(await importAdventureScenes(f.input)).toMatchObject({ unchanged: 1 });
+    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+    expect(f.input.decide).not.toHaveBeenCalled();
+  });
+  it("preserves runtime state, manual content and renames even during restore", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input);
+    const s = f.world[0]; s.name = "Renomeada"; s.folder = "manual-folder"; s.ownership = { default: 2 }; s.initial = { x: 12, y: 34, scale: 1 };
+    s.tokens[0].x = 123; s.tokens[0].elevation = 4; s.tokens[0].level = "manualLevel00000x"; s.tokens[0].name = "Token renomeado";
+    s.walls[8].ds = 1; s.tiles[0].hidden = true; s.drawings[0].locked = true;
+    s.fog = { ...s.fog as object, reset: 999 };
+    for (const collection of Object.values(SCENE_COLLECTIONS)) s[collection] = [...s[collection], { _id: `manual-${collection}`, label: "manual", flags: { other: { keep: true } } }];
+    s.lights = [{ _id: "manual-light", bright: 42 }]; s.regions = [{ _id: "manual-region", name: "POI posterior" }];
+    const manualBefore = structuredClone(s);
+    f.clearWrites();
+    expect(await importAdventureScenes(f.input)).toMatchObject({ unchanged: 1 });
+    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+    f.world[0].walls[0].c = [1, 2, 3, 4];
+    expect(await importAdventureScenes(f.input)).toMatchObject({ updated: 1 });
+    expect(f.input.decide).toHaveBeenCalledOnce();
+    expect(f.world[0]).toMatchObject({ name: "Renomeada", folder: "manual-folder", ownership: { default: 2 }, fog: { reset: 999 }, lights: manualBefore.lights, regions: manualBefore.regions });
+    expect(f.world[0].tokens[0]).toMatchObject({ x: 123, elevation: 4, level: "manualLevel00000x", name: "Token renomeado" });
+    expect(f.world[0].walls[8].ds).toBe(1); expect(f.world[0].tiles[0].hidden).toBe(true); expect(f.world[0].drawings[0].locked).toBe(true);
+    for (const collection of Object.values(SCENE_COLLECTIONS)) expect(f.world[0][collection].at(-1)).toEqual(manualBefore[collection].at(-1));
+  });
+  it("does not adopt a manual homonym, and recreates a deleted imported Scene once", async () => {
+    const f = sceneImportFixture();
+    const manual: AdventureSceneSource = { _id: "manual", name: "O Porão", levels: [], walls: [], tiles: [], tokens: [], drawings: [] };
+    f.world.push(manual as unknown as typeof f.world[number]); await importAdventureScenes(f.input);
+    expect(f.world).toHaveLength(2); expect(f.world[0]).toEqual(manual);
+    f.world.splice(1, 1); await importAdventureScenes(f.input); await importAdventureScenes(f.input);
+    expect(f.world).toHaveLength(2); expect(f.port.createScene).toHaveBeenCalledTimes(2);
+  });
+  it.each(["preserve", null] as const)("does no Scene writes for decision %s", async decision => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input); f.world[0].walls[0].c = [1, 2, 3, 4];
+    const before = structuredClone(f.world); f.clearWrites(); f.input.decide.mockResolvedValueOnce(decision);
+    const result = await importAdventureScenes(f.input);
+    expect(result).toMatchObject(decision === null ? { cancelled: true } : { preserved: 1 });
+    expect(f.world).toEqual(before); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+  });
+  it("applies revision additions and removals while keeping runtime and IDs", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input); f.world[0].tokens[0].x = 987;
+    const preset = structuredClone(f.input.presets[0]);
+    const revised = { ...preset, revision: 2, walls: [...preset.walls.slice(1), { ...preset.walls[0], id: "newWall00000000x" }] };
+    expect(await importAdventureScenes({ ...f.input, presets: [revised] })).toMatchObject({ updated: 1 });
+    expect(f.input.decide).not.toHaveBeenCalled(); expect(f.world[0].tokens[0].x).toBe(987);
+    expect(f.world[0].walls.some(w => w._id === preset.walls[0].id)).toBe(false);
+    expect(f.world[0].walls.some(w => w._id === "newWall00000000x")).toBe(true);
+    expect(f.flag()?.presetRevision).toBe(2);
+    f.clearWrites(); await expect(importAdventureScenes(f.input)).rejects.toThrow("mais recente");
+    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+  });
+  it("detects managed deletion and restores it with the stable ID", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input);
+    const id = f.world[0].tokens[0]._id; f.world[0].tokens = f.world[0].tokens.slice(1);
+    await importAdventureScenes(f.input); expect(f.input.decide).toHaveBeenCalledOnce();
+    expect(f.world[0].tokens.filter(t => t._id === id)).toHaveLength(1);
+  });
+  it("skips Scene preparation for Act II even when old assets and Actors exist", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input); f.clearWrites(); vi.mocked(f.port.confirmAsset).mockClear();
+    expect(await importAdventureScenes({ ...f.input, materialization: { ...f.input.materialization, materializedActs: ["actTwo"] } })).toMatchObject({ created: 0, unchanged: 0 });
+    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled()); expect(f.port.confirmAsset).not.toHaveBeenCalled();
+  });
+  it.each(["asset", "actor", "duplicateActor", "incompleteActor", "schema", "references", "model", "authority"])("preflights %s with zero writes", async kind => {
+    const f = sceneImportFixture();
+    if (kind === "asset") f.input.materialization.assets.pop();
+    if (kind === "asset") vi.mocked(f.port.confirmAsset).mockRejectedValueOnce(new Error("missing asset"));
+    if (kind === "actor") f.actors.pop();
+    if (kind === "duplicateActor") f.actors.push(structuredClone(f.actors[0]));
+    if (kind === "incompleteActor") importFlag(f.actors[0])!.state = "incomplete";
+    if (kind === "schema") (f.input.presets[0] as unknown as Record<string, unknown>).regions = [];
+    if (kind === "references") (f.input.presets[0].tiles[0].interaction as unknown as { wallIds: string[] }).wallIds = ["missingWall00000x"];
+    if (kind === "model") vi.mocked(f.port.validateCandidate).mockImplementationOnce(() => { throw new Error("invalid model"); });
+    if (kind === "authority") vi.mocked(f.port.isAuthorized).mockReturnValue(false);
+    await expect(importAdventureScenes(f.input)).rejects.toBeInstanceOf(SceneImportError);
+    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+  });
+  it("blocks duplicate Scene identities, malformed provenance and manual ID collisions", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input);
+    f.world.push({ ...structuredClone(f.world[0]), _id: "duplicate" }); f.clearWrites();
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("duplicada"); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+    f.world.pop(); delete f.world[0].walls[0].flags;
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("Colisão"); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+    f.world[0].walls[0].flags = { ordemparanormal2: { adventureImport: { importer: "sceneEmbedded" } } };
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("Provenance");
+  });
+  it("blocks removal of a managed target referenced by a manual controller", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input);
+    const preset = f.input.presets[0]; const id = preset.walls[0].id;
+    f.world[0].tiles = [...f.world[0].tiles, { _id: "manual-control", flags: { ordemparanormal2: { tileInteraction: { enabled: true, wallIds: [id], tileIds: [] } } } }];
+    f.clearWrites();
+    await expect(importAdventureScenes({ ...f.input, presets: [{ ...preset, revision: 2, walls: preset.walls.slice(1) }] })).rejects.toThrow("interação manual");
+    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+  });
+  it("aborts stale confirmation and changed Actor bindings before writes", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input); f.world[0].walls[0].c = [1, 2, 3, 4]; f.clearWrites();
+    f.input.decide.mockImplementationOnce(async () => { f.actors[0].prototypeToken = { width: 5 }; return "restore"; });
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("Actor mudou"); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+    f.input.decide.mockImplementationOnce(async () => { f.world[0].walls[1].c = [5, 6, 7, 8]; return "restore"; });
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("Scene mudou"); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+  });
+  it("retains incomplete identity on operational failure and recovers on rerun", async () => {
+    const f = sceneImportFixture(); vi.mocked(f.port.completeScene).mockRejectedValueOnce(new Error("write failed"));
+    await expect(importAdventureScenes(f.input)).rejects.toMatchObject({ stage: "baseline", counts: { created: 0 } });
+    expect(f.world).toHaveLength(1); expect(f.flag()?.state).toBe("incomplete");
+    expect(await importAdventureScenes(f.input)).toMatchObject({ updated: 1 });
+    expect(f.world).toHaveLength(1); expect(f.flag()?.state).toBe("complete");
+  });
+  it("blocks concurrent import calls and stops on active-GM change", async () => {
+    const f = sceneImportFixture(); let release!: () => void;
+    vi.mocked(f.port.confirmAsset).mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+    const pending = importAdventureScenes(f.input);
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("andamento"); release(); await pending;
+    f.world[0].walls[0].c = [1, 2, 3, 4]; f.clearWrites();
+    f.input.decide.mockImplementationOnce(async () => { vi.mocked(f.port.isAuthorized).mockReturnValue(false); return "restore"; });
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("GM ativo mudou"); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
+  });
+});

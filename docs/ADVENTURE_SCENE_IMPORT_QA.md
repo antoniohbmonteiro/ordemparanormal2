@@ -28,7 +28,7 @@ The normal suite skips this one test when the environment variable is absent. Na
 
 Use a disposable World and legally owned recognized PDF/Act I ZIP sources.
 
-1. Import through the existing button. Confirm exactly one imported basement Scene, one Level, 168 Walls, three control Tiles, five linked Agent Tokens and three Drawing labels. The Scene is not automatically activated or assigned an authoring folder.
+1. Import through the existing button. Confirm exactly one imported basement Scene in `A Maldição do Ídolo de Pedra > Ato I`, one Level, 168 Walls, three control Tiles, five linked Agent Tokens and three Drawing labels. The Scene is not automatically activated.
 2. Open it manually. Confirm the full map aligns with Walls and placements; Tokens use the imported Actors and materialized images, with PV/PD bars and vision. Test hover/focus, dialog resizing/scrolling and native window controls.
 3. As GM, click each of the two air-passage controls and the bookshelf control outside the Tiles editing layer. Each changes its corresponding two doors. The bookshelf has no opened-furniture visual in this revision. As a player, confirm GM-only control authorization remains enforced.
 4. Move a Token, open/lock a door and hide a control Tile. Reimport without configuration changes: no duplicate Scene/documents and no reset of gameplay state or fog exploration.
@@ -37,5 +37,6 @@ Use a disposable World and legally owned recognized PDF/Act I ZIP sources.
 7. Temporarily make a required asset or imported Actor unavailable. Reimport: the Scene-stage preflight fails with no Scene write; previous assets/handouts/Actors remain. Restore the missing source before retrying.
 8. In the disposable World, delete the imported Scene and rerun twice: recreate it once. Confirm imports of Act II alone never create a Scene or add Tokens elsewhere.
 9. Exercise interruption/failure recovery and active-GM changes: incomplete provenance is retained, rerun uses the same identity, and stale plans cannot silently overwrite newer managed edits.
+10. Move the imported Scene to another Folder and rerun. Confirm the custom placement is preserved. In a separate legacy fixture, remove its placement marker and Folder while retaining valid revision-one Scene provenance; rerun and confirm it moves once to the managed Act I Folder without changing managed divergence or runtime state.
 
-Manual Regions/POIs added later are preserved but are not authored, associated or reconciled by this feature. No global folder/color changes, playlists or additional Scenes belong to this test.
+Manual Regions/POIs added later are preserved but are not authored, associated or reconciled by this feature. The importer may reconcile the name, color and provenance of its own Folder, but never treats manual contents as imported. Playlists and additional Scenes remain outside this test.

@@ -6,6 +6,7 @@ import type { AdventureAct } from "../../core/adventure-import/recognize-zip-sou
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
 import { resolveAdventureAsset } from "./resolve-adventure-asset";
+import type { AdventureFolderPlacementFlag } from "./adventure-folders";
 import { abilityGrant, hasAgentDivergence, importFlag, itemSourceUuid, managedItems, relevantAgentState,
   type AgentActorSource, type AgentImportFlag } from "../../core/adventure-import/adventure-agent-reconciliation";
 
@@ -28,8 +29,8 @@ export interface AdventureAgentActorPort {
   resolveCanonical(uuid: string, type: AgentPortableItem["type"]): Promise<AgentPortableItem>;
   validatePrepared(agent: PreparedAdventureAgent): void;
   prepareProfileAbilities(actorId: string | null, profileId: string, profile: AgentPortableItem, abilities: readonly AgentPortableItem[]): readonly AgentPortableItem[];
-  ensureFolder(act: AdventureAct): Promise<string>;
-  createActor(agent: PreparedAdventureAgent, folder: string): Promise<string>;
+  createActor(agent: PreparedAdventureAgent, folder: string, folderPlacement: AdventureFolderPlacementFlag): Promise<string>;
+  updateFolderPlacement(id: string, folder: string | null, flag: AdventureFolderPlacementFlag): Promise<void>;
   updateActor(id: string, agent: PreparedAdventureAgent): Promise<void>;
   createItems(id: string, items: readonly PreparedAgentItem[], agent: PreparedAdventureAgent): Promise<void>;
   updateItems(id: string, items: readonly PreparedAgentItem[], agent: PreparedAdventureAgent): Promise<void>;

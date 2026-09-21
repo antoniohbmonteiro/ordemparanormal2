@@ -13,6 +13,8 @@ const create = vi.fn();
 const batch = vi.fn();
 const browse = vi.fn();
 const getToken = vi.fn();
+const placement = { version: 1 as const, adventureId: "playtest-alpha", documentType: "Scene" as const,
+  documentId: "actOne.basement", act: "actOne" as const };
 class NativeScene {
   readonly id = "scene";
   constructor(readonly data: AdventureSceneSource) {}
@@ -50,10 +52,11 @@ describe("Foundry Scene adapter", () => {
     expect(create).not.toHaveBeenCalled(); expect(batch).not.toHaveBeenCalled();
   });
   it("creates a Scene without adopting the authoring Scene ID and keeps embedded IDs", async () => {
-    expect(await createAdventureScenePort().createScene(source)).toBe("new-scene");
+    expect(await createAdventureScenePort().createScene(source, "scene-act-one", placement)).toBe("new-scene");
     const [data, options] = create.mock.calls[0];
     expect(data).not.toHaveProperty("_id"); expect(options).toEqual({ keepEmbeddedIds: true, renderSheet: false });
-    expect(data).toMatchObject({ active: false, folder: null, levels: [{ _id: "defaultLevel0000" }] });
+    expect(data).toMatchObject({ active: false, folder: "scene-act-one", levels: [{ _id: "defaultLevel0000" }],
+      flags: { ordemparanormal2: { adventureImportFolder: placement } } });
   });
   it("prepares Tokens through the public Actor API, with semantic assets and no authoring metadata", async () => {
     const preset = PLAYTEST_ALPHA_SCENE_PRESETS[0].tokens[0];
@@ -94,7 +97,7 @@ describe("Foundry Scene adapter", () => {
   });
   it("guards writes when the active GM changes", async () => {
     vi.stubGlobal("game", { user: { isGM: true, id: "other" }, users: { activeGM: { id: "gm" } } });
-    await expect(createAdventureScenePort().createScene(source)).rejects.toThrow("GM ativo"); expect(create).not.toHaveBeenCalled();
+    await expect(createAdventureScenePort().createScene(source, "scene-act-one", placement)).rejects.toThrow("GM ativo"); expect(create).not.toHaveBeenCalled();
   });
   it("excludes gameplay state from managed projections", () => {
     expect(sceneConfigurationProjection({ ...source, fog: { ...source.fog as object, reset: 999 } })).toEqual(sceneConfigurationProjection(source));

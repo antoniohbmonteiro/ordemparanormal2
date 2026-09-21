@@ -189,12 +189,12 @@
         "Title": "Agentes modificados ou incompletos",
         "Preserve": "Preservar agentes modificados",
         "Restore": "Restaurar dados importados",
-        "Explanation": "Estes agentes têm dados gerenciados alterados ou uma importação incompleta. Preservar não modifica nenhum dado desses agentes. Restaurar reaplica a mecânica, as imagens e as seleções canônicas importadas.",
-        "Resources": "Nome, pasta, permissões, estado de jogo, configurações do token e Items manuais serão preservados. Recursos de Habilidades podem ter seu formato restaurado, incluindo criação ou remoção do recurso. Quando o recurso existe nas duas representações, seu valor atual é preservado, sem limitar ao máximo. Fechar cancela a etapa de agentes."
+        "Explanation": "Estes agentes têm dados gerenciados alterados ou uma importação incompleta. Preservar mantém esses dados, mas pode concluir a organização inicial em pastas. Restaurar reaplica a mecânica, as imagens e as seleções canônicas importadas.",
+        "Resources": "Nome, permissões, estado de jogo, configurações do token e Items manuais serão preservados. Após a organização inicial, mudanças manuais de pasta também serão preservadas. Recursos de Habilidades podem ter seu formato restaurado, incluindo criação ou remoção do recurso. Quando o recurso existe nas duas representações, seu valor atual é preservado, sem limitar ao máximo. Fechar cancela a etapa de agentes."
       },
       "SceneConflict": {
         "Title": "Scene importada alterada",
-        "Explanation": "A configuração gerenciada desta Scene foi alterada desde a última importação. Preservar mantém a Scene inteira; restaurar aplica a configuração do preset somente ao conteúdo gerenciado.",
+        "Explanation": "A configuração gerenciada desta Scene foi alterada desde a última importação. Preservar mantém essa configuração, mas pode concluir a organização inicial em pastas; restaurar aplica o preset somente ao conteúdo gerenciado.",
         "Categories": "{walls} paredes, {tiles} Tiles, {tokens} Tokens e {drawings} desenhos",
         "Runtime": "O conteúdo manual, as posições dos Tokens e os estados de portas e Tiles serão preservados, inclusive ao restaurar."
       }

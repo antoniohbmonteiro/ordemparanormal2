@@ -11,6 +11,7 @@ import {
 import { readAgentImportFlag } from "./prepare-adventure-agents";
 import { resolveAdventureAsset } from "./resolve-adventure-asset";
 import type { MaterializationResult } from "./materialize-adventure-assets";
+import type { AdventureFolderPlacementFlag } from "./adventure-folders";
 
 export const SCENE_SYSTEM_ASSETS = { gmControlButton: "systems/ordemparanormal2/assets/scene-controls/gm-control-button.png" } as const;
 export interface AdventureScenePort {
@@ -20,7 +21,8 @@ export interface AdventureScenePort {
   confirmAsset(path: string): Promise<void>;
   prepareToken(actorId: string, preset: SceneTokenPreset, texture: string, levelId: string): Promise<SceneEmbeddedSource>;
   validateCandidate(source: AdventureSceneSource): void;
-  createScene(source: AdventureSceneSource): Promise<string>;
+  createScene(source: AdventureSceneSource, folder: string, folderPlacement: AdventureFolderPlacementFlag): Promise<string>;
+  updateFolderPlacement(id: string, folder: string | null, flag: AdventureFolderPlacementFlag): Promise<void>;
   markIncomplete(id: string, flag: SceneImportFlag): Promise<void>;
   applyChanges(id: string, desired: AdventureSceneSource, changes: readonly SceneEmbeddedChange[]): Promise<void>;
   completeScene(id: string, flag: SceneImportFlag): Promise<void>;

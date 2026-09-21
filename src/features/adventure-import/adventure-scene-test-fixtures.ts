@@ -5,6 +5,7 @@ import { PLAYTEST_ALPHA_AGENT_PRESETS } from "../../config/adventure-agent-prese
 import { importFlag, type AgentActorSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 import { SCENE_COLLECTIONS, type AdventureSceneSource, type SceneEmbeddedSource } from "../../core/adventure-import/adventure-scene-reconciliation";
 import { buildSceneCandidate, type AdventureScenePort } from "./prepare-adventure-scenes";
+import type { AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
 
 export function sceneImportFixture() {
   type Mutable<T> = { -readonly [K in keyof T]: T[K] };
@@ -28,7 +29,8 @@ export function sceneImportFixture() {
     prepareToken: vi.fn(async (actorId, preset, texture, levelId) => ({ _id: preset.id, name: actors.find(a => a._id === actorId)!.name,
       ...structuredClone(preset.configuration), ...preset.initial, actorId, level: levelId, texture: { ...preset.configuration.texture, src: texture } })),
     validateCandidate: vi.fn(),
-    createScene: vi.fn(async source => { world.push({ ...structuredClone(source), _id: "scene-one" } as unknown as MutableScene); return "scene-one"; }),
+    createScene: vi.fn(async (source, folder, placement) => { const created = { ...structuredClone(source), _id: "scene-one", folder } as unknown as MutableScene; created.flags = { ...created.flags, ordemparanormal2: { ...created.flags?.ordemparanormal2 as object, adventureImportFolder: placement } }; world.push(created); return "scene-one"; }),
+    updateFolderPlacement: vi.fn(async (id, folder, flag) => { const s = find(id); s.folder = folder; s.flags = { ...s.flags, ordemparanormal2: { ...s.flags?.ordemparanormal2 as object, adventureImportFolder: flag } }; }),
     markIncomplete: vi.fn(async (id, flag) => { const s = find(id); s.flags = { ...s.flags, ordemparanormal2: { ...s.flags?.ordemparanormal2 as object, adventureImport: structuredClone(flag) } }; }),
     applyChanges: vi.fn(async (id, desired, changes) => {
       const index = world.findIndex(s => s._id === id);
@@ -36,13 +38,19 @@ export function sceneImportFixture() {
     }),
     completeScene: vi.fn(async (id, flag) => { const s = find(id); s.flags = { ...s.flags, ordemparanormal2: { ...s.flags?.ordemparanormal2 as object, adventureImport: structuredClone(flag) } }; }),
   };
+  const folderWorld: AdventureFolderSnapshot[] = [];
+  const folders: AdventureFolderPort = {
+    isAuthorized: () => true, listFolders: () => folderWorld,
+    createFolder: vi.fn(async data => { const id = `Scene-${data.flag.folderId}`; folderWorld.push({ id, name: data.name, color: data.color, type: data.documentType, parentId: data.parentId, flag: data.flag }); return id; }),
+    updateFolder: vi.fn(async (id, data) => { const index = folderWorld.findIndex(folder => folder.id === id); folderWorld[index] = { ...folderWorld[index], ...data }; }),
+  };
   const input = {
     definition: structuredClone(PLAYTEST_ALPHA_ADVENTURE), presets: structuredClone(PLAYTEST_ALPHA_SCENE_PRESETS), scenes: port,
     materialization: { materializedActs: ["actOne"] as const, assets: PLAYTEST_ALPHA_ADVENTURE.assets.filter(a => a.source.act === "actOne")
       .map(a => ({ act: a.source.act, originalEntryPath: a.source.originalEntryPath, storedPath: `worlds/test/${a.id}.png` })) },
-    decide: vi.fn(async (): Promise<"preserve" | "restore" | null> => "restore"),
+    decide: vi.fn(async (): Promise<"preserve" | "restore" | null> => "restore"), folders,
   };
-  const writes = () => [port.createScene, port.markIncomplete, port.applyChanges, port.completeScene];
+  const writes = () => [port.createScene, port.updateFolderPlacement, port.markIncomplete, port.applyChanges, port.completeScene];
   const clearWrites = () => writes().forEach(fn => vi.mocked(fn).mockClear());
   return { input, port, actors, world, writes, clearWrites, find, flag: () => importFlag(world[0]), collections: SCENE_COLLECTIONS };
 }

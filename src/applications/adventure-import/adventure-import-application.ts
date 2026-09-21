@@ -34,6 +34,8 @@ import { openAdventureImportAgentConflictDialog } from "./adventure-import-agent
 import { PLAYTEST_ALPHA_SCENE_PRESETS } from "../../config/adventure-scene-presets/playtest-alpha";
 import { createAdventureScenePort } from "../../adapters/foundry/adventure-scenes";
 import { importAdventureScenes, SceneImportError } from "../../features/adventure-import/import-adventure-scenes";
+import { createAdventureFolderPort } from "../../adapters/foundry/adventure-folders";
+import { preflightAdventureFolders, type AdventureFolderRequirement } from "../../features/adventure-import/adventure-folders";
 import { openAdventureImportSceneConflictDialog } from "./adventure-import-scene-conflict-dialog";
 
 const ADVENTURE_IMPORT_TEMPLATE =
@@ -376,6 +378,19 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
+      const folderPort = createAdventureFolderPort();
+      const selectedActs = this.#result.materializedActs;
+      const requirements: AdventureFolderRequirement[] = [];
+      if (PLAYTEST_ALPHA_ADVENTURE.handouts.some(handout => selectedActs.includes(handout.act))) {
+        requirements.push({ documentType: "JournalEntry", acts: selectedActs.filter(act => PLAYTEST_ALPHA_ADVENTURE.handouts.some(handout => handout.act === act)) });
+      }
+      if (PLAYTEST_ALPHA_AGENT_PRESETS.some(preset => selectedActs.includes(preset.act))) {
+        requirements.push({ documentType: "Actor", acts: selectedActs.filter(act => PLAYTEST_ALPHA_AGENT_PRESETS.some(preset => preset.act === act)) });
+      }
+      if (PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => selectedActs.includes(preset.act))) {
+        requirements.push({ documentType: "Scene", acts: selectedActs.filter(act => PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => preset.act === act)) });
+      }
+      preflightAdventureFolders({ adventureId: PLAYTEST_ALPHA_ADVENTURE.id, requirements, folders: folderPort });
       stage = "handouts";
       this.#progress = localize("Actions.HandoutsPreparing");
       await this.render();
@@ -384,6 +399,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         acts: this.#result.materializedActs,
         lookup: createAdventureAssetStorage(),
         journals: createAdventureHandoutJournalPort(),
+        folders: folderPort,
         onProgress: async (completed, total) => {
           this.#progress = format("Actions.HandoutsProgress", { completed: String(completed), total: String(total) });
           await this.render();
@@ -396,6 +412,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       const agents = await importAdventureAgents({
         definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_AGENT_PRESETS, revision: PLAYTEST_ALPHA_PRESET_REVISION,
         acts: this.#result.materializedActs, pdf: analysis.pdf, lookup: createAdventureAssetStorage(),
+        folders: folderPort,
         actors: { ...actorPort, isAuthorized: () => actorPort.isAuthorized() && this.#analysis === analysis },
         decide: openAdventureImportAgentConflictDialog,
         onProgress: async (completed, total) => {
@@ -413,6 +430,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         const scenePort = createAdventureScenePort();
         const scenes = await importAdventureScenes({ definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_SCENE_PRESETS,
           materialization: this.#result, scenes: { ...scenePort, isAuthorized: () => scenePort.isAuthorized() && this.#analysis === analysis },
+          folders: folderPort,
           decide: openAdventureImportSceneConflictDialog,
           onProgress: async (completed, total) => {
             this.#progress = format("Actions.ScenesProgress", { completed: String(completed), total: String(total) });
@@ -449,7 +467,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           ? localize(`Actions.HandoutsFailure.${error.code}`)
             + `${error.act ? ` · ${localize(error.act === "actOne" ? "ActOne" : "ActTwo")}` : ""}`
             + `${error.documentId ? ` · ${PLAYTEST_ALPHA_ADVENTURE.handouts.find((handout) => handout.id === error.documentId)?.label ?? ""}` : ""}`
-          : localize("Actions.UnexpectedFailure");
+          : error instanceof Error ? error.message : localize("Actions.UnexpectedFailure");
         ui.notifications.error(format("Actions.HandoutsImportFailure", { detail }));
         console.error("ordemparanormal2 | Adventure handout import failed.", error);
         return;

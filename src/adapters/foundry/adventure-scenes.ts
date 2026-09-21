@@ -7,6 +7,7 @@ import {
   type AdventureSceneSource, type SceneEmbeddedSource, type SceneEmbeddedChange, type SceneImportFlag,
 } from "../../core/adventure-import/adventure-scene-reconciliation";
 import type { AdventureScenePort } from "../../features/adventure-import/prepare-adventure-scenes";
+import { ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH, type AdventureFolderPlacementFlag } from "../../features/adventure-import/adventure-folders";
 
 // Public v14 Levels and Scene fields are incomplete in the installed declarations.
 interface NativeScene {
@@ -76,13 +77,31 @@ export function createAdventureScenePort(): AdventureScenePort {
         }
       }
     },
-    async createScene(source) {
+    async createScene(source, folder, folderPlacement: AdventureFolderPlacementFlag) {
       guard();
       const data: Record<string, unknown> = structuredClone(source);
       delete data._id;
+      data.folder = folder;
+      const flags = record(data.flags) ?? {};
+      data.flags = { ...flags, ordemparanormal2: { ...record(flags.ordemparanormal2), adventureImportFolder: folderPlacement } };
       const result = await Scene.create(data, { keepEmbeddedIds: true, renderSheet: false });
-      if (!result?.id || stableSerialize(importFlag(result.toObject())) !== stableSerialize(importFlag(source))) throw new Error("Criação de Scene não confirmada.");
+      const persisted = result?.toObject();
+      const persistedScope = persisted ? record(persisted.flags?.ordemparanormal2) : null;
+      if (!result?.id || !persisted || stableSerialize(importFlag(persisted)) !== stableSerialize(importFlag(source))
+        || persisted.folder !== folder || stableSerialize(persistedScope?.adventureImportFolder) !== stableSerialize(folderPlacement)) {
+        throw new Error("Criação de Scene não confirmada.");
+      }
       return result.id;
+    },
+    async updateFolderPlacement(id, folder, flag) {
+      guard();
+      const scene = sceneById(id);
+      await scene.update({ folder, [ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH]: flag });
+      const persisted = scene.toObject();
+      const scope = record(persisted.flags?.ordemparanormal2);
+      if ((persisted.folder ?? null) !== folder || stableSerialize(scope?.adventureImportFolder) !== stableSerialize(flag)) {
+        throw new Error("Organização da Scene não confirmada.");
+      }
     },
     async markIncomplete(id, flag) {
       guard(); await sceneById(id).update(flagUpdate(flag));

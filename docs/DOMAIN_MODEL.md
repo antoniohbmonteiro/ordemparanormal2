@@ -46,6 +46,8 @@ PV and PD are the only universal Agent resources. Ímpeto is not stored under Ag
 
 Adventure Agent imports use complete versioned mechanical presets, validated against the skill registry. New Actors initialize PV/PD current values to explicit preset maxima; reimport preserves current values without a clamp or capacity calculation. Names initialize exactly from the preset and later renames remain preserved. Managed statistics, images and portable canonical embedded selections reconcile against a completed persisted baseline. Optional Ability resource structure is canonical; an existing current value survives when both representations have a resource. Manual Abilities and unrelated Items, effects, flags and token settings remain outside importer ownership.
 
+Adventure-imported Actors, Journals and Scenes use equivalent type-specific Folder trees. Folder provenance owns the Folder identity and presentation, while document placement is initialized once and then becomes user-owned. Folder contents do not inherit importer ownership.
+
 The preset Ability list is complete, including effective Profile grants. Heitor explicitly replaces his embedded Executor grant with Ímpeto (Aprimorado), whose UUID is used in `profileGrant` and whose canonical resource maximum is five. This is an import-local snapshot override; the canonical Executor still grants base Ímpeto. Manual exact-UUID Abilities satisfy a desired reference without changing their provenance; base Ímpeto does not satisfy the improved UUID. No global equivalence, UUID-to-UUID resource transfer, or name-based mechanic is introduced.
 
 ## Adventure Scene ownership

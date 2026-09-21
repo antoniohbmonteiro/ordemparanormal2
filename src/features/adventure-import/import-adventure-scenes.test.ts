@@ -53,6 +53,21 @@ describe("Scene import workflow", () => {
     expect(result).toMatchObject(decision === null ? { cancelled: true } : { preserved: 1 });
     expect(f.world).toEqual(before); f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
   });
+  it("normalizes the unfiled revision-one Scene once, including when managed divergence is preserved", async () => {
+    const f = sceneImportFixture(); await importAdventureScenes(f.input);
+    const scope = f.world[0].flags!.ordemparanormal2 as Record<string, unknown>;
+    delete scope.adventureImportFolder; f.world[0].folder = null; f.world[0].walls[0].c = [1, 2, 3, 4];
+    f.clearWrites(); f.input.decide.mockResolvedValueOnce("preserve");
+    expect(await importAdventureScenes(f.input)).toMatchObject({ preserved: 1 });
+    expect(f.world[0].folder).toBe("Scene-actOne");
+    expect((f.world[0].flags!.ordemparanormal2 as Record<string, unknown>).adventureImportFolder)
+      .toMatchObject({ documentType: "Scene", documentId: "actOne.basement", act: "actOne" });
+    expect(f.port.updateFolderPlacement).toHaveBeenCalledOnce();
+    f.world[0].folder = "manual-folder"; f.clearWrites(); f.input.decide.mockResolvedValueOnce("preserve");
+    await importAdventureScenes(f.input);
+    expect(f.world[0].folder).toBe("manual-folder");
+    expect(f.port.updateFolderPlacement).not.toHaveBeenCalled();
+  });
   it("applies revision additions and removals while keeping runtime and IDs", async () => {
     const f = sceneImportFixture(); await importAdventureScenes(f.input); f.world[0].tokens[0].x = 987;
     const preset = structuredClone(f.input.presets[0]);

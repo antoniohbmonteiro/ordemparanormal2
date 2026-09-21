@@ -6,6 +6,7 @@ import { readStoredAgentAccentColor, resolveEffectiveAgentAccentColor, SYSTEM_DE
 import { adventureDataRecord as record } from "../../core/adventure-import/adventure-agent-data";
 import { ADVENTURE_ACTOR_FLAG_PATH as FLAG_PATH, actorDataDifferences, importFlag, itemProjection, preserveAbilityResourceValue, sourceDifferencePaths, stableSerialize, type AgentActorSource, type AgentImportFlag, type AgentItemSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 import type { AdventureAgentActorPort, AgentPortableItem, PreparedAdventureAgent, PreparedAgentItem } from "../../features/adventure-import/prepare-adventure-agents";
+import { ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH, type AdventureFolderPlacementFlag } from "../../features/adventure-import/adventure-folders";
 
 const SCOPE = "ordemparanormal2", KEY = "adventureImport";
 function actorById(id: string): foundry.documents.Actor {
@@ -43,22 +44,6 @@ export function createAdventureAgentActorPort(): AdventureAgentActorPort {
   const sources = new Map<string, foundry.documents.Item>();
   function authorized() { return game.user.isGM && game.users.activeGM?.id === game.user.id; }
   function guard() { if (!authorized()) throw new Error("Somente o GM ativo pode importar agentes."); }
-  function folders(key: string) {
-    const matches = game.folders.contents.filter(f => {
-      const flag = record(f.getFlag(SCOPE, KEY));
-      return flag?.importer === "actorFolder" && flag.adventureId === "playtest-alpha" && flag.folderId === key;
-    });
-    if (matches.length > 1 || matches.some(f => f.type !== "Actor" || record(f.getFlag(SCOPE, KEY))?.version !== 1)) throw new Error("Identidade de pasta de agentes incompatível.");
-    return matches[0];
-  }
-  async function folder(key: string, name: string, parent: string | null) {
-    const existing = folders(key); if (existing) return existing.id!;
-    guard();
-    const flag = { importer: "actorFolder", adventureId: "playtest-alpha", folderId: key, version: 1 };
-    const result = await foundry.documents.Folder.create({ name, type: "Actor", folder: parent, flags: { [SCOPE]: { [KEY]: flag } } });
-    if (!result?.id || folders(key)?.id !== result.id) throw new Error("Criação de pasta não confirmada.");
-    return result.id;
-  }
   return {
     isAuthorized: authorized,
     newId: () => foundry.utils.randomID(),
@@ -89,7 +74,6 @@ export function createAdventureAgentActorPort(): AdventureAgentActorPort {
       });
     },
     validatePrepared(agent) {
-      for (const key of ["root", "actOne", "actTwo"]) folders(key);
       const previous = agent.actorId ? actorById(agent.actorId).toObject() as unknown as AgentActorSource : null;
       const system = actorSystem(agent);
       if (previous) {
@@ -107,19 +91,29 @@ export function createAdventureAgentActorPort(): AdventureAgentActorPort {
         if (!model.validate({ strict: true })) throw new Error("Snapshot de Item inválido.");
       }
     },
-    async ensureFolder(act) {
-      const root = await folder("root", "Ordem Paranormal 2 — Playtest Alpha", null);
-      return folder(act, act === "actOne" ? "Ato I" : "Ato II", root);
-    },
-    async createActor(agent, folderId) {
+    async createActor(agent, folderId, folderPlacement: AdventureFolderPlacementFlag) {
       guard();
       const profile = agent.items.find(i => i.type === "profile")!;
       const accent = record(profile.system)?.accentColor ?? SYSTEM_DEFAULT_ACCENT_COLOR;
       const result = await foundry.documents.Actor.implementation.create({ name: agent.preset.name, type: "agent", img: agent.img as foundry.documents.Actor["img"], folder: folderId,
         system: { ...actorSystem(agent), appearance: { accentColor: accent } }, prototypeToken: { texture: { src: agent.token as foundry.documents.TokenDocument["texture"]["src"] } },
-        flags: { [SCOPE]: { [KEY]: agent.flag } } });
-      if (!result?.id || importFlag(result.toObject() as unknown as AgentActorSource)?.state !== "incomplete") throw new Error("Criação de Actor não confirmada.");
+        flags: { [SCOPE]: { [KEY]: agent.flag, adventureImportFolder: folderPlacement } } });
+      const persisted = result?.toObject() as unknown as AgentActorSource | undefined;
+      if (!result?.id || !persisted || importFlag(persisted)?.state !== "incomplete" || (persisted.folder ?? null) !== folderId
+        || stableSerialize(record(persisted.flags?.[SCOPE])?.adventureImportFolder) !== stableSerialize(folderPlacement)) {
+        throw new Error("Criação de Actor não confirmada.");
+      }
       return result.id;
+    },
+    async updateFolderPlacement(id, folderId, flag) {
+      guard();
+      const actor = actorById(id);
+      await actor.update({ folder: folderId, [ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH]: flag });
+      const source = actor.toObject() as unknown as AgentActorSource;
+      const scope = record(source.flags?.[SCOPE]);
+      if ((source.folder ?? null) !== folderId || stableSerialize(scope?.adventureImportFolder) !== stableSerialize(flag)) {
+        throw new Error("Organização do Actor não confirmada.");
+      }
     },
     async updateActor(id, agent) {
       guard(); const actor = actorById(id);

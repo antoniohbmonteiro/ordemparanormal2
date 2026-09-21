@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   createAdventureAssetStorage: vi.fn(),
   importAdventureHandouts: vi.fn(),
   createAdventureHandoutJournalPort: vi.fn(),
+  createAdventureFolderPort: vi.fn(),
 }));
 
 vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
@@ -45,6 +46,7 @@ vi.mock("../../features/adventure-import/import-adventure-handouts", async (impo
 vi.mock("../../adapters/foundry/adventure-handout-journals", () => ({
   createAdventureHandoutJournalPort: mocks.createAdventureHandoutJournalPort,
 }));
+vi.mock("../../adapters/foundry/adventure-folders", () => ({ createAdventureFolderPort: mocks.createAdventureFolderPort }));
 
 vi.mock("../../features/adventure-import/import-adventure-agents", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-agents")>();
@@ -246,6 +248,7 @@ beforeEach(() => {
   mocks.createAdventureAssetStorage.mockReset().mockReturnValue({ worldId: "test-world" });
   mocks.importAdventureHandouts.mockReset().mockResolvedValue({ created: 0, updated: 0, unchanged: 0 });
   mocks.createAdventureHandoutJournalPort.mockReset().mockReturnValue({ isAuthorized: () => true });
+  mocks.createAdventureFolderPort.mockReset().mockReturnValue({ isAuthorized: () => true, listFolders: () => [] });
 });
 
 afterAll(() => vi.unstubAllGlobals());
@@ -551,10 +554,32 @@ describe("Adventure Import Application", () => {
     expect(mocks.importAdventureAgents.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 1 });
     expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
     expect(mocks.importAdventureScenes.mock.calls[0][0]).toMatchObject({ materialization: { materializedActs: ["actOne", "actTwo"] } });
+    const folderPort = mocks.createAdventureFolderPort.mock.results[0].value;
+    expect(mocks.importAdventureHandouts.mock.calls[0][0].folders).toBe(folderPort);
+    expect(mocks.importAdventureAgents.mock.calls[0][0].folders).toBe(folderPort);
+    expect(mocks.importAdventureScenes.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureAgents.mock.invocationCallOrder[0]);
     expect(mocks.importAdventureAgents.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureScenes.mock.invocationCallOrder[0]);
     expect(info).toHaveBeenCalledOnce();
     expect(Application.DEFAULT_OPTIONS.actions).not.toHaveProperty("importHandouts");
+  });
+
+  it("blocks every document importer when the shared Folder preflight finds a structural conflict", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actOne.select(file("ato-um.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] }, actTwo: null });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actOne"] });
+    const flag = { importer: "folder", adventureId: "playtest-alpha", documentType: "Actor", folderId: "root", version: 1 };
+    mocks.createAdventureFolderPort.mockReturnValue({ isAuthorized: () => true, listFolders: () => [
+      { id: "first", name: "First", color: null, type: "Actor", parentId: null, flag },
+      { id: "second", name: "Second", color: null, type: "Actor", parentId: null, flag },
+    ] });
+    await action(app, "analyzeFiles"); await action(app, "importAssets");
+    expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
+    expect(mocks.importAdventureAgents).not.toHaveBeenCalled();
+    expect(mocks.importAdventureScenes).not.toHaveBeenCalled();
+    expect(errorNotification).toHaveBeenCalledWith(expect.stringContaining("Identidade duplicada"));
   });
 
   it("does not dispatch adventure import from an inactive GM", async () => {

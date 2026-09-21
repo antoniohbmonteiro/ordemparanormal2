@@ -7,6 +7,7 @@ import { createAdventureAgentActorPort } from "../../adapters/foundry/adventure-
 import { prepareAdventureAgents, type AdventureAgentActorPort, type AgentPortableItem, type PreparedAdventureAgent, type PreparedAgentItem } from "./prepare-adventure-agents";
 import { importFlag, preserveAbilityResourceValue, type AgentActorSource, type AgentImportFlag, type AgentItemSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
+import type { AdventureFolderFlag, AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
 
 const canonical = new Map<string, AgentPortableItem>();
 for (const [pack, type] of [["profiles", "profile"], ["occupations", "occupation"], ["abilities", "ability"]] as const) {
@@ -36,23 +37,29 @@ function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
     a.system = { ...a.system, level: p.preset.level, attributes: p.preset.attributes, skills: p.preset.skills,
       resources: { health: { ...(initial ? { value: p.preset.resources.healthMax } : (a.system.resources as { health: object }).health), max: p.preset.resources.healthMax },
         determination: { ...(initial ? { value: p.preset.resources.determinationMax } : (a.system.resources as { determination: object }).determination), max: p.preset.resources.determinationMax } } };
-    a.flags = { ...a.flags, ...marker(p) };
+    a.flags = { ...a.flags, ordemparanormal2: { ...a.flags?.ordemparanormal2 as object, ...marker(p).ordemparanormal2 } };
   }
   const port: AdventureAgentActorPort = {
     isAuthorized: () => authorized, newId: () => `id${++counter}`, listActors: () => structuredClone(world),
     resolveCanonical: vi.fn(async (uuid, type) => { const source = canonical.get(uuid); if (!source || source.type !== type) throw new Error("missing canonical"); return structuredClone(source); }),
     validatePrepared: vi.fn(), prepareProfileAbilities: (_actor, _profileId, profile, abilities) => abilities.filter(a => (profile.system.abilityGrants as { uuid: string }[]).some(g => g.uuid === a.uuid)),
-    ensureFolder: async act => { writes.push("folder"); return act; },
-    createActor: async (p, folder) => { writes.push("createActor"); const a: MutableActor = { _id: `actor${++counter}`, type: "agent", name: p.preset.name, system: {}, items: [], folder }; update(a, p, true); world.push(a); return a._id; },
+    createActor: async (p, folder, placement) => { writes.push("createActor"); const a: MutableActor = { _id: `actor${++counter}`, type: "agent", name: p.preset.name, system: {}, items: [], folder }; update(a, p, true); (a.flags!.ordemparanormal2 as Record<string, unknown>).adventureImportFolder = placement; world.push(a); return a._id; },
+    updateFolderPlacement: async (id, folder, flag) => { writes.push("folderPlacement"); const a = actor(id); a.folder = folder ?? undefined; const scope = a.flags!.ordemparanormal2 as Record<string, unknown>; scope.adventureImportFolder = flag; },
     updateActor: async (id, p) => { writes.push("updateActor"); update(actor(id), p); },
     createItems: async (id, items, p) => { writes.push("createItems"); actor(id).items.push(...items.map(i => item(i, p))); },
     updateItems: async (id, items, p) => { writes.push("updateItems"); const a = actor(id); for (const i of items) { const index = a.items.findIndex(old => old._id === i.id); const old = a.items[index]; a.items[index] = { ...old, ...item(i, p), system: i.type === "ability" ? preserveAbilityResourceValue(i.system, old.system) : structuredClone(i.system) }; } },
     deleteItems: async (id, ids) => { writes.push("deleteItems"); const a = actor(id); a.items = a.items.filter(i => !ids.includes(i._id)); },
-    completeActor: async (id, flag) => { writes.push("completeActor"); actor(id).flags = { ordemparanormal2: { adventureImport: structuredClone(flag) } }; },
+    completeActor: async (id, flag) => { writes.push("completeActor"); const a = actor(id); a.flags = { ...a.flags, ordemparanormal2: { ...a.flags?.ordemparanormal2 as object, adventureImport: structuredClone(flag) } }; },
+  };
+  const folderWorld: AdventureFolderSnapshot[] = [];
+  const folders: AdventureFolderPort = {
+    isAuthorized: () => authorized, listFolders: () => folderWorld,
+    createFolder: async data => { writes.push("folder"); const id = `${data.documentType}-${data.flag.folderId}`; folderWorld.push({ id, name: data.name, color: data.color, type: data.documentType, parentId: data.parentId, flag: data.flag }); return id; },
+    updateFolder: async (id, data) => { writes.push("folder"); const index = folderWorld.findIndex(folder => folder.id === id); folderWorld[index] = { ...folderWorld[index], ...data, flag: data.flag as AdventureFolderFlag }; },
   };
   const pdf = { status: "recognized", passwordRequired: false, edition: "playtest-alpha-v1.1", facts: { parseAttempt: { status: "success" } } } as PdfSourceAnalysis;
   const decide = vi.fn(async () => "restore" as const);
-  const input = { definition, presets, revision: 1, acts, pdf, actors: port, lookup: { worldId: "test", findExisting: async (dir: string, name: string) => `${dir}/${name}` }, decide };
+  const input = { definition, presets, revision: 1, acts, pdf, actors: port, folders, lookup: { worldId: "test", findExisting: async (dir: string, name: string) => `${dir}/${name}` }, decide };
   return { input, port, world, writes, decide, setAuthorized: (v: boolean) => { authorized = v; } };
 }
 function resource(a: MutableActor) { return a.system.resources as { health: { value: number; max: number }; determination: { value: number; max: number } }; }

@@ -2,6 +2,10 @@ import type { AdventureDefinition, AdventureHandoutReference } from "../../core/
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
 import { resolveAdventureAsset } from "./resolve-adventure-asset";
+import {
+  adventureFolderPlacementFlag, ensureAdventureFolder, hasAdventureFolderPlacement,
+  type AdventureFolderPlacementFlag, type AdventureFolderPort,
+} from "./adventure-folders";
 
 export const HANDOUT_IMPORTER = "handout";
 export const HANDOUT_IMPORT_VERSION = 1;
@@ -20,13 +24,6 @@ export interface HandoutImportMetadata {
 
 export type HandoutImportFlag = HandoutImportIdentity & HandoutImportMetadata;
 
-export interface HandoutFolderFlag {
-  readonly importer: typeof HANDOUT_IMPORTER;
-  readonly adventureId: string;
-  readonly folderId: "root" | AdventureAct;
-  readonly version: number;
-}
-
 export interface HandoutPageSnapshot {
   readonly id: string;
   readonly flag: unknown;
@@ -37,21 +34,17 @@ export interface HandoutPageSnapshot {
 export interface HandoutJournalSnapshot {
   readonly id: string;
   readonly flag: unknown;
+  readonly folderId?: string | null;
+  readonly folderPlacement?: unknown;
   readonly pages: readonly HandoutPageSnapshot[];
-}
-
-export interface HandoutFolderSnapshot {
-  readonly id: string;
-  readonly type: string;
-  readonly flag: unknown;
 }
 
 export interface HandoutJournalPort {
   isAuthorized(): boolean;
   listJournals(): readonly HandoutJournalSnapshot[];
-  listFolders(): readonly HandoutFolderSnapshot[];
-  createFolder(name: string, parentId: string | null, flag: HandoutFolderFlag): Promise<string>;
-  createJournal(handout: AdventureHandoutReference, storedPath: string, folderId: string, flag: HandoutImportFlag): Promise<string>;
+  createJournal(handout: AdventureHandoutReference, storedPath: string, folderId: string, flag: HandoutImportFlag,
+    folderPlacement: AdventureFolderPlacementFlag): Promise<string>;
+  updateFolderPlacement(journalId: string, folderId: string | null, flag: AdventureFolderPlacementFlag): Promise<void>;
   updateJournalMetadata(journalId: string, metadata: HandoutImportMetadata): Promise<void>;
   createPage(journalId: string, name: string, type: "image" | "pdf", src: string, flag: HandoutImportFlag): Promise<void>;
   updatePage(journalId: string, pageId: string, type: "image" | "pdf", src: string, metadata: HandoutImportMetadata): Promise<void>;
@@ -86,6 +79,7 @@ export interface ImportAdventureHandoutsInput {
   readonly acts: readonly AdventureAct[];
   readonly lookup: AdventureAssetLookup;
   readonly journals: HandoutJournalPort;
+  readonly folders: AdventureFolderPort;
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
 }
 
@@ -195,15 +189,9 @@ function preflightDocuments(
     if (managedPages > 1) {
       fail("conflict", "preflight", null, journalIdentity.documentId, emptyCounts(), "Multiple managed pages in one Journal");
     }
-  }
-  const folderIds = new Set<string>();
-  for (const folder of port.listFolders()) {
-    const data = record(folder.flag);
-    if (data?.importer !== HANDOUT_IMPORTER || data.adventureId !== adventureId) continue;
-    if (typeof data.folderId !== "string" || folder.type !== "JournalEntry" || folderIds.has(data.folderId)) {
-      fail("conflict", "preflight", null, null, emptyCounts(), "Conflicting imported Journal folder");
-    }
-    folderIds.add(data.folderId);
+    const handout = selected.find(candidate => candidate.id === journalIdentity.documentId)!;
+    hasAdventureFolderPlacement(journal.folderPlacement, adventureFolderPlacementFlag({ adventureId,
+      documentType: "JournalEntry", documentId: handout.id, act: handout.act }));
   }
 }
 
@@ -218,24 +206,10 @@ function importedJournal(
   return matches[0] ?? null;
 }
 
-async function ensureFolder(
-  adventureId: string, folderId: "root" | AdventureAct, name: string, parentId: string | null,
-  port: HandoutJournalPort,
-): Promise<string> {
-  const existing = port.listFolders().find((folder) => {
-    const data = record(folder.flag);
-    return data?.importer === HANDOUT_IMPORTER && data.adventureId === adventureId && data.folderId === folderId;
-  });
-  if (existing) return existing.id;
-  return port.createFolder(name, parentId, {
-    importer: HANDOUT_IMPORTER, adventureId, folderId, version: HANDOUT_IMPORT_VERSION,
-  });
-}
-
 let importRunning = false;
 
 export async function importAdventureHandouts(input: ImportAdventureHandoutsInput): Promise<HandoutImportCounts> {
-  const { definition, lookup, journals } = input;
+  const { definition, lookup, journals, folders: folderPort } = input;
   if (importRunning) fail("busy", "preflight", null, null, emptyCounts(), "A handout import is already running");
   importRunning = true;
   let counts = emptyCounts();
@@ -256,32 +230,31 @@ export async function importAdventureHandouts(input: ImportAdventureHandoutsInpu
       }
     }
     preflightDocuments(definition.id, selected, journals);
+    const folders = new Map<AdventureAct, string>();
+    try {
+      for (const act of acts) if (selected.some(handout => handout.act === act)) {
+        folders.set(act, await ensureAdventureFolder({ adventureId: definition.id, documentType: "JournalEntry", act, folders: folderPort }));
+      }
+    } catch (cause) {
+      fail("operation-failed", "folder", null, null, counts, "Falha ao garantir as pastas de Handouts", cause);
+    }
     try {
       await input.onProgress?.(0, prepared.length);
     } catch (cause) {
       fail("operation-failed", "preflight", null, null, counts, "Failed to report import progress", cause);
     }
     let completed = 0;
-    const folders = new Map<AdventureAct, string>();
     for (const { handout, storedPath } of prepared) {
       if (!journals.isAuthorized()) fail("unauthorized", "journal", handout.act, handout.id, counts, "Active GM changed");
       const flag = flagFor(definition.id, handout);
+      const placement = adventureFolderPlacementFlag({ adventureId: definition.id, documentType: "JournalEntry",
+        documentId: handout.id, act: handout.act });
       let journal = importedJournal(definition.id, handout.id, journals, counts);
       if (!journal) {
-        try {
-          let folderId = folders.get(handout.act);
-          if (!folderId) {
-            const rootId = await ensureFolder(definition.id, "root", "Ordem Paranormal 2 — Playtest Alpha", null, journals);
-            folderId = await ensureFolder(definition.id, handout.act, handout.act === "actOne" ? "Ato I" : "Ato II", rootId, journals);
-            folders.set(handout.act, folderId);
-          }
-        } catch (cause) {
-          fail("operation-failed", "folder", handout.act, handout.id, counts, "Failed to ensure handout folders", cause);
-        }
         journal = importedJournal(definition.id, handout.id, journals, counts);
         if (!journal) {
           try {
-            await journals.createJournal(handout, storedPath, folders.get(handout.act)!, flag);
+            await journals.createJournal(handout, storedPath, folders.get(handout.act)!, flag, placement);
           } catch (cause) {
             fail("operation-failed", "journal", handout.act, handout.id, counts, "Failed to create Journal", cause);
           }
@@ -294,6 +267,14 @@ export async function importAdventureHandouts(input: ImportAdventureHandoutsInpu
           }
           continue;
         }
+      }
+      try {
+        if (!hasAdventureFolderPlacement(journal.folderPlacement, placement)) {
+          await journals.updateFolderPlacement(journal.id, journal.folderId ?? null, placement);
+          journal = importedJournal(definition.id, handout.id, journals, counts)!;
+        }
+      } catch (cause) {
+        fail("conflict", "folder", handout.act, handout.id, counts, "Falha ao normalizar a organização do Handout", cause);
       }
       const page = journal.pages.find((candidate) => {
         const found = identity(candidate.flag);

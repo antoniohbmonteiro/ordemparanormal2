@@ -11,40 +11,38 @@ const handout = {
   label: "Handout 01 — preenchível", pageType: "pdf" as const,
 };
 
-const folderCreate = vi.fn();
 const journalCreate = vi.fn();
 const journalUpdate = vi.fn();
 const createEmbeddedDocuments = vi.fn();
 const updateEmbeddedDocuments = vi.fn();
 const page = {
   id: "page-id", type: "pdf", src: "worlds/test/b.pdf",
-  getFlag: vi.fn(() => flag),
+  getFlag: vi.fn((_scope: string, key: string) => key === "adventureImport" ? flag : undefined),
 };
 const journal = {
   id: "journal-id", pages: { contents: [page] },
-  getFlag: vi.fn(() => flag),
+  getFlag: vi.fn((_scope: string, key: string) => key === "adventureImport" ? flag : undefined),
   update: journalUpdate,
   createEmbeddedDocuments,
   updateEmbeddedDocuments,
 };
-const folder = { id: "folder-id", type: "JournalEntry", getFlag: vi.fn(() => ({
-  importer: "handout", adventureId: "playtest-alpha", folderId: "root", version: 1,
-})) };
 
 beforeEach(() => {
-  folderCreate.mockReset().mockResolvedValue({ id: "new-folder" });
-  journalCreate.mockReset().mockResolvedValue({ id: "new-journal" });
+  journalCreate.mockReset().mockImplementation(async (data: Record<string, unknown>) => ({
+    id: "new-journal", folder: { id: data.folder },
+    getFlag: (_scope: string, key: string) => key === "adventureImportFolder"
+      ? ((data.flags as { ordemparanormal2: { adventureImportFolder: unknown } }).ordemparanormal2.adventureImportFolder) : undefined,
+  }));
   journalUpdate.mockReset().mockResolvedValue(journal);
   createEmbeddedDocuments.mockReset().mockResolvedValue([{ id: "new-page" }]);
   updateEmbeddedDocuments.mockReset().mockResolvedValue([page]);
   vi.stubGlobal("foundry", { documents: {
-    Folder: { create: folderCreate },
     JournalEntry: { create: journalCreate },
   } });
   vi.stubGlobal("game", {
     user: { isGM: true, id: "active-gm" }, users: { activeGM: { id: "active-gm" } },
     journal: { contents: [journal], get: vi.fn(() => journal) },
-    folders: { contents: [folder] },
+    folders: { contents: [] },
   });
 });
 
@@ -55,29 +53,23 @@ describe("Foundry handout Journal adapter", () => {
     const port = createAdventureHandoutJournalPort();
     expect(port.isAuthorized()).toBe(true);
     expect(port.listJournals()).toEqual([{
-      id: "journal-id", flag,
+      id: "journal-id", flag, folderId: null, folderPlacement: undefined,
       pages: [{ id: "page-id", flag, type: "pdf", src: "worlds/test/b.pdf" }],
     }]);
-    expect(port.listFolders()[0]).toMatchObject({ id: "folder-id", type: "JournalEntry", flag: { folderId: "root" } });
     expect(journal.getFlag).toHaveBeenCalledWith("ordemparanormal2", "adventureImport");
     expect(page.getFlag).toHaveBeenCalledWith("ordemparanormal2", "adventureImport");
   });
 
-  it("creates a native Journal folder and a PDF Journal with its managed page in one operation", async () => {
+  it("creates a PDF Journal with its managed page and folder placement in one operation", async () => {
     const port = createAdventureHandoutJournalPort();
-    expect(await port.createFolder("Ato II", "root-id", {
-      importer: "handout", adventureId: "playtest-alpha", folderId: "actTwo", version: 1,
-    })).toBe("new-folder");
-    expect(folderCreate).toHaveBeenCalledWith(expect.objectContaining({
-      name: "Ato II", type: "JournalEntry", folder: "root-id",
-      flags: { ordemparanormal2: { adventureImport: expect.objectContaining({ folderId: "actTwo" }) } },
-    }));
-    expect(await port.createJournal(handout, "worlds/test/b.pdf", "new-folder", flag)).toBe("new-journal");
+    const placement = { version: 1 as const, adventureId: "playtest-alpha", documentType: "JournalEntry" as const,
+      documentId: flag.documentId, act: "actTwo" as const };
+    expect(await port.createJournal(handout, "worlds/test/b.pdf", "new-folder", flag, placement)).toBe("new-journal");
     expect(journalCreate).toHaveBeenCalledWith({
       name: handout.label, folder: "new-folder",
       pages: [{ name: handout.label, type: "pdf", src: "worlds/test/b.pdf",
         flags: { ordemparanormal2: { adventureImport: flag } } }],
-      flags: { ordemparanormal2: { adventureImport: flag } },
+      flags: { ordemparanormal2: { adventureImport: flag, adventureImportFolder: placement } },
     });
   });
 

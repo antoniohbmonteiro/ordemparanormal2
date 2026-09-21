@@ -1,8 +1,6 @@
 import type { AdventureHandoutReference } from "../../core/adventure-import/adventure-definition";
-import type {
-  HandoutFolderFlag, HandoutImportFlag, HandoutImportMetadata, HandoutJournalPort,
-  HandoutJournalSnapshot, HandoutFolderSnapshot,
-} from "../../features/adventure-import/import-adventure-handouts";
+import type { HandoutImportFlag, HandoutImportMetadata, HandoutJournalPort, HandoutJournalSnapshot } from "../../features/adventure-import/import-adventure-handouts";
+import { ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH, type AdventureFolderPlacementFlag } from "../../features/adventure-import/adventure-folders";
 
 const FLAG_SCOPE = "ordemparanormal2";
 const FLAG_KEY = "adventureImport";
@@ -29,6 +27,8 @@ export function createAdventureHandoutJournalPort(): HandoutJournalPort {
       return game.journal.contents.map((journal) => ({
         id: journal.id!,
         flag: journal.getFlag(FLAG_SCOPE, FLAG_KEY),
+        folderId: journal.folder?.id ?? null,
+        folderPlacement: journal.getFlag(FLAG_SCOPE, "adventureImportFolder"),
         pages: journal.pages.contents.map((page) => ({
           id: page.id!,
           flag: page.getFlag(FLAG_SCOPE, FLAG_KEY),
@@ -37,23 +37,9 @@ export function createAdventureHandoutJournalPort(): HandoutJournalPort {
         })),
       }));
     },
-    listFolders(): readonly HandoutFolderSnapshot[] {
-      return game.folders.contents.map((folder) => ({
-        id: folder.id!,
-        type: folder.type,
-        flag: folder.getFlag(FLAG_SCOPE, FLAG_KEY),
-      }));
-    },
-    async createFolder(name: string, parentId: string | null, flag: HandoutFolderFlag): Promise<string> {
-      const created = await foundry.documents.Folder.create({
-        name, type: "JournalEntry", folder: parentId,
-        flags: { [FLAG_SCOPE]: { [FLAG_KEY]: flag } },
-      });
-      if (!created?.id) throw new Error(`Folder creation was not confirmed: ${flag.folderId}`);
-      return created.id;
-    },
     async createJournal(
       handout: AdventureHandoutReference, storedPath: string, folderId: string, flag: HandoutImportFlag,
+      folderPlacement: AdventureFolderPlacementFlag,
     ): Promise<string> {
       const created = await foundry.documents.JournalEntry.create({
         name: handout.label,
@@ -64,10 +50,21 @@ export function createAdventureHandoutJournalPort(): HandoutJournalPort {
           src: storedPath,
           flags: { [FLAG_SCOPE]: { [FLAG_KEY]: flag } },
         }],
-        flags: { [FLAG_SCOPE]: { [FLAG_KEY]: flag } },
+        flags: { [FLAG_SCOPE]: { [FLAG_KEY]: flag, adventureImportFolder: folderPlacement } },
       });
-      if (!created?.id) throw new Error(`Journal creation was not confirmed: ${handout.id}`);
+      if (!created?.id || created.folder?.id !== folderId
+        || JSON.stringify(created.getFlag(FLAG_SCOPE, "adventureImportFolder")) !== JSON.stringify(folderPlacement)) {
+        throw new Error(`Journal creation was not confirmed: ${handout.id}`);
+      }
       return created.id;
+    },
+    async updateFolderPlacement(journalId, folderId, flag) {
+      const journal = journalById(journalId);
+      await journal.update({ folder: folderId, [ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH]: flag });
+      if ((journal.folder?.id ?? null) !== folderId
+        || JSON.stringify(journal.getFlag(FLAG_SCOPE, "adventureImportFolder")) !== JSON.stringify(flag)) {
+        throw new Error("Organização do Journal não confirmada.");
+      }
     },
     async updateJournalMetadata(journalId: string, metadata: HandoutImportMetadata): Promise<void> {
       await journalById(journalId).update(metadataUpdate(metadata));

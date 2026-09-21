@@ -17,6 +17,7 @@ export interface AgentActorSource {
   readonly img?: string;
   readonly system: Record<string, unknown>;
   readonly prototypeToken?: Record<string, unknown>;
+  readonly folder?: string | null;
   readonly flags?: Record<string, unknown>;
   readonly items: readonly AgentItemSource[];
 }

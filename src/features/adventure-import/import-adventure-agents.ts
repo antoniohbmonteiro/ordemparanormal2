@@ -1,6 +1,7 @@
 import { ADVENTURE_ACTOR_FLAG_PATH, actorDataDifferences, abilityGrant, buildAgentBaseline, importFlag, itemSourceUuid, itemProjection, managedDigest, sourceDifferencePaths,
   relevantAgentState, type AgentActorSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 import { prepareAdventureAgents, type PrepareAdventureAgentsInput, type PreparedAdventureAgent, type PreparedAgentItem } from "./prepare-adventure-agents";
+import { adventureFolderPlacementFlag, ensureAdventureFolder, hasAdventureFolderPlacement, type AdventureFolderPort } from "./adventure-folders";
 
 export type AgentConflictDecision = "preserve" | "restore" | null;
 export interface AgentImportCounts { created: number; updated: number; unchanged: number; preserved: number; cancelled: boolean }
@@ -9,6 +10,7 @@ export class AgentImportError extends Error {
     readonly counts: Readonly<AgentImportCounts>, message: string, options?: ErrorOptions) { super(message, options); this.name = "AgentImportError"; }
 }
 export interface ImportAdventureAgentsInput extends PrepareAdventureAgentsInput {
+  readonly folders: AdventureFolderPort;
   readonly decide: (agents: readonly PreparedAdventureAgent[]) => Promise<AgentConflictDecision>;
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
 }
@@ -35,6 +37,11 @@ function itemProvenanceMatches(current: AgentActorSource["items"][number], item:
   if (item.grant) return !f && itemSourceUuid(current) === item.uuid && grant?.abilityUuid === item.uuid && grant.profileItemId === agent.profileId;
   return !grant && f?.importer === "actorItem" && f.adventureId === agent.flag.adventureId && f.documentId === agent.flag.documentId && f.version === 1 && f.uuid === item.uuid;
 }
+function placementValue(actor: AgentActorSource): unknown {
+  const scope = actor.flags?.ordemparanormal2;
+  return scope && typeof scope === "object" && !Array.isArray(scope)
+    ? (scope as Record<string, unknown>).adventureImportFolder : undefined;
+}
 export async function importAdventureAgents(input: ImportAdventureAgentsInput): Promise<AgentImportCounts> {
   const counts: AgentImportCounts = { created: 0, updated: 0, unchanged: 0, preserved: 0, cancelled: false };
   if (importing) throw new AgentImportError("preflight", null, counts, "Já existe uma importação de agentes em andamento.");
@@ -42,24 +49,40 @@ export async function importAdventureAgents(input: ImportAdventureAgentsInput): 
   let stage: AgentImportError["stage"] = "preflight", current: PreparedAdventureAgent | null = null;
   try {
     const plans = await prepareAdventureAgents(input);
+    for (const plan of plans) {
+      const actor = plan.actorId ? input.actors.listActors().find(candidate => candidate._id === plan.actorId) : undefined;
+      if (actor) hasAdventureFolderPlacement(placementValue(actor), adventureFolderPlacementFlag({ adventureId: plan.flag.adventureId,
+        documentType: "Actor", documentId: plan.flag.documentId, act: plan.preset.act }));
+    }
     stage = "confirmation";
     const divergent = plans.filter(p => p.divergent);
     const decision = divergent.length ? await input.decide(divergent) : "restore";
     if (decision === null) return { ...counts, cancelled: true };
     assertAuthorized(input);
+    const folderIds = new Map<PreparedAdventureAgent["preset"]["act"], string>();
+    for (const act of new Set(plans.map(plan => plan.preset.act))) {
+      stage = "folder";
+      folderIds.set(act, await ensureAdventureFolder({ adventureId: input.definition.id, documentType: "Actor", act, folders: input.folders }));
+    }
     for (const agent of plans) {
       current = agent;
       assertAuthorized(input);
-      if (agent.divergent && decision === "preserve") {
-        counts.preserved++;
-        await input.onProgress?.(counts.created + counts.updated + counts.unchanged + counts.preserved, plans.length);
-        continue;
-      }
       const live = input.actors.listActors();
       const matches = live.filter(a => importFlag(a)?.importer === "actor" && importFlag(a)?.adventureId === agent.flag.adventureId && importFlag(a)?.documentId === agent.flag.documentId);
       const actor = agent.actorId ? live.find(a => a._id === agent.actorId) : undefined;
       if (agent.actorId ? !actor || matches.length !== 1 || matches[0]._id !== agent.actorId || relevantAgentState(actor) !== agent.previousState : matches.length !== 0) {
         throw new Error("O estado do agente mudou após a preparação. Execute a importação novamente.");
+      }
+      const placement = adventureFolderPlacementFlag({ adventureId: agent.flag.adventureId, documentType: "Actor",
+        documentId: agent.flag.documentId, act: agent.preset.act });
+      if (actor && !hasAdventureFolderPlacement(placementValue(actor), placement)) {
+        stage = "folder"; assertAuthorized(input);
+        await input.actors.updateFolderPlacement(actor._id, actor.folder ?? null, placement);
+      }
+      if (agent.divergent && decision === "preserve") {
+        counts.preserved++;
+        await input.onProgress?.(counts.created + counts.updated + counts.unchanged + counts.preserved, plans.length);
+        continue;
       }
       if (actor && await desiredMatches(actor, agent) && !agent.divergent) {
         counts.unchanged++;
@@ -69,10 +92,10 @@ export async function importAdventureAgents(input: ImportAdventureAgentsInput): 
       let id = agent.actorId;
       if (!id) {
         stage = "folder"; assertAuthorized(input);
-        const folder = await input.actors.ensureFolder(agent.preset.act);
+        const folder = folderIds.get(agent.preset.act)!;
         stage = "actor"; assertAuthorized(input);
         if (input.actors.listActors().some(a => importFlag(a)?.importer === "actor" && importFlag(a)?.adventureId === agent.flag.adventureId && importFlag(a)?.documentId === agent.flag.documentId)) throw new Error("A identidade do agente mudou. Execute novamente.");
-        id = await input.actors.createActor(agent, folder);
+        id = await input.actors.createActor(agent, folder, placement);
       } else {
         stage = "actor"; assertAuthorized(input);
         const beforeWrite = input.actors.listActors().find(a => a._id === id);

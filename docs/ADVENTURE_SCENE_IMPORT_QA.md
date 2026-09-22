@@ -1,6 +1,6 @@
 # Adventure Scene import QA
 
-The single **Importar para este Mundo** action materializes assets, imports handouts and Actors, then reconciles the Act I basement. Revision 1 deliberately omits the opened-furniture Tile: its authoring image is official Act II artwork. The bookshelf still controls its two doors, with no Tile reference and no Act II ZIP dependency.
+The single **Importar para este Mundo** action materializes assets, imports handouts and Actors, then reconciles the basement Scene for each Act selected in the current run. The Act I revision deliberately omits the opened-furniture Tile: its authoring image is official artwork. The Act II revision contains the authored Walls, regular doors and Agent Tokens only, with no Regions, POIs or Tiles.
 
 ## Automated validation
 
@@ -26,17 +26,18 @@ The normal suite skips this one test when the environment variable is absent. Na
 
 ## Foundry v14 smoke test
 
-Use a disposable World and legally owned recognized PDF/Act I ZIP sources.
+Use a disposable World and legally owned recognized PDF and ZIP sources.
 
-1. Import through the existing button. Confirm exactly one imported basement Scene in `A Maldição do Ídolo de Pedra > Ato I`, one Level, 168 Walls, three control Tiles, five linked Agent Tokens and three Drawing labels. The Scene is not automatically activated.
-2. Open it manually. Confirm the full map aligns with Walls and placements; Tokens use the imported Actors and materialized images, with PV/PD bars and vision. Test hover/focus, dialog resizing/scrolling and native window controls.
-3. As GM, click each of the two air-passage controls and the bookshelf control outside the Tiles editing layer. Each changes its corresponding two doors. The bookshelf has no opened-furniture visual in this revision. As a player, confirm GM-only control authorization remains enforced.
-4. Move a Token, open/lock a door and hide a control Tile. Reimport without configuration changes: no duplicate Scene/documents and no reset of gameplay state or fog exploration.
-5. Rename the imported Scene and add manual Tokens, Walls, Tiles, Drawings, lights and sounds. Reimport: retain the name and every manual document. A manual Scene also named **O Porão** must remain independent.
-6. Change managed Wall geometry or Token presentation; delete a managed Token. Reimport and test **Preservar**, **Restaurar dados importados** and dialog cancellation. Restore only managed configuration, recreate missing managed documents with stable IDs, retain manual content and current state, and show one Scene/lote decision.
-7. Temporarily make a required asset or imported Actor unavailable. Reimport: the Scene-stage preflight fails with no Scene write; previous assets/handouts/Actors remain. Restore the missing source before retrying.
-8. In the disposable World, delete the imported Scene and rerun twice: recreate it once. Confirm imports of Act II alone never create a Scene or add Tokens elsewhere.
-9. Exercise interruption/failure recovery and active-GM changes: incomplete provenance is retained, rerun uses the same identity, and stale plans cannot silently overwrite newer managed edits.
-10. Move the imported Scene to another Folder and rerun. Confirm the custom placement is preserved. In a separate legacy fixture, remove its placement marker and Folder while retaining valid revision-one Scene provenance; rerun and confirm it moves once to the managed Act I Folder without changing managed divergence or runtime state.
+1. Import Act II alone. Confirm exactly one **O Porão — Ato II** Scene in `A Maldição do Ídolo de Pedra > Ato II`, with one Level, 145 Walls, two regular doors, five linked Agent Tokens and no Tiles, Drawings or Regions. Confirm the Scene is not automatically activated.
+2. In a fresh World, import Act I alone. Confirm only **O Porão** is created under `Ato I`, retaining one Level, 168 Walls, three control Tiles, five linked Tokens and three Drawing labels.
+3. In another fresh World, import both Acts. Confirm exactly two imported Scenes, the corresponding Actor sets and one shared type-specific Folder tree; no Scene, Folder or Actor is duplicated.
+4. Open both Scenes manually. Confirm each materialized map aligns with its authored Walls and placements, and Tokens use the imported Actors and semantic materialized images with PV/PD bars and vision.
+5. In Act I, exercise the three GM-only control Tiles and confirm the existing two-door relationships remain unchanged. The bookshelf still has no opened-furniture visual.
+6. In Act II, move Tokens and open/close both authored doors. Reimport and confirm positions and door states are preserved. Also confirm there is no Region/POI or Tile interaction.
+7. Rename either imported Scene and add manual Tokens, Walls, Tiles, Drawings, lights, sounds and Regions. Reimport: retain the name and every manual document. A manual homonymous Scene remains independent.
+8. Change managed Wall geometry or Token presentation; delete a managed Token. Reimport and test **Preservar**, **Restaurar dados importados** and dialog cancellation. Restore only managed configuration, recreate missing managed documents with stable IDs, retain manual content and current state, and show one Scene/lote decision.
+9. Temporarily make a required map, Token asset or imported Actor unavailable while both Acts are selected. Reimport: the Scene-stage preflight fails before any Scene write; previous assets, handouts and Actors remain. Restore the missing source before retrying.
+10. Delete either imported Scene and rerun twice: recreate it once with stable embedded IDs. Exercise interruption/failure recovery and active-GM changes; incomplete provenance must retain the same identity and stale plans must not overwrite newer edits.
+11. Move each imported Scene to another Folder and rerun. Confirm custom placement is preserved. In a separate legacy Act I fixture, remove its placement marker and Folder while retaining valid revision-one provenance; confirm it moves once to the managed Act I Folder without changing divergence or runtime state.
 
-Manual Regions/POIs added later are preserved but are not authored, associated or reconciled by this feature. The importer may reconcile the name, color and provenance of its own Folder, but never treats manual contents as imported. Playlists and additional Scenes remain outside this test.
+Manual Regions/POIs added later are preserved but are not authored, associated or reconciled by this feature. The importer may reconcile the name, color and provenance of its own Folder, but never treats manual contents as imported. Playlists and Scenes beyond the two declared presets remain outside this test.

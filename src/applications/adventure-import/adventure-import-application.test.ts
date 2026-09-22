@@ -608,14 +608,16 @@ describe("Adventure Import Application", () => {
     expect(info).toHaveBeenCalledWith(expect.stringContaining("Actions.ScenesSummary"));
   });
 
-  it("skips Scenes when only Act II was materialized", async () => {
+  it("dispatches the Act II Scene when only Act II was materialized", async () => {
     const app = new Application(); attach(app);
     app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actTwo.select(file("act-two.zip"));
     mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(), actOne: null,
       actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null, issues: [] } });
     mocks.materializeAdventureAssets.mockResolvedValueOnce({ assets: [], materializedActs: ["actTwo"] });
     await action(app, "analyzeFiles"); await action(app, "importAssets");
-    expect(mocks.importAdventureAgents).toHaveBeenCalledOnce(); expect(mocks.importAdventureScenes).not.toHaveBeenCalled();
+    expect(mocks.importAdventureAgents).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureScenes.mock.calls[0][0]).toMatchObject({ materialization: { materializedActs: ["actTwo"] } });
   });
 
   it("reports Scene cancellation and failures independently of the Actor stage", async () => {
@@ -731,7 +733,7 @@ describe("Adventure Import Application", () => {
     await action(app, "importAssets");
     expect(mocks.materializeAdventureAssets).toHaveBeenCalledTimes(2);
     expect(mocks.importAdventureHandouts).toHaveBeenCalledTimes(2);
-    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportSuccess");
+    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportSuccess ORDEMPARANORMAL2.AdventureImport.Actions.ScenesSummary(1,0,0,0)");
   });
 });
 

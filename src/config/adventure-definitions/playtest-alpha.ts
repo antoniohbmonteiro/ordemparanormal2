@@ -5,7 +5,7 @@ import type { AdventureDefinition } from "../../core/adventure-import/adventure-
 export const PLAYTEST_ALPHA_ADVENTURE = {
   id: "playtest-alpha",
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },
-  scenes: [{ presetId: "actOne.basement" }],
+  scenes: [{ presetId: "actOne.basement" }, { presetId: "actTwo.basement" }],
   actors: [
     { presetId: "actOne.kenia" },
     { presetId: "actOne.edgar" },

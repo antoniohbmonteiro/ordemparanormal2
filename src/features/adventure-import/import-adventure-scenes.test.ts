@@ -18,6 +18,47 @@ describe("Scene import workflow", () => {
     f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
     expect(f.input.decide).not.toHaveBeenCalled();
   });
+  it.each([
+    { acts: ["actOne"] as const, expected: ["actOne.basement"] },
+    { acts: ["actTwo"] as const, expected: ["actTwo.basement"] },
+    { acts: ["actOne", "actTwo"] as const, expected: ["actOne.basement", "actTwo.basement"] },
+  ])("imports only the Scene presets selected by materializedActs: $acts", async ({ acts, expected }) => {
+    const f = sceneImportFixture({ materializedActs: acts });
+    expect(await importAdventureScenes(f.input)).toMatchObject({ created: expected.length, updated: 0 });
+    expect(f.world.map(scene => importFlag(scene)?.documentId)).toEqual(expected);
+    expect(f.world.map(scene => scene.folder)).toEqual(expected.map(id => id.startsWith("actOne.") ? "Scene-actOne" : "Scene-actTwo"));
+  });
+  it("creates and reconciles the Act II Scene with semantic assets, stable IDs and preserved runtime state", async () => {
+    const f = sceneImportFixture({ materializedActs: ["actTwo"] });
+    const preset = f.input.presets.find(candidate => candidate.id === "actTwo.basement")!;
+    expect(await importAdventureScenes(f.input)).toMatchObject({ created: 1 });
+    const scene = f.scene("actTwo.basement")!;
+    expect(scene.levels[0]).toMatchObject({ _id: "defaultLevel0000", background: { src: "worlds/test/actTwo.basement.map.png" } });
+    expect(scene.walls.map(wall => wall._id)).toEqual(preset.walls.map(wall => wall.id));
+    expect(scene.tokens.map(token => token._id)).toEqual(preset.tokens.map(token => token.id));
+    for (const token of scene.tokens) {
+      const actor = f.actors.find(candidate => candidate._id === token.actorId)!;
+      const documentId = importFlag(actor)!.documentId as string;
+      expect(preset.tokens.find(candidate => candidate.id === token._id)?.agentPresetId).toBe(documentId);
+      expect(token.texture).toMatchObject({ src: `worlds/test/${documentId}.token.png` });
+    }
+    scene.tokens[0].x = 999; scene.tokens[0].y = 888;
+    const door = scene.walls.find(wall => wall._id === "YvDltkrAU0I722fZ")!; door.ds = 1;
+    scene.folder = "manual-folder";
+    scene.walls = [...scene.walls, { _id: "manual-wall", c: [1, 2, 3, 4], flags: { other: { keep: true } } }];
+    scene.regions = [{ _id: "manual-region", name: "POI posterior" }];
+    scene.walls[0].c = [9, 8, 7, 6];
+    expect(await importAdventureScenes(f.input)).toMatchObject({ updated: 1 });
+    const reconciled = f.scene("actTwo.basement")!;
+    expect(reconciled.tokens[0]).toMatchObject({ x: 999, y: 888 });
+    expect(reconciled.walls.find(wall => wall._id === "YvDltkrAU0I722fZ")?.ds).toBe(1);
+    expect(reconciled.folder).toBe("manual-folder");
+    expect(reconciled.walls.at(-1)).toMatchObject({ _id: "manual-wall" });
+    expect(reconciled.regions).toEqual([{ _id: "manual-region", name: "POI posterior" }]);
+    f.clearWrites();
+    expect(await importAdventureScenes(f.input)).toMatchObject({ unchanged: 1 });
+    f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
+  });
   it("preserves runtime state, manual content and renames even during restore", async () => {
     const f = sceneImportFixture(); await importAdventureScenes(f.input);
     const s = f.world[0]; s.name = "Renomeada"; s.folder = "manual-folder"; s.ownership = { default: 2 }; s.initial = { x: 12, y: 34, scale: 1 };
@@ -72,7 +113,7 @@ describe("Scene import workflow", () => {
     const f = sceneImportFixture(); await importAdventureScenes(f.input); f.world[0].tokens[0].x = 987;
     const preset = structuredClone(f.input.presets[0]);
     const revised = { ...preset, revision: 2, walls: [...preset.walls.slice(1), { ...preset.walls[0], id: "newWall00000000x" }] };
-    expect(await importAdventureScenes({ ...f.input, presets: [revised] })).toMatchObject({ updated: 1 });
+    expect(await importAdventureScenes({ ...f.input, presets: f.input.presets.map(candidate => candidate.id === revised.id ? revised : candidate) })).toMatchObject({ updated: 1 });
     expect(f.input.decide).not.toHaveBeenCalled(); expect(f.world[0].tokens[0].x).toBe(987);
     expect(f.world[0].walls.some(w => w._id === preset.walls[0].id)).toBe(false);
     expect(f.world[0].walls.some(w => w._id === "newWall00000000x")).toBe(true);
@@ -86,10 +127,11 @@ describe("Scene import workflow", () => {
     await importAdventureScenes(f.input); expect(f.input.decide).toHaveBeenCalledOnce();
     expect(f.world[0].tokens.filter(t => t._id === id)).toHaveLength(1);
   });
-  it("skips Scene preparation for Act II even when old assets and Actors exist", async () => {
-    const f = sceneImportFixture(); await importAdventureScenes(f.input); f.clearWrites(); vi.mocked(f.port.confirmAsset).mockClear();
-    expect(await importAdventureScenes({ ...f.input, materialization: { ...f.input.materialization, materializedActs: ["actTwo"] } })).toMatchObject({ created: 0, unchanged: 0 });
-    f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled()); expect(f.port.confirmAsset).not.toHaveBeenCalled();
+  it("preflights every selected Scene before writes when an Act II Actor is missing", async () => {
+    const f = sceneImportFixture({ materializedActs: ["actOne", "actTwo"] });
+    f.actors.splice(f.actors.findIndex(actor => importFlag(actor)?.documentId === "actTwo.heitor"), 1);
+    await expect(importAdventureScenes(f.input)).rejects.toThrow("actTwo.heitor");
+    expect(f.world).toEqual([]); f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
   });
   it.each(["asset", "actor", "duplicateActor", "incompleteActor", "schema", "references", "model", "authority"])("preflights %s with zero writes", async kind => {
     const f = sceneImportFixture();
@@ -119,7 +161,8 @@ describe("Scene import workflow", () => {
     const preset = f.input.presets[0]; const id = preset.walls[0].id;
     f.world[0].tiles = [...f.world[0].tiles, { _id: "manual-control", flags: { ordemparanormal2: { tileInteraction: { enabled: true, wallIds: [id], tileIds: [] } } } }];
     f.clearWrites();
-    await expect(importAdventureScenes({ ...f.input, presets: [{ ...preset, revision: 2, walls: preset.walls.slice(1) }] })).rejects.toThrow("interação manual");
+    const revised = { ...preset, revision: 2, walls: preset.walls.slice(1) };
+    await expect(importAdventureScenes({ ...f.input, presets: f.input.presets.map(candidate => candidate.id === revised.id ? revised : candidate) })).rejects.toThrow("interação manual");
     f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
   });
   it("aborts stale confirmation and changed Actor bindings before writes", async () => {

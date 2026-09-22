@@ -8,6 +8,7 @@ import { prepareAdventureAgents, type AdventureAgentActorPort, type AgentPortabl
 import { importFlag, preserveAbilityResourceValue, type AgentActorSource, type AgentImportFlag, type AgentItemSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import type { AdventureFolderFlag, AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
+import type { MaterializationResult } from "./materialize-adventure-assets";
 
 const canonical = new Map<string, AgentPortableItem>();
 for (const [pack, type] of [["profiles", "profile"], ["occupations", "occupation"], ["abilities", "ability"]] as const) {
@@ -59,12 +60,47 @@ function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
   };
   const pdf = { status: "recognized", passwordRequired: false, edition: "playtest-alpha-v1.1", facts: { parseAttempt: { status: "success" } } } as PdfSourceAnalysis;
   const decide = vi.fn(async () => "restore" as const);
-  const input = { definition, presets, revision: 1, acts, pdf, actors: port, folders, lookup: { worldId: "test", findExisting: async (dir: string, name: string) => `${dir}/${name}` }, decide };
-  return { input, port, world, writes, decide, setAuthorized: (v: boolean) => { authorized = v; } };
+  const lookup = { worldId: "test", findExisting: vi.fn(async (dir: string, name: string) => `${dir}/${name}`) };
+  const input = { definition, presets, revision: 1, acts, pdf, actors: port, folders,
+    assetSource: { kind: "worldStorage" as const, lookup }, decide };
+  return { input, port, world, writes, decide, lookup, setAuthorized: (v: boolean) => { authorized = v; } };
 }
 function resource(a: MutableActor) { return a.system.resources as { health: { value: number; max: number }; determination: { value: number; max: number } }; }
 
 describe("Adventure preset Actor import", () => {
+  it.each(["relative", "hosted"])("uses %s materialized portrait and token paths without browsing", async representation => {
+    const h = harness(["actOne"]);
+    const selected = presets.filter(p => p.act === "actOne");
+    const ids = new Set(selected.flatMap(p => [p.portraitAssetId, p.tokenAssetId]));
+    const paths = new Map<string, string>();
+    const assets = definition.assets.filter(a => ids.has(a.id)).map(asset => {
+      const storedPath = `${representation === "hosted" ? "https://assets.example.test/prefix/" : ""}worlds/test/${asset.source.originalEntryPath.split("/").map(encodeURIComponent).join("/")}`;
+      paths.set(asset.id, storedPath);
+      return { act: asset.source.act, originalEntryPath: asset.source.originalEntryPath, storedPath };
+    });
+    const result: MaterializationResult = { materializedActs: ["actOne"], assets };
+    const input = { ...h.input, assetSource: { kind: "materialization" as const, result } };
+    expect((await importAdventureAgents(input)).created).toBe(5);
+    for (const preset of selected) {
+      const actor = h.world.find(a => (a.flags?.ordemparanormal2 as { adventureImport?: { documentId: string } })?.adventureImport?.documentId === preset.id)!;
+      expect(actor.img).toBe(paths.get(preset.portraitAssetId));
+      expect((actor.prototypeToken?.texture as { src?: string } | undefined)?.src).toBe(paths.get(preset.tokenAssetId));
+    }
+    const writes = h.writes.length;
+    expect((await importAdventureAgents(input)).unchanged).toBe(5);
+    expect(h.writes).toHaveLength(writes);
+    expect(h.lookup.findExisting).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing materialized Agent image before Actor writes", async () => {
+    const h = harness(["actOne"]);
+    const result: MaterializationResult = { materializedActs: ["actOne"], assets: [] };
+    await expect(importAdventureAgents({ ...h.input, assetSource: { kind: "materialization", result } }))
+      .rejects.toMatchObject({ stage: "preflight" });
+    expect(h.writes).toEqual([]);
+    expect(h.lookup.findExisting).not.toHaveBeenCalled();
+  });
+
   it.each([["actOne", 5], ["actTwo", 5], ["both", 10]] as const)("uses current materialization scope %s even with old assets available", async (scope, n) => {
     const h = harness(scope === "both" ? ["actOne", "actTwo"] : [scope]);
     const result = await importAdventureAgents(h.input);

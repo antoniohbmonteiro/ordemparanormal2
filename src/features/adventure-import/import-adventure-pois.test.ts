@@ -4,6 +4,8 @@ import { PLAYTEST_ALPHA_POI_PRESETS } from "../../config/adventure-poi-presets/p
 import { validateAdventurePoiData, validateAdventurePoiReferences } from "../../core/adventure-import/adventure-poi-data";
 import { importAdventurePois, type PoiImportFlag, type PoiItemPort, type PoiItemSnapshot } from "./import-adventure-pois";
 import type { AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
+import type { AdventureAssetResolutionSource } from "./resolve-adventure-asset";
+import type { MaterializationResult } from "./materialize-adventure-assets";
 
 class FakeWorld implements PoiItemPort, AdventureFolderPort {
   readonly items: PoiItemSnapshot[] = [];
@@ -61,12 +63,45 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
 
 function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
   decide: Parameters<typeof importAdventurePois>[0]["decide"] = async () => "preserve",
-  presets: readonly unknown[] = PLAYTEST_ALPHA_POI_PRESETS, revision = 1) {
+  presets: readonly unknown[] = PLAYTEST_ALPHA_POI_PRESETS, revision = 1,
+  assetSource: AdventureAssetResolutionSource = { kind: "worldStorage", lookup: world.lookup }) {
   return importAdventurePois({ definition: PLAYTEST_ALPHA_ADVENTURE, presets, revision,
-    acts, items: world, folders: world, lookup: world.lookup, decide });
+    acts, items: world, folders: world, assetSource, decide });
 }
 
 describe("Adventure Point of Interest import", () => {
+  it.each(["relative", "hosted"])("uses %s materialized POI images and reimports without browsing", async representation => {
+    const world = new FakeWorld();
+    const imagePresets = PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId);
+    const paths = new Map(imagePresets.map(p => [p.id,
+      `${representation === "hosted" ? "https://assets.example.test/prefix/" : ""}worlds/test-world/${encodeURIComponent(p.imageAssetId!)}.jpg`]));
+    const result: MaterializationResult = { materializedActs: ["actOne"], assets: imagePresets.map(p => {
+      const reference = PLAYTEST_ALPHA_ADVENTURE.assets.find(a => a.id === p.imageAssetId)!;
+      return { act: reference.source.act, originalEntryPath: reference.source.originalEntryPath,
+        storedPath: paths.get(p.id)! };
+    }) };
+    const source = { kind: "materialization" as const, result };
+    expect(await run(world, ["actOne"], undefined, undefined, undefined, source)).toMatchObject({ created: 29 });
+    for (const preset of imagePresets) {
+      const item = world.items.find(candidate => (candidate.flag as PoiImportFlag).documentId === preset.id)!;
+      expect(item.img).toBe(paths.get(preset.id));
+    }
+    const writes = world.writes;
+    expect(await run(world, ["actOne"], undefined, undefined, undefined, source)).toMatchObject({ unchanged: 29 });
+    expect(world.writes).toBe(writes);
+    expect(world.lookup.findExisting).not.toHaveBeenCalled();
+  });
+
+  it("fails before POI writes when a materialized image is missing", async () => {
+    const world = new FakeWorld();
+    const source = { kind: "materialization" as const,
+      result: { materializedActs: ["actOne" as const], assets: [] } };
+    await expect(run(world, ["actOne"], undefined, undefined, undefined, source))
+      .rejects.toMatchObject({ stage: "preflight" });
+    expect(world.writes).toBe(0);
+    expect(world.lookup.findExisting).not.toHaveBeenCalled();
+  });
+
   it("validates the complete catalog, stable IDs and representative content boundaries", () => {
     expect(() => validateAdventurePoiReferences(PLAYTEST_ALPHA_ADVENTURE, PLAYTEST_ALPHA_POI_PRESETS)).not.toThrow();
     expect(PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.act === "actOne")).toHaveLength(29);

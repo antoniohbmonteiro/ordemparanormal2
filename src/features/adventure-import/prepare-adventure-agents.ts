@@ -4,8 +4,7 @@ import { validateAdventureAgentData, adventureDataRecord as record } from "../..
 import { validateAdventureAgentReferences, type AdventureDefinition } from "../../core/adventure-import/adventure-definition";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
-import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
-import { resolveAdventureAsset } from "./resolve-adventure-asset";
+import { resolveAdventureAsset, type AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import type { AdventureFolderPlacementFlag } from "./adventure-folders";
 import { abilityGrant, hasAgentDivergence, importFlag, itemSourceUuid, managedItems, relevantAgentState,
   type AgentActorSource, type AgentImportFlag } from "../../core/adventure-import/adventure-agent-reconciliation";
@@ -39,7 +38,7 @@ export interface AdventureAgentActorPort {
 }
 export interface PrepareAdventureAgentsInput {
   readonly definition: AdventureDefinition; readonly presets: readonly PlaytestAlphaAgentPreset[]; readonly revision: number;
-  readonly acts: readonly AdventureAct[]; readonly pdf: PdfSourceAnalysis; readonly lookup: AdventureAssetLookup;
+  readonly acts: readonly AdventureAct[]; readonly pdf: PdfSourceAnalysis; readonly assetSource: AdventureAssetResolutionSource;
   readonly actors: AdventureAgentActorPort;
 }
 export function usableAdventurePdf(pdf: PdfSourceAnalysis | null): boolean {
@@ -116,8 +115,8 @@ export async function prepareAdventureAgents(input: PrepareAdventureAgentsInput)
   const result: PreparedAdventureAgent[] = [];
   for (const preset of selected) {
     try {
-      const img = await resolveAdventureAsset(definition, preset.portraitAssetId, { kind: "worldStorage", lookup: input.lookup });
-      const token = await resolveAdventureAsset(definition, preset.tokenAssetId, { kind: "worldStorage", lookup: input.lookup });
+      const img = await resolveAdventureAsset(definition, preset.portraitAssetId, input.assetSource);
+      const token = await resolveAdventureAsset(definition, preset.tokenAssetId, input.assetSource);
       const profile = structuredClone(await resolve(preset.profile.uuid, "profile"));
       const occupation = await resolve(preset.occupation.uuid, "occupation");
       const abilities = await Promise.all(preset.abilities.map(r => resolve(r.uuid, "ability")));

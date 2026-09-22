@@ -3,8 +3,7 @@ import { poiSystem, validateAdventurePoiReferences, type AdventurePoiPreset } fr
 import type { AdventureDefinition } from "../../core/adventure-import/adventure-definition";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
-import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
-import { resolveAdventureAsset } from "./resolve-adventure-asset";
+import { resolveAdventureAsset, type AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import { adventureFolderPlacementFlag, ensureAdventurePoiFolder, hasAdventureFolderPlacement,
   type AdventureFolderPlacementFlag, type AdventureFolderPort } from "./adventure-folders";
 
@@ -63,7 +62,7 @@ export interface ImportAdventurePoisInput {
   readonly acts: readonly AdventureAct[];
   readonly items: PoiItemPort;
   readonly folders: AdventureFolderPort;
-  readonly lookup: AdventureAssetLookup;
+  readonly assetSource: AdventureAssetResolutionSource;
   readonly decide: (pois: readonly PreparedAdventurePoi[]) => Promise<PoiConflictDecision>;
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
 }
@@ -117,7 +116,7 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
     const images = new Map<string, string>();
     for (const preset of selected) {
       if (preset.imageAssetId) images.set(preset.id, await resolveAdventureAsset(input.definition, preset.imageAssetId,
-        { kind: "worldStorage", lookup: input.lookup }));
+        input.assetSource));
     }
     const selectedIds = new Set(selected.map(p => p.id));
     const existing = new Map<string, PoiItemSnapshot>();

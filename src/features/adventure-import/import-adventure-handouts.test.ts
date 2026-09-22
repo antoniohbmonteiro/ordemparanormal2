@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AdventureDefinition } from "../../core/adventure-import/adventure-definition";
 import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
+import type { MaterializationResult } from "./materialize-adventure-assets";
 import {
   HANDOUT_IMPORTER, importAdventureHandouts, validateHandoutDefinition,
   type HandoutImportFlag,
@@ -88,6 +89,34 @@ const importedFlag = (documentId: string): HandoutImportFlag => ({
 });
 
 describe("handout import", () => {
+  it.each([
+    "worlds/test-world/handouts/a.png",
+    "https://assets.example.test/some-prefix/worlds/test-world/handouts/a.png",
+  ])("uses the confirmed materialization path %s and reimports without browsing", async storedPath => {
+    const port = new FakePort();
+    const storage = lookup();
+    const result: MaterializationResult = { materializedActs: ["actOne"],
+      assets: [{ act: "actOne", originalEntryPath: "Handouts/a.png", storedPath }] };
+    const input = { definition, acts: ["actOne" as const], assetSource: { kind: "materialization" as const, result },
+      journals: port, folders: port };
+    expect(await importAdventureHandouts(input)).toMatchObject({ created: 1 });
+    expect(port.journals[0].pages[0].src).toBe(storedPath);
+    expect(await importAdventureHandouts(input)).toMatchObject({ unchanged: 1 });
+    expect(port.journals).toHaveLength(1);
+    expect(storage.findExisting).not.toHaveBeenCalled();
+  });
+
+  it("fails before writes when the current materialization lacks the handout, without cross-act fallback", async () => {
+    const port = new FakePort();
+    const result: MaterializationResult = { materializedActs: ["actOne", "actTwo"],
+      assets: [{ act: "actTwo", originalEntryPath: "Handouts/a.png", storedPath: "wrong-act.png" }] };
+    await expect(importAdventureHandouts({ definition, acts: ["actOne"],
+      assetSource: { kind: "materialization", result }, journals: port, folders: port }))
+      .rejects.toMatchObject({ code: "missing-asset", stage: "preflight", act: "actOne" });
+    expect(port.journals).toEqual([]);
+    expect(port.folders).toEqual([]);
+  });
+
   it("rejects missing, duplicate, cross-Act and wrong-type mappings", () => {
     expect(validateHandoutDefinition(definition)).toEqual([]);
     expect(validateHandoutDefinition({ ...definition, handouts: definition.handouts.slice(0, 1) }))
@@ -102,7 +131,7 @@ describe("handout import", () => {
     const port = new FakePort();
     const storage = lookup();
     storage.findExisting.mockResolvedValueOnce("worlds/test-world/handouts/a.png").mockResolvedValueOnce(null);
-    await expect(importAdventureHandouts({ definition, acts: ["actOne", "actTwo"], lookup: storage, journals: port, folders: port }))
+    await expect(importAdventureHandouts({ definition, acts: ["actOne", "actTwo"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .rejects.toMatchObject({ code: "missing-asset", stage: "preflight", act: "actTwo", documentId: "two" });
     expect(port.folders).toEqual([]);
     expect(port.journals).toEqual([]);
@@ -113,14 +142,14 @@ describe("handout import", () => {
     const storage = lookup();
     port.journals.push({ id: "manual", flag: null, pages: [{ id: "manual-page", flag: null, type: "text", src: null }] });
     port.folders.push({ id: "manual-folder", name: "A Maldição do Ídolo de Pedra", color: null, type: "JournalEntry", parentId: null, flag: null });
-    expect(await importAdventureHandouts({ definition, acts: ["actOne"], lookup: storage, journals: port, folders: port }))
+    expect(await importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .toEqual({ created: 1, updated: 0, unchanged: 0 });
     expect(port.created).toEqual([{ label: "Handout 01", src: "worlds/test-world/handouts/a.png", pageType: "image" }]);
     expect(port.folders.map((folder) => folder.id)).toEqual(["manual-folder", "folder-2", "folder-3"]);
-    expect(await importAdventureHandouts({ definition, acts: ["actOne"], lookup: storage, journals: port, folders: port }))
+    expect(await importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .toEqual({ created: 0, updated: 0, unchanged: 1 });
     expect(port.journals).toHaveLength(2);
-    expect(await importAdventureHandouts({ definition, acts: ["actTwo"], lookup: storage, journals: port, folders: port }))
+    expect(await importAdventureHandouts({ definition, acts: ["actTwo"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .toEqual({ created: 1, updated: 0, unchanged: 0 });
     expect(port.created[1]).toMatchObject({ pageType: "pdf", src: "worlds/test-world/handouts/b.pdf" });
     expect(port.folders).toHaveLength(4);
@@ -133,7 +162,7 @@ describe("handout import", () => {
       { id: "managed", flag: old, type: "pdf", src: "old-path" },
       { id: "manual", flag: null, type: "text", src: null },
     ] });
-    expect(await importAdventureHandouts({ definition, acts: ["actOne"], lookup: lookup(), journals: port, folders: port }))
+    expect(await importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: lookup() }, journals: port, folders: port }))
       .toEqual({ created: 0, updated: 1, unchanged: 0 });
     expect(port.journals[0].flag).toMatchObject(importedFlag("one"));
     expect(port.journals[0].pages[0]).toMatchObject({ type: "image", src: "worlds/test-world/handouts/a.png", flag: importedFlag("one") });
@@ -145,7 +174,7 @@ describe("handout import", () => {
     port.journals.push({ id: "imported", flag: importedFlag("one"), pages: [
       { id: "manual", flag: null, type: "image", src: "manual.png" },
     ] });
-    expect(await importAdventureHandouts({ definition, acts: ["actOne"], lookup: lookup(), journals: port, folders: port }))
+    expect(await importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: lookup() }, journals: port, folders: port }))
       .toEqual({ created: 0, updated: 1, unchanged: 0 });
     expect(port.journals[0].pages).toHaveLength(2);
     expect(port.journals[0].pages[0].src).toBe("manual.png");
@@ -156,19 +185,19 @@ describe("handout import", () => {
     const port = new FakePort();
     port.journals.push({ id: "first", flag: importedFlag("one"), pages: [] });
     port.journals.push({ id: "second", flag: importedFlag("one"), pages: [] });
-    await expect(importAdventureHandouts({ definition, acts: ["actOne"], lookup: lookup(), journals: port, folders: port }))
+    await expect(importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: lookup() }, journals: port, folders: port }))
       .rejects.toMatchObject({ code: "conflict", stage: "preflight" });
     port.journals.pop();
     port.journals[0] = { ...port.journals[0], pages: [
       { id: "wrong", flag: importedFlag("two"), type: "pdf", src: "b.pdf" },
     ] };
-    await expect(importAdventureHandouts({ definition, acts: ["actOne"], lookup: lookup(), journals: port, folders: port }))
+    await expect(importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: lookup() }, journals: port, folders: port }))
       .rejects.toMatchObject({ code: "conflict", stage: "preflight" });
     port.journals[0] = { ...port.journals[0], pages: [
       { id: "p1", flag: importedFlag("one"), type: "image", src: "a.png" },
       { id: "p2", flag: importedFlag("one"), type: "image", src: "a.png" },
     ] };
-    await expect(importAdventureHandouts({ definition, acts: ["actOne"], lookup: lookup(), journals: port, folders: port }))
+    await expect(importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: lookup() }, journals: port, folders: port }))
       .rejects.toMatchObject({ code: "conflict", stage: "preflight" });
   });
 
@@ -176,11 +205,11 @@ describe("handout import", () => {
     const port = new FakePort();
     port.failJournalAt = 2;
     const storage = lookup();
-    await expect(importAdventureHandouts({ definition, acts: ["actOne", "actTwo"], lookup: storage, journals: port, folders: port }))
+    await expect(importAdventureHandouts({ definition, acts: ["actOne", "actTwo"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .rejects.toMatchObject({ code: "operation-failed", stage: "journal", act: "actTwo", documentId: "two", counts: { created: 1 } });
     expect(port.journals).toHaveLength(1);
     port.failJournalAt = -1;
-    expect(await importAdventureHandouts({ definition, acts: ["actOne", "actTwo"], lookup: storage, journals: port, folders: port }))
+    expect(await importAdventureHandouts({ definition, acts: ["actOne", "actTwo"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .toEqual({ created: 1, updated: 0, unchanged: 1 });
     expect(port.journals).toHaveLength(2);
   });
@@ -189,7 +218,7 @@ describe("handout import", () => {
     const port = new FakePort();
     port.authorized = false;
     const storage = lookup();
-    await expect(importAdventureHandouts({ definition, acts: ["actOne"], lookup: storage, journals: port, folders: port }))
+    await expect(importAdventureHandouts({ definition, acts: ["actOne"], assetSource: { kind: "worldStorage", lookup: storage }, journals: port, folders: port }))
       .rejects.toMatchObject({ code: "unauthorized", stage: "preflight" });
     expect(storage.findExisting).not.toHaveBeenCalled();
   });

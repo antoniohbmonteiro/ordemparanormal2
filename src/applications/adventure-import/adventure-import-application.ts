@@ -392,6 +392,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
+      const assetSource = { kind: "materialization" as const, result: this.#result };
       const folderPort = createAdventureFolderPort();
       const selectedActs = this.#result.materializedActs;
       const requirements: AdventureFolderRequirement[] = [];
@@ -414,7 +415,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       await importAdventureHandouts({
         definition: PLAYTEST_ALPHA_ADVENTURE,
         acts: this.#result.materializedActs,
-        lookup: createAdventureAssetStorage(),
+        assetSource,
         journals: createAdventureHandoutJournalPort(),
         folders: folderPort,
         onProgress: async (completed, total) => {
@@ -430,7 +431,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_POI_PRESETS,
         revision: PLAYTEST_ALPHA_POI_PRESET_REVISION, acts: selectedActs,
         items: { ...poiPort, isAuthorized: () => poiPort.isAuthorized() && this.#analysis === analysis },
-        folders: folderPort, lookup: createAdventureAssetStorage(), decide: openAdventureImportPoiConflictDialog,
+        folders: folderPort, assetSource, decide: openAdventureImportPoiConflictDialog,
         onProgress: async (completed, total) => {
           this.#progress = format("Actions.PoisProgress", { completed: String(completed), total: String(total) });
           await this.render();
@@ -447,7 +448,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       const actorPort = createAdventureAgentActorPort();
       const agents = await importAdventureAgents({
         definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_AGENT_PRESETS, revision: PLAYTEST_ALPHA_PRESET_REVISION,
-        acts: this.#result.materializedActs, pdf: analysis.pdf, lookup: createAdventureAssetStorage(),
+        acts: this.#result.materializedActs, pdf: analysis.pdf, assetSource,
         folders: folderPort,
         actors: { ...actorPort, isAuthorized: () => actorPort.isAuthorized() && this.#analysis === analysis },
         decide: openAdventureImportAgentConflictDialog,

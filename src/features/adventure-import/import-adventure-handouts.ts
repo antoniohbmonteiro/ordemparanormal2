@@ -1,7 +1,6 @@
 import type { AdventureDefinition, AdventureHandoutReference } from "../../core/adventure-import/adventure-definition";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
-import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
-import { resolveAdventureAsset } from "./resolve-adventure-asset";
+import { resolveAdventureAsset, type AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import {
   adventureFolderPlacementFlag, ensureAdventureFolder, hasAdventureFolderPlacement,
   type AdventureFolderPlacementFlag, type AdventureFolderPort,
@@ -77,7 +76,7 @@ export class HandoutImportError extends Error {
 export interface ImportAdventureHandoutsInput {
   readonly definition: AdventureDefinition;
   readonly acts: readonly AdventureAct[];
-  readonly lookup: AdventureAssetLookup;
+  readonly assetSource: AdventureAssetResolutionSource;
   readonly journals: HandoutJournalPort;
   readonly folders: AdventureFolderPort;
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
@@ -209,7 +208,7 @@ function importedJournal(
 let importRunning = false;
 
 export async function importAdventureHandouts(input: ImportAdventureHandoutsInput): Promise<HandoutImportCounts> {
-  const { definition, lookup, journals, folders: folderPort } = input;
+  const { definition, assetSource, journals, folders: folderPort } = input;
   if (importRunning) fail("busy", "preflight", null, null, emptyCounts(), "A handout import is already running");
   importRunning = true;
   let counts = emptyCounts();
@@ -222,9 +221,7 @@ export async function importAdventureHandouts(input: ImportAdventureHandoutsInpu
     const prepared: PreparedHandout[] = [];
     for (const handout of selected) {
       try {
-        prepared.push({ handout, storedPath: await resolveAdventureAsset(definition, handout.assetId, {
-          kind: "worldStorage", lookup,
-        }) });
+        prepared.push({ handout, storedPath: await resolveAdventureAsset(definition, handout.assetId, assetSource) });
       } catch (cause) {
         fail("missing-asset", "preflight", handout.act, handout.id, counts, `Cannot resolve stored asset: ${handout.assetId}`, cause);
       }

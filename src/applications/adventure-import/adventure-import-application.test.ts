@@ -576,8 +576,11 @@ describe("Adventure Import Application", () => {
       actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null, issues: [] },
     });
     let finishSending!: () => void;
+    const materialization = { assets: [{ act: "actOne", originalEntryPath: "Handouts/a.png",
+      storedPath: "https://assets.example.test/worlds/test-world/Handouts/a.png" }],
+      materializedActs: ["actOne", "actTwo"] };
     mocks.materializeAdventureAssets.mockImplementation(() => new Promise(resolve => {
-      finishSending = () => resolve({ assets: [], materializedActs: ["actOne", "actTwo"] });
+      finishSending = () => resolve(materialization);
     }));
     await action(app, "analyzeFiles");
     const importing = action(app, "importAssets");
@@ -593,7 +596,7 @@ describe("Adventure Import Application", () => {
     expect(mocks.importAdventurePois).toHaveBeenCalledOnce();
     expect(mocks.importAdventurePois.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 1 });
     expect(mocks.importAdventureHandouts.mock.calls[0][0]).toMatchObject({
-      acts: ["actOne", "actTwo"], lookup: { worldId: "test-world" },
+      acts: ["actOne", "actTwo"], assetSource: { kind: "materialization" },
       definition: expect.objectContaining({ id: "playtest-alpha" }),
     });
     expect(mocks.importAdventureAgents).toHaveBeenCalledOnce();
@@ -603,8 +606,11 @@ describe("Adventure Import Application", () => {
     const folderPort = mocks.createAdventureFolderPort.mock.results[0].value;
     expect(mocks.importAdventureHandouts.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventurePois.mock.calls[0][0].folders).toBe(folderPort);
-    expect(mocks.importAdventurePois.mock.calls[0][0].lookup).toEqual({ worldId: "test-world" });
     expect(mocks.importAdventureAgents.mock.calls[0][0].folders).toBe(folderPort);
+    for (const importer of [mocks.importAdventureHandouts, mocks.importAdventurePois, mocks.importAdventureAgents]) {
+      expect(importer.mock.calls[0][0].assetSource.result).toBe(materialization);
+      expect(importer.mock.calls[0][0]).not.toHaveProperty("lookup");
+    }
     expect(mocks.importAdventureScenes.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureAgents.mock.invocationCallOrder[0]);
     expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventurePois.mock.invocationCallOrder[0]);

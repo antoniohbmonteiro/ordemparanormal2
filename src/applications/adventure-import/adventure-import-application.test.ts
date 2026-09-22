@@ -172,9 +172,16 @@ interface TestStatus {
   issues: readonly string[];
 }
 
-interface TestInventoryRow {
+interface TestActContent {
+  icon: string;
   label: string;
-  summary: string;
+  count: number;
+}
+
+interface TestActCard {
+  label: string;
+  status: string;
+  content: readonly TestActContent[];
 }
 
 interface TestContext {
@@ -185,8 +192,9 @@ interface TestContext {
   hasAnalysis: boolean;
   canImport: boolean;
   isImporting: boolean;
-  statuses: readonly TestStatus[];
-  inventory: readonly TestInventoryRow[];
+  pdfStatus: TestStatus | null;
+  actCards: readonly TestActCard[];
+  otherStatuses: readonly TestStatus[];
 }
 
 interface TestApplication {
@@ -392,8 +400,9 @@ describe("Adventure Import Application", () => {
     });
     const result = await app._prepareContext();
     expect(result.hasAnalysis).toBe(true);
-    expect(result.statuses).toHaveLength(1);
-    expect(result.statuses[0].modifier).toBe("recognized");
+    expect(result.pdfStatus?.modifier).toBe("recognized");
+    expect(result.pdfStatus?.text).toContain("PageCount(104)");
+    expect(result.actCards).toEqual([]);
     expect(pdf.arrayBuffer).not.toHaveBeenCalled();
     expect(pdf.text).not.toHaveBeenCalled();
 
@@ -401,7 +410,7 @@ describe("Adventure Import Application", () => {
     expect((await app._prepareContext()).hasAnalysis).toBe(false);
   });
 
-  it("shows real per-folder inventory counts derived from the mocked analysis, never invented numbers", async () => {
+  it("shows only semantic content for a recognized Act, independent of raw ZIP inventory", async () => {
     const app = new Application();
     attach(app);
     mocks.analyzeAdventureSources.mockResolvedValue({
@@ -423,10 +432,29 @@ describe("Adventure Import Application", () => {
     app.inputs.pdf.select(file("playtest.pdf"));
     await action(app, "analyzeFiles");
     const result = await app._prepareContext();
-    expect(result.statuses).toHaveLength(2);
-    expect(result.inventory.map((row) => row.summary)).toContain("ORDEMPARANORMAL2.AdventureImport.Analysis.Inventory.PageCount(104)");
-    expect(result.inventory.map((row) => row.summary)).toContain("ORDEMPARANORMAL2.AdventureImport.Analysis.Inventory.TotalFiles(43)");
-    expect(result.inventory.map((row) => row.summary)).toContain("ORDEMPARANORMAL2.AdventureImport.Analysis.Inventory.TotalFiles(14)");
+    expect(result.pdfStatus?.text).toContain("PageCount(104)");
+    expect(result.actCards).toHaveLength(1);
+    expect(result.actCards[0]).toMatchObject({ label: "ORDEMPARANORMAL2.AdventureImport.ActOne",
+      content: [{ count: 5 }, { count: 18 }, { count: 29 }, { count: 1 }] });
+    expect(result.actCards[0].content.map(row => row.icon)).toEqual([
+      "fa-solid fa-users", "fa-solid fa-book-open", "fa-solid fa-magnifying-glass", "fa-solid fa-map",
+    ]);
+    expect(JSON.stringify(result)).not.toContain("43");
+    expect(JSON.stringify(result)).not.toContain("Tokens");
+    expect(result.otherStatuses).toEqual([]);
+  });
+
+  it("shows two semantic Act cards when both ZIPs are recognized", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf"));
+    app.inputs.actOne.select(file("ato-um.zip"));
+    app.inputs.actTwo.select(file("ato-dois.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] },
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null, issues: [] } });
+    await action(app, "analyzeFiles");
+    const cards = (await app._prepareContext()).actCards;
+    expect(cards.map(card => card.content.map(row => row.count))).toEqual([[5, 18, 29, 1], [5, 8, 25, 1]]);
   });
 
   it("opens the password dialog every time it is needed, never blocked by a prior cancel, and only stores a password that actually unlocked the file", async () => {
@@ -472,7 +500,7 @@ describe("Adventure Import Application", () => {
     await action(app, "analyzeFiles");
     expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(2);
     expect(mocks.analyzePdfSource).toHaveBeenCalledExactlyOnceWith(pdf, "senha-errada");
-    expect((await app._prepareContext()).statuses[0].issues).toContain(
+    expect((await app._prepareContext()).pdfStatus?.issues).toContain(
       "ORDEMPARANORMAL2.AdventureImport.Analysis.Issues.PdfIncorrectPassword",
     );
 
@@ -484,7 +512,7 @@ describe("Adventure Import Application", () => {
     expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(3, { pdf, actOne: null, actTwo: null, password: null });
     expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(3);
     expect(mocks.analyzePdfSource).toHaveBeenNthCalledWith(2, pdf, "senha-certa");
-    expect((await app._prepareContext()).statuses[0].modifier).toBe("recognized");
+    expect((await app._prepareContext()).pdfStatus?.modifier).toBe("recognized");
 
     // 4th click: the now-stored password is reused automatically; the dialog does not reopen.
     await action(app, "analyzeFiles");
@@ -838,6 +866,44 @@ describe("Adventure Import prototype template and styles", () => {
     expect(analyzed).not.toContain("AdventureImport.EmptyContent");
     expect(analyzed).toMatch(/data-action="importAssets"\s+disabled/);
     expect(template.match(/AdventureImport\.Act(?:One|Two)/g)).toHaveLength(2);
+  });
+
+  it("renders compact semantic Act cards and retains a non-recognized ZIP warning", async () => {
+    const [template, css] = await Promise.all([
+      readFile(fileURLToPath(new URL("../../../templates/applications/adventure-import.hbs", import.meta.url)), "utf8"),
+      readFile(fileURLToPath(new URL("../../../styles/adventure-import.css", import.meta.url)), "utf8"),
+    ]);
+    const hb = Handlebars.create();
+    hb.registerHelper("localize", (key: string) => key);
+    const render = hb.compile(template);
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf"));
+    app.inputs.actOne.select(file("ato-um.zip"));
+    app.inputs.actTwo.select(file("ato-dois.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", issues: [],
+        inventory: { totalFiles: 999, totalBytes: 1, topLevelFolders: [{ name: "Pasta técnica", fileCount: 400 }] } },
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", issues: [], inventory: null } });
+    await action(app, "analyzeFiles");
+    const both = render(await app._prepareContext());
+    expect(both.match(/class="op2-adventure-import__act-card"/g)).toHaveLength(2);
+    expect(both).toContain("op2-adventure-import__act-content-count\">29</span>");
+    expect(both).toContain("op2-adventure-import__act-content-count\">25</span>");
+    expect(both).not.toContain("Pasta técnica");
+    expect(both).not.toContain("999");
+    expect(template).not.toMatch(/Inventory\.TotalFiles|topLevelFolders|__inventory/);
+    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(css).toContain(".op2-adventure-import__act-card:only-child");
+    expect(css).toContain("@container (max-width: 570px)");
+
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "unknown", edition: null, issues: [], inventory: null },
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", issues: [], inventory: null } });
+    await action(app, "analyzeFiles");
+    const one = render(await app._prepareContext());
+    expect(one.match(/class="op2-adventure-import__act-card"/g)).toHaveLength(1);
+    expect(one).toContain("AdventureImport.Analysis.Zip.Unknown");
+    expect(one).toContain("AdventureImport.ActTwo");
   });
 
   it("uses three local inputs and keeps CSS off native header buttons", async () => {

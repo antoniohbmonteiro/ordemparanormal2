@@ -42,7 +42,36 @@
     <h2 id="op2-adventure-import-detected-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.DetectedContent"}}</h2>
     {{#if hasAnalysis}}
       <div class="op2-adventure-import__analysis">
-        {{#each statuses}}
+        {{#with pdfStatus}}
+          <div class="op2-adventure-import__status-row op2-adventure-import__status-row--{{modifier}}">
+            <span class="op2-adventure-import__status-icon" aria-hidden="true"><i class="{{icon}}"></i></span>
+            <span class="op2-adventure-import__status-text">
+              <span class="op2-adventure-import__status-label">{{label}}</span>
+              <span class="op2-adventure-import__status-value">{{text}}</span>
+              {{#each issues}}<span class="op2-adventure-import__status-issue">{{this}}</span>{{/each}}
+            </span>
+          </div>
+        {{/with}}
+        {{#if actCards.length}}
+          <div class="op2-adventure-import__act-cards">
+            {{#each actCards}}
+              <article class="op2-adventure-import__act-card" aria-label="{{label}}">
+                <h3 class="op2-adventure-import__act-title">{{label}}</h3>
+                <p class="op2-adventure-import__act-status"><i class="fa-solid fa-check" aria-hidden="true"></i>{{status}}</p>
+                <div class="op2-adventure-import__act-content">
+                  {{#each content}}
+                    <div class="op2-adventure-import__act-content-row">
+                      <i class="op2-adventure-import__act-content-icon {{icon}}" aria-hidden="true"></i>
+                      <span class="op2-adventure-import__act-content-label">{{label}}</span>
+                      <span class="op2-adventure-import__act-content-count">{{count}}</span>
+                    </div>
+                  {{/each}}
+                </div>
+              </article>
+            {{/each}}
+          </div>
+        {{/if}}
+        {{#each otherStatuses}}
           <div class="op2-adventure-import__status-row op2-adventure-import__status-row--{{modifier}}">
             <span class="op2-adventure-import__status-icon" aria-hidden="true"><i class="{{icon}}"></i></span>
             <span class="op2-adventure-import__status-text">
@@ -52,18 +81,6 @@
             </span>
           </div>
         {{/each}}
-        {{#if inventory.length}}
-          <div class="op2-adventure-import__inventory">
-            <p class="op2-adventure-import__inventory-note">{{localize "ORDEMPARANORMAL2.AdventureImport.Analysis.Note"}}</p>
-            {{#each inventory}}
-              <div class="op2-adventure-import__inventory-row">
-                <i class="op2-adventure-import__inventory-icon {{icon}}" aria-hidden="true"></i>
-                <span class="op2-adventure-import__inventory-label">{{label}}</span>
-                <span class="op2-adventure-import__inventory-summary">{{summary}}</span>
-              </div>
-            {{/each}}
-          </div>
-        {{/if}}
       </div>
     {{else}}
       <div class="op2-adventure-import__empty-content">

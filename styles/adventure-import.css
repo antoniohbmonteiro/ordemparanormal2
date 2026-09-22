@@ -204,9 +204,11 @@
 }
 
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__status-text {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   min-width: 0;
-  gap: .1rem;
+  column-gap: .25rem;
   line-height: 1.25;
 }
 
@@ -218,6 +220,10 @@
   letter-spacing: .04em;
 }
 
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__status-label::after {
+  content: " —";
+}
+
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__status-value {
   min-width: 0;
   color: var(--op2-text);
@@ -227,52 +233,89 @@
 
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__status-issue {
   display: block;
+  flex-basis: 100%;
   min-width: 0;
   color: var(--op2-text-muted);
   font-size: .76rem;
   overflow-wrap: anywhere;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory {
-  padding-top: .5rem;
-  border-top: 1px solid var(--op2-border);
-}
-
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-note {
-  margin: 0 0 .4rem;
-  color: var(--op2-text-muted);
-  font-size: .78rem;
-}
-
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-row {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-cards {
   display: grid;
   min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: .5rem;
-  padding: .18rem 0;
-  font-size: .82rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-icon {
-  flex: none;
-  width: 1.1rem;
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-card {
+  min-width: 0;
+  padding: .65rem .75rem;
+  border: 1px solid var(--op2-border);
+  border-radius: 7px;
+  background: var(--op2-input-bg);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-card:only-child {
+  grid-column: 1 / -1;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-title {
+  margin: 0;
+  border: 0;
+  color: var(--op2-text);
+  font-size: .9rem;
+  font-weight: 750;
+  letter-spacing: .07em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-shadow: none;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-status {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin: .2rem 0 .45rem;
+  color: var(--op2-text-muted);
+  font-size: .77rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-status i {
+  color: var(--op2-positive);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-content {
+  display: grid;
+  gap: .15rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-content-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .45rem;
+  padding: .12rem 0;
+  font-size: .83rem;
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-content-icon {
   color: var(--op2-text-muted);
   font-size: .78rem;
   text-align: center;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-label {
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-content-label {
   min-width: 0;
   color: var(--op2-text);
   overflow-wrap: anywhere;
 }
 
-.ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-summary {
-  min-width: 0;
-  color: var(--op2-text-muted);
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-content-count {
+  min-width: 2ch;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
   text-align: right;
-  white-space: nowrap;
 }
 
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__body button {
@@ -332,12 +375,7 @@
     grid-column: 1 / -1;
   }
 
-  .ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .ordemparanormal2.op2-adventure-import .op2-adventure-import__inventory-summary {
-    grid-column: 2;
-    text-align: left;
+  .ordemparanormal2.op2-adventure-import .op2-adventure-import__act-cards {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

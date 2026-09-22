@@ -7,7 +7,7 @@ import type {
 import type { AdventureImportIssueCode } from "../../core/adventure-import/recognition-status";
 import type { PdfEditionId, ZipPackageId } from "../../core/adventure-import/known-adventure-sources";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
-import type { ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
+import type { AdventureAct, ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
 import {
   analyzeAdventureSources,
   analyzePdfSource,
@@ -59,10 +59,16 @@ interface SourceStatusViewModel {
   readonly issues: readonly string[];
 }
 
-interface InventoryRowViewModel {
+interface ActContentViewModel {
   readonly icon: string;
   readonly label: string;
-  readonly summary: string;
+  readonly count: number;
+}
+
+interface DetectedActViewModel {
+  readonly label: string;
+  readonly status: string;
+  readonly content: readonly ActContentViewModel[];
 }
 
 interface AdventureImportRenderContext {
@@ -75,8 +81,9 @@ interface AdventureImportRenderContext {
   readonly canImport: boolean;
   readonly isImporting: boolean;
   readonly progress: string;
-  readonly statuses: readonly SourceStatusViewModel[];
-  readonly inventory: readonly InventoryRowViewModel[];
+  readonly pdfStatus: SourceStatusViewModel | null;
+  readonly actCards: readonly DetectedActViewModel[];
+  readonly otherStatuses: readonly SourceStatusViewModel[];
 }
 
 const localize = (key: string): string => game.i18n.localize(`ORDEMPARANORMAL2.AdventureImport.${key}`);
@@ -128,14 +135,19 @@ function buildPdfStatusViewModel(analysis: PdfSourceAnalysis | null): SourceStat
   }
 
   switch (analysis.status) {
-    case "recognized":
+    case "recognized": {
+      const pages = analysis.facts.parseAttempt.status === "success"
+        ? format("Analysis.Inventory.PageCount", { count: String(analysis.facts.parseAttempt.facts.pageCount) })
+        : null;
+      const edition = analysis.edition ? editionLabel(analysis.edition) : "";
       return {
         label,
         modifier: "recognized",
         icon: "fa-solid fa-check",
-        text: format("Analysis.Pdf.Recognized", { edition: analysis.edition ? editionLabel(analysis.edition) : "" }),
+        text: pages && analysis.edition ? `${edition} · ${pages}` : format("Analysis.Pdf.Recognized", { edition }),
         issues,
       };
+    }
     case "unsupported":
       return { label, modifier: "unsupported", icon: "fa-solid fa-triangle-exclamation", text: localize("Analysis.Pdf.Unsupported"), issues };
     case "unknown":
@@ -168,46 +180,35 @@ function buildZipStatusViewModel(label: string, analysis: ZipSourceAnalysis | nu
   }
 }
 
-function appendActInventoryRows(
-  rows: InventoryRowViewModel[],
-  actLabel: string,
-  analysis: ZipSourceAnalysis | null,
-): void {
-  if (!analysis?.inventory) return;
-
-  rows.push({
-    icon: "fa-solid fa-folder-tree",
-    label: actLabel,
-    summary: format("Analysis.Inventory.TotalFiles", { count: String(analysis.inventory.totalFiles) }),
-  });
-  for (const folder of analysis.inventory.topLevelFolders) {
-    rows.push({
-      icon: "fa-solid fa-folder",
-      label: `${actLabel} · ${folder.name}`,
-      summary: format("Analysis.Inventory.TotalFiles", { count: String(folder.fileCount) }),
-    });
-  }
+function countReferencedPresets(
+  references: readonly { readonly presetId: string }[],
+  presets: readonly { readonly id: string; readonly act: AdventureAct }[],
+  act: AdventureAct,
+): number {
+  const ids = new Set(presets.filter(preset => preset.act === act).map(preset => preset.id));
+  return references.filter(reference => ids.has(reference.presetId)).length;
 }
 
-function buildInventoryRows(analysis: AdventureSourceAnalysis | null): readonly InventoryRowViewModel[] {
-  if (!analysis) return [];
+function isRecognizedAct(act: AdventureAct, analysis: ZipSourceAnalysis | null): boolean {
+  return analysis?.status === "recognized" && analysis.edition === PLAYTEST_ALPHA_ADVENTURE.packageIds[act];
+}
 
-  const rows: InventoryRowViewModel[] = [];
-
-  if (analysis.pdf.facts.parseAttempt.status === "success") {
-    rows.push({
-      icon: "fa-solid fa-file-lines",
-      label: localize("Analysis.Pdf.Label"),
-      summary: format("Analysis.Inventory.PageCount", {
-        count: String(analysis.pdf.facts.parseAttempt.facts.pageCount),
-      }),
-    });
-  }
-
-  appendActInventoryRows(rows, localize("ActOne"), analysis.actOne);
-  appendActInventoryRows(rows, localize("ActTwo"), analysis.actTwo);
-
-  return rows;
+function buildDetectedActViewModel(act: AdventureAct, analysis: ZipSourceAnalysis | null): DetectedActViewModel | null {
+  if (!isRecognizedAct(act, analysis)) return null;
+  return {
+    label: localize(act === "actOne" ? "ActOne" : "ActTwo"),
+    status: localize("Analysis.Zip.Recognized"),
+    content: [
+      { icon: "fa-solid fa-users", label: localize("Analysis.Content.Agents"),
+        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.actors, PLAYTEST_ALPHA_AGENT_PRESETS, act) },
+      { icon: "fa-solid fa-book-open", label: localize("Analysis.Content.Handouts"),
+        count: PLAYTEST_ALPHA_ADVENTURE.handouts.filter(handout => handout.act === act).length },
+      { icon: "fa-solid fa-magnifying-glass", label: localize("Analysis.Content.PointsOfInterest"),
+        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.pointsOfInterest, PLAYTEST_ALPHA_POI_PRESETS, act) },
+      { icon: "fa-solid fa-map", label: localize("Analysis.Content.Scenes"),
+        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.scenes, PLAYTEST_ALPHA_SCENE_PRESETS, act) },
+    ],
+  };
 }
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -277,12 +278,19 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       ),
       isImporting: this.#isImporting,
       progress: this.#progress,
-      statuses: [
-        buildPdfStatusViewModel(this.#analysis?.pdf ?? null),
-        buildZipStatusViewModel(localize("ActOne"), this.#analysis?.actOne ?? null),
-        buildZipStatusViewModel(localize("ActTwo"), this.#analysis?.actTwo ?? null),
-      ].filter((status): status is SourceStatusViewModel => status !== null),
-      inventory: buildInventoryRows(this.#analysis),
+      pdfStatus: buildPdfStatusViewModel(this.#analysis?.pdf ?? null),
+      actCards: [
+        buildDetectedActViewModel("actOne", this.#analysis?.actOne ?? null),
+        buildDetectedActViewModel("actTwo", this.#analysis?.actTwo ?? null),
+      ].filter((act): act is DetectedActViewModel => act !== null),
+      otherStatuses: ([
+        ["actOne", this.#analysis?.actOne ?? null],
+        ["actTwo", this.#analysis?.actTwo ?? null],
+      ] as const).flatMap(([act, source]) => {
+        if (!source || isRecognizedAct(act, source)) return [];
+        const status = buildZipStatusViewModel(localize(act === "actOne" ? "ActOne" : "ActTwo"), source);
+        return status ? [status] : [];
+      }),
     };
   }
 

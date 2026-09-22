@@ -88,6 +88,12 @@
       "EmptyContent": "Selecione e analise os arquivos para ver o conteúdo disponível para importação.",
       "Analysis": {
         "Note": "Contagens reais, derivadas da estrutura dos arquivos selecionados.",
+        "Content": {
+          "Agents": "Agentes",
+          "Handouts": "Handouts",
+          "PointsOfInterest": "Pontos de Interesse",
+          "Scenes": "Cenas"
+        },
         "Pdf": {
           "Label": "PDF",
           "Recognized": "Reconhecido — {edition}",

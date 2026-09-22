@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-22
+
+### Fixed
+
+- Fixed Adventure Importer asset resolution for Handouts, POI images, and Agent portraits and tokens by reusing paths confirmed during the current materialization instead of browsing hosted storage again.
+
 ## [0.4.1] - 2026-09-22
 
 ### Fixed

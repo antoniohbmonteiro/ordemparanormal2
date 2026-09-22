@@ -1,62 +1,58 @@
-# Ordem Paranormal 2 — v0.3.0
+# Ordem Paranormal 2 — v0.4.0
 
 Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal.
 
 **Contém material gerado por inteligência artificial.**
 
-![Habilidades aplicáveis antes da rolagem](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.3.0/docs/release-assets/v0.3.0/ability-check-pre-roll.png)
+![Importador de Aventura](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.4.0/docs/release-assets/v0.4.0/adventure-import.png)
 
 ## Destaques
 
-- Habilidades agora podem aparecer automaticamente no Check antes da rolagem quando são aplicáveis ao contexto atual — sem precisar lembrar delas, abrir a ficha ou procurar entre opções que não servem para aquele teste.
-- Habilidades passaram a suportar múltiplas Formas de uso, cada uma com seu próprio custo em PV, PD ou recurso próprio da Habilidade.
-- Foco Mental e Ímpeto ganharam versões Aprimoradas no compêndio, disponíveis para uso manual por personagens que já possuem essas versões.
-- Novos Agents recebem um Prototype Token já configurado, com PV e PD como barras do token.
+- Novo **Importador de Aventura** nas Ferramentas do Mestre, com reconhecimento do PDF Playtest Alpha v1.0 ou v1.1 e dos ZIPs de extras dos Atos I e II fornecidos pelo usuário.
+- Preparação de **Agentes, Handouts, Pontos de Interesse e Scenes** no próprio Mundo, com uma prévia do conteúdo detectado antes da importação.
+- **Controles interativos de Tile** para abrir ou fechar portas e mostrar ou ocultar Tiles associados.
 
-## Habilidades aplicáveis antes da rolagem
+## Importador de Aventura
 
-Ao abrir um Check, o sistema já identifica o contexto da rolagem — atributo, Perícia ou Aptidão envolvida — e reconhece quais Formas de uso das Habilidades do Agent podem ser aplicadas naquele momento. Apenas essas opções aparecem na seção **Habilidades aplicáveis**.
+O Mestre seleciona seus próprios arquivos legalmente obtidos. O sistema analisa os materiais reconhecidos e processa os arquivos localmente para preparar o conteúdo no Mundo. **O sistema não inclui nem distribui PDFs, mapas, tokens, handouts ou outros arquivos oficiais.** É possível importar um ato ou ambos.
 
-- O jogador escolhe pelo botão **+**, que abre um seletor mostrando somente Formas atualmente utilizáveis.
-- Ao aplicar uma Habilidade, o dado extra aparece na composição do Check já identificado pela Habilidade e pela Forma de origem.
-- O custo é mostrado antes da rolagem e permanece pendente até a confirmação.
-- Selecionar uma Habilidade não gasta nada, e cancelar ou fechar o Check também não consome nenhum recurso.
-- Ao confirmar a rolagem, o estado e o custo são revalidados e só então o custo é efetivamente consumido e o resultado publicado no chat.
+| Conteúdo detectado | Ato I | Ato II |
+| --- | ---: | ---: |
+| Agentes | 5 | 5 |
+| Handouts | 18 | 8 |
+| Pontos de Interesse | 29 | 25 |
+| Scenes | 1 | 1 |
 
-Esse fluxo está disponível em Checks normais, Testes Opostos, Request de Perícias e Examinar.
+## Importação segura e reexecutável
 
-O escopo atual dessa integração automática é adicionar um dado extra ao Check. Formas de uso sem essa integração continuam disponíveis pelo fluxo direto de uso de Habilidade, quando aplicável.
+A importação organiza o conteúdo em pastas próprias e pode ser executada novamente sem duplicar os documentos que já reconhece. Ao encontrar alterações do Mestre em Agentes, Pontos de Interesse ou Scenes gerenciados pelo importador, o fluxo apresenta o conflito antes de substituir esse conteúdo. Alterações pertencentes ao Mestre são preservadas quando ele escolhe mantê-las.
 
-## Formas de uso e custos
+O **Importador de Aventura é opcional**: nenhum conteúdo de aventura é criado ao atualizar ou abrir o sistema. A criação ocorre somente quando o Mestre aciona a importação.
 
-Uma Habilidade agora pode ter várias Formas de uso, cada uma com nome, descrição e custo independentes. Um custo pode ser:
+## Pontos de Interesse
 
-- sem custo;
-- PV;
-- PD;
-- um recurso próprio da Habilidade.
+Os 54 Pontos de Interesse são criados como Items estruturados. Quando apropriado, alguns recebem automaticamente imagens públicas dos arquivos fornecidos pelo usuário.
 
-As Formas com integração automática entram no Check apropriado pela seção Habilidades aplicáveis; as demais continuam disponíveis pelo fluxo direto de uso de Habilidade na Ficha de Agente.
+O importador **não cria nem associa Regions automaticamente**. O Mestre posiciona os Pontos de Interesse na Scene e faz as associações desejadas pela aba **Ponto de Interesse** da configuração de Region.
 
-![Configuração de integração de Formas de uso com Checks](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.3.0/docs/release-assets/v0.3.0/ability-use-check-integration.png)
+## Scenes dos Atos I e II
 
-## Habilidades aprimoradas (Ato 2)
+O importador prepara as Scenes dos porões dos Atos I e II com os mapas fornecidos. No Ato I, um detalhe visual da estante pode usar um overlay gerado localmente quando o arquivo necessário estiver disponível.
 
-O compêndio passa a apresentar **Foco Mental (Aprimorado)** e **Ímpeto (Aprimorado)** como Habilidades separadas de **Foco Mental** e **Ímpeto**.
+## Controles interativos de Tile
 
-Isso é uma solução manual para personagens que já possuem essas versões aprimoradas no conteúdo atual do playtest. Não existe aquisição automática do upgrade nem uma condição de nível que conceda a versão aprimorada sozinha: o Mestre ou jogador substitui manualmente a Habilidade base pela aprimorada quando isso for apropriado para o personagem.
+O Mestre pode configurar um Tile para, ao ser acionado, **abrir ou fechar portas** e **mostrar ou ocultar Tiles associados** na mesma Scene. A configuração fica na aba de interação do Tile.
 
 ## Outras melhorias
 
-- Ability sheets abertas a partir de um compêndio agora permitem navegar entre abas e abrir Formas de uso existentes para inspeção em modo somente leitura.
-- Novos Agents recebem defaults de Prototype Token mais úteis, incluindo PV e PD como barras primária e secundária do token.
+- A configuração atual de Region ganhou uma aba dedicada para associar ou remover um Ponto de Interesse.
+- A prévia do importador apresenta as quantidades por ato e tipo de conteúdo antes da criação no Mundo.
 
 ## Compatibilidade e atualização
 
 - Compatível com **Foundry VTT v14**.
-- Atualização direta a partir da **v0.2.1**.
-- A migração de dados do mundo converte automaticamente o custo antigo salvo na raiz de uma Habilidade para o novo formato de Formas de uso; não é necessária nenhuma ação manual para isso.
-- As versões Aprimoradas de Foco Mental e Ímpeto são escolhas manuais do Mestre/jogador, e não resultado de qualquer migração automática.
+- Atualização direta a partir da **v0.3.0**. Não há nova migração de dados do Mundo nesta versão.
+- O Importador de Aventura só cria conteúdo quando acionado pelo Mestre com os arquivos fornecidos por ele.
 
 O projeto continua **source-available** sob a PolyForm Strict License 1.0.0. Releases públicas até v0.0.22 permanecem sob os termos MIT aplicáveis às cópias já distribuídas.
 
@@ -71,7 +67,7 @@ https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/s
 Pacote:
 
 ```text
-ordemparanormal2-v0.3.0.zip
+ordemparanormal2-v0.4.0.zip
 ```
 
-**Comparar alterações**: https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.2.1...v0.3.0
+**Comparar alterações**: https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.3.0...v0.4.0

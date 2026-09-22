@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-22
+
+### Added
+
+- Added the Adventure Importer to GM Tools with local file selection, source analysis, and a semantic preview of detected content. It recognizes Playtest Alpha PDFs v1.0 and v1.1 and the Act I and II extras ZIPs supplied by the user.
+- Added local materialization of selected adventure files into the World, with importer-owned folders and re-runnable Handout Journal import (18 from Act I and 8 from Act II).
+- Added structured Agent presets for both acts (5 per act), with reconciliation that detects GM changes before replacing importer-managed data.
+- Added 54 structured Point of Interest presets (29 from Act I and 25 from Act II), including appropriate public images from supplied files where available; Region placement remains manual.
+- Added basement Scene presets for Acts I and II, including a locally generated Act I bookshelf overlay when its source asset is available. Reimport checks managed content for conflicts while preserving GM-owned changes.
+- Added GM-configurable Tile interactions for opening and closing doors and showing or hiding associated Tiles.
+
+### Changed
+
+- Moved Point of Interest association into a dedicated tab of the current Region configuration sheet.
+
 ## [0.3.0] - 2026-09-13
 
 ### Added

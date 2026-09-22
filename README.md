@@ -50,7 +50,8 @@
 - 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
 - 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat. Checks também apresentam Habilidades aplicáveis antes da rolagem quando o Agent possui uma Forma de uso compatível.
 - ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
-- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos e Request de Perícias.
+- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos, Request de Perícias e Importador de Aventura.
+- 📦 **Importador de Aventura** — prepara os Atos I e II a partir dos arquivos oficiais fornecidos pelo próprio usuário, criando Agentes, Handouts, Pontos de Interesse e Scenes no Mundo.
 - 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
 - 🧩 **Conteúdo reutilizável** — Perfis, Habilidades, Ocupações e Equipamentos como Items integrados à ficha e aos compêndios.
 - 🎬 **Cena Narrativa** — mantém o contexto atual da sessão visível para todos os jogadores.
@@ -85,6 +86,10 @@ Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas aos Pont
 <p align="center">
   <img src="docs/screenshots/investigation.webp" alt="Cena de investigação com Caio Nunes, Rafael Sato e um Ponto de Interesse destacado no Foundry VTT" width="760">
 </p>
+
+### Importe sua aventura no próprio Mundo
+
+O **Importador de Aventura**, nas Ferramentas do Mestre, prepara os Atos I e II a partir de arquivos que o usuário obteve legalmente e fornece ao sistema. O processamento cria o conteúdo dentro do próprio Mundo do Foundry. O sistema não distribui PDFs, mapas, tokens, handouts ou outros arquivos oficiais. A importação pode ser executada novamente e procura preservar as alterações feitas pelo Mestre.
 
 ## Instalação
 

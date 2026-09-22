@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-22
+
+### Fixed
+
+- Fixed Adventure Importer asset confirmation for hosted providers that return absolute or CDN URLs, while preserving relative paths used by self-hosted installations.
+
 ## [0.4.0] - 2026-09-22
 
 ### Added

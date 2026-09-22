@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-09-22
+
+### Fixed
+
+- Fixed Adventure Importer Scene preparation on hosted storage providers by using background, Tile, and Token paths already confirmed during materialization instead of validating them again through FilePicker.
+
 ## [0.4.2] - 2026-09-22
 
 ### Fixed

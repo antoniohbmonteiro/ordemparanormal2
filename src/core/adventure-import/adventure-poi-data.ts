@@ -7,6 +7,7 @@ export interface AdventurePoiPreset extends PointOfInterestSystemData {
   readonly id: string;
   readonly act: AdventureAct;
   readonly name: string;
+  readonly imageAssetId?: string;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -20,10 +21,12 @@ function keysAre(value: Record<string, unknown>, keys: readonly string[]): boole
 
 export function validateAdventurePoiData(value: unknown): asserts value is AdventurePoiPreset {
   const preset = record(value);
-  if (!preset || !keysAre(preset, ["id", "act", "name", "publicDescription", "gmContext", "skills"])
+  if (!preset || !keysAre(preset, ["id", "act", "name", "publicDescription", "gmContext", "skills",
+    ...(preset.imageAssetId === undefined ? [] : ["imageAssetId"])])
     || (preset.act !== "actOne" && preset.act !== "actTwo")
     || typeof preset.id !== "string" || !preset.id.startsWith(`${preset.act}.`)
     || typeof preset.name !== "string" || !preset.name.trim()
+    || (preset.imageAssetId !== undefined && (typeof preset.imageAssetId !== "string" || !preset.imageAssetId.trim()))
     || typeof preset.publicDescription !== "string" || typeof preset.gmContext !== "string"
     || !Array.isArray(preset.skills)) throw new Error("Preset de POI inválido.");
 
@@ -59,6 +62,15 @@ export function validateAdventurePoiReferences(definition: AdventureDefinition, 
   if (ids.size !== catalog.length || new Set(references).size !== references.length
     || ids.size !== references.length || references.some(id => !ids.has(id))) {
     throw new Error("Referências de POI ausentes ou duplicadas.");
+  }
+  for (const preset of catalog) {
+    if (!preset.imageAssetId) continue;
+    const matches = definition.assets.filter(asset => asset.id === preset.imageAssetId);
+    const asset = matches[0];
+    if (matches.length !== 1 || asset.source.act !== preset.act || asset.kind === "music"
+      || !/\.(?:apng|avif|bmp|gif|jpe?g|png|svg|tiff|webp)$/i.test(asset.source.originalEntryPath)) {
+      throw new Error(`Imagem de POI inválida: ${preset.id} → ${preset.imageAssetId}.`);
+    }
   }
 }
 

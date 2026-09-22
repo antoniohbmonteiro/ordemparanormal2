@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
 import type { AdventureDefinition } from "../../core/adventure-import/adventure-definition";
+import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
 import type { MaterializationResult } from "./materialize-adventure-assets";
 import {
   AssetResolutionError, resolveAdventureAsset, validateAdventureDefinition,
@@ -34,6 +35,16 @@ function lookup(): AdventureAssetLookup & { findExisting: ReturnType<typeof vi.f
 }
 
 describe("adventure asset resolver", () => {
+  it("resolves the five public POI images from their exact Act I world entries", async () => {
+    const foundryLookup = lookup();
+    for (const number of ["06", "07", "08", "09", "10"]) {
+      await resolveAdventureAsset(PLAYTEST_ALPHA_ADVENTURE, `actOne.handout.${number}`,
+        { kind: "worldStorage", lookup: foundryLookup });
+    }
+    expect(foundryLookup.findExisting).toHaveBeenCalledTimes(5);
+    expect(foundryLookup.findExisting.mock.calls.every(([directory, basename]) =>
+      directory.includes("/act-1/") && basename.endsWith(".jpg"))).toBe(true);
+  });
   it("resolves only from a complete result without browsing or crossing acts", async () => {
     const foundryLookup = lookup();
     expect(await resolveAdventureAsset(definition, "one.kenia.portrait", {

@@ -475,6 +475,9 @@ Possible future scope remains intentionally uncommitted until confirmed by publi
 - one information/clue accessible through multiple skills with one shared identity and reveal state;
 - an Aptidão specialization attached to a POI information entry;
 - explicit conditions and unlocks for POI information, including character, prior discovery and object state;
+- GM control over whether a POI image is included in the player projection;
+- the option to keep an existing `Item.img` visible only to the GM;
+- future integration of image visibility with Investigation and reveal, without deciding its UI or final DataModel yet;
 - Interagir;
 - Recapitular / Compartilhar;
 - automatic Check-to-DT comparison or information revelation;

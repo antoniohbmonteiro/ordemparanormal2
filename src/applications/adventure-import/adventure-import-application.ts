@@ -422,7 +422,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_POI_PRESETS,
         revision: PLAYTEST_ALPHA_POI_PRESET_REVISION, acts: selectedActs,
         items: { ...poiPort, isAuthorized: () => poiPort.isAuthorized() && this.#analysis === analysis },
-        folders: folderPort, decide: openAdventureImportPoiConflictDialog,
+        folders: folderPort, lookup: createAdventureAssetStorage(), decide: openAdventureImportPoiConflictDialog,
         onProgress: async (completed, total) => {
           this.#progress = format("Actions.PoisProgress", { completed: String(completed), total: String(total) });
           await this.render();

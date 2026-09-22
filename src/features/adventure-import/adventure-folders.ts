@@ -7,7 +7,7 @@ export const ADVENTURE_ROOT_FOLDER_COLOR = "#7a2424";
 export const ADVENTURE_ACT_FOLDER_COLOR = "#4f2525";
 
 export type AdventureFolderDocumentType = "Actor" | "JournalEntry" | "Scene" | "Item";
-export type AdventureFolderId = "root" | AdventureAct;
+export type AdventureFolderId = "root" | AdventureAct | `${AdventureAct}.pointsOfInterest`;
 
 export interface AdventureFolderFlag {
   readonly importer: "folder";
@@ -23,6 +23,7 @@ export interface AdventureFolderPlacementFlag {
   readonly documentType: AdventureFolderDocumentType;
   readonly documentId: string;
   readonly act: AdventureAct;
+  readonly folderId?: "pointsOfInterest";
 }
 
 export interface AdventureFolderSnapshot {
@@ -64,8 +65,13 @@ function isAct(value: unknown): value is AdventureAct {
   return value === "actOne" || value === "actTwo";
 }
 
+function isPoiFolder(value: unknown): value is `${AdventureAct}.pointsOfInterest` {
+  return value === "actOne.pointsOfInterest" || value === "actTwo.pointsOfInterest";
+}
+
 function folderName(folderId: AdventureFolderId): string {
   if (folderId === "root") return ADVENTURE_ROOT_FOLDER_NAME;
+  if (isPoiFolder(folderId)) return "Pontos de Interesse";
   return folderId === "actOne" ? "Ato I" : "Ato II";
 }
 
@@ -80,7 +86,8 @@ function readIdentity(snapshot: AdventureFolderSnapshot, adventureId: string): A
     if (typeof flag.adventureId !== "string") throw new Error(`Provenance de Folder incompatível: ${snapshot.id}.`);
     if (flag.adventureId !== adventureId) return null;
     if (flag.version !== 1 || !["Actor", "JournalEntry", "Scene", "Item"].includes(String(flag.documentType))
-      || (flag.folderId !== "root" && !isAct(flag.folderId))) {
+      || (flag.folderId !== "root" && !isAct(flag.folderId)
+        && !(flag.documentType === "Item" && isPoiFolder(flag.folderId)))) {
       throw new Error(`Provenance de Folder incompatível: ${snapshot.id}.`);
     }
     return flag as unknown as AdventureFolderFlag;
@@ -103,7 +110,10 @@ function requiredIdentities(requirements: readonly AdventureFolderRequirement[])
   const keys = new Set<string>();
   for (const requirement of requirements) {
     keys.add(identityKey(requirement.documentType, "root"));
-    for (const act of requirement.acts) keys.add(identityKey(requirement.documentType, act));
+    for (const act of requirement.acts) {
+      keys.add(identityKey(requirement.documentType, act));
+      if (requirement.documentType === "Item") keys.add(identityKey("Item", `${act}.pointsOfInterest`));
+    }
   }
   return keys;
 }
@@ -133,6 +143,12 @@ export function preflightAdventureFolders(input: {
       const child = found.get(identityKey(requirement.documentType, act));
       if (child && (!root || child.parentId !== root.id)) {
         throw new Error(`Parent incompatível na Folder ${requirement.documentType}:${act}: ${child.id}.`);
+      }
+      if (requirement.documentType === "Item") {
+        const poi = found.get(identityKey("Item", `${act}.pointsOfInterest`));
+        if (poi && (!child || poi.parentId !== child.id)) {
+          throw new Error(`Parent incompatível na Folder Item:${act}.pointsOfInterest: ${poi.id}.`);
+        }
       }
     }
   }
@@ -197,11 +213,23 @@ export async function ensureAdventureFolder(input: {
   return ensureOne({ ...input, folderId: input.act, parentId: rootId });
 }
 
+export async function ensureAdventurePoiFolder(input: {
+  readonly adventureId: string;
+  readonly act: AdventureAct;
+  readonly folders: AdventureFolderPort;
+}): Promise<{ readonly actId: string; readonly poiId: string }> {
+  const actId = await ensureAdventureFolder({ ...input, documentType: "Item" });
+  const poiId = await ensureOne({ ...input, documentType: "Item",
+    folderId: `${input.act}.pointsOfInterest`, parentId: actId });
+  return { actId, poiId };
+}
+
 export function adventureFolderPlacementFlag(input: {
   readonly adventureId: string;
   readonly documentType: AdventureFolderDocumentType;
   readonly documentId: string;
   readonly act: AdventureAct;
+  readonly folderId?: "pointsOfInterest";
 }): AdventureFolderPlacementFlag {
   return { version: 1, ...input };
 }
@@ -213,5 +241,9 @@ export function hasAdventureFolderPlacement(value: unknown, expected: AdventureF
     || flag.documentId !== expected.documentId || flag.act !== expected.act) {
     throw new Error(`Marcação de organização incompatível: ${expected.documentType}:${expected.documentId}.`);
   }
+  if (expected.folderId && "folderId" in flag && flag.folderId !== expected.folderId) {
+    throw new Error(`Marcação de organização incompatível: ${expected.documentType}:${expected.documentId}.`);
+  }
+  if (expected.folderId && !("folderId" in flag)) return false;
   return true;
 }

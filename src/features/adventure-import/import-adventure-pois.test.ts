@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
 import { PLAYTEST_ALPHA_POI_PRESETS } from "../../config/adventure-poi-presets/playtest-alpha";
 import { validateAdventurePoiData, validateAdventurePoiReferences } from "../../core/adventure-import/adventure-poi-data";
@@ -9,6 +9,8 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
   readonly items: PoiItemSnapshot[] = [];
   readonly folders: AdventureFolderSnapshot[] = [];
   writes = 0;
+  readonly lookup = { worldId: "test-world",
+    findExisting: vi.fn(async (_directory: string, basename: string) => `worlds/test-world/${basename}`) };
   isAuthorized() { return true; }
   listItems() { return this.items; }
   listFolders() { return this.folders; }
@@ -25,10 +27,10 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
     this.folders[index] = { ...this.folders[index], ...data };
     this.writes++;
   }
-  async createItem(preset: typeof PLAYTEST_ALPHA_POI_PRESETS[number], folderId: string,
-    flag: PoiImportFlag, placement: Parameters<PoiItemPort["createItem"]>[3]) {
+  async createItem(preset: typeof PLAYTEST_ALPHA_POI_PRESETS[number], img: string, folderId: string,
+    flag: PoiImportFlag, placement: Parameters<PoiItemPort["createItem"]>[4]) {
     const id = `item-${this.items.length + 1}`;
-    this.items.push({ id, type: "pointOfInterest", folderId, flag, folderPlacement: placement,
+    this.items.push({ id, type: "pointOfInterest", folderId, img, flag, folderPlacement: placement,
       system: structuredClone({ publicDescription: preset.publicDescription, gmContext: preset.gmContext, skills: preset.skills }) });
     this.writes++;
     return id;
@@ -37,6 +39,13 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
     const index = this.items.findIndex(item => item.id === id);
     this.items[index] = { ...this.items[index], folderId, folderPlacement: flag };
     this.writes++;
+  }
+  async updateImageIfFallback(id: string, img: string) {
+    const index = this.items.findIndex(item => item.id === id);
+    if (this.items[index].img !== "icons/svg/item-bag.svg") return false;
+    this.items[index] = { ...this.items[index], img };
+    this.writes++;
+    return true;
   }
   async updateItem(id: string, system: Parameters<PoiItemPort["updateItem"]>[1], flag: PoiImportFlag) {
     const index = this.items.findIndex(item => item.id === id);
@@ -54,7 +63,7 @@ function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
   decide: Parameters<typeof importAdventurePois>[0]["decide"] = async () => "preserve",
   presets: readonly unknown[] = PLAYTEST_ALPHA_POI_PRESETS, revision = 1) {
   return importAdventurePois({ definition: PLAYTEST_ALPHA_ADVENTURE, presets, revision,
-    acts, items: world, folders: world, decide });
+    acts, items: world, folders: world, lookup: world.lookup, decide });
 }
 
 describe("Adventure Point of Interest import", () => {
@@ -70,6 +79,53 @@ describe("Adventure Point of Interest import", () => {
     expect(tattoo.skills.find(group => group.skill === "medicine")?.information[0].id)
       .not.toBe(tattoo.skills.find(group => group.skill === "survival")?.information[0].id);
     expect(PLAYTEST_ALPHA_POI_PRESETS.every(p => p.skills.every(group => group.skill !== "aptitude"))).toBe(true);
+    expect(PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId).map(p => [p.id, p.imageAssetId])).toEqual([
+      ["actOne.map.11", "actOne.handout.06"], ["actOne.map.12", "actOne.handout.07"],
+      ["actOne.map.13", "actOne.handout.08"], ["actOne.map.14", "actOne.handout.09"],
+      ["actOne.map.15", "actOne.handout.10"],
+    ]);
+  });
+
+  it("rejects absent, cross-Act and non-image assets in preset preflight", async () => {
+    const preset = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.11")!;
+    for (const imageAssetId of ["missing", "actTwo.handout.03", "actTwo.handout.01.print"]) {
+      const invalid = PLAYTEST_ALPHA_POI_PRESETS.map(p => p.id === preset.id ? { ...p, imageAssetId } : p);
+      const world = new FakeWorld();
+      await expect(run(world, ["actOne"], undefined, invalid)).rejects.toMatchObject({ stage: "preflight" });
+      expect(world.writes).toBe(0);
+    }
+    expect(() => validateAdventurePoiData({ ...preset, imageAssetId: "" })).toThrow();
+    const invalidDefinition = { ...PLAYTEST_ALPHA_ADVENTURE,
+      assets: PLAYTEST_ALPHA_ADVENTURE.assets.map(asset => asset.id === preset.imageAssetId
+        ? { ...asset, source: { ...asset.source, originalEntryPath: "Handouts/book.pdf" } } : asset) };
+    expect(() => validateAdventurePoiReferences(invalidDefinition, PLAYTEST_ALPHA_POI_PRESETS)).toThrow("Imagem de POI inválida");
+  });
+
+  it("resolves five Act I images from world storage before creating their Items", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actOne"]);
+    expect(world.lookup.findExisting).toHaveBeenCalledTimes(5);
+    expect(world.lookup.findExisting).toHaveBeenCalledWith(
+      expect.stringContaining("/act-1/Arquivos para o público - Ato I/Handouts"),
+      "Handout 06 - Estante de Livros.jpg",
+    );
+    for (const preset of PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId)) {
+      const item = world.items.find(candidate => (candidate.flag as PoiImportFlag).documentId === preset.id)!;
+      expect(item.img).toContain(".jpg");
+      expect(item.folderId).toBe("folder-3");
+    }
+    expect(world.items.find(item => (item.flag as PoiImportFlag).documentId === "actOne.map.10")?.img)
+      .toBe("icons/svg/item-bag.svg");
+    const two = new FakeWorld();
+    await run(two, ["actTwo"]);
+    expect(two.lookup.findExisting).not.toHaveBeenCalled();
+  });
+
+  it("blocks all POI writes when a referenced image is absent from world storage", async () => {
+    const world = new FakeWorld();
+    world.lookup.findExisting.mockResolvedValueOnce(null as never);
+    await expect(run(world, ["actOne"])).rejects.toMatchObject({ stage: "preflight" });
+    expect(world.writes).toBe(0);
   });
 
   it("imports only materialized Acts and remains unchanged on rerun", async () => {
@@ -77,14 +133,18 @@ describe("Adventure Point of Interest import", () => {
     expect(await run(one, ["actOne"])).toMatchObject({ created: 29, unchanged: 0 });
     expect(one.items).toHaveLength(29);
     expect(one.folders.map(folder => [folder.type, folder.name])).toEqual([
-      ["Item", "A Maldição do Ídolo de Pedra"], ["Item", "Ato I"],
+      ["Item", "A Maldição do Ídolo de Pedra"], ["Item", "Ato I"], ["Item", "Pontos de Interesse"],
     ]);
+    expect(one.items.every(item => item.folderId === "folder-3")).toBe(true);
     const writes = one.writes;
     expect(await run(one, ["actOne"])).toMatchObject({ created: 0, unchanged: 29 });
     expect(one.writes).toBe(writes);
     expect(await run(one, ["actTwo"])).toMatchObject({ created: 25 });
     expect(one.items).toHaveLength(54);
-    expect(one.folders.map(folder => folder.name)).toEqual(["A Maldição do Ídolo de Pedra", "Ato I", "Ato II"]);
+    expect(one.folders.map(folder => folder.name)).toEqual([
+      "A Maldição do Ídolo de Pedra", "Ato I", "Pontos de Interesse", "Ato II", "Pontos de Interesse",
+    ]);
+    expect(one.folders[4].parentId).toBe("folder-4");
     const both = new FakeWorld();
     expect(await run(both, ["actOne", "actTwo"])).toMatchObject({ created: 54 });
     const two = new FakeWorld();
@@ -107,6 +167,45 @@ describe("Adventure Point of Interest import", () => {
     expect(await run(world, ["actOne"], async () => "restore")).toMatchObject({ updated: 1, unchanged: 28 });
     expect(world.items[0].system.gmContext).toBe(PLAYTEST_ALPHA_POI_PRESETS[0].gmContext);
     expect(world.items[0].folderId).toBeNull();
+  });
+
+  it("moves old placed POIs once and preserves manual moves before and after the upgrade", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actOne"]);
+    const oldMarker = (index: number) => {
+      const placement = world.items[index].folderPlacement as Record<string, unknown>;
+      world.items[index] = { ...world.items[index], folderPlacement: Object.fromEntries(
+        Object.entries(placement).filter(([key]) => key !== "folderId")) };
+    };
+    oldMarker(0); oldMarker(1);
+    world.items[0] = { ...world.items[0], folderId: "folder-2" };
+    world.items[1] = { ...world.items[1], folderId: "manual-folder" };
+    world.items[2] = { ...world.items[2], folderId: "folder-2" };
+    expect(await run(world, ["actOne"])).toMatchObject({ unchanged: 29 });
+    expect(world.items[0].folderId).toBe("folder-3");
+    expect(world.items[1].folderId).toBe("manual-folder");
+    expect(world.items[2].folderId).toBe("folder-2");
+    expect(world.items.slice(0, 3).every(item => (item.folderPlacement as Record<string, unknown>).folderId === "pointsOfInterest")).toBe(true);
+    world.items[0] = { ...world.items[0], folderId: "folder-2" };
+    const writes = world.writes;
+    expect(await run(world, ["actOne"])).toMatchObject({ unchanged: 29 });
+    expect(world.items[0].folderId).toBe("folder-2");
+    expect(world.writes).toBe(writes);
+  });
+
+  it("upgrades only an old fallback image and keeps a GM-selected image on rerun", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actOne"]);
+    const bookshelf = world.items.findIndex(item => (item.flag as PoiImportFlag).documentId === "actOne.map.11");
+    const poster = world.items.findIndex(item => (item.flag as PoiImportFlag).documentId === "actOne.map.12");
+    world.items[bookshelf] = { ...world.items[bookshelf], img: "icons/svg/item-bag.svg" };
+    world.items[poster] = { ...world.items[poster], img: "worlds/test/custom-poster.png" };
+    expect(await run(world, ["actOne"])).toMatchObject({ updated: 1, unchanged: 28 });
+    expect(world.items[bookshelf].img).toContain("Handout 06 - Estante de Livros.jpg");
+    expect(world.items[poster].img).toBe("worlds/test/custom-poster.png");
+    const writes = world.writes;
+    expect(await run(world, ["actOne"])).toMatchObject({ updated: 0, unchanged: 29 });
+    expect(world.writes).toBe(writes);
   });
 
   it("applies a later preset revision without treating untouched content as a manual conflict", async () => {
@@ -170,7 +269,7 @@ describe("Adventure Point of Interest import", () => {
     world.items.push({ ...world.items[0], id: "duplicate" });
     await expect(run(world, ["actOne"])).rejects.toMatchObject({ stage: "preflight" });
     world.items.pop();
-    world.items.push({ id: "manual", type: "pointOfInterest", folderId: null, flag: null,
+    world.items.push({ id: "manual", type: "pointOfInterest", folderId: null, img: "custom.png", flag: null,
       folderPlacement: null, system: { publicDescription: "", gmContext: "", skills: [] } });
     expect(await run(world, ["actOne"])).toMatchObject({ unchanged: 29 });
     expect(world.items).toHaveLength(30);

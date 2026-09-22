@@ -3,10 +3,13 @@ import { poiSystem, validateAdventurePoiReferences, type AdventurePoiPreset } fr
 import type { AdventureDefinition } from "../../core/adventure-import/adventure-definition";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
-import { adventureFolderPlacementFlag, ensureAdventureFolder, hasAdventureFolderPlacement,
+import type { AdventureAssetLookup } from "../../adapters/foundry/adventure-asset-storage";
+import { resolveAdventureAsset } from "./resolve-adventure-asset";
+import { adventureFolderPlacementFlag, ensureAdventurePoiFolder, hasAdventureFolderPlacement,
   type AdventureFolderPlacementFlag, type AdventureFolderPort } from "./adventure-folders";
 
 export const ADVENTURE_POI_FLAG_PATH = "flags.ordemparanormal2.adventureImport";
+export const ADVENTURE_POI_FALLBACK_IMAGE = "icons/svg/item-bag.svg";
 export type PoiConflictDecision = "preserve" | "restore" | null;
 export interface PoiImportFlag {
   readonly importer: "pointOfInterest";
@@ -22,6 +25,7 @@ export interface PoiItemSnapshot {
   readonly id: string;
   readonly type: string;
   readonly folderId: string | null;
+  readonly img: string | null;
   readonly flag: unknown;
   readonly folderPlacement: unknown;
   readonly system: PointOfInterestSystemData;
@@ -30,9 +34,10 @@ export interface PoiItemPort {
   isAuthorized(): boolean;
   listItems(): readonly PoiItemSnapshot[];
   validateCandidate(preset: AdventurePoiPreset, flag: PoiImportFlag): void;
-  createItem(preset: AdventurePoiPreset, folderId: string, flag: PoiImportFlag,
+  createItem(preset: AdventurePoiPreset, img: string, folderId: string, flag: PoiImportFlag,
     placement: AdventureFolderPlacementFlag): Promise<string>;
   updateFolderPlacement(id: string, folderId: string | null, flag: AdventureFolderPlacementFlag): Promise<void>;
+  updateImageIfFallback(id: string, img: string): Promise<boolean>;
   updateItem(id: string, system: PointOfInterestSystemData, flag: PoiImportFlag): Promise<void>;
   completeItem(id: string, flag: PoiImportFlag): Promise<void>;
 }
@@ -58,6 +63,7 @@ export interface ImportAdventurePoisInput {
   readonly acts: readonly AdventureAct[];
   readonly items: PoiItemPort;
   readonly folders: AdventureFolderPort;
+  readonly lookup: AdventureAssetLookup;
   readonly decide: (pois: readonly PreparedAdventurePoi[]) => Promise<PoiConflictDecision>;
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
 }
@@ -79,13 +85,17 @@ function readFlag(value: unknown, adventureId: string): PoiImportFlag | null {
   return flag as unknown as PoiImportFlag;
 }
 function relevantState(item: PoiItemSnapshot): string {
-  return stableSerialize({ type: item.type, flag: item.flag, system: item.system, folderPlacement: item.folderPlacement });
+  return stableSerialize({ type: item.type, flag: item.flag, system: item.system,
+    folderId: item.folderId, folderPlacement: item.folderPlacement });
 }
 function flagFor(definition: AdventureDefinition, preset: AdventurePoiPreset, revision: number): PoiImportFlag {
   return { importer: "pointOfInterest", adventureId: definition.id, documentId: preset.id,
     act: preset.act, version: 1, presetRevision: revision, state: "incomplete" };
 }
 function placementFor(definition: AdventureDefinition, preset: AdventurePoiPreset): AdventureFolderPlacementFlag {
+  return { ...legacyPlacementFor(definition, preset), folderId: "pointsOfInterest" };
+}
+function legacyPlacementFor(definition: AdventureDefinition, preset: AdventurePoiPreset): AdventureFolderPlacementFlag {
   return adventureFolderPlacementFlag({ adventureId: definition.id, documentType: "Item", documentId: preset.id, act: preset.act });
 }
 let importing = false;
@@ -104,6 +114,11 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
     for (const preset of catalog) input.items.validateCandidate(preset, flagFor(input.definition, preset, input.revision));
     const selected = input.definition.pointsOfInterest.map(ref => catalog.find(p => p.id === ref.presetId)!)
       .filter(p => input.acts.includes(p.act));
+    const images = new Map<string, string>();
+    for (const preset of selected) {
+      if (preset.imageAssetId) images.set(preset.id, await resolveAdventureAsset(input.definition, preset.imageAssetId,
+        { kind: "worldStorage", lookup: input.lookup }));
+    }
     const selectedIds = new Set(selected.map(p => p.id));
     const existing = new Map<string, PoiItemSnapshot>();
     for (const item of input.items.listItems()) {
@@ -127,10 +142,10 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
     const decision = divergent.length ? await input.decide(divergent) : "restore";
     if (decision === null) return { ...counts, cancelled: true };
     if (!input.items.isAuthorized()) throw new Error("O GM ativo mudou. Execute novamente.");
-    const folders = new Map<AdventureAct, string>();
+    const folders = new Map<AdventureAct, { readonly actId: string; readonly poiId: string }>();
     for (const act of new Set(prepared.map(p => p.preset.act))) {
       stage = "folder";
-      folders.set(act, await ensureAdventureFolder({ adventureId: input.definition.id, documentType: "Item", act, folders: input.folders }));
+      folders.set(act, await ensureAdventurePoiFolder({ adventureId: input.definition.id, act, folders: input.folders }));
     }
     await input.onProgress?.(0, prepared.length);
     for (const plan of prepared) {
@@ -144,14 +159,26 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
       const placement = placementFor(input.definition, plan.preset);
       if (previous && !hasAdventureFolderPlacement(previous.folderPlacement, placement)) {
         stage = "folder";
-        await input.items.updateFolderPlacement(previous.id, previous.folderId, placement);
+        const isLegacy = hasAdventureFolderPlacement(previous.folderPlacement, legacyPlacementFor(input.definition, plan.preset));
+        const target = isLegacy && previous.folderId === folders.get(plan.preset.act)!.actId
+          ? folders.get(plan.preset.act)!.poiId : previous.folderId;
+        await input.items.updateFolderPlacement(previous.id, target, placement);
+      }
+      const image = images.get(plan.preset.id);
+      let imageUpdated = false;
+      if (previous && image) {
+        stage = "item";
+        imageUpdated = await input.items.updateImageIfFallback(previous.id, image);
       }
       if (plan.divergent && decision === "preserve") counts.preserved++;
       else if (previous && !plan.divergent && await managedDigest(previous.system) === plan.desiredDigest
-        && readFlag(previous.flag, input.definition.id)?.presetRevision === input.revision) counts.unchanged++;
+        && readFlag(previous.flag, input.definition.id)?.presetRevision === input.revision) {
+        if (imageUpdated) counts.updated++; else counts.unchanged++;
+      }
       else {
         stage = "item";
-        const id = plan.itemId ?? await input.items.createItem(plan.preset, folders.get(plan.preset.act)!, plan.flag, placement);
+        const id = plan.itemId ?? await input.items.createItem(plan.preset,
+          image ?? ADVENTURE_POI_FALLBACK_IMAGE, folders.get(plan.preset.act)!.poiId, plan.flag, placement);
         if (plan.itemId) await input.items.updateItem(id, poiSystem(plan.preset), plan.flag);
         const persisted = input.items.listItems().find(item => item.id === id);
         if (!persisted || await managedDigest(persisted.system) !== plan.desiredDigest

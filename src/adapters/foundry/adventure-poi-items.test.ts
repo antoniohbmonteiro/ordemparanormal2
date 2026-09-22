@@ -29,6 +29,7 @@ class NativeItem {
   constructor(readonly data: ItemData) {}
   get id() { return this.data._id as string | null; }
   get type() { return this.data.type; }
+  get img() { return this.data.img; }
   get folder() { return this.data.folder ? { id: this.data.folder } : null; }
   toObject() { return structuredClone(this.data); }
   validate() { return true; }
@@ -63,12 +64,12 @@ describe("Foundry Adventure POI Item adapter", () => {
     const flag: PoiImportFlag = { importer: "pointOfInterest", adventureId: "playtest-alpha", documentId: preset.id,
       act: preset.act, version: 1, presetRevision: 1, state: "incomplete" };
     const placement: AdventureFolderPlacementFlag = { version: 1, adventureId: "playtest-alpha",
-      documentType: "Item", documentId: preset.id, act: preset.act };
+      documentType: "Item", documentId: preset.id, act: preset.act, folderId: "pointsOfInterest" };
     const port = createAdventurePoiItemPort();
     expect(() => port.validateCandidate(preset, flag)).not.toThrow();
-    const id = await port.createItem(preset, "act-folder", flag, placement);
+    const id = await port.createItem(preset, "icons/svg/item-bag.svg", "poi-folder", flag, placement);
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: "pointOfInterest",
-      img: "icons/svg/item-bag.svg", folder: "act-folder", ownership: { default: 0 } }));
+      img: "icons/svg/item-bag.svg", folder: "poi-folder", ownership: { default: 0 } }));
     const item = world[0];
     item.data.name = "Nome editado";
     item.data.img = "custom.png";
@@ -81,5 +82,19 @@ describe("Foundry Adventure POI Item adapter", () => {
       ownership: { default: 2 }, flags: { other: { key: "preserved" } }, system: poiSystem(preset) });
     await port.completeItem(id, { ...flag, state: "complete", baseline: "digest" });
     expect(port.listItems()[0].flag).toMatchObject({ state: "complete", baseline: "digest" });
+  });
+
+  it("upgrades only the original fallback image", async () => {
+    const preset = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.11")!;
+    const flag: PoiImportFlag = { importer: "pointOfInterest", adventureId: "playtest-alpha", documentId: preset.id,
+      act: preset.act, version: 1, presetRevision: 1, state: "incomplete" };
+    const placement: AdventureFolderPlacementFlag = { version: 1, adventureId: "playtest-alpha",
+      documentType: "Item", documentId: preset.id, act: preset.act, folderId: "pointsOfInterest" };
+    const port = createAdventurePoiItemPort();
+    const id = await port.createItem(preset, "icons/svg/item-bag.svg", "poi-folder", flag, placement);
+    expect(await port.updateImageIfFallback(id, "worlds/test/bookshelf.jpg")).toBe(true);
+    expect(world[0].img).toBe("worlds/test/bookshelf.jpg");
+    expect(await port.updateImageIfFallback(id, "worlds/test/other.jpg")).toBe(false);
+    expect(world[0].img).toBe("worlds/test/bookshelf.jpg");
   });
 });

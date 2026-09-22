@@ -338,6 +338,7 @@
     "id": "actOne.map.11",
     "act": "actOne",
     "name": "Estante de Livros",
+    "imageAssetId": "actOne.handout.06",
     "publicDescription": "Estante de cinco prateleiras instalada próxima à parede.",
     "gmContext": "É uma passagem para a sala secreta, disfarçada com falsos livros. Os quatro pôsteres indicam livros de prateleiras distintas; a abertura depende de condução manual.",
     "skills": [
@@ -398,6 +399,7 @@
     "id": "actOne.map.12",
     "act": "actOne",
     "name": "Pôster: Lutadores de Rua",
+    "imageAssetId": "actOne.handout.07",
     "publicDescription": "Pôster de um jogo de luta dos anos 1990.",
     "gmContext": "Indica o livro de videogame na quarta prateleira. Aptidão (Atualidades), DT 8, associa o jogador Zika à autobiografia; conduzir manualmente.",
     "skills": []
@@ -406,6 +408,7 @@
     "id": "actOne.map.13",
     "act": "actOne",
     "name": "Pôster: Unidos do Invisível Futebol Clube",
+    "imageAssetId": "actOne.handout.08",
     "publicDescription": "Pôster de um time de futebol pouco conhecido.",
     "gmContext": "Indica o livro sobre um gol controverso na segunda prateleira. Aptidão (Atualidades), DT 8, reconhece a história do time; conduzir manualmente.",
     "skills": [
@@ -426,6 +429,7 @@
     "id": "actOne.map.14",
     "act": "actOne",
     "name": "Pôster: Eric Tufão 3 – A Explosão Explosiva",
+    "imageAssetId": "actOne.handout.09",
     "publicDescription": "Pôster do terceiro filme de uma franquia de ação.",
     "gmContext": "Indica o terceiro volume da coleção sobre explosivos na terceira prateleira. Aptidão (Atualidades), DT 8, reconhece a franquia; conduzir manualmente.",
     "skills": [
@@ -446,6 +450,7 @@
     "id": "actOne.map.15",
     "act": "actOne",
     "name": "Pôster: Thunderland 2008",
+    "imageAssetId": "actOne.handout.10",
     "publicDescription": "Pôster de um antigo festival de rock.",
     "gmContext": "Indica o livro de guitarra na quinta prateleira. Aptidão (Atualidades), DT 6 e 8, permite relacionar o festival, seus guitarristas e Kurt Hemmis ao livro; conduzir manualmente.",
     "skills": []

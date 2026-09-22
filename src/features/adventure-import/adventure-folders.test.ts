@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ensureAdventureFolder, preflightAdventureFolders, type AdventureFolderFlag,
+  ensureAdventureFolder, ensureAdventurePoiFolder, preflightAdventureFolders, type AdventureFolderFlag,
   type AdventureFolderPort, type AdventureFolderSnapshot,
 } from "./adventure-folders";
 
@@ -23,7 +23,8 @@ class FakeFolders implements AdventureFolderPort {
 const legacy = (importer: "actorFolder" | "handout", folderId: "root" | "actOne" | "actTwo") => ({
   importer, adventureId: "playtest-alpha", folderId, version: 1,
 });
-const managed = (documentType: "Actor" | "JournalEntry" | "Scene", folderId: "root" | "actOne" | "actTwo"): AdventureFolderFlag => ({
+const managed = (documentType: "Actor" | "JournalEntry" | "Scene" | "Item",
+  folderId: AdventureFolderFlag["folderId"]): AdventureFolderFlag => ({
   importer: "folder", adventureId: "playtest-alpha", documentType, folderId, version: 1,
 });
 
@@ -52,6 +53,43 @@ describe("Adventure folder policy", () => {
       { id: "old-root", name: "A Maldição do Ídolo de Pedra", color: "#7a2424", flag: { importer: "folder", documentType: "JournalEntry" } },
       { id: "old-act", name: "Ato I", color: "#4f2525", flag: { importer: "folder", documentType: "JournalEntry" } },
     ]);
+  });
+
+  it("creates importer-owned POI subfolders beneath each Item Act folder", async () => {
+    const folders = new FakeFolders();
+    const one = await ensureAdventurePoiFolder({ adventureId: "playtest-alpha", act: "actOne", folders });
+    const two = await ensureAdventurePoiFolder({ adventureId: "playtest-alpha", act: "actTwo", folders });
+    expect(one).toEqual({ actId: "folder-2", poiId: "folder-3" });
+    expect(two).toEqual({ actId: "folder-4", poiId: "folder-5" });
+    expect(folders.world[2]).toMatchObject({ type: "Item", parentId: one.actId,
+      name: "Pontos de Interesse", flag: managed("Item", "actOne.pointsOfInterest") });
+    expect(folders.world[4]).toMatchObject({ type: "Item", parentId: two.actId,
+      name: "Pontos de Interesse", flag: managed("Item", "actTwo.pointsOfInterest") });
+    expect(await ensureAdventurePoiFolder({ adventureId: "playtest-alpha", act: "actOne", folders })).toEqual(one);
+    expect(folders.world).toHaveLength(5);
+  });
+
+  it.each([
+    ["duplicate", [
+      { id: "root", name: "Root", color: null, type: "Item", parentId: null, flag: managed("Item", "root") },
+      { id: "act", name: "Act", color: null, type: "Item", parentId: "root", flag: managed("Item", "actOne") },
+      { id: "first", name: "POI", color: null, type: "Item", parentId: "act", flag: managed("Item", "actOne.pointsOfInterest") },
+      { id: "second", name: "POI", color: null, type: "Item", parentId: "act", flag: managed("Item", "actOne.pointsOfInterest") },
+    ]],
+    ["wrong parent", [
+      { id: "root", name: "Root", color: null, type: "Item", parentId: null, flag: managed("Item", "root") },
+      { id: "act", name: "Act", color: null, type: "Item", parentId: "root", flag: managed("Item", "actOne") },
+      { id: "poi", name: "POI", color: null, type: "Item", parentId: "root", flag: managed("Item", "actOne.pointsOfInterest") },
+    ]],
+    ["wrong type", [
+      { id: "root", name: "Root", color: null, type: "Item", parentId: null, flag: managed("Item", "root") },
+      { id: "act", name: "Act", color: null, type: "Item", parentId: "root", flag: managed("Item", "actOne") },
+      { id: "poi", name: "POI", color: null, type: "Actor", parentId: "act", flag: managed("Item", "actOne.pointsOfInterest") },
+    ]],
+  ] as const)("rejects POI subfolder %s in structural preflight", (_kind, world) => {
+    const folders = new FakeFolders(); folders.world.push(...world);
+    expect(() => preflightAdventureFolders({ adventureId: "playtest-alpha",
+      requirements: [{ documentType: "Item", acts: ["actOne"] }], folders })).toThrow();
   });
 
   it.each([

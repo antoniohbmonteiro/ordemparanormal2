@@ -575,6 +575,7 @@ describe("Adventure Import Application", () => {
     const folderPort = mocks.createAdventureFolderPort.mock.results[0].value;
     expect(mocks.importAdventureHandouts.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventurePois.mock.calls[0][0].folders).toBe(folderPort);
+    expect(mocks.importAdventurePois.mock.calls[0][0].lookup).toEqual({ worldId: "test-world" });
     expect(mocks.importAdventureAgents.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureScenes.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureAgents.mock.invocationCallOrder[0]);

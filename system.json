@@ -1,7 +1,7 @@
 {
   "id": "ordemparanormal2",
   "title": "Ordem Paranormal 2",
-  "description": "Ordem Paranormal 2 é um sistema comunitário não oficial, desenvolvido nativamente para Foundry VTT v14, que oferece Ficha de Agente, Check Engine, Testes Opostos e investigação em cena para as regras públicas de playtest de Ordem Paranormal RPG 2.",
+  "description": "Ordem Paranormal 2 é um sistema comunitário não oficial para Foundry VTT v14, baseado nas regras públicas do playtest, com Ficha de Agente, Check Engine, Testes Opostos, investigação em cena e Importador de Aventura (Adventure Importer) para os Atos I e II a partir dos arquivos fornecidos pelo usuário.",
   "version": "0.4.0",
   "license": "LICENSE",
   "readme": "https://github.com/antoniohbmonteiro/ordemparanormal2/blob/main/README.md",
@@ -114,6 +114,11 @@
       "type": "screenshot",
       "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.4.0/docs/screenshots/agent-sheet.webp",
       "caption": "Ficha de Agente com Perfil, Ocupação, Perícias, Habilidades e Inventário."
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.4.0/docs/release-assets/v0.4.0/adventure-import.png",
+      "caption": "Importador de Aventura para preparar os Atos I e II a partir dos arquivos fornecidos pelo usuário."
     },
     {
       "type": "screenshot",

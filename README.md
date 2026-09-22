@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-  Ficha de Agente, Check Engine, ferramentas de Mestre com Testes Opostos e Request de Perícias, investigação em cena, Perfis, Habilidades, Ocupações e Equipamentos.
+  Ficha de Agente, Check Engine, Importador de Aventura, ferramentas de Mestre com Testes Opostos e Request de Perícias, investigação em cena e conteúdo reutilizável.
 </p>
 
 <p align="center">

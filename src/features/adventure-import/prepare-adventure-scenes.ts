@@ -75,9 +75,7 @@ export async function prepareAdventureScenes(input: PrepareAdventureScenesInput)
   const result: PreparedAdventureScene[] = [];
   const assets = new Map<string, Promise<string>>();
   function resolve(id: string): Promise<string> {
-    if (!assets.has(id)) assets.set(id, resolveAdventureAsset(definition, id, { kind: "materialization", result: materialization }).then(async path => {
-      await scenes.confirmAsset(path); return path;
-    }));
+    if (!assets.has(id)) assets.set(id, resolveAdventureAsset(definition, id, { kind: "materialization", result: materialization }));
     return assets.get(id)!;
   }
   for (const fullPreset of selected) {

@@ -3,8 +3,58 @@ import { importFlag } from "../../core/adventure-import/adventure-agent-reconcil
 import { SCENE_COLLECTIONS, type AdventureSceneSource } from "../../core/adventure-import/adventure-scene-reconciliation";
 import { importAdventureScenes, SceneImportError } from "./import-adventure-scenes";
 import { sceneImportFixture } from "./adventure-scene-test-fixtures";
+import { SCENE_SYSTEM_ASSETS } from "./prepare-adventure-scenes";
 
 describe("Scene import workflow", () => {
+  it.each(["relative", "hosted"])("uses %s materialized backgrounds, Tiles, and Tokens without confirming them again", async representation => {
+    const f = sceneImportFixture();
+    const preset = f.input.presets[0];
+    const adventureTile = preset.tiles[0];
+    const modifiedPreset = { ...preset, tiles: preset.tiles.map(tile => tile.id === adventureTile.id
+      ? { ...tile, textureAsset: { kind: "adventure" as const, assetId: preset.level.backgroundAssetId } } : tile) };
+    const input = { ...f.input, presets: [modifiedPreset, ...f.input.presets.slice(1)] };
+    for (const asset of f.input.materialization.assets) {
+      if (representation === "hosted") asset.storedPath = `https://assets.example.test/prefix/${asset.storedPath}`;
+    }
+    const storedPath = (id: string) => {
+      const reference = f.input.definition.assets.find(asset => asset.id === id)!;
+      return f.input.materialization.assets.find(asset => asset.act === reference.source.act
+        && asset.originalEntryPath === reference.source.originalEntryPath)!.storedPath;
+    };
+
+    expect(await importAdventureScenes(input)).toMatchObject({ created: 1 });
+    const scene = f.world[0];
+    expect((scene.levels[0].background as { src: string }).src).toBe(storedPath(preset.level.backgroundAssetId));
+    expect((scene.tiles.find(tile => tile._id === adventureTile.id)!.texture as { src: string }).src)
+      .toBe(storedPath(preset.level.backgroundAssetId));
+    for (const token of scene.tokens) {
+      const actor = f.actors.find(candidate => candidate._id === token.actorId)!;
+      const tokenAssetId = importFlag(actor)!.tokenAssetId as string;
+      expect((token.texture as { src: string }).src).toBe(storedPath(tokenAssetId));
+    }
+    expect(f.port.confirmAsset).toHaveBeenCalledTimes(modifiedPreset.tiles.filter(tile => tile.textureAsset.kind === "system").length);
+    for (const [path] of vi.mocked(f.port.confirmAsset).mock.calls) expect(path).toBe(SCENE_SYSTEM_ASSETS.gmControlButton);
+  });
+
+  it("fails on a missing materialized background before storage confirmation or Scene writes", async () => {
+    const f = sceneImportFixture();
+    const backgroundId = f.input.presets[0].level.backgroundAssetId;
+    const reference = f.input.definition.assets.find(asset => asset.id === backgroundId)!;
+    f.input.materialization.assets = f.input.materialization.assets.filter(asset =>
+      asset.originalEntryPath !== reference.source.originalEntryPath || asset.act !== reference.source.act);
+    await expect(importAdventureScenes(f.input)).rejects.toMatchObject({ stage: "preflight" });
+    expect(f.port.confirmAsset).not.toHaveBeenCalled();
+    f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
+  });
+
+  it("still validates system-owned Tile assets before writing the Scene", async () => {
+    const f = sceneImportFixture();
+    vi.mocked(f.port.confirmAsset).mockRejectedValueOnce(new Error("system asset unavailable"));
+    await expect(importAdventureScenes(f.input)).rejects.toMatchObject({ stage: "preflight" });
+    expect(f.port.confirmAsset).toHaveBeenCalledWith(SCENE_SYSTEM_ASSETS.gmControlButton);
+    f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
+  });
+
   it("creates the reviewed Scene with semantic Actor bindings and is a write-free rerun", async () => {
     const f = sceneImportFixture();
     expect(await importAdventureScenes(f.input)).toMatchObject({ created: 1 });

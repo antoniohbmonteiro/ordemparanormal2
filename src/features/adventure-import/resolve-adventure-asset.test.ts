@@ -7,6 +7,7 @@ import {
 } from "./resolve-adventure-asset";
 
 const definition: AdventureDefinition = {
+  pointsOfInterest: [],
   scenes: [],
   id: "playtest-alpha",
   actors: [],

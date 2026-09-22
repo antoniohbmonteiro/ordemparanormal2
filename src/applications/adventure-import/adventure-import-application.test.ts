@@ -14,6 +14,8 @@ type Slot = "pdf" | "actOne" | "actTwo";
 const mocks = vi.hoisted(() => ({
   importAdventureScenes: vi.fn(),
   importAdventureAgents: vi.fn(),
+  importAdventurePois: vi.fn(),
+  createAdventurePoiItemPort: vi.fn(),
   analyzeAdventureSources: vi.fn(),
   analyzePdfSource: vi.fn(),
   openAdventureImportPasswordDialog: vi.fn(),
@@ -48,6 +50,12 @@ vi.mock("../../adapters/foundry/adventure-handout-journals", () => ({
   createAdventureHandoutJournalPort: mocks.createAdventureHandoutJournalPort,
 }));
 vi.mock("../../adapters/foundry/adventure-folders", () => ({ createAdventureFolderPort: mocks.createAdventureFolderPort }));
+vi.mock("../../features/adventure-import/import-adventure-pois", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-pois")>();
+  return { ...original, importAdventurePois: mocks.importAdventurePois };
+});
+vi.mock("../../adapters/foundry/adventure-poi-items", () => ({ createAdventurePoiItemPort: mocks.createAdventurePoiItemPort }));
+vi.mock("./adventure-import-poi-conflict-dialog", () => ({ openAdventureImportPoiConflictDialog: vi.fn() }));
 
 vi.mock("../../features/adventure-import/import-adventure-agents", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-agents")>();
@@ -228,6 +236,8 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  mocks.importAdventurePois.mockReset().mockResolvedValue({ created: 54, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
+  mocks.createAdventurePoiItemPort.mockReset().mockReturnValue({ isAuthorized: () => true });
   mocks.importAdventureAgents.mockReset().mockResolvedValue({ created: 10, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
   mocks.importAdventureScenes.mockReset().mockResolvedValue({ created: 1, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
   vi.stubGlobal("game", {
@@ -552,6 +562,8 @@ describe("Adventure Import Application", () => {
     finishSending();
     await importing;
     expect(mocks.importAdventureHandouts).toHaveBeenCalledOnce();
+    expect(mocks.importAdventurePois).toHaveBeenCalledOnce();
+    expect(mocks.importAdventurePois.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 1 });
     expect(mocks.importAdventureHandouts.mock.calls[0][0]).toMatchObject({
       acts: ["actOne", "actTwo"], lookup: { worldId: "test-world" },
       definition: expect.objectContaining({ id: "playtest-alpha" }),
@@ -562,13 +574,41 @@ describe("Adventure Import Application", () => {
     expect(mocks.importAdventureScenes.mock.calls[0][0]).toMatchObject({ materialization: { materializedActs: ["actOne", "actTwo"] } });
     const folderPort = mocks.createAdventureFolderPort.mock.results[0].value;
     expect(mocks.importAdventureHandouts.mock.calls[0][0].folders).toBe(folderPort);
+    expect(mocks.importAdventurePois.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureAgents.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureScenes.mock.calls[0][0].folders).toBe(folderPort);
     expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureAgents.mock.invocationCallOrder[0]);
+    expect(mocks.importAdventureHandouts.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventurePois.mock.invocationCallOrder[0]);
+    expect(mocks.importAdventurePois.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureAgents.mock.invocationCallOrder[0]);
     expect(mocks.importAdventureAgents.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureScenes.mock.invocationCallOrder[0]);
     expect(info).toHaveBeenCalledOnce();
     expect(Application.DEFAULT_OPTIONS.actions).not.toHaveProperty("importHandouts");
   });
+
+  it.each(["playtest-alpha-v1.0", "playtest-alpha-v1.1"] as const)(
+    "uses the same POI presets for recognized PDF edition %s",
+    async edition => {
+      const app = new Application(); attach(app);
+      app.inputs.pdf.select(file(`${edition}.pdf`));
+      app.inputs.actOne.select(file("ato-um.zip"));
+      mocks.analyzeAdventureSources.mockResolvedValue({
+        pdf: unencryptedRecognizedPdf({ edition }),
+        actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] },
+        actTwo: null,
+      });
+      mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actOne"] });
+
+      await action(app, "analyzeFiles");
+      await action(app, "importAssets");
+
+      const input = mocks.importAdventurePois.mock.calls[0][0];
+      expect(input.acts).toEqual(["actOne"]);
+      expect(input.presets).toHaveLength(54);
+      expect(input.presets[0].id).toBe("actOne.character.alan");
+      expect(input.presets.at(-1).id).toBe("actTwo.map.25");
+      expect(input.revision).toBe(1);
+    },
+  );
 
   it("blocks every document importer when the shared Folder preflight finds a structural conflict", async () => {
     const app = new Application(); attach(app);
@@ -760,7 +800,7 @@ describe("Adventure Import Application", () => {
     await action(app, "importAssets");
     expect(mocks.materializeAdventureAssets).toHaveBeenCalledTimes(2);
     expect(mocks.importAdventureHandouts).toHaveBeenCalledTimes(2);
-    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportSuccess ORDEMPARANORMAL2.AdventureImport.Actions.ScenesSummary(1,0,0,0)");
+    expect(info).toHaveBeenCalledExactlyOnceWith("ORDEMPARANORMAL2.AdventureImport.Actions.ImportSuccess ORDEMPARANORMAL2.AdventureImport.Actions.PoisSummary(54,0,0,0) ORDEMPARANORMAL2.AdventureImport.Actions.ScenesSummary(1,0,0,0)");
   });
 });
 

@@ -10,6 +10,7 @@ import type { AdventureFolderFlag, AdventureFolderPort, AdventureFolderSnapshot 
 
 const definition: AdventureDefinition = {
   scenes: [],
+  pointsOfInterest: [],
   id: "playtest-alpha",
   actors: [],
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },

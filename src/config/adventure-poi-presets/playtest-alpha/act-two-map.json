@@ -1,0 +1,694 @@
+[
+  {
+    "id": "actTwo.map.01",
+    "act": "actTwo",
+    "name": "Pertences de Alan",
+    "publicDescription": "Mochila de viagem bastante usada, reunida pela equipe da Ordem.",
+    "gmContext": "Alan trouxe componentes para repetir o ritual e estudou sua execução por conta própria.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "iraqTravel",
+            "difficulty": 6,
+            "content": "Documentos e etiquetas indicam uma viagem de Alan ao Iraque no início de 2022.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "ritualCompartments",
+            "difficulty": 10,
+            "content": "A organização e os resíduos sugerem que a mochila transportou componentes ritualísticos.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "occultism",
+        "information": [
+          {
+            "id": "ritualNotes",
+            "difficulty": 10,
+            "content": "Os rabiscos descrevem etapas de um ritual que usa sangue, tigela, marca no pulso e superfície com sigilos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "practice",
+            "difficulty": 12,
+            "content": "As notas revelam estudo e treino prolongados para executar o ritual.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.02",
+    "act": "actTwo",
+    "name": "Pertences de Edgar",
+    "publicDescription": "Carteira antiga com algum dinheiro.",
+    "gmContext": "Edgar não levou outros objetos relevantes para a casa de Gustavo; não há pistas por perícia.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.03",
+    "act": "actTwo",
+    "name": "Pertences de Eloísa",
+    "publicDescription": "Bolsa de academia com remédios, recipientes e papéis.",
+    "gmContext": "Eloísa sofria com insônia; drogou a água oferecida a Edgar e Kênia depois de aceitar o plano de Alan. Victor fingiu beber.",
+    "skills": [
+      {
+        "skill": "medicine",
+        "information": [
+          {
+            "id": "strongSedatives",
+            "difficulty": 6,
+            "content": "Os remédios para dormir são fortes e exigem cuidado com a dose.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "bagContents",
+            "difficulty": 6,
+            "content": "Há caixas de remédio, garrafa térmica, recibos e chaves na bolsa.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "emptyPackages",
+            "difficulty": 6,
+            "content": "As cartelas de remédio estão vazias.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.04",
+    "act": "actTwo",
+    "name": "Pertences de Kênia",
+    "publicDescription": "Mochila com cadernos, livros e objetos escolares.",
+    "gmContext": "As consequências da maldição prejudicaram a concentração e os estudos de Kênia.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "lawMaterials",
+            "difficulty": 6,
+            "content": "A mochila contém materiais de direito e um lanche.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "decliningNotes",
+            "difficulty": 8,
+            "content": "As anotações recentes de Kênia estão mais desorganizadas que as anteriores.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.05",
+    "act": "actTwo",
+    "name": "Pertences de Victor",
+    "publicDescription": "Mochila grande cheia de livros e materiais de estudo.",
+    "gmContext": "Victor investigava rituais para aliviar seus sintomas e considerou alterar memórias. Ocultismo DT 6, 8, 10 e 12 só pode ser realizado após encontrar o caderno preto; suas pistas explicam pesquisa amadora, instruções de apagamento, erro no alvo e uso de objetos de valor sentimental. Conduzir manualmente.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "booksAndJewelry",
+            "difficulty": 6,
+            "content": "Entre os livros há joias antigas e giz branco.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "blackNotebook",
+            "difficulty": 8,
+            "content": "Um caderno preto contém estudos sobre ocultismo, não sobre literatura.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.06",
+    "act": "actTwo",
+    "name": "Faca de Churrasco",
+    "publicDescription": "Faca longa com marcas de sangue.",
+    "gmContext": "Alan usou a faca para entalhar o altar e matar Gustavo. Em algumas trajetórias, Eloísa também a usou contra Edgar. Não há pista de perícia sem ferramenta neste ato.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.07",
+    "act": "actTwo",
+    "name": "O Ídolo de Pedra",
+    "publicDescription": "Estatueta de pedra com duas faces e um símbolo gravado na base.",
+    "gmContext": "A Ordem investiga o artefato usado por Alan no ritual. Aptidão (Humanas), DT 8, sugere antiguidade mesopotâmica. Se o Ídolo estiver quebrado, Percepção DT 6 e 8 revela interior orgânico e riscos de contagem; Ocultismo DT 10 interpreta a contagem. Conduzir essas condições manualmente.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "baseSymbol",
+            "difficulty": 6,
+            "content": "O símbolo na base é igual à marca dos sobreviventes.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "baseBlood",
+            "difficulty": 8,
+            "content": "Há sangue seco no símbolo da base.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "occultism",
+        "information": [
+          {
+            "id": "ancientUse",
+            "difficulty": 10,
+            "content": "O objeto parece ter sido usado em rituais ao longo de muitos séculos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "cursedArtifact",
+            "difficulty": 12,
+            "content": "O uso ritual repetido transformou a estatueta em um artefato amaldiçoado.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.08",
+    "act": "actTwo",
+    "name": "“Altar” de Madeira",
+    "publicDescription": "Móvel de madeira com sangue, correntes e entalhes.",
+    "gmContext": "Alan adaptou a cômoda para o ritual e matou Gustavo quando ele se recusou a participar. Edgar foi preso ao móvel antes do confronto.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "relatedSymbols",
+            "difficulty": 6,
+            "content": "Os entalhes lembram a marca dos pulsos e o símbolo do teto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "bladeMarks",
+            "difficulty": 6,
+            "content": "Os símbolos foram entalhados com uma lâmina.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "movedFurniture",
+            "difficulty": 8,
+            "content": "Marcas no chão mostram que o móvel foi puxado até ficar sob o símbolo do teto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "drawerRemains",
+            "difficulty": 6,
+            "content": "As gavetas contêm toalhas com sangue seco e resíduos de componentes ritualísticos.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.09",
+    "act": "actTwo",
+    "name": "Símbolo no Teto",
+    "publicDescription": "Grande símbolo avermelhado desenhado acima do móvel usado como altar.",
+    "gmContext": "Alan o desenhou meses antes e novamente com sangue de Gustavo. A observação de perto depende de acesso conduzido manualmente. Aptidão (Humanas), DT 6, compara os traços a escritas mesopotâmicas sem identificar um alfabeto.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "sameMark",
+            "difficulty": 6,
+            "content": "O desenho corresponde à marca nos pulsos dos sobreviventes.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "twoLayers",
+            "difficulty": 8,
+            "content": "Há um traçado antigo sob uma camada vermelha mais recente.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "rushedLayer",
+            "difficulty": 10,
+            "content": "A camada recente parece ter sido feita às pressas.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.10",
+    "act": "actTwo",
+    "name": "Depósito A",
+    "publicDescription": "Depósito gradeado com porta, estantes e painel elétrico.",
+    "gmContext": "O local foi usado como cela improvisada. Victor atirou as chaves para dentro.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "keysOnFloor",
+            "difficulty": 6,
+            "content": "Há um molho de três chaves caído no chão.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "keysThrown",
+            "difficulty": 6,
+            "content": "A posição das chaves indica que foram arremessadas para dentro.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.11",
+    "act": "actTwo",
+    "name": "Depósito A, Molho de Chaves",
+    "publicDescription": "Molho com duas chaves grandes e uma pequena.",
+    "gmContext": "As chaves servem aos dois depósitos e às correntes de Edgar.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "bloodOnKeys",
+            "difficulty": 6,
+            "content": "Há sangue nas chaves.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "matchingKeys",
+            "difficulty": 6,
+            "content": "As duas maiores provavelmente abrem depósitos diferentes.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "smallPadlockKey",
+            "difficulty": 6,
+            "content": "A chave menor parece abrir um cadeado.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.12",
+    "act": "actTwo",
+    "name": "Depósito A, Painel Elétrico",
+    "publicDescription": "Painel elétrico antigo e mal instalado.",
+    "gmContext": "Controla os circuitos do porão e da sala secreta. A operação do painel não é automatizada.",
+    "skills": [
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "breakerLabels",
+            "difficulty": 4,
+            "content": "Os disjuntores estão identificados como Porão e Segredo.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "obviousSecret",
+            "difficulty": 8,
+            "content": "A etiqueta Segredo parece uma indicação deliberada, não uma tentativa séria de ocultação.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "machinery",
+        "information": [
+          {
+            "id": "separateCircuit",
+            "difficulty": 8,
+            "content": "O disjuntor Segredo não altera a iluminação desta sala.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.13",
+    "act": "actTwo",
+    "name": "Depósito B",
+    "publicDescription": "Depósito gradeado com caixas, objetos antigos e fragmentos de tigela.",
+    "gmContext": "Victor atingiu Alan com a tigela e realizou um ritual no chão. Aptidão (Humanas), DT 6, indica a grande antiguidade da tigela.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "mundaneObjects",
+            "difficulty": 6,
+            "content": "Entre as caixas há um teclado quebrado e um ursinho com inicial bordada.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "mixedStains",
+            "difficulty": 8,
+            "content": "Os fragmentos guardam manchas antigas e sangue mais recente.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "bloodAges",
+            "difficulty": 10,
+            "content": "Há sangue em diferentes estados de deterioração na tigela.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "occultism",
+        "information": [
+          {
+            "id": "ritualBowl",
+            "difficulty": 10,
+            "content": "A tigela parece ter sido usada em rituais anteriores.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.14",
+    "act": "actTwo",
+    "name": "Depósito B, Rabiscos no Chão",
+    "publicDescription": "Traços borrados no chão sugerem um desenho apagado.",
+    "gmContext": "Victor desenhou um ritual de alteração de memória e caiu sobre o traçado, borrando-o.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "remainingDiagram",
+            "difficulty": 6,
+            "content": "Os traços restantes parecem parte de um diagrama ou símbolo.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "differentSymbol",
+            "difficulty": 10,
+            "content": "O desenho não é igual às marcas dos pulsos nem ao símbolo do teto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.15",
+    "act": "actTwo",
+    "name": "Armário de Metal",
+    "publicDescription": "Armário de ferramentas enferrujado.",
+    "gmContext": "O armário já foi esvaziado ou pode ser aberto pela equipe da Ordem. O Ídolo e a faca são POIs separados; não há pista de perícia comum aqui.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.16",
+    "act": "actTwo",
+    "name": "Estante de Livros",
+    "publicDescription": "Estante deslocada que deixa visível a passagem secreta.",
+    "gmContext": "A passagem já está aberta neste ato; outras pistas pertencem ao POI correspondente do Ato I.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.17",
+    "act": "actTwo",
+    "name": "Pôsteres",
+    "publicDescription": "Quatro pôsteres antigos afixados nas paredes.",
+    "gmContext": "Serviam como pistas para abrir a estante no Ato I. Não há informação nova baseada em perícia neste ato.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.18",
+    "act": "actTwo",
+    "name": "Duto de Ventilação",
+    "publicDescription": "Duto alto e fechado por uma grade.",
+    "gmContext": "Conecta o porão à sala secreta. Seu acesso depende de ações conduzidas manualmente; nada adicional é encontrado neste ato.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.19",
+    "act": "actTwo",
+    "name": "Porta de Saída",
+    "publicDescription": "Porta de metal com tranca eletrônica e painel numérico.",
+    "gmContext": "A porta está aberta, e os agentes já conhecem a senha caso seja fechada. Sem nova pista por perícia.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.20",
+    "act": "actTwo",
+    "name": "Mesa de Poker",
+    "publicDescription": "Mesa com cartas e fichas espalhadas.",
+    "gmContext": "A cadeira caiu quando Alan arrastou um corpo pela sala.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "fallenChair",
+            "difficulty": 6,
+            "content": "Uma cadeira caída acompanha a trilha de sangue.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.21",
+    "act": "actTwo",
+    "name": "Mesa de Sinuca",
+    "publicDescription": "Mesa de bilhar com bolas e um taco.",
+    "gmContext": "Objeto de lazer de Gustavo sem pista adicional neste ato.",
+    "skills": []
+  },
+  {
+    "id": "actTwo.map.22",
+    "act": "actTwo",
+    "name": "Churrasqueira",
+    "publicDescription": "Grelha de churrasco com coifa acima.",
+    "gmContext": "Gustavo usava a grelha em encontros com amigos.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "socialRoom",
+            "difficulty": 6,
+            "content": "O isolamento acústico sugere uma sala de convivência para encontros tardios.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "grillAndVent",
+            "difficulty": 6,
+            "content": "A coifa é estreita para passagem e a grelha não parece ter sido usada recentemente.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.23",
+    "act": "actTwo",
+    "name": "Armário de Roupas",
+    "publicDescription": "Armário aberto e revirado, com peças de roupa pelo chão.",
+    "gmContext": "Alan procurou roupas limpas depois de matar Gustavo e deixou as próprias peças manchadas no armário.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "bloodyClothes",
+            "difficulty": 6,
+            "content": "Entre as roupas há camisa e jaqueta com manchas de sangue.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.24",
+    "act": "actTwo",
+    "name": "Computador",
+    "publicDescription": "Computador antigo cercado por papéis e arquivos desorganizados.",
+    "gmContext": "Os e-mails permitem revisar os vínculos entre participantes e a data do primeiro ritual. Intuição DT 6 depende de ter encontrado os e-mails e deve ser conduzida manualmente. A navegação pelo computador permanece fora do POI.",
+    "skills": [
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "accountingPapers",
+            "difficulty": 6,
+            "content": "Os papéis próximos são sobretudo documentos contábeis.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "medicalReport",
+            "difficulty": 8,
+            "content": "Um exame recente não encontra evidências da doença antes relatada.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "emailBoxResearch",
+            "difficulty": 6,
+            "content": "A caixa de e-mail reúne mensagens trocadas pelo grupo.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "meetingDateResearch",
+            "difficulty": 6,
+            "content": "Um e-mail marca o primeiro encontro do grupo em 16 de março.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "technology",
+        "information": [
+          {
+            "id": "emailBoxTechnology",
+            "difficulty": 6,
+            "content": "A caixa de e-mail reúne mensagens trocadas pelo grupo.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "meetingDateTechnology",
+            "difficulty": 6,
+            "content": "Um e-mail marca o primeiro encontro do grupo em 16 de março.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actTwo.map.25",
+    "act": "actTwo",
+    "name": "Freezer",
+    "publicDescription": "Freezer sujo de sangue seco.",
+    "gmContext": "Alan ocultou aqui o corpo de Gustavo depois do ritual; no Ato II ele já não está dentro.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "removedBody",
+            "difficulty": 4,
+            "content": "Há sinais de que um corpo foi guardado aqui e depois retirado.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "frozenBlood",
+            "difficulty": 6,
+            "content": "Há sangue congelado dentro do freezer.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "medicine",
+        "information": [
+          {
+            "id": "darkBlood",
+            "difficulty": 10,
+            "content": "O sangue tem coloração mais escura que o esperado.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "survival",
+        "information": [
+          {
+            "id": "bloodTrail",
+            "difficulty": 8,
+            "content": "Uma trilha antiga de sangue liga o altar ao freezer.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  }
+]

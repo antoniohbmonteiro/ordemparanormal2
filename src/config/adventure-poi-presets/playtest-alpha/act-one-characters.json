@@ -1,0 +1,51 @@
+[
+  {
+    "id": "actOne.character.alan", "act": "actOne", "name": "Alan e seus Pertences",
+    "publicDescription": "Alan tem um ferimento na nuca e carrega um celular quase sem bateria.",
+    "gmContext": "Victor golpeou Alan para desacordá-lo. Alan veste roupas antigas de Gustavo depois de sujar as próprias com sangue. O celular mostra a conversa com Eloísa do handout 01; a mensagem foi enviada por Alan para atraí-la mais cedo.",
+    "skills": [
+      { "skill": "intuition", "information": [{ "id": "oversizedClothes", "difficulty": 6, "content": "A camisa e o casaco parecem grandes demais para Alan.", "showDifficultyToPlayers": false }] },
+      { "skill": "perception", "information": [
+        { "id": "neckWound", "difficulty": 6, "content": "A nuca de Alan sangra levemente e está dolorida.", "showDifficultyToPlayers": false },
+        { "id": "embroideredInitial", "difficulty": 10, "content": "Há uma inicial G bordada na gola do casaco.", "showDifficultyToPlayers": false }
+      ] }
+    ]
+  },
+  {
+    "id": "actOne.character.victor", "act": "actOne", "name": "Victor e seus Pertences",
+    "publicDescription": "Victor carrega giz branco, papéis frágeis com um diagrama e brincos de ouro.",
+    "gmContext": "Os objetos foram componentes do ritual de memória que Victor realizou. Apenas Victor pode obter por Intuição, DT 6 e 10, as lembranças de que as joias eram de sua avó e de que as trouxe deliberadamente.",
+    "skills": [
+      { "skill": "perception", "information": [
+        { "id": "fadingPapers", "difficulty": 6, "content": "Os papéis traziam símbolos de um alfabeto desconhecido antes de se desfazerem.", "showDifficultyToPlayers": false },
+        { "id": "chalkDust", "difficulty": 8, "content": "Há pó de giz branco nos dedos de Victor.", "showDifficultyToPlayers": false }
+      ] },
+      { "skill": "research", "information": [{ "id": "floorDrawing", "difficulty": 10, "content": "O giz gasto e os vestígios no chão indicam que Victor desenhou algo ali.", "showDifficultyToPlayers": false }] }
+    ]
+  },
+  {
+    "id": "actOne.character.eloisa", "act": "actOne", "name": "Eloísa e seus Pertences",
+    "publicDescription": "Eloísa veste roupa de academia e guarda fones sem fio no bolso.",
+    "gmContext": "Ela deixou a bolsa no andar de cima antes de ajudar Alan a levar os corpos ao porão. Os fones podem anunciar uma mensagem antiga de Alan. Apenas Eloísa pode obter por Intuição, DT 6, a percepção de que a roupa de treino contrasta com seu cansaço recente.",
+    "skills": [{ "skill": "technology", "information": [{ "id": "connectedHeadphones", "difficulty": 6, "content": "Os fones continuam conectados a um celular próximo e indicam uma mensagem recebida.", "showDifficultyToPlayers": false }] }]
+  },
+  {
+    "id": "actOne.character.tattoo", "act": "actOne", "name": "Símbolo Tatuado nos Corpos",
+    "publicDescription": "Todos apresentam uma marca igual no pulso, semelhante a uma tatuagem.",
+    "gmContext": "O Ídolo marcou os participantes durante o ritual. A marca corresponde ao símbolo do teto. Se alguém tocar nela, Intuição DT 6 revela uma reação simultânea entre os personagens; conduza essa condição manualmente.",
+    "skills": [
+      { "skill": "medicine", "information": [{ "id": "scarAgeMedicine", "difficulty": 6, "content": "A cicatriz levou meses para se formar; não é recente.", "showDifficultyToPlayers": false }] },
+      { "skill": "survival", "information": [{ "id": "scarAgeSurvival", "difficulty": 6, "content": "A cicatriz levou meses para se formar; não é recente.", "showDifficultyToPlayers": false }] },
+      { "skill": "perception", "information": [
+        { "id": "raisedScar", "difficulty": 6, "content": "A marca parece uma cicatriz formada na pele, não uma tatuagem aplicada.", "showDifficultyToPlayers": false },
+        { "id": "pressedShape", "difficulty": 8, "content": "O relevo sugere que o símbolo foi pressionado contra a pele.", "showDifficultyToPlayers": false }
+      ] }
+    ]
+  },
+  {
+    "id": "actOne.character.edgarKenia", "act": "actOne", "name": "Edgar e Kênia",
+    "publicDescription": "Edgar e Kênia estão sem pertences e sentem sede e formigamento.",
+    "gmContext": "Alan e Eloísa esvaziaram seus bolsos. Edgar está preso ao móvel usado como altar; Kênia foi levada ao Depósito A. As formas de libertá-los pertencem à condução manual da aventura.",
+    "skills": []
+  }
+]

@@ -39,10 +39,12 @@ export interface AdventureDefinition {
   readonly imageCrops?: readonly AdventureImageCropRecipe[];
   readonly actors: readonly AdventureAgentReference[];
   readonly scenes: readonly AdventureSceneReference[];
+  readonly pointsOfInterest: readonly AdventurePointOfInterestReference[];
 }
 
 export interface AdventureAgentReference { readonly presetId: string }
 export interface AdventureSceneReference { readonly presetId: string }
+export interface AdventurePointOfInterestReference { readonly presetId: string }
 
 export function validateAdventureAgentReferences(
   definition: AdventureDefinition,

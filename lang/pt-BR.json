@@ -149,13 +149,18 @@
         "ImportNotice": "Nenhum conteúdo foi importado. Esta etapa só analisa os arquivos selecionados.",
         "Preparing": "Validando os ZIPs antes de enviar os arquivos…",
         "Progress": "Enviando arquivos: {completed} de {total}",
-        "ImportSuccess": "A aventura foi importada para este Mundo, incluindo handouts e agentes.",
+        "ImportSuccess": "A aventura foi importada para este Mundo, incluindo handouts, pontos de interesse e agentes.",
         "ImportFailure": "Importação interrompida após {count} arquivos confirmados: {detail}",
         "ValidationFailure": "Falha na validação do ZIP ou de seus arquivos",
         "DirectoryFailure": "Não foi possível criar a pasta de destino",
         "ExtractionFailure": "Não foi possível extrair o arquivo do ZIP",
         "UploadFailure": "Não foi possível confirmar o envio do arquivo para este Mundo",
         "UnexpectedFailure": "Ocorreu um erro inesperado",
+        "PoisPreparing": "Preparando pontos de interesse…",
+        "PoisProgress": "Importando pontos de interesse: {completed} de {total}",
+        "PoisCancelled": "A etapa de pontos de interesse foi cancelada. Assets e handouts já importados foram mantidos.",
+        "PoisSummary": "Pontos de interesse: {created} criados, {updated} atualizados, {unchanged} sem alterações e {preserved} preservados.",
+        "PoisImportFailure": "A etapa de pontos de interesse foi interrompida: {detail} Progresso confirmado: {completed}; preservados: {preserved}. Execute novamente para continuar.",
         "AgentsPreparing": "Preparando agentes…",
         "AgentsProgress": "Importando agentes {completed} de {total}",
         "AgentsCancelled": "A etapa de agentes foi cancelada. Assets e handouts já importados foram mantidos.",
@@ -199,6 +204,10 @@
         "Explanation": "A configuração gerenciada desta Scene foi alterada desde a última importação. Preservar mantém essa configuração, mas pode concluir a organização inicial em pastas; restaurar aplica o preset somente ao conteúdo gerenciado.",
         "Categories": "{walls} paredes, {tiles} Tiles, {tokens} Tokens e {drawings} desenhos",
         "Runtime": "O conteúdo manual, as posições dos Tokens e os estados de portas e Tiles serão preservados, inclusive ao restaurar."
+      },
+      "PoiConflict": {
+        "Title": "Pontos de interesse modificados ou incompletos",
+        "Explanation": "Estes pontos de interesse tiveram conteúdo gerenciado alterado ou uma importação incompleta. Preservar mantém as alterações; restaurar reaplica apenas as descrições, o contexto e as informações do preset. Nome, imagem, permissões e mudanças de pasta são preservados. Fechar cancela esta etapa."
       }
     },
     "PointOfInterest": {

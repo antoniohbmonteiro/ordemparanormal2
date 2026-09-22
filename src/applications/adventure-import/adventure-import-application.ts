@@ -39,6 +39,10 @@ import { materializeAdventureDerivedAssets } from "../../features/adventure-impo
 import { createAdventureFolderPort } from "../../adapters/foundry/adventure-folders";
 import { preflightAdventureFolders, type AdventureFolderRequirement } from "../../features/adventure-import/adventure-folders";
 import { openAdventureImportSceneConflictDialog } from "./adventure-import-scene-conflict-dialog";
+import { PLAYTEST_ALPHA_POI_PRESETS, PLAYTEST_ALPHA_POI_PRESET_REVISION } from "../../config/adventure-poi-presets/playtest-alpha";
+import { createAdventurePoiItemPort } from "../../adapters/foundry/adventure-poi-items";
+import { importAdventurePois, PoiImportError } from "../../features/adventure-import/import-adventure-pois";
+import { openAdventureImportPoiConflictDialog } from "./adventure-import-poi-conflict-dialog";
 
 const ADVENTURE_IMPORT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/adventure-import.hbs";
@@ -364,7 +368,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
-    let stage: "assets" | "handouts" | "actors" | "scenes" = "assets";
+    let stage: "assets" | "handouts" | "pois" | "actors" | "scenes" = "assets";
     try {
       await this.render();
       this.#result = null;
@@ -389,6 +393,9 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       if (PLAYTEST_ALPHA_AGENT_PRESETS.some(preset => selectedActs.includes(preset.act))) {
         requirements.push({ documentType: "Actor", acts: selectedActs.filter(act => PLAYTEST_ALPHA_AGENT_PRESETS.some(preset => preset.act === act)) });
       }
+      if (PLAYTEST_ALPHA_POI_PRESETS.some(preset => selectedActs.includes(preset.act))) {
+        requirements.push({ documentType: "Item", acts: selectedActs.filter(act => PLAYTEST_ALPHA_POI_PRESETS.some(preset => preset.act === act)) });
+      }
       if (PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => selectedActs.includes(preset.act))) {
         requirements.push({ documentType: "Scene", acts: selectedActs.filter(act => PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => preset.act === act)) });
       }
@@ -407,6 +414,25 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
+      stage = "pois";
+      this.#progress = localize("Actions.PoisPreparing");
+      await this.render();
+      const poiPort = createAdventurePoiItemPort();
+      const pois = await importAdventurePois({
+        definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_POI_PRESETS,
+        revision: PLAYTEST_ALPHA_POI_PRESET_REVISION, acts: selectedActs,
+        items: { ...poiPort, isAuthorized: () => poiPort.isAuthorized() && this.#analysis === analysis },
+        folders: folderPort, decide: openAdventureImportPoiConflictDialog,
+        onProgress: async (completed, total) => {
+          this.#progress = format("Actions.PoisProgress", { completed: String(completed), total: String(total) });
+          await this.render();
+        },
+      });
+      if (pois.cancelled) { ui.notifications.warn(localize("Actions.PoisCancelled")); return; }
+      const summaries: string[] = [format("Actions.PoisSummary", {
+        created: String(pois.created), updated: String(pois.updated),
+        unchanged: String(pois.unchanged), preserved: String(pois.preserved),
+      })];
       stage = "actors";
       this.#progress = localize("Actions.AgentsPreparing");
       await this.render();
@@ -423,7 +449,6 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         },
       });
       if (agents.cancelled) { ui.notifications.warn(localize("Actions.AgentsCancelled")); return; }
-      const summaries: string[] = [];
       if (agents.preserved) summaries.push(format("Actions.AgentsSummary", { created: String(agents.created), updated: String(agents.updated), unchanged: String(agents.unchanged), preserved: String(agents.preserved) }));
       if (PLAYTEST_ALPHA_SCENE_PRESETS.some(p => this.#result!.materializedActs.includes(p.act))) {
         stage = "scenes";
@@ -455,6 +480,15 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       }
       ui.notifications.info([localize("Actions.ImportSuccess"), ...summaries].join(" "));
     } catch (error) {
+      if (stage === "pois") {
+        const counts = error instanceof PoiImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
+        ui.notifications.error(format("Actions.PoisImportFailure", {
+          detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure"),
+          completed: String(counts.created + counts.updated + counts.unchanged), preserved: String(counts.preserved),
+        }));
+        console.error("ordemparanormal2 | Adventure POI import failed.", error);
+        return;
+      }
       if (stage === "scenes") {
         const counts = error instanceof SceneImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
         ui.notifications.error(format("Actions.ScenesImportFailure", { detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure"),

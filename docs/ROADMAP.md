@@ -472,6 +472,9 @@ Version 0.1.1 delivered Investigation as a first-class feature using Foundry Reg
 
 Possible future scope remains intentionally uncommitted until confirmed by public playtest material:
 
+- one information/clue accessible through multiple skills with one shared identity and reveal state;
+- an Aptidão specialization attached to a POI information entry;
+- explicit conditions and unlocks for POI information, including character, prior discovery and object state;
 - Interagir;
 - Recapitular / Compartilhar;
 - automatic Check-to-DT comparison or information revelation;

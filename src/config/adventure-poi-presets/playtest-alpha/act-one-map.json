@@ -1,0 +1,688 @@
+[
+  {
+    "id": "actOne.map.01",
+    "act": "actOne",
+    "name": "Depósito A",
+    "publicDescription": "Depósito com grades, porta trancada, estantes vazias e um painel elétrico.",
+    "gmContext": "Alan e Eloísa usaram os depósitos como celas. Victor lançou as chaves para dentro para evitar que Alan escapasse; Kênia também foi deixada ali.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "keysOnFloor",
+            "difficulty": 6,
+            "content": "Há um molho com três chaves caído no chão.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "keysThrown",
+            "difficulty": 6,
+            "content": "A posição das chaves sugere que foram arremessadas para dentro.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.02",
+    "act": "actOne",
+    "name": "Depósito A, Molho de Chaves",
+    "publicDescription": "Molho com duas chaves grandes e uma pequena.",
+    "gmContext": "As chaves abrem os depósitos A e B e o cadeado que prende Edgar.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "bloodOnKeys",
+            "difficulty": 6,
+            "content": "Há vestígios de sangue nas chaves.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "matchingKeys",
+            "difficulty": 6,
+            "content": "As duas chaves maiores parecem servir aos dois depósitos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "smallKey",
+            "difficulty": 8,
+            "content": "A chave menor parece servir a um cadeado.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.03",
+    "act": "actOne",
+    "name": "Depósito A, Painel Elétrico",
+    "publicDescription": "Painel elétrico antigo com instalação confusa.",
+    "gmContext": "O disjuntor do porão controla luzes e dispositivos dali; o outro controla a sala secreta. A operação do painel e seus efeitos são conduzidos manualmente.",
+    "skills": [
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "breakerLabels",
+            "difficulty": 6,
+            "content": "Dois disjuntores estão identificados como Porão e Segredo.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "obviousSecret",
+            "difficulty": 8,
+            "content": "Uma etiqueta Segredo sugere que o segundo circuito não foi pensado para permanecer oculto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "machinery",
+        "information": [
+          {
+            "id": "otherCircuit",
+            "difficulty": 8,
+            "content": "O disjuntor Segredo não altera as luzes da sala atual.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.04",
+    "act": "actOne",
+    "name": "Depósito B",
+    "publicDescription": "Depósito gradeado com caixas, teclado quebrado, ursinho e fragmentos de uma tigela.",
+    "gmContext": "Victor usou a tigela para atingir Alan e depois fez um ritual no chão. Aptidão (Humanas), DT 6: a tigela parece ter séculos; a especialização exige condução manual.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "mundaneObjects",
+            "difficulty": 6,
+            "content": "As caixas não trazem nada útil; o teclado está quebrado e o ursinho tem uma inicial bordada.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "oldBlood",
+            "difficulty": 8,
+            "content": "Os fragmentos da tigela apresentam manchas antigas e sangue recente.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "alanWound",
+            "difficulty": 10,
+            "content": "A tigela provavelmente causou a ferida na cabeça de Alan.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.05",
+    "act": "actOne",
+    "name": "Depósito B, Rabiscos no Chão",
+    "publicDescription": "Desenho no chão está borrado, como se algo tivesse sido arrastado sobre ele.",
+    "gmContext": "Victor desenhou o símbolo para alterar memórias e o apagou sem querer ao cair sobre ele.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "dragDirection",
+            "difficulty": 6,
+            "content": "O borrão segue na direção do local onde Victor despertou.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "diagram",
+            "difficulty": 6,
+            "content": "Os traços restantes parecem parte de um diagrama ou símbolo.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "differentSymbol",
+            "difficulty": 10,
+            "content": "O desenho não é igual à marca dos pulsos nem ao símbolo do teto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.06",
+    "act": "actOne",
+    "name": "“Altar” de Madeira",
+    "publicDescription": "Móvel de madeira manchado de sangue, com correntes e uma trilha no chão.",
+    "gmContext": "É uma cômoda adaptada por Alan para o ritual; ele entalhou os símbolos com uma faca. A pista adicional de Pesquisar DT 8 varia com o número de personagens e fica para condução manual.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "relatedSymbols",
+            "difficulty": 6,
+            "content": "Os entalhes lembram a marca dos pulsos e o símbolo do teto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "carvedWithBlade",
+            "difficulty": 6,
+            "content": "Os símbolos foram entalhados com uma lâmina.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "movedFurniture",
+            "difficulty": 8,
+            "content": "Marcas no piso indicam que o móvel foi deslocado até ficar sob o símbolo do teto.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "drawerRemains",
+            "difficulty": 6,
+            "content": "As gavetas contêm toalhas com sangue seco e vestígios de componentes do ritual.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.07",
+    "act": "actOne",
+    "name": "Símbolo no Teto",
+    "publicDescription": "Símbolo grande desenhado acima do altar com material avermelhado.",
+    "gmContext": "Alan o desenhou duas vezes: meses antes e novamente com sangue de Gustavo. A observação de perto depende de acesso conduzido pelo Mestre. Aptidão (Humanas), DT 6: lembra escritas mesopotâmicas sem corresponder a alfabeto conhecido.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "matchesWrists",
+            "difficulty": 6,
+            "content": "O desenho corresponde à marca presente nos pulsos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "twoLayers",
+            "difficulty": 8,
+            "content": "Há uma camada antiga e seca sob outra mais recente, possivelmente de sangue.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "rushedDrawing",
+            "difficulty": 10,
+            "content": "A camada recente foi traçada de modo apressado e irregular.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.08",
+    "act": "actOne",
+    "name": "Armário de Metal",
+    "publicDescription": "Armário de ferramentas enferrujado, fechado por cadeado manchado de sangue.",
+    "gmContext": "Alan guardou ali o Ídolo, anotações e uma faca, protegendo a estatueta com a jaqueta de Gustavo. Intuição DT 6 antes de tentar forçar a abertura alerta para o perigo. Pesquisar DT 6 ou 10 para as anotações depende do estado do armário. Percepção DT 8 apenas Alan reconhece a própria letra. Aptidão (Humanas), DT 6 e 8 permite interpretar as notas; tudo isso requer condução manual.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "dangerousContents",
+            "difficulty": 6,
+            "content": "O interior do armário provoca forte sensação de perigo.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "jacketIdentity",
+            "difficulty": 6,
+            "content": "A jaqueta tem sangue e guarda a identidade de Gustavo no bolso.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "backHoles",
+            "difficulty": 8,
+            "content": "Há três perfurações nas costas da jaqueta.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.09",
+    "act": "actOne",
+    "name": "Celular de Gustavo",
+    "publicDescription": "Celular bloqueado mostra o nome de Gustavo e uma data na tela.",
+    "gmContext": "O celular liga o grupo às mensagens de Gustavo e aos handouts 05A, 05B e 05C. Após acesso conduzido manualmente: Pesquisar DT 6 mostra os contatos; Tecnologia DT 6 revela o grupo de apoio e conversas; Tecnologia DT 8 revela e-mails protegidos e o aplicativo da porta. A data do ritual está nos e-mails do computador.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "wrongDateFeeling",
+            "difficulty": 6,
+            "content": "A data exibida causa a sensação de que algo está errado com a própria memória.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "technology",
+        "information": [
+          {
+            "id": "passwordHint",
+            "difficulty": 4,
+            "content": "O lembrete de senha associa a prata ao número 25.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.10",
+    "act": "actOne",
+    "name": "Duto de Ventilação",
+    "publicDescription": "Duto alto na parede está fechado por uma grade.",
+    "gmContext": "Conecta o porão à sala secreta; o trecho que leva aos andares superiores é estreito demais para passagem. A abertura e o deslocamento ficam sob condução manual.",
+    "skills": []
+  },
+  {
+    "id": "actOne.map.11",
+    "act": "actOne",
+    "name": "Estante de Livros",
+    "publicDescription": "Estante de cinco prateleiras instalada próxima à parede.",
+    "gmContext": "É uma passagem para a sala secreta, disfarçada com falsos livros. Os quatro pôsteres indicam livros de prateleiras distintas; a abertura depende de condução manual.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "hiddenPassage",
+            "difficulty": 6,
+            "content": "A estante parece esconder algo além de livros.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "machinery",
+        "information": [
+          {
+            "id": "rearTracks",
+            "difficulty": 6,
+            "content": "Há trilhos e um mecanismo atrás da estante, com tecido preso nas engrenagens.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "fourConnections",
+            "difficulty": 8,
+            "content": "O motor se conecta às prateleiras de dois a cinco, mas não à primeira.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "falseBooks",
+            "difficulty": 6,
+            "content": "Os livros parecem objetos decorativos que nunca foram lidos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "floorScratches",
+            "difficulty": 8,
+            "content": "Ranhuras no chão e um bilhete remetem aos pôsteres.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "damagedMechanism",
+            "difficulty": 10,
+            "content": "Há um mecanismo nos trilhos prejudicado por um pedaço de tecido.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.12",
+    "act": "actOne",
+    "name": "Pôster: Lutadores de Rua",
+    "publicDescription": "Pôster de um jogo de luta dos anos 1990.",
+    "gmContext": "Indica o livro de videogame na quarta prateleira. Aptidão (Atualidades), DT 8, associa o jogador Zika à autobiografia; conduzir manualmente.",
+    "skills": []
+  },
+  {
+    "id": "actOne.map.13",
+    "act": "actOne",
+    "name": "Pôster: Unidos do Invisível Futebol Clube",
+    "publicDescription": "Pôster de um time de futebol pouco conhecido.",
+    "gmContext": "Indica o livro sobre um gol controverso na segunda prateleira. Aptidão (Atualidades), DT 8, reconhece a história do time; conduzir manualmente.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "oddDisplay",
+            "difficulty": 6,
+            "content": "A posição de destaque do pôster parece incomum para um porão.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.14",
+    "act": "actOne",
+    "name": "Pôster: Eric Tufão 3 – A Explosão Explosiva",
+    "publicDescription": "Pôster do terceiro filme de uma franquia de ação.",
+    "gmContext": "Indica o terceiro volume da coleção sobre explosivos na terceira prateleira. Aptidão (Atualidades), DT 8, reconhece a franquia; conduzir manualmente.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "threeExplosions",
+            "difficulty": 6,
+            "content": "Há três explosões desenhadas atrás do protagonista.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.15",
+    "act": "actOne",
+    "name": "Pôster: Thunderland 2008",
+    "publicDescription": "Pôster de um antigo festival de rock.",
+    "gmContext": "Indica o livro de guitarra na quinta prateleira. Aptidão (Atualidades), DT 6 e 8, permite relacionar o festival, seus guitarristas e Kurt Hemmis ao livro; conduzir manualmente.",
+    "skills": []
+  },
+  {
+    "id": "actOne.map.16",
+    "act": "actOne",
+    "name": "Porta de Saída",
+    "publicDescription": "Porta reforçada com tranca eletrônica e teclado numérico.",
+    "gmContext": "A data do primeiro ritual, descoberta pelos e-mails, é a senha. A operação da tranca e a possibilidade de usar o aplicativo do celular ficam para condução manual.",
+    "skills": [
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "newLock",
+            "difficulty": 8,
+            "content": "A tranca foi instalada recentemente.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "technology",
+        "information": [
+          {
+            "id": "lockout",
+            "difficulty": 6,
+            "content": "O modelo bloqueia novas tentativas por algum tempo após erros repetidos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "remoteApp",
+            "difficulty": 10,
+            "content": "Esse modelo também aceita comando remoto por aplicativo, com a mesma senha.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.17",
+    "act": "actOne",
+    "name": "O Ídolo de Pedra",
+    "publicDescription": "Estatueta de pedra com duas faces e um disco gravado na base.",
+    "gmContext": "Alan a encontrou na Mesopotâmia; o uso ritual repetido tornou o objeto amaldiçoado. Ao toque, a marca dos participantes reage. Aptidão (Humanas), DT 8, sugere antiguidade mesopotâmica. Se o Ídolo for quebrado, Percepção DT 6 e 8 revelam interior orgânico e marcas de contagem; conduzir manualmente.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "unpaidDebt",
+            "difficulty": 6,
+            "content": "O objeto desperta a sensação de uma dívida pendente.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "baseMark",
+            "difficulty": 6,
+            "content": "O símbolo na base coincide com a marca dos pulsos.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "driedBlood",
+            "difficulty": 8,
+            "content": "Há sangue seco no símbolo da base.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.18",
+    "act": "actOne",
+    "name": "Mesa de Poker",
+    "publicDescription": "Mesa com cartas e fichas espalhadas.",
+    "gmContext": "Gustavo jogava com amigos, incluindo Alan e Victor. A cadeira caiu quando Alan arrastou um corpo.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "fallenChair",
+            "difficulty": 6,
+            "content": "Uma cadeira caída segue o trajeto da trilha de sangue.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.19",
+    "act": "actOne",
+    "name": "Mesa de Sinuca",
+    "publicDescription": "Mesa de bilhar com bolas dispersas e um taco sobre ela.",
+    "gmContext": "Era usada por Gustavo e seus amigos; não oferece pista adicional neste ato.",
+    "skills": []
+  },
+  {
+    "id": "actOne.map.20",
+    "act": "actOne",
+    "name": "Grelha de Churrasco",
+    "publicDescription": "Grelha com coifa ligada ao teto.",
+    "gmContext": "Gustavo preparava churrascos na sala isolada; o espaço da coifa não permite fuga.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "socialRoom",
+            "difficulty": 6,
+            "content": "O isolamento da sala sugere um espaço de convivência para reuniões tardias.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "unusedGrill",
+            "difficulty": 6,
+            "content": "A coifa é estreita para passagem e a grelha não parece ter sido usada recentemente.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.21",
+    "act": "actOne",
+    "name": "Armário de Roupas",
+    "publicDescription": "Armário aberto e revirado, com roupas espalhadas.",
+    "gmContext": "Alan trocou suas roupas manchadas de sangue pelas de Gustavo e deixou para trás identidade e chaves. O handout 11 mostra o documento encontrado.",
+    "skills": [
+      {
+        "skill": "perception",
+        "information": [
+          {
+            "id": "bloodyClothes",
+            "difficulty": 6,
+            "content": "Há roupas com sangue, uma identidade e um molho de chaves entre os pertences.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.22",
+    "act": "actOne",
+    "name": "Computador",
+    "publicDescription": "Computador antigo em uma mesa desorganizada.",
+    "gmContext": "Os e-mails contêm a data do ritual e ligam os participantes, servindo à investigação da saída. Pesquisar ou Tecnologia DT 6 pode localizar a caixa de e-mail; o acesso às conversas e aos handouts 12A, 12B e 12C depende de verificar o celular, com Pesquisar ou Tecnologia DT 6. Após isso, Pesquisar ou Tecnologia DT 10 relaciona o encontro ao dia 16 de março; Intuição DT 6 ajuda a ler os vínculos do grupo. Essas informações condicionais ficam para condução manual.",
+    "skills": [
+      {
+        "skill": "research",
+        "information": [
+          {
+            "id": "accountingPapers",
+            "difficulty": 6,
+            "content": "Os papéis próximos são principalmente documentos contábeis.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "medicalReports",
+            "difficulty": 8,
+            "content": "Um exame recente não confirma sinais da doença anteriormente relatada.",
+            "showDifficultyToPlayers": false
+          },
+          {
+            "id": "emailBoxResearch",
+            "difficulty": 6,
+            "content": "A organização do computador permite localizar a caixa de e-mail de Gustavo.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "technology",
+        "information": [
+          {
+            "id": "emailBoxTechnology",
+            "difficulty": 6,
+            "content": "A organização do computador permite localizar a caixa de e-mail de Gustavo.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.23",
+    "act": "actOne",
+    "name": "Freezer",
+    "publicDescription": "Freezer trancado, com sangue e uma trilha que vem do altar.",
+    "gmContext": "Alan escondeu o corpo de Gustavo no interior e esqueceu a chave ao trocar de roupa. Abrir o freezer e os efeitos do encontro com o corpo são conduzidos manualmente.",
+    "skills": [
+      {
+        "skill": "intuition",
+        "information": [
+          {
+            "id": "oddPadlock",
+            "difficulty": 6,
+            "content": "É estranho haver um cadeado em um freezer destinado a guardar alimentos.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      },
+      {
+        "skill": "survival",
+        "information": [
+          {
+            "id": "freshBlood",
+            "difficulty": 6,
+            "content": "O sangue indica que o freezer foi trancado há pouco tempo.",
+            "showDifficultyToPlayers": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "actOne.map.24",
+    "act": "actOne",
+    "name": "Freezer, o Corpo",
+    "publicDescription": "",
+    "gmContext": "Há um cadáver no interior, acessível somente após abrir o freezer; não revelar antes. É Gustavo, morto por Alan e usado no ritual. Percepção DT 6 encontra foto e pulseira; Percepção DT 8 compara a marca no pulso. Intuição DT 4 identifica Gustavo apenas para Alan e Victor; Intuição DT 6 nota a reação da marca. Medicina ou Sobrevivência DT 6 indica facadas nas costas. Pesquisar DT 6 e 10 requer foto e pulseira para deduzir datas familiares. Aptidão (Atualidades) DT 6 e 10 interpreta as bodas de prata. Conduzir todas essas pistas manualmente após a abertura.",
+    "skills": []
+  }
+]

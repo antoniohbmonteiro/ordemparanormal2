@@ -6,7 +6,7 @@ export const ADVENTURE_ROOT_FOLDER_NAME = "A Maldição do Ídolo de Pedra";
 export const ADVENTURE_ROOT_FOLDER_COLOR = "#7a2424";
 export const ADVENTURE_ACT_FOLDER_COLOR = "#4f2525";
 
-export type AdventureFolderDocumentType = "Actor" | "JournalEntry" | "Scene";
+export type AdventureFolderDocumentType = "Actor" | "JournalEntry" | "Scene" | "Item";
 export type AdventureFolderId = "root" | AdventureAct;
 
 export interface AdventureFolderFlag {
@@ -79,7 +79,7 @@ function readIdentity(snapshot: AdventureFolderSnapshot, adventureId: string): A
   if (flag.importer === "folder") {
     if (typeof flag.adventureId !== "string") throw new Error(`Provenance de Folder incompatível: ${snapshot.id}.`);
     if (flag.adventureId !== adventureId) return null;
-    if (flag.version !== 1 || !["Actor", "JournalEntry", "Scene"].includes(String(flag.documentType))
+    if (flag.version !== 1 || !["Actor", "JournalEntry", "Scene", "Item"].includes(String(flag.documentType))
       || (flag.folderId !== "root" && !isAct(flag.folderId))) {
       throw new Error(`Provenance de Folder incompatível: ${snapshot.id}.`);
     }

@@ -89,13 +89,77 @@ describe("Adventure asset storage", () => {
     expect(browse).toHaveBeenCalledWith("data", tree);
   });
 
-  it("ignores the upload response shape and returns an unencoded path exposed by browse", async () => {
+  it("falls back to browse when the upload response has no path", async () => {
     setup([ROOT], [`${ROOT}/ação.png`]);
     const storage = createAdventureAssetStorage();
     const file = new File(["image"], "ação.png", { type: "image/png" });
     await expect(storage.uploadAndConfirm(ROOT, file)).resolves.toBe(`${ROOT}/ação.png`);
     expect(upload).toHaveBeenCalledExactlyOnceWith("data", ROOT, file, {}, { notify: false });
     expect(browse).toHaveBeenCalledWith("data", ROOT);
+  });
+
+  it("accepts the traditional relative upload path without browsing", async () => {
+    setup([ROOT]);
+    const storedPath = `${ROOT}/Kênia.png`;
+    upload.mockResolvedValue({ path: storedPath });
+
+    await expect(createAdventureAssetStorage().uploadAndConfirm(
+      ROOT, new File(["image"], "Kênia.png", { type: "image/png" }),
+    )).resolves.toBe(storedPath);
+    expect(browse).not.toHaveBeenCalled();
+  });
+
+  it("accepts a hosted URL from upload and preserves it without browsing", async () => {
+    setup([ROOT]);
+    const storedPath = `https://assets.example.test/some-prefix/${ROOT}/K%C3%AAnia.png`;
+    upload.mockResolvedValue({ path: storedPath });
+
+    await expect(createAdventureAssetStorage().uploadAndConfirm(
+      ROOT, new File(["image"], "Kênia.png", { type: "image/png" }),
+    )).resolves.toBe(storedPath);
+    expect(browse).not.toHaveBeenCalled();
+  });
+
+  it("falls back to browse when upload returns a different path", async () => {
+    const storedPath = `https://assets.example.test/some-prefix/${ROOT}/K%C3%AAnia.png`;
+    setup([ROOT], [storedPath]);
+    upload.mockResolvedValue({ path: `https://assets.example.test/some-prefix/${ROOT}/other.png` });
+
+    await expect(createAdventureAssetStorage().uploadAndConfirm(
+      ROOT, new File(["image"], "Kênia.png", { type: "image/png" }),
+    )).resolves.toBe(storedPath);
+    expect(browse).toHaveBeenCalledWith("data", ROOT);
+  });
+
+  it("finds an existing hosted URL on reimport without uploading", async () => {
+    const storedPath = `https://assets.example.test/some-prefix/${ROOT}/K%C3%AAnia.png`;
+    setup([ROOT], [storedPath]);
+
+    await expect(createAdventureAssetStorage().findExisting(ROOT, "Kênia.png")).resolves.toBe(storedPath);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("does not accept a basename match in a different directory", async () => {
+    const different = `https://assets.example.test/some-prefix/worlds/other-world/ordemparanormal2/adventures/playtest-alpha/act-1/K%C3%AAnia.png`;
+    setup([ROOT], [different]);
+    upload.mockResolvedValue({ path: different });
+
+    await expect(createAdventureAssetStorage().uploadAndConfirm(
+      ROOT, new File(["image"], "Kênia.png", { type: "image/png" }),
+    )).rejects.toThrow(/not found/);
+    expect(browse).toHaveBeenCalledWith("data", ROOT);
+  });
+
+  it("rejects encoded separators and traversal in hosted upload paths", async () => {
+    setup([ROOT]);
+    const file = new File(["image"], "Kênia.png", { type: "image/png" });
+    for (const path of [
+      `https://assets.example.test/some-prefix/${ROOT}%2FK%C3%AAnia.png`,
+      `https://assets.example.test/some-prefix/../${ROOT}/K%C3%AAnia.png`,
+    ]) {
+      upload.mockResolvedValue({ path });
+      await expect(createAdventureAssetStorage().uploadAndConfirm(ROOT, file)).rejects.toThrow(/not found/);
+    }
   });
 
   it("matches spaces in a percent-encoded browse path and returns that original URL", async () => {

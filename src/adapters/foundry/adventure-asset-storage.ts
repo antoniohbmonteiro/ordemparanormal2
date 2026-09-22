@@ -10,22 +10,46 @@ export interface AdventureAssetStorage extends AdventureAssetLookup {
   uploadAndConfirm(directory: string, file: File): Promise<string>;
 }
 
-function normalizeStoragePath(path: string): string {
-  return path.replaceAll("\\", "/").normalize("NFC");
-}
+function candidateSegments(path: string): { segments: string[]; absolute: boolean } | null {
+  let pathname = path;
+  let absolute = false;
+  if (/^[a-z][a-z\d+.-]*:/i.test(path)) {
+    try {
+      const url = new URL(path);
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash) return null;
+      // Keep the raw pathname so URL parsing cannot hide traversal segments.
+      const match = /^https?:\/\/[^/?#]+(\/[^?#]*)?(?:\?[^#]*)?$/i.exec(path);
+      if (!match || path.includes("\\")) return null;
+      pathname = match[1] ?? "/";
+      absolute = true;
+    } catch {
+      return null;
+    }
+  } else if (path.startsWith("//") || path.includes("?") || path.includes("#")) {
+    return null;
+  }
 
-function normalizeBrowsePath(path: string): string | null {
   try {
-    const segments = path.replaceAll("\\", "/").split("/").map((segment) => decodeURIComponent(segment));
-    if (segments.some((segment) => segment.includes("/"))) return null;
-    return segments.join("/").normalize("NFC");
+    const rawSegments = pathname.replaceAll("\\", "/").split("/");
+    if (absolute) rawSegments.shift();
+    if (rawSegments.some((segment) => segment.length === 0)) return null;
+    const segments = rawSegments.map((segment) => decodeURIComponent(segment).normalize("NFC"));
+    if (segments.some((segment) => segment === "." || segment === ".."
+      || /[\\/\u0000-\u001F\u007F]/u.test(segment))) return null;
+    return { segments, absolute };
   } catch {
     return null;
   }
 }
 
 function matchesExpectedPath(candidate: string, expected: string): boolean {
-  return normalizeBrowsePath(candidate) === expected;
+  const parsed = candidateSegments(candidate);
+  if (!parsed) return false;
+  const expectedSegments = expected.replaceAll("\\", "/").split("/").map((segment) => segment.normalize("NFC"));
+  if (parsed.segments.length < expectedSegments.length) return false;
+  if (!parsed.absolute && parsed.segments.length !== expectedSegments.length) return false;
+  return expectedSegments.every((segment, index) =>
+    parsed.segments[parsed.segments.length - expectedSegments.length + index] === segment);
 }
 
 export function createAdventureAssetStorage(): AdventureAssetStorage {
@@ -36,7 +60,7 @@ export function createAdventureAssetStorage(): AdventureAssetStorage {
     const safeBasename = safeZipEntryPath(basename).basename;
     if (safeBasename !== basename) throw new Error(`Expected a filename: ${basename}`);
     const listing = await FilePicker.browse("data", directory);
-    const expected = normalizeStoragePath(`${directory}/${safeBasename}`);
+    const expected = `${directory}/${safeBasename}`;
     return listing.files.find((candidate) => matchesExpectedPath(candidate, expected)) ?? null;
   }
 
@@ -79,7 +103,9 @@ export function createAdventureAssetStorage(): AdventureAssetStorage {
     async uploadAndConfirm(directory, file) {
       const basename = safeZipEntryPath(file.name).basename;
       const expected = `${directory}/${basename}`;
-      await FilePicker.upload("data", directory, file, {}, { notify: false });
+      const response = await FilePicker.upload("data", directory, file, {}, { notify: false });
+      if (response && "path" in response && typeof response.path === "string"
+        && matchesExpectedPath(response.path, expected)) return response.path;
       const storedPath = await findExisting(directory, basename);
       if (storedPath === null) {
         throw new Error(`Uploaded file was not found at expected path: ${expected}`);

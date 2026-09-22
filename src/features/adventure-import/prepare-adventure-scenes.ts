@@ -12,6 +12,8 @@ import { readAgentImportFlag } from "./prepare-adventure-agents";
 import { resolveAdventureAsset } from "./resolve-adventure-asset";
 import type { MaterializationResult } from "./materialize-adventure-assets";
 import type { AdventureFolderPlacementFlag } from "./adventure-folders";
+import { validateAdventureImageCrops } from "../../core/adventure-import/adventure-image-crop";
+import type { DerivedAssetResult } from "./materialize-adventure-derived-assets";
 
 export const SCENE_SYSTEM_ASSETS = { gmControlButton: "systems/ordemparanormal2/assets/scene-controls/gm-control-button.png" } as const;
 export interface AdventureScenePort {
@@ -38,11 +40,13 @@ export interface PreparedAdventureScene {
 export interface PrepareAdventureScenesInput {
   readonly definition: AdventureDefinition; readonly presets: readonly AdventureScenePreset[];
   readonly materialization: MaterializationResult; readonly scenes: AdventureScenePort;
+  readonly derivedAssets?: DerivedAssetResult;
 }
 export function sceneActorBindingState(actor: AgentActorSource): string {
   return stableSerialize({ type: actor.type, flag: importFlag(actor), prototypeToken: actor.prototypeToken });
 }
 export function validateAdventureSceneReferences(definition: AdventureDefinition, presets: readonly AdventureScenePreset[]): void {
+  validateAdventureImageCrops(definition, presets);
   if (new Set(presets.map(p => p.id)).size !== presets.length || new Set(definition.scenes.map(p => p.presetId)).size !== definition.scenes.length
     || new Set(definition.assets.map(a => a.id)).size !== definition.assets.length) throw new Error("Referências de Scene duplicadas.");
   for (const { presetId } of definition.scenes) {
@@ -76,11 +80,21 @@ export async function prepareAdventureScenes(input: PrepareAdventureScenesInput)
     }));
     return assets.get(id)!;
   }
-  for (const preset of selected) {
-    const matches = live.filter(s => readSceneImportFlag(s, definition.id)?.documentId === preset.id);
+  for (const fullPreset of selected) {
+    const matches = live.filter(s => readSceneImportFlag(s, definition.id)?.documentId === fullPreset.id);
     if (matches.length > 1) throw new Error("Identidade de Scene duplicada.");
     const previous = matches[0] ?? null;
     const oldFlag = previous ? readSceneImportFlag(previous, definition.id)! : null;
+    const derived = fullPreset.tiles.filter(tile => tile.textureAsset.kind === "derived");
+    if (previous && derived.some(tile => {
+      const status = input.derivedAssets?.[tile.textureAsset.assetId];
+      return status?.status === "failed" && status.reason === "lookup";
+    })) continue;
+    const availableTileIds = new Set(fullPreset.tiles.filter(tile => tile.textureAsset.kind !== "derived"
+      || input.derivedAssets?.[tile.textureAsset.assetId]?.status === "available").map(tile => tile.id));
+    const preset: AdventureScenePreset = { ...fullPreset, tiles: fullPreset.tiles.filter(tile => availableTileIds.has(tile.id))
+      .map(tile => ({ ...tile, interaction: { ...tile.interaction,
+        tileIds: tile.interaction.tileIds.filter(id => availableTileIds.has(id)) } })) };
     if (oldFlag && oldFlag.presetRevision > preset.revision) throw new Error("A Scene possui uma revisão mais recente que o preset.");
     const flag = sceneFlag(preset, definition.id, oldFlag?.baseline);
     if (previous) validateSceneStructure(previous, flag);
@@ -95,7 +109,9 @@ export async function prepareAdventureScenes(input: PrepareAdventureScenesInput)
     const walls = preset.walls.map(({ id, initialState, ...data }) => embedded("Wall", id, { ...data, levels: [levelId], ds: initialState }));
     const tiles: SceneEmbeddedSource[] = [];
     for (const { id, textureAsset, initial, interaction, ...data } of preset.tiles) {
-      const path = textureAsset.kind === "system" ? SCENE_SYSTEM_ASSETS[textureAsset.assetId] : await resolve(textureAsset.assetId);
+      const path = textureAsset.kind === "system" ? SCENE_SYSTEM_ASSETS[textureAsset.assetId]
+        : textureAsset.kind === "derived" ? (input.derivedAssets?.[textureAsset.assetId] as { status: "available"; path: string }).path
+        : await resolve(textureAsset.assetId);
       if (textureAsset.kind === "system") await scenes.confirmAsset(path);
       const tile = embedded("Tile", id, { ...data, ...initial, levels: [levelId], texture: { ...data.texture, src: path }, interaction });
       delete tile.interaction;

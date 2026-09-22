@@ -16,8 +16,11 @@ describe.skipIf(!commonPath)("installed Foundry v14 Scene models (no persistence
       users: { activeGM: { id: "validationUser00" } }, system: { id: "ordemparanormal2", version: "0.3.0", grid: { type: 1, distance: 1, units: "" } },
       i18n: { localize: (key: string) => key, format: (key: string) => key }, actors: { contents: [] }, scenes: { contents: [] } });
     vi.stubGlobal("foundry", { ...native, documents: { ...native.documents, Scene: { implementation: native.documents.BaseScene } } });
-    const plans = await prepareAdventureScenes(f.input);
+    const plans = await prepareAdventureScenes({ ...f.input, derivedAssets: {
+      "actOne.basement.bookshelfOpen": { status: "available", path: "worlds/test/generated-bookshelf-open-r1.png" },
+    } });
     expect(plans.map(plan => plan.preset.id)).toEqual(["actOne.basement", "actTwo.basement"]);
+    expect(plans[0].desired.tiles).toHaveLength(4);
     for (const plan of plans) expect(() => createAdventureScenePort().validateCandidate(plan.desired)).not.toThrow();
     f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
   });

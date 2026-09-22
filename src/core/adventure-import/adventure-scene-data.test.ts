@@ -5,21 +5,23 @@ import { validateAdventureSceneData } from "./adventure-scene-data";
 import { validateAdventureSceneReferences } from "../../features/adventure-import/prepare-adventure-scenes";
 
 describe("adventure Scene preset", () => {
-  it("contains the reviewed configuration, without authoring paths or the deferred furniture", () => {
+  it("contains the reviewed configuration and conditional furniture recipe without authoring paths", () => {
     const p = PLAYTEST_ALPHA_SCENE_PRESETS.find(preset => preset.id === "actOne.basement")!;
-    expect(p).toMatchObject({ id: "actOne.basement", revision: 1, scene: { width: 3537, height: 3750, padding: 0.25, shiftX: 40 },
+    expect(p).toMatchObject({ id: "actOne.basement", revision: 2, scene: { width: 3537, height: 3750, padding: 0.25, shiftX: 40 },
       level: { id: "defaultLevel0000", backgroundAssetId: "actOne.basement.completeMap", elevation: { bottom: 0, top: 20 } } });
-    expect(p.walls).toHaveLength(168); expect(p.tiles).toHaveLength(3); expect(p.tokens).toHaveLength(5); expect(p.drawings).toHaveLength(3);
+    expect(p.walls).toHaveLength(168); expect(p.tiles).toHaveLength(4); expect(p.tokens).toHaveLength(5); expect(p.drawings).toHaveLength(3);
     expect(p.walls.filter(w => w.door === 1)).toHaveLength(3); expect(p.walls.filter(w => w.door === 2)).toHaveLength(6);
     expect(p.walls.find(w => w.id === "Fnkz5vNIPbaAKxGT")?.initialState).toBe(2);
     expect(p.tiles.map(t => t.interaction.wallIds)).toEqual([
-      ["VlToLKiyERpUpHj2", "XvYD5GtqFSGM4G0W"], ["ub57IcVU4LN4MnJI", "vRJhupXcEghW4hgo"], ["VcHyOosYEwvc5Ha3", "iopl6aKxarBdRzP4"],
+      ["VlToLKiyERpUpHj2", "XvYD5GtqFSGM4G0W"], ["ub57IcVU4LN4MnJI", "vRJhupXcEghW4hgo"], ["VcHyOosYEwvc5Ha3", "iopl6aKxarBdRzP4"], [],
     ]);
     expect(p.tokens.map(t => [t.agentPresetId, t.initial.x, t.initial.y])).toEqual([
       ["actOne.alan", 2600, 1800], ["actOne.kenia", 2800, 1400], ["actOne.victor", 2900, 2000], ["actOne.edgar", 1900, 2200], ["actOne.eloisa", 1500, 2200],
     ]);
     expect(JSON.stringify(p)).not.toMatch(/worlds\/|assets\/|_stats|actorId|ownership|folder|thumb|HXiElhZ9UlLaRLYE|regions|tokenizer/i);
-    expect(p.tiles.every(t => !t.interaction.tileIds.length)).toBe(true);
+    expect(p.tiles.find(t => t.id === "GTcIdC5fkuM9N8oA")?.interaction.tileIds).toEqual(["qGwblo0LY1FdVwox"]);
+    expect(p.tiles.find(t => t.id === "qGwblo0LY1FdVwox")).toMatchObject({ x: 3347, y: 2959, width: 200, height: 440,
+      textureAsset: { kind: "derived", assetId: "actOne.basement.bookshelfOpen" }, initial: { hidden: true, locked: false } });
     expect(() => validateAdventureSceneReferences(PLAYTEST_ALPHA_ADVENTURE, PLAYTEST_ALPHA_SCENE_PRESETS)).not.toThrow();
   });
   it("contains the reviewed Act II basement with semantic references and no authoring data", () => {

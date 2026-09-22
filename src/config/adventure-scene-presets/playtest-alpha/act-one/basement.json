@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "actOne.basement",
   "act": "actOne",
-  "revision": 1,
+  "revision": 2,
   "name": "O Porão",
   "scene": {
     "width": 3537,
@@ -4186,8 +4186,34 @@
           "VcHyOosYEwvc5Ha3",
           "iopl6aKxarBdRzP4"
         ],
-        "tileIds": []
+        "tileIds": ["qGwblo0LY1FdVwox"]
       }
+    },
+    {
+      "id": "qGwblo0LY1FdVwox",
+      "x": 3347,
+      "y": 2959,
+      "width": 200,
+      "height": 440,
+      "rotation": 0,
+      "elevation": 0,
+      "sort": 5,
+      "alpha": 1,
+      "texture": {
+        "anchorX": 0.5,
+        "anchorY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "tint": "#ffffff",
+        "fit": "fill",
+        "alphaThreshold": 0.75
+      },
+      "textureAsset": { "kind": "derived", "assetId": "actOne.basement.bookshelfOpen" },
+      "initial": { "hidden": true, "locked": false },
+      "occlusion": { "modes": [], "alpha": 0 },
+      "restrictions": { "light": false, "weather": false },
+      "video": { "loop": true, "autoplay": true, "volume": 0 },
+      "interaction": { "enabled": false, "wallIds": [], "tileIds": [] }
     }
   ],
   "tokens": [

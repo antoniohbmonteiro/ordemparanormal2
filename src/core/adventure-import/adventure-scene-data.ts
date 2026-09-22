@@ -53,7 +53,7 @@ export interface SceneWallPreset {
   readonly doorSound?: string;
 }
 export type SceneTextureAsset = { readonly kind: "system"; readonly assetId: "gmControlButton" }
-  | { readonly kind: "adventure"; readonly assetId: string };
+  | { readonly kind: "adventure" | "derived"; readonly assetId: string };
 export interface SceneTilePreset {
   readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number;
   readonly rotation: number; readonly elevation: number; readonly sort: number; readonly alpha: number;
@@ -174,7 +174,7 @@ export function validateAdventureSceneData(value: unknown): asserts value is Adv
       textureAsset: v => {
         const a = record(v);
         return !!a && Object.keys(a).length === 2 && nonblank(a.assetId)
-          && ((a.kind === "system" && a.assetId === "gmControlButton") || a.kind === "adventure");
+          && ((a.kind === "system" && a.assetId === "gmControlButton") || a.kind === "adventure" || a.kind === "derived");
       }, interaction: { enabled: bool, wallIds: ids, tileIds: ids } }),
     tokens: list({ id, agentPresetId: nonblank, initial: { hidden: bool, locked: bool, x: number, y: number, elevation: number, rotation: number }, configuration: tokenConfiguration }),
     drawings: list({ id, initial, x: number, y: number, rotation: number, elevation: number, sort: number,

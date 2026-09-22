@@ -64,7 +64,8 @@ export async function importAdventureScenes(input: ImportAdventureScenesInput): 
         documentId: plan.flag.documentId, act: plan.preset.act });
       if (previous && !hasAdventureFolderPlacement(placementValue(previous), placement)) {
         stage = "folder"; authorized();
-        const legacyFolder = plan.flag.presetRevision === 1 && (previous.folder === null || previous.folder === undefined)
+        const legacyFolder = readSceneImportFlag(previous, input.definition.id)?.presetRevision === 1
+          && (previous.folder === null || previous.folder === undefined)
           ? folderIds.get(plan.preset.act)! : (typeof previous.folder === "string" ? previous.folder : null);
         await input.scenes.updateFolderPlacement(previous._id, legacyFolder, placement);
       }

@@ -7,6 +7,13 @@ export function adventureActRoot(worldId: string, act: AdventureAct): string {
   return `worlds/${worldId}/ordemparanormal2/adventures/playtest-alpha/${ACT_FOLDER[act]}`;
 }
 
+export function adventureDerivedAssetLocation(worldId: string, act: AdventureAct, basename: string):
+  { readonly directory: string; readonly basename: string } {
+  const safe = safeZipEntryPath(basename);
+  if (safe.isDirectory || safe.basename !== basename || safe.directory) throw new Error(`Invalid derived asset basename: ${basename}`);
+  return { directory: adventureActRoot(worldId, act), basename };
+}
+
 export function adventureEntryLocation(
   worldId: string, act: AdventureAct, originalEntryPath: string,
 ): { readonly directory: string; readonly basename: string } {

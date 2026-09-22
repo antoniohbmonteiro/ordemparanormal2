@@ -170,6 +170,8 @@
           "baseline": "Conclusão"
         },
         "ScenesPreparing": "Preparando a Scene do Ato I…",
+        "OverlayLookupFailure": "Não foi possível verificar o overlay da estante. Uma Scene existente do Ato I será preservada nesta execução; tente importar novamente.",
+        "OverlayGenerationFailure": "Não foi possível gerar o overlay da estante. A Scene do Ato I continuará funcional sem esse detalhe visual.",
         "ScenesProgress": "Importando Scenes: {completed}/{total}",
         "ScenesSummary": "Scenes: {created} criadas, {updated} atualizadas, {unchanged} inalteradas, {preserved} preservadas.",
         "ScenesCancelled": "Importação da Scene cancelada. Assets, handouts e agentes já importados foram mantidos.",

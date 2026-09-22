@@ -12,7 +12,7 @@ describe("Scene import workflow", () => {
     expect(s.levels).toHaveLength(1); expect(s.walls).toHaveLength(168); expect(s.tiles).toHaveLength(3); expect(s.tokens).toHaveLength(5); expect(s.drawings).toHaveLength(3);
     expect(s.levels[0].background).toMatchObject({ src: "worlds/test/actOne.basement.completeMap.png" });
     for (const t of s.tokens) expect(f.actors.find(a => a._id === t.actorId)?.flags?.ordemparanormal2).toMatchObject({ adventureImport: { documentId: `actOne.${String(t.name).toLowerCase().replace("ê", "e")}` } });
-    expect(f.flag()).toMatchObject({ state: "complete", presetRevision: 1, baseline: { embedded: expect.any(Array) } });
+    expect(f.flag()).toMatchObject({ state: "complete", presetRevision: 2, baseline: { embedded: expect.any(Array) } });
     f.clearWrites();
     expect(await importAdventureScenes(f.input)).toMatchObject({ unchanged: 1 });
     f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
@@ -27,6 +27,55 @@ describe("Scene import workflow", () => {
     expect(await importAdventureScenes(f.input)).toMatchObject({ created: expected.length, updated: 0 });
     expect(f.world.map(scene => importFlag(scene)?.documentId)).toEqual(expected);
     expect(f.world.map(scene => scene.folder)).toEqual(expected.map(id => id.startsWith("actOne.") ? "Scene-actOne" : "Scene-actTwo"));
+  });
+  it("adds the derived overlay when available and preserves opened runtime state across reruns", async () => {
+    const f = sceneImportFixture({ materializedActs: ["actOne", "actTwo"] });
+    const derivedAssets = { "actOne.basement.bookshelfOpen": { status: "available" as const,
+      path: "worlds/test/ordemparanormal2/adventures/playtest-alpha/act-1/generated-bookshelf-open-r1.png" } };
+    const input = { ...f.input, derivedAssets };
+    expect(await importAdventureScenes(input)).toMatchObject({ created: 2 });
+    const scene = f.scene("actOne.basement")!;
+    const overlay = scene.tiles.find(tile => tile._id === "qGwblo0LY1FdVwox")!;
+    expect(overlay).toMatchObject({ hidden: true, locked: false, levels: ["defaultLevel0000"],
+      texture: { src: derivedAssets["actOne.basement.bookshelfOpen"].path } });
+    expect(scene.tiles.find(tile => tile._id === "GTcIdC5fkuM9N8oA")?.flags?.ordemparanormal2)
+      .toMatchObject({ tileInteraction: { wallIds: ["VcHyOosYEwvc5Ha3", "iopl6aKxarBdRzP4"], tileIds: [overlay._id] } });
+    overlay.hidden = false;
+    for (const id of ["VcHyOosYEwvc5Ha3", "iopl6aKxarBdRzP4"]) scene.walls.find(wall => wall._id === id)!.ds = 1;
+    f.clearWrites();
+    expect(await importAdventureScenes(input)).toMatchObject({ unchanged: 2 });
+    f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
+    expect(scene.tiles.find(tile => tile._id === overlay._id)?.hidden).toBe(false);
+    const actOneOnly = { ...input, materialization: { ...input.materialization, materializedActs: ["actOne" as const] } };
+    expect(await importAdventureScenes(actOneOnly)).toMatchObject({ unchanged: 1 });
+    expect(f.scene("actOne.basement")!.tiles.find(tile => tile._id === overlay._id)?.hidden).toBe(false);
+  });
+
+  it("keeps Act I mechanical without the source and removes only an unavailable managed overlay", async () => {
+    const f = sceneImportFixture();
+    await importAdventureScenes(f.input);
+    expect(f.world[0].tiles).toHaveLength(3);
+    expect((f.world[0].tiles.find(tile => tile._id === "GTcIdC5fkuM9N8oA")!.flags!.ordemparanormal2 as
+      { tileInteraction: { tileIds: string[] } }).tileInteraction.tileIds).toEqual([]);
+    const path = "worlds/test/generated-bookshelf-open-r1.png";
+    const available = { ...f.input, derivedAssets: { "actOne.basement.bookshelfOpen": { status: "available" as const, path } } };
+    await importAdventureScenes(available);
+    f.world[0].tiles.push({ _id: "manual-tile", flags: { other: { keep: true } } });
+    expect(await importAdventureScenes(f.input)).toMatchObject({ updated: 1 });
+    expect(f.world[0].tiles.some(tile => tile._id === "qGwblo0LY1FdVwox")).toBe(false);
+    expect(f.world[0].tiles.some(tile => tile._id === "manual-tile")).toBe(true);
+    expect((f.world[0].tiles.find(tile => tile._id === "GTcIdC5fkuM9N8oA")!.flags!.ordemparanormal2 as
+      { tileInteraction: { tileIds: string[] } }).tileInteraction.tileIds).toEqual([]);
+  });
+
+  it("skips an existing Act I Scene when output lookup is uncertain while importing Act II", async () => {
+    const f = sceneImportFixture({ materializedActs: ["actOne", "actTwo"] });
+    await importAdventureScenes(f.input);
+    const before = structuredClone(f.scene("actOne.basement"));
+    const input = { ...f.input, derivedAssets: { "actOne.basement.bookshelfOpen": {
+      status: "failed" as const, reason: "lookup" as const, error: new Error("browse failed") } } };
+    expect(await importAdventureScenes(input)).toMatchObject({ unchanged: 1 });
+    expect(f.scene("actOne.basement")).toEqual(before);
   });
   it("creates and reconciles the Act II Scene with semantic assets, stable IDs and preserved runtime state", async () => {
     const f = sceneImportFixture({ materializedActs: ["actTwo"] });
@@ -97,6 +146,7 @@ describe("Scene import workflow", () => {
   it("normalizes the unfiled revision-one Scene once, including when managed divergence is preserved", async () => {
     const f = sceneImportFixture(); await importAdventureScenes(f.input);
     const scope = f.world[0].flags!.ordemparanormal2 as Record<string, unknown>;
+    (scope.adventureImport as { presetRevision: number }).presetRevision = 1;
     delete scope.adventureImportFolder; f.world[0].folder = null; f.world[0].walls[0].c = [1, 2, 3, 4];
     f.clearWrites(); f.input.decide.mockResolvedValueOnce("preserve");
     expect(await importAdventureScenes(f.input)).toMatchObject({ preserved: 1 });
@@ -112,12 +162,12 @@ describe("Scene import workflow", () => {
   it("applies revision additions and removals while keeping runtime and IDs", async () => {
     const f = sceneImportFixture(); await importAdventureScenes(f.input); f.world[0].tokens[0].x = 987;
     const preset = structuredClone(f.input.presets[0]);
-    const revised = { ...preset, revision: 2, walls: [...preset.walls.slice(1), { ...preset.walls[0], id: "newWall00000000x" }] };
+    const revised = { ...preset, revision: 3, walls: [...preset.walls.slice(1), { ...preset.walls[0], id: "newWall00000000x" }] };
     expect(await importAdventureScenes({ ...f.input, presets: f.input.presets.map(candidate => candidate.id === revised.id ? revised : candidate) })).toMatchObject({ updated: 1 });
     expect(f.input.decide).not.toHaveBeenCalled(); expect(f.world[0].tokens[0].x).toBe(987);
     expect(f.world[0].walls.some(w => w._id === preset.walls[0].id)).toBe(false);
     expect(f.world[0].walls.some(w => w._id === "newWall00000000x")).toBe(true);
-    expect(f.flag()?.presetRevision).toBe(2);
+    expect(f.flag()?.presetRevision).toBe(3);
     f.clearWrites(); await expect(importAdventureScenes(f.input)).rejects.toThrow("mais recente");
     f.writes().forEach(fn => expect(fn).not.toHaveBeenCalled());
   });

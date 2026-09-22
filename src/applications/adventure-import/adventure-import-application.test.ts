@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   analyzePdfSource: vi.fn(),
   openAdventureImportPasswordDialog: vi.fn(),
   materializeAdventureAssets: vi.fn(),
+  materializeAdventureDerivedAssets: vi.fn(),
   createAdventureAssetStorage: vi.fn(),
   importAdventureHandouts: vi.fn(),
   createAdventureHandoutJournalPort: vi.fn(),
@@ -58,6 +59,10 @@ vi.mock("../../features/adventure-import/import-adventure-scenes", async (import
   const original = await importOriginal<typeof import("../../features/adventure-import/import-adventure-scenes")>();
   return { ...original, importAdventureScenes: mocks.importAdventureScenes };
 });
+vi.mock("../../features/adventure-import/materialize-adventure-derived-assets", () => ({
+  materializeAdventureDerivedAssets: mocks.materializeAdventureDerivedAssets,
+}));
+vi.mock("../../adapters/files/adventure-image-crop", () => ({ createAdventureImageCropPort: () => ({}) }));
 vi.mock("../../adapters/foundry/adventure-scenes", () => ({ createAdventureScenePort: () => ({ isAuthorized: () => true }) }));
 vi.mock("./adventure-import-scene-conflict-dialog", () => ({ openAdventureImportSceneConflictDialog: vi.fn() }));
 
@@ -245,6 +250,7 @@ beforeEach(() => {
   mocks.analyzePdfSource.mockReset();
   mocks.openAdventureImportPasswordDialog.mockReset();
   mocks.materializeAdventureAssets.mockReset();
+  mocks.materializeAdventureDerivedAssets.mockReset().mockResolvedValue({});
   mocks.createAdventureAssetStorage.mockReset().mockReturnValue({ worldId: "test-world" });
   mocks.importAdventureHandouts.mockReset().mockResolvedValue({ created: 0, updated: 0, unchanged: 0 });
   mocks.createAdventureHandoutJournalPort.mockReset().mockReturnValue({ isAuthorized: () => true });
@@ -602,10 +608,31 @@ describe("Adventure Import Application", () => {
       actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] }, actTwo: null });
     mocks.importAdventureAgents.mockResolvedValueOnce({ created: 0, updated: 0, unchanged: 4, preserved: 1, cancelled: false });
     mocks.materializeAdventureAssets.mockResolvedValueOnce({ assets: [], materializedActs: ["actOne"] });
+    mocks.materializeAdventureDerivedAssets.mockResolvedValueOnce({ "actOne.basement.bookshelfOpen": { status: "available", path: "worlds/test/overlay.png" } });
     await action(app, "analyzeFiles"); await action(app, "importAssets");
     expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
+    expect(mocks.materializeAdventureDerivedAssets).toHaveBeenCalledOnce();
+    expect(mocks.importAdventureScenes.mock.calls[0][0]).toMatchObject({ derivedAssets: {
+      "actOne.basement.bookshelfOpen": { status: "available", path: "worlds/test/overlay.png" },
+    } });
     expect(info).toHaveBeenCalledWith(expect.stringContaining("Actions.AgentsSummary"));
     expect(info).toHaveBeenCalledWith(expect.stringContaining("Actions.ScenesSummary"));
+  });
+
+  it("warns about an optional overlay failure while still importing Scenes", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs.actOne.select(file("act-one.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] }, actTwo: null });
+    mocks.materializeAdventureAssets.mockResolvedValueOnce({ assets: [], materializedActs: ["actOne"] });
+    mocks.materializeAdventureDerivedAssets.mockResolvedValueOnce({ "actOne.basement.bookshelfOpen": {
+      status: "failed", reason: "generation", error: new Error("decode failed") } });
+    const logging = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await action(app, "analyzeFiles"); await action(app, "importAssets");
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("OverlayGenerationFailure"));
+      expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
+    } finally { logging.mockRestore(); }
   });
 
   it("dispatches the Act II Scene when only Act II was materialized", async () => {

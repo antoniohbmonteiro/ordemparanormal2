@@ -5,6 +5,12 @@ import type { AdventureDefinition } from "../../core/adventure-import/adventure-
 export const PLAYTEST_ALPHA_ADVENTURE = {
   id: "playtest-alpha",
   packageIds: { actOne: "ato-i-extras", actTwo: "ato-ii-extras" },
+  imageCrops: [{
+    id: "actOne.basement.bookshelfOpen", consumerAct: "actOne", sourceAssetId: "actTwo.basement.map", revision: 1,
+    crop: { x: 2486, y: 1815, width: 200, height: 440 },
+    target: { width: 200, height: 440, mimeType: "image/png" },
+    basename: "generated-bookshelf-open-r1.png",
+  }],
   scenes: [{ presetId: "actOne.basement" }, { presetId: "actTwo.basement" }],
   actors: [
     { presetId: "actOne.kenia" },

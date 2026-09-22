@@ -14,6 +14,7 @@ import {
   type AdventureSourceAnalysis,
 } from "../../features/adventure-import/analyze-adventure-sources";
 import { createAdventureAssetStorage } from "../../adapters/foundry/adventure-asset-storage";
+import { createAdventureImageCropPort } from "../../adapters/files/adventure-image-crop";
 import { createAdventureHandoutJournalPort } from "../../adapters/foundry/adventure-handout-journals";
 import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
 import {
@@ -34,6 +35,7 @@ import { openAdventureImportAgentConflictDialog } from "./adventure-import-agent
 import { PLAYTEST_ALPHA_SCENE_PRESETS } from "../../config/adventure-scene-presets/playtest-alpha";
 import { createAdventureScenePort } from "../../adapters/foundry/adventure-scenes";
 import { importAdventureScenes, SceneImportError } from "../../features/adventure-import/import-adventure-scenes";
+import { materializeAdventureDerivedAssets } from "../../features/adventure-import/materialize-adventure-derived-assets";
 import { createAdventureFolderPort } from "../../adapters/foundry/adventure-folders";
 import { preflightAdventureFolders, type AdventureFolderRequirement } from "../../features/adventure-import/adventure-folders";
 import { openAdventureImportSceneConflictDialog } from "./adventure-import-scene-conflict-dialog";
@@ -427,9 +429,17 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         stage = "scenes";
         this.#progress = localize("Actions.ScenesPreparing");
         await this.render();
+        const derivedAssets = await materializeAdventureDerivedAssets({
+          definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_SCENE_PRESETS,
+          materialization: this.#result, storage: createAdventureAssetStorage(), images: createAdventureImageCropPort(),
+        });
+        for (const status of Object.values(derivedAssets)) if (status.status === "failed") {
+          console.error("ordemparanormal2 | Adventure overlay unavailable.", status.error);
+          ui.notifications.warn(localize(status.reason === "lookup" ? "Actions.OverlayLookupFailure" : "Actions.OverlayGenerationFailure"));
+        }
         const scenePort = createAdventureScenePort();
         const scenes = await importAdventureScenes({ definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_SCENE_PRESETS,
-          materialization: this.#result, scenes: { ...scenePort, isAuthorized: () => scenePort.isAuthorized() && this.#analysis === analysis },
+          materialization: this.#result, derivedAssets, scenes: { ...scenePort, isAuthorized: () => scenePort.isAuthorized() && this.#analysis === analysis },
           folders: folderPort,
           decide: openAdventureImportSceneConflictDialog,
           onProgress: async (completed, total) => {

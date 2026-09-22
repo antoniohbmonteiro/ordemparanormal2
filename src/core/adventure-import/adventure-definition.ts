@@ -21,11 +21,22 @@ export interface AdventureHandoutReference {
   readonly pageType: "image" | "pdf";
 }
 
+export interface AdventureImageCropRecipe {
+  readonly id: string;
+  readonly consumerAct: AdventureAct;
+  readonly sourceAssetId: string;
+  readonly revision: number;
+  readonly crop: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly target: { readonly width: number; readonly height: number; readonly mimeType: "image/png" };
+  readonly basename: string;
+}
+
 export interface AdventureDefinition {
   readonly id: "playtest-alpha";
   readonly packageIds: Readonly<Record<AdventureAct, ZipPackageId>>;
   readonly assets: readonly AdventureAssetReference[];
   readonly handouts: readonly AdventureHandoutReference[];
+  readonly imageCrops?: readonly AdventureImageCropRecipe[];
   readonly actors: readonly AdventureAgentReference[];
   readonly scenes: readonly AdventureSceneReference[];
 }

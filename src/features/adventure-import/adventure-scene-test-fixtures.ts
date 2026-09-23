@@ -27,7 +27,6 @@ export function sceneImportFixture(options: { readonly materializedActs?: readon
   const port: AdventureScenePort = {
     isAuthorized: vi.fn(() => true),
     listScenes: () => structuredClone(world), listActors: () => structuredClone(actors),
-    confirmAsset: vi.fn(async () => {}),
     prepareToken: vi.fn(async (actorId, preset, texture, levelId) => ({ _id: preset.id, name: actors.find(a => a._id === actorId)!.name,
       ...structuredClone(preset.configuration), ...preset.initial, actorId, level: levelId, texture: { ...preset.configuration.texture, src: texture } })),
     validateCandidate: vi.fn(),

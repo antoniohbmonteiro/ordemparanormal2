@@ -65,11 +65,12 @@ describe("Foundry Scene adapter", () => {
     expect(token).toMatchObject({ _id: preset.id, texture: { src: "worlds/test/token.png" } });
     for (const key of ["_stats", "flags", "_movementHistory", "_regions", "delta"]) expect(token).not.toHaveProperty(key);
   });
-  it("confirms encoded asset paths and rejects unavailable assets without writing", async () => {
-    await createAdventureScenePort().confirmAsset("worlds/test/My Token.png");
-    expect(browse).toHaveBeenCalledWith("data", "worlds/test");
-    await expect(createAdventureScenePort().confirmAsset("worlds/test/missing.png")).rejects.toThrow("indisponível");
-    expect(create).not.toHaveBeenCalled(); expect(batch).not.toHaveBeenCalled();
+  it("does not browse World storage for Scene assets", async () => {
+    const port = createAdventureScenePort();
+    expect(port).not.toHaveProperty("confirmAsset");
+    await port.prepareToken("actor", PLAYTEST_ALPHA_SCENE_PRESETS[0].tokens[0], "https://assets.example.test/token.png", "defaultLevel0000");
+    await port.createScene(source, "scene-act-one", placement);
+    expect(browse).not.toHaveBeenCalled();
   });
   it("uses one public batch and updates only managed paths, preserving fog reset and runtime", async () => {
     const tile = source.tiles[0], token = source.tokens[0], wall = source.walls[0];

@@ -46,13 +46,6 @@ export function createAdventureScenePort(): AdventureScenePort {
     isAuthorized: authorized,
     listScenes: () => game.scenes.contents.map((s: foundry.documents.Scene) => s.toObject() as unknown as AdventureSceneSource),
     listActors: () => game.actors.contents.map((a: foundry.documents.Actor) => a.toObject() as unknown as AgentActorSource),
-    async confirmAsset(path) {
-      const slash = path.lastIndexOf("/");
-      if (slash < 0) throw new Error("Path de asset inválido.");
-      const listing = await foundry.applications.apps.FilePicker.browse("data", path.slice(0, slash));
-      const normalize = (p: string) => p.split("/").map(decodeURIComponent).join("/").normalize("NFC");
-      if (!listing.files.some(p => normalize(p) === normalize(path))) throw new Error(`Asset de Scene indisponível: ${path}`);
-    },
     async prepareToken(actorId, preset, texture, levelId) {
       const actor = game.actors.get(actorId);
       if (!actor) throw new Error("Actor de Token não encontrado.");

@@ -3,10 +3,9 @@ import { importFlag } from "../../core/adventure-import/adventure-agent-reconcil
 import { SCENE_COLLECTIONS, type AdventureSceneSource } from "../../core/adventure-import/adventure-scene-reconciliation";
 import { importAdventureScenes, SceneImportError } from "./import-adventure-scenes";
 import { sceneImportFixture } from "./adventure-scene-test-fixtures";
-import { SCENE_SYSTEM_ASSETS } from "./prepare-adventure-scenes";
 
 describe("Scene import workflow", () => {
-  it.each(["relative", "hosted"])("uses %s materialized backgrounds, Tiles, and Tokens without confirming them again", async representation => {
+  it.each(["relative", "hosted"])("uses %s materialized backgrounds, Tiles, and Tokens and the packaged control Tile directly", async representation => {
     const f = sceneImportFixture();
     const preset = f.input.presets[0];
     const adventureTile = preset.tiles[0];
@@ -32,26 +31,22 @@ describe("Scene import workflow", () => {
       const tokenAssetId = importFlag(actor)!.tokenAssetId as string;
       expect((token.texture as { src: string }).src).toBe(storedPath(tokenAssetId));
     }
-    expect(f.port.confirmAsset).toHaveBeenCalledTimes(modifiedPreset.tiles.filter(tile => tile.textureAsset.kind === "system").length);
-    for (const [path] of vi.mocked(f.port.confirmAsset).mock.calls) expect(path).toBe(SCENE_SYSTEM_ASSETS.gmControlButton);
+    const systemTiles = modifiedPreset.tiles.filter(tile => tile.textureAsset.kind === "system");
+    expect(systemTiles.length).toBeGreaterThan(0);
+    for (const { id } of systemTiles) {
+      expect((scene.tiles.find(tile => tile._id === id)!.texture as { src: string }).src)
+        .toBe("systems/ordemparanormal2/assets/scene-controls/gm-control-button.png");
+    }
+    expect(f.port).not.toHaveProperty("confirmAsset");
   });
 
-  it("fails on a missing materialized background before storage confirmation or Scene writes", async () => {
+  it("fails on a missing materialized background before Scene writes", async () => {
     const f = sceneImportFixture();
     const backgroundId = f.input.presets[0].level.backgroundAssetId;
     const reference = f.input.definition.assets.find(asset => asset.id === backgroundId)!;
     f.input.materialization.assets = f.input.materialization.assets.filter(asset =>
       asset.originalEntryPath !== reference.source.originalEntryPath || asset.act !== reference.source.act);
     await expect(importAdventureScenes(f.input)).rejects.toMatchObject({ stage: "preflight" });
-    expect(f.port.confirmAsset).not.toHaveBeenCalled();
-    f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
-  });
-
-  it("still validates system-owned Tile assets before writing the Scene", async () => {
-    const f = sceneImportFixture();
-    vi.mocked(f.port.confirmAsset).mockRejectedValueOnce(new Error("system asset unavailable"));
-    await expect(importAdventureScenes(f.input)).rejects.toMatchObject({ stage: "preflight" });
-    expect(f.port.confirmAsset).toHaveBeenCalledWith(SCENE_SYSTEM_ASSETS.gmControlButton);
     f.writes().forEach(write => expect(write).not.toHaveBeenCalled());
   });
 
@@ -235,8 +230,11 @@ describe("Scene import workflow", () => {
   });
   it.each(["asset", "actor", "duplicateActor", "incompleteActor", "schema", "references", "model", "authority"])("preflights %s with zero writes", async kind => {
     const f = sceneImportFixture();
-    if (kind === "asset") f.input.materialization.assets.pop();
-    if (kind === "asset") vi.mocked(f.port.confirmAsset).mockRejectedValueOnce(new Error("missing asset"));
+    if (kind === "asset") {
+      const token = f.actors.map(actor => importFlag(actor)!.tokenAssetId as string)[0];
+      const reference = f.input.definition.assets.find(asset => asset.id === token)!;
+      f.input.materialization.assets = f.input.materialization.assets.filter(asset => asset.originalEntryPath !== reference.source.originalEntryPath);
+    }
     if (kind === "actor") f.actors.pop();
     if (kind === "duplicateActor") f.actors.push(structuredClone(f.actors[0]));
     if (kind === "incompleteActor") importFlag(f.actors[0])!.state = "incomplete";
@@ -281,7 +279,10 @@ describe("Scene import workflow", () => {
   });
   it("blocks concurrent import calls and stops on active-GM change", async () => {
     const f = sceneImportFixture(); let release!: () => void;
-    vi.mocked(f.port.confirmAsset).mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+    const prepareToken = vi.mocked(f.port.prepareToken).getMockImplementation()!;
+    vi.mocked(f.port.prepareToken).mockImplementationOnce(async (...args) => {
+      await new Promise<void>(resolve => { release = resolve; }); return prepareToken(...args);
+    });
     const pending = importAdventureScenes(f.input);
     await vi.waitFor(() => expect(release).toBeTypeOf("function"));
     await expect(importAdventureScenes(f.input)).rejects.toThrow("andamento"); release(); await pending;

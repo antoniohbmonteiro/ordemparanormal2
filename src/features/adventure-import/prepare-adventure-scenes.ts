@@ -20,7 +20,6 @@ export interface AdventureScenePort {
   isAuthorized(): boolean;
   listScenes(): readonly AdventureSceneSource[];
   listActors(): readonly AgentActorSource[];
-  confirmAsset(path: string): Promise<void>;
   prepareToken(actorId: string, preset: SceneTokenPreset, texture: string, levelId: string): Promise<SceneEmbeddedSource>;
   validateCandidate(source: AdventureSceneSource): void;
   createScene(source: AdventureSceneSource, folder: string, folderPlacement: AdventureFolderPlacementFlag): Promise<string>;
@@ -110,7 +109,6 @@ export async function prepareAdventureScenes(input: PrepareAdventureScenesInput)
       const path = textureAsset.kind === "system" ? SCENE_SYSTEM_ASSETS[textureAsset.assetId]
         : textureAsset.kind === "derived" ? (input.derivedAssets?.[textureAsset.assetId] as { status: "available"; path: string }).path
         : await resolve(textureAsset.assetId);
-      if (textureAsset.kind === "system") await scenes.confirmAsset(path);
       const tile = embedded("Tile", id, { ...data, ...initial, levels: [levelId], texture: { ...data.texture, src: path }, interaction });
       delete tile.interaction;
       tiles.push(tile);

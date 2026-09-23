@@ -15,6 +15,7 @@
 .ordemparanormal2.op2-poi-scene-panel .window-content,
 .ordemparanormal2.op2-poi-picker-dialog .window-content { padding: 0; background: var(--op2-sheet-bg); }
 .ordemparanormal2.op2-poi-scene-panel .op2-poi-scene-panel {
+  position: relative;
   display: flex;
   min-height: 320px;
   max-height: calc(100dvh - 90px);
@@ -23,6 +24,25 @@
   padding: 16px;
   overflow: hidden;
 }
+.ordemparanormal2.op2-poi-scene-panel .op2-poi-scene-panel.is-drag-over {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--op2-accent) 75%, white);
+}
+.op2-poi-scene-panel__drop-hint {
+  position: absolute;
+  z-index: 1;
+  right: 16px;
+  bottom: 38px;
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--op2-border-strong);
+  border-radius: 5px;
+  background: var(--op2-panel-bg);
+  color: var(--op2-text);
+  font-size: .78rem;
+  opacity: 0;
+  pointer-events: none;
+}
+.op2-poi-scene-panel.is-drag-over .op2-poi-scene-panel__drop-hint { opacity: 1; }
 .op2-poi-scene-panel__header {
   display: flex;
   align-items: center;
@@ -176,8 +196,27 @@
   font-size: .8rem;
   text-align: left;
 }
-.op2-poi-scene-menu__item:hover:not(:disabled),
-.op2-poi-scene-menu__item:focus-visible { background: rgba(255, 255, 255, .09); }
+.op2-poi-scene-menu__item:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(255, 255, 255, .09);
+  box-shadow: none;
+}
+.op2-poi-scene-menu__item:active:not(:disabled) {
+  border-color: transparent;
+  background: rgba(255, 255, 255, .12);
+  box-shadow: none;
+}
+.op2-poi-scene-menu__item:focus:not(:focus-visible) {
+  border-color: transparent;
+  box-shadow: none;
+  outline-color: transparent;
+}
+.op2-poi-scene-menu__item:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 1px solid #b96468;
+  outline-offset: -2px;
+}
 .op2-poi-scene-menu__item:disabled { color: #858b94; cursor: default; }
 .op2-poi-scene-menu__item.is-remove:not(:disabled) { color: #e7a5a8; }
 .op2-poi-scene-menu__item > i { text-align: center; }
@@ -228,8 +267,17 @@
 .op2-poi-picker__option img { width: 38px; height: 38px; border-radius: 5px; object-fit: contain; }
 .op2-poi-picker__option span { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .op2-poi-picker__status { min-height: 1.2em; margin: 0; color: var(--op2-text-muted); font-size: .78rem; }
-.op2-poi-picker__footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 12px; border-top: 1px solid var(--op2-border); }
-.op2-poi-picker__footer button { width: auto; margin: 0; padding: 6px 12px; }
+.ordemparanormal2.op2-poi-picker-dialog .dialog-form > .form-footer {
+  justify-content: flex-end;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--op2-border);
+}
+.ordemparanormal2.op2-poi-picker-dialog .dialog-form > .form-footer > button {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+}
 .op2-poi-picker__confirm {
   border: 1px solid color-mix(in srgb, var(--op2-accent) 60%, white);
   background: color-mix(in srgb, var(--op2-accent) 45%, var(--op2-panel-bg));

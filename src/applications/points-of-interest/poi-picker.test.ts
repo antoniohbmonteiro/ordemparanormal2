@@ -9,11 +9,21 @@ const entries = [{ key: "world:a", uuid: "Item.a", name: "Biblioteca", img: "", 
 class DialogStub extends EventTarget {
   static latest: DialogStub;
   window = { content: new PoiTestElement() };
-  constructor(readonly options: { content: PoiTestElement; buttons: unknown[] }) {
+  element = this.window.content;
+  constructor(readonly options: { content: PoiTestElement; buttons: Array<{ action: string; label: string; class?: string;
+    disabled?: boolean; callback?: () => Promise<void> }> }) {
     super(); DialogStub.latest = this;
     // Foundry serializes content, so listeners on the supplied elements do not survive.
     const mount = new PoiTestElement(); mount.className = "op2-poi-picker-mount";
     this.window.content.append(mount);
+    for (const config of options.buttons) {
+      const button = new PoiTestElement("button");
+      button.className = config.class ?? "";
+      button.textContent = config.label;
+      button.disabled = !!config.disabled;
+      button.addEventListener("click", () => { void config.callback?.(); });
+      this.window.content.append(button);
+    }
   }
   async render(): Promise<void> { this.dispatchEvent(new Event("render")); }
   close = vi.fn(async () => { this.dispatchEvent(new Event("close")); });
@@ -50,11 +60,21 @@ describe("Actor-independent POI picker", () => {
   it("uses the scene-specific title and action without repeating the World origin", async () => {
     const picker = openPoiPicker({ purpose: "scene" }); await flushPoiTasks();
     expect(DialogStub.latest.options).toMatchObject({ window: { title: "ORDEMPARANORMAL2.PointOfInterest.Picker.SceneTitle" } });
+    expect(DialogStub.latest.options.buttons.map(({ action, label }) => ({ action, label }))).toEqual([
+      { action: "cancel", label: "ORDEMPARANORMAL2.PointOfInterest.Picker.Cancel" },
+      { action: "choose", label: "ORDEMPARANORMAL2.PointOfInterest.Picker.SceneChoose" },
+    ]);
     expect(button("SceneChoose").disabled).toBe(true);
     expect(option("Biblioteca").children.at(-1)?.textContent).toBe("Biblioteca");
     option("Biblioteca").click();
     expect(option("Biblioteca").className).toContain("is-selected");
     button("SceneChoose").click(); expect(await picker.result).toMatchObject({ itemUuid: "Item.a" });
+  });
+  it("excludes Items already in the Scene from the picker", async () => {
+    const picker = openPoiPicker({ purpose: "scene", excludeItemUuids: ["Item.a"] });
+    await flushPoiTasks();
+    expect(list().children).toHaveLength(0);
+    await picker.close();
   });
   it("reports loading failures and supports retry", async () => {
     load.mockRejectedValueOnce(new Error("offline")); const picker = openPoiPicker(); await flushPoiTasks();

@@ -11,6 +11,7 @@
       </button>
     {{/if}}
   </header>
+  {{#if isGM}}<p class="op2-poi-scene-panel__drop-hint" aria-hidden="true">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.DropHint"}}</p>{{/if}}
 
   {{#if loading}}<p class="op2-poi-scene-panel__status" role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Loading"}}</p>{{/if}}
   {{#if error}}<p class="op2-poi-scene-panel__status" role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Failed"}}</p>{{/if}}
@@ -31,13 +32,11 @@
               <span>{{locationLabel}}</span>
             </p>
           </div>
-          {{#if @root.isGM}}
             <button type="button" class="op2-poi-scene-panel__menu-trigger" data-poi-menu-trigger
               aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Actions'}}"
               title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Actions'}}">
               <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
             </button>
-          {{/if}}
         </li>
       {{else}}
         <li class="op2-poi-scene-panel__empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Empty"}}</li>

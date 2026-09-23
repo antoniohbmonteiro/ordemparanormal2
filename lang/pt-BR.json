@@ -372,6 +372,8 @@
         "Empty": "Nenhum ponto de interesse disponível nesta cena.",
         "UnlinkFirst": "Desvincule as localizações associadas primeiro.",
         "MembershipFailed": "Não foi possível adicionar o ponto de interesse da região à cena.",
+        "AlreadyInScene": "Este Ponto de Interesse já está nesta Cena.",
+        "DropHint": "Solte para adicionar à Cena",
         "Failed": "Não foi possível atualizar os pontos de interesse da cena."
       }
     },

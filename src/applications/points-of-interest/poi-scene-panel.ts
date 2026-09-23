@@ -2,13 +2,14 @@ import type { HandlebarsTemplatePart } from "@client/applications/api/handlebars
 import type { HandlebarsRenderOptions } from "@client/applications/api/handlebars-application.mjs";
 import type { ApplicationClosingOptions } from "@client/applications/_types.mjs";
 import { mutatePoi, requestPoiScene, subscribePoiInvalidation, type PoiSceneResult } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
-import { associatedRegionIds, readPoiVisibility, worldPoi } from "../../adapters/foundry/points-of-interest/poi-runtime-state";
-import { locatePoiInCurrentScene } from "../../adapters/foundry/points-of-interest/poi-scene-locator";
+import { associatedRegionIds, readPoiVisibility, readScenePoiUuids, worldPoi } from "../../adapters/foundry/points-of-interest/poi-runtime-state";
+import { countPoiVisibleLocations, hasPoiVisibleLocation, locatePoiInCurrentScene } from "../../adapters/foundry/points-of-interest/poi-scene-locator";
 import { openPoiPicker } from "./poi-picker";
 import { openPoiUserRevealDialog } from "./poi-user-reveal-dialog";
 import { openInvestigationApplication } from "./investigation-application";
 import { listenPoiSceneMenuTriggers, poiSceneMenuEntries, showPoiSceneMenu, type PoiSceneMenuAction, type PoiMenuAnchor } from "./poi-scene-panel-menu";
 import { poiSceneRowView } from "./poi-scene-panel-view";
+import { listenPoiScenePanelDrop } from "./poi-scene-panel-drop";
 
 const ROOT = "ORDEMPARANORMAL2.PointOfInterest.ScenePanel";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -31,6 +32,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   #result: PoiSceneResult | null = null;
   #stop: (() => void) | null = null;
   #stopMenuTriggers: (() => void) | null = null;
+  #stopDrop: (() => void) | null = null;
   #closeMenu: (() => void) | null = null;
   #revision = 0;
 
@@ -44,11 +46,14 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   protected override async _prepareContext(): Promise<Record<string, unknown>> {
     const scene = game.scenes.get(this.#sceneId);
     const isGM = !!game.user?.isGM;
-    const entries = this.#result && "entries" in this.#result ? this.#result.entries.map(entry => {
+    const projected = this.#result && "entries" in this.#result ? this.#result.entries : [];
+    const allowed = new Map(projected.map(entry => [entry.itemUuid, entry.name]));
+    const entries = projected.map(entry => {
       const item = isGM ? worldPoi(entry.itemUuid) : null;
-      const count = scene ? associatedRegionIds(scene, entry.itemUuid).length : 0;
+      const count = isGM ? (scene ? associatedRegionIds(scene, entry.itemUuid).length : 0)
+        : countPoiVisibleLocations(this.#sceneId, entry.itemUuid, allowed);
       return poiSceneRowView(entry, item ? readPoiVisibility(item) : null, count, key => game.i18n.localize(key), isGM ? "gm" : "player");
-    }) : [];
+    });
     return {
       sceneName: scene?.name ?? "",
       isGM: !!game.user?.isGM,
@@ -64,8 +69,13 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     super._attachPartListeners(partId, element, options);
     this.#closeMenu?.();
     this.#stopMenuTriggers?.();
-    if (partId !== "main" || !game.user?.isGM) return;
+    this.#stopDrop?.();
+    if (partId !== "main") return;
     this.#stopMenuTriggers = listenPoiSceneMenuTriggers(element, (uuid, anchor) => this.#showMenu(uuid, anchor));
+    if (!game.user?.isGM) return;
+    this.#stopDrop = listenPoiScenePanelDrop(element, this.#sceneId,
+      uuid => this.#addItem(uuid),
+      () => ui.notifications.info(game.i18n.localize(`${ROOT}.AlreadyInScene`)));
   }
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
@@ -101,10 +111,15 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onAdd(this: PoiScenePanel): Promise<void> {
     if (!game.user?.isGM) return;
-    const picker = openPoiPicker({ purpose: "scene" });
+    const scene = game.scenes.get(this.#sceneId);
+    const picker = openPoiPicker({ purpose: "scene", excludeItemUuids: scene ? readScenePoiUuids(scene) : [] });
     const selection = await picker.result;
     if (!selection) return;
-    await this.#mutate({ action: "add", sceneId: this.#sceneId, itemUuid: selection.itemUuid });
+    await this.#addItem(selection.itemUuid);
+  }
+
+  async #addItem(itemUuid: string): Promise<void> {
+    await this.#mutate({ action: "add", sceneId: this.#sceneId, itemUuid });
   }
 
   async #showUsers(uuid: string): Promise<void> {
@@ -120,19 +135,26 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #showMenu(uuid: string, anchor: PoiMenuAnchor): void {
-    if (!game.user?.isGM || !this.#result || !("entries" in this.#result)) return;
+    if (!this.#result || !("entries" in this.#result)) return;
     const entry = this.#result.entries.find(candidate => candidate.itemUuid === uuid);
     if (!entry) return;
     this.#closeMenu?.();
-    const item = worldPoi(uuid);
+    const isGM = !!game.user?.isGM;
+    const item = isGM ? worldPoi(uuid) : null;
     const visibility = item ? readPoiVisibility(item).mode : "hidden";
-    const entries = poiSceneMenuEntries({ visibility, hasLocation: entry.linkedRegionIds.length > 0,
+    const allowed = new Map(this.#result.entries.map(candidate => [candidate.itemUuid, candidate.name]));
+    const hasLocation = isGM ? entry.linkedRegionIds.length > 0 : hasPoiVisibleLocation(this.#sceneId, uuid, allowed);
+    const entries = poiSceneMenuEntries({ isGM, visibility, hasLocation,
       linked: entry.linkedRegionIds.length > 0 }, key => game.i18n.localize(key));
     this.#closeMenu = showPoiSceneMenu(anchor, entries, action => { void this.#runMenuAction(uuid, action); });
   }
 
   async #runMenuAction(uuid: string, action: PoiSceneMenuAction): Promise<void> {
-    if (!game.user?.isGM) return;
+    if (!game.user?.isGM) {
+      if (!this.#result || !("entries" in this.#result)
+        || !this.#result.entries.some(entry => entry.itemUuid === uuid)
+        || (action !== "open" && action !== "locate")) return;
+    }
     try {
       switch (action) {
         case "open": this.#openEntry(uuid); break;
@@ -166,6 +188,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#revision++;
     this.#stop?.();
     this.#stopMenuTriggers?.();
+    this.#stopDrop?.();
     this.#closeMenu?.();
     open.delete(this.#sceneId);
     super._onClose(options);

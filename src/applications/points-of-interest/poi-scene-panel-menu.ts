@@ -9,20 +9,25 @@ export interface PoiSceneMenuEntry {
   readonly hint?: string;
 }
 export interface PoiSceneMenuState {
+  readonly isGM: boolean;
   readonly visibility: "hidden" | "everyone" | "users";
   readonly hasLocation: boolean;
   readonly linked: boolean;
 }
-export interface PoiMenuAnchor { readonly x: number; readonly y: number }
+export interface PoiMenuAnchor { readonly x: number; readonly y: number; readonly focusFirst?: boolean }
 
 const ROOT = "ORDEMPARANORMAL2.PointOfInterest.ScenePanel";
 
 export function poiSceneMenuEntries(state: PoiSceneMenuState, localize: (key: string) => string): readonly PoiSceneMenuEntry[] {
   const label = (key: string) => localize(`${ROOT}.${key}`);
-  return [
+  const navigation: PoiSceneMenuEntry[] = [
     { action: "open", label: label("Open"), icon: "fa-folder-open", group: "navigation" },
     { action: "locate", label: label("Locate"), icon: "fa-location-dot", group: "navigation",
       disabled: !state.hasLocation, hint: !state.hasLocation ? label("NoLocation") : undefined },
+  ];
+  if (!state.isGM) return navigation;
+  return [
+    ...navigation,
     { action: "everyone", label: label("ShowEveryone"), icon: "fa-eye", group: "visibility", checked: state.visibility === "everyone" },
     { action: "users", label: label("ShowUsers"), icon: "fa-users", group: "visibility", checked: state.visibility === "users" },
     { action: "hide", label: label("Hide"), icon: "fa-eye-slash", group: "visibility", checked: state.visibility === "hidden" },
@@ -47,7 +52,8 @@ export function listenPoiSceneMenuTriggers(
     const row = trigger && rowFor(trigger);
     if (!trigger || !row) return;
     const rect = trigger.getBoundingClientRect();
-    open(row.dataset.itemUuid!, { x: rect.right, y: rect.bottom });
+    open(row.dataset.itemUuid!, { x: rect.right, y: rect.bottom,
+      ...(event.detail === 0 ? { focusFirst: true } : {}) });
   };
   const onContext = (event: MouseEvent) => {
     const row = rowFor(event.target);
@@ -120,6 +126,6 @@ export function showPoiSceneMenu(
   document.addEventListener("pointerdown", outside, true);
   document.addEventListener("keydown", keydown, true);
   window.addEventListener("blur", close);
-  menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+  if (anchor.focusFirst) menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
   return close;
 }

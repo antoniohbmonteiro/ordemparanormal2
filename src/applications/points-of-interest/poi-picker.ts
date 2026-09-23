@@ -8,7 +8,10 @@ export interface PoiPickerHandle {
   readonly result: Promise<PoiSelection | null>;
   close(): Promise<void>;
 }
-export interface PoiPickerOptions { readonly purpose?: "association" | "scene" }
+export interface PoiPickerOptions {
+  readonly purpose?: "association" | "scene";
+  readonly excludeItemUuids?: readonly string[];
+}
 
 const localize = (key: string) => game.i18n.localize(`ORDEMPARANORMAL2.PointOfInterest.Picker.${key}`);
 
@@ -39,21 +42,12 @@ export function openPoiPicker(options: PoiPickerOptions = {}): PoiPickerHandle {
   const status = document.createElement("p");
   status.setAttribute("role", "status");
   status.className = "op2-poi-picker__status";
-  const choose = document.createElement("button");
-  choose.type = "button";
-  choose.className = "op2-poi-picker__confirm";
-  choose.textContent = localize(options.purpose === "scene" ? "SceneChoose" : "Choose");
-  const cancel = document.createElement("button");
-  cancel.type = "button";
-  cancel.textContent = localize("Cancel");
+  let choose: HTMLButtonElement | null = null;
   const retry = document.createElement("button");
   retry.type = "button";
   retry.textContent = localize("Retry");
   retry.hidden = true;
-  const footer = document.createElement("div");
-  footer.className = "op2-poi-picker__footer";
-  footer.append(cancel, choose);
-  content.append(searchLabel, list, status, retry, footer);
+  content.append(searchLabel, list, status, retry);
 
   const refresh = () => {
     const filtered = filterPoiEntries(entries, search.value);
@@ -74,18 +68,19 @@ export function openPoiPicker(options: PoiPickerOptions = {}): PoiPickerHandle {
       row.append(button);
       return row;
     }));
-    choose.disabled = busy || !selectedKey;
+    if (choose) choose.disabled = busy || !selectedKey;
     if (!busy) status.textContent = filtered.length ? "" : localize(entries.length ? "NoMatches" : "Empty");
   };
   const load = async () => {
     busy = true;
     retry.hidden = true;
-    choose.disabled = true;
+    if (choose) choose.disabled = true;
     status.textContent = localize("Loading");
     try {
       const loaded = await loadAvailablePois();
       if (closed) return;
-      entries = loaded.filter(entry => entry.source.kind === "world");
+      const excluded = new Set(options.excludeItemUuids ?? []);
+      entries = loaded.filter(entry => entry.source.kind === "world" && !excluded.has(entry.uuid));
       busy = false;
       refresh();
     } catch (error) {
@@ -104,33 +99,39 @@ export function openPoiPicker(options: PoiPickerOptions = {}): PoiPickerHandle {
   const dialog = new foundry.applications.api.DialogV2({
     classes: ["ordemparanormal2", "op2-poi-picker-dialog"],
     window: { title: localize(options.purpose === "scene" ? "SceneTitle" : "Title") },
-    position: { width: 560 }, content: container, buttons: [],
+    position: { width: 560 }, content: container, form: { closeOnSubmit: false },
+    buttons: [
+      { action: "cancel", label: localize("Cancel"), type: "button", default: true,
+        callback: async () => { await dialog.close(); } },
+      { action: "choose", label: localize(options.purpose === "scene" ? "SceneChoose" : "Choose"),
+        class: "op2-poi-picker__confirm", disabled: true, callback: async () => {
+          const entry = entries.find(candidate => candidate.key === selectedKey && candidate.source.kind === "world");
+          if (!entry || busy || closed) return;
+          busy = true;
+          if (choose) choose.disabled = true;
+          try {
+            const selection = await resolvePoiCatalogSource(entry.source);
+            if (closed) return;
+            finish(selection);
+            await dialog.close();
+          } catch (error) {
+            if (closed) return;
+            busy = false;
+            status.textContent = localize("Unavailable");
+            retry.hidden = false;
+            console.error(`${SYSTEM_ID} | Failed to resolve POI selection`, error);
+          }
+        } },
+    ],
   });
   dialog.addEventListener("render", () => {
     const window = dialog.window as typeof dialog.window & { readonly content: HTMLElement };
     window.content.querySelector(".op2-poi-picker-mount")?.replaceWith(content);
+    choose = dialog.element.querySelector<HTMLButtonElement>(".op2-poi-picker__confirm");
   });
   dialog.addEventListener("close", () => { closed = true; finish(null); }, { once: true });
   search.addEventListener("input", refresh);
   retry.addEventListener("click", () => { void load(); });
-  cancel.addEventListener("click", () => { void dialog.close(); });
-  choose.addEventListener("click", () => {
-    const entry = entries.find(candidate => candidate.key === selectedKey && candidate.source.kind === "world");
-    if (!entry || busy || closed) return;
-    busy = true;
-    choose.disabled = true;
-    void resolvePoiCatalogSource(entry.source).then(async selection => {
-      if (closed) return;
-      finish(selection);
-      await dialog.close();
-    }).catch(error => {
-      if (closed) return;
-      busy = false;
-      status.textContent = localize("Unavailable");
-      retry.hidden = false;
-      console.error(`${SYSTEM_ID} | Failed to resolve POI selection`, error);
-    });
-  });
   void dialog.render({ force: true }).then(async () => {
     if (closed) await dialog.close();
     else await load();

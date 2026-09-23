@@ -91,6 +91,7 @@ export async function prepareAdventureAgents(input: PrepareAdventureAgentsInput)
   if (!actors.isAuthorized()) throw new Error("Somente o GM ativo pode importar agentes.");
   if (!usableAdventurePdf(pdf)) throw new Error("É necessário reconhecer e ler o PDF com sucesso.");
   if (!acts.length || new Set(acts).size !== acts.length || acts.some(a => a !== "actOne" && a !== "actTwo")) throw new Error("Escopo de atos inválido.");
+  if (acts.some((act) => !pdf.supportedActs.includes(act))) throw new Error("O PDF selecionado não cobre todos os atos solicitados.");
   if (!Number.isInteger(input.revision) || input.revision < 1) throw new Error("Revisão de presets inválida.");
   for (const preset of presets) validateAdventureAgentData(preset, SKILL_DEFINITIONS);
   const issues = validateAdventureAgentReferences(definition, presets);

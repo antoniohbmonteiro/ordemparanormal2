@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-09-22
+
+### Fixed
+
+- Recognize verified unlocked Playtest Alpha v1.0 PDFs through their complete structural descriptor and known Act II extras variants through multiple explicit fingerprints.
+
 ## [0.4.4] - 2026-09-22
 
 ### Fixed

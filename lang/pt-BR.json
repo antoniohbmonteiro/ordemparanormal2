@@ -101,7 +101,8 @@
           "PasswordRequired": "Protegido por senha",
           "Unsupported": "Fonte não suportada",
           "Unknown": "Fonte não reconhecida",
-          "Invalid": "Arquivo inválido"
+          "Invalid": "Arquivo inválido",
+          "SurvivorsLabel": "distribuição gratuita (Sobreviventes), cobre o Ato I"
         },
         "Zip": {
           "Recognized": "Pacote reconhecido",
@@ -115,6 +116,13 @@
           "AtoIExtras": "Ato I",
           "AtoIIExtras": "Ato II"
         },
+        "MatchMethod": {
+          "Hash": "hash conhecido",
+          "Content": "conteúdo textual",
+          "Structural": "estrutura e conteúdo do pacote",
+          "StructuralHint": "indício estrutural",
+          "None": "sem correspondência"
+        },
         "Issues": {
           "PdfHeaderMissing": "O arquivo não parece ser um PDF válido.",
           "PdfIncorrectPassword": "Senha incorreta.",
@@ -122,8 +130,23 @@
           "ZipEocdNotFound": "O arquivo não parece ser um ZIP válido.",
           "ZipZip64Unsupported": "Este ZIP usa um formato (ZIP64) que ainda não é suportado.",
           "ZipEncryptedEntriesUnsupported": "Este ZIP contém arquivos protegidos por senha, o que ainda não é suportado.",
-          "ZipWrongActSlot": "Este arquivo corresponde ao pacote de outro ato."
+          "ZipInvalidEntries": "Este ZIP contém entradas inválidas ou caminhos conflitantes.",
+          "ZipWrongActSlot": "Este arquivo corresponde ao pacote de outro ato.",
+          "ZipSupplementalMissing": "Arquivo suplementar não fornecido: {path}.",
+          "ZipSupplementalMismatch": "Arquivo suplementar divergente: {path}.",
+          "ZipRequiredMismatch": "Arquivo necessário ausente ou divergente.",
+          "ZipContentMismatch": "O conteúdo descompactado diverge da fonte conhecida.",
+          "ZipUnexpectedPayload": "O ZIP contém um arquivo inesperado: {path}."
         },
+        "Availability": {
+          "Ready": "Pronto para importar",
+          "ReadyWithWarnings": "Pronto para importar com avisos",
+          "PdfUnusable": "Selecione e analise um PDF reconhecido.",
+          "PdfActUnavailable": "Este PDF cobre apenas o Ato I.",
+          "ZipNotProvided": "ZIP deste ato não fornecido.",
+          "ZipNotRecognized": "O ZIP deste ato não é compatível."
+        },
+        "SupplementalNotUsed": "Esses áudios não são usados pela importação atual.",
         "Inventory": {
           "PageCount": "{count} páginas",
           "TotalFiles": "{count} arquivos"
@@ -141,6 +164,10 @@
         "SelectZip": "Selecionar ZIP",
         "Analyze": "Analisar arquivos",
         "Import": "Importar para este Mundo",
+        "ImportWithWarnings": "Importar mesmo assim",
+        "SelectAct": "Selecionar este ato",
+        "DeselectAct": "Ato selecionado — remover da importação",
+        "ImportSuccessWithWarnings": "Importação concluída com avisos: {count} arquivos suplementares não estavam disponíveis.",
         "HandoutsPreparing": "Preparando os handouts da aventura…",
         "HandoutsProgress": "Preparando handouts: {completed} de {total}",
         "HandoutsImportFailure": "Os arquivos foram enviados, mas não foi possível concluir a importação da aventura: {detail}. Clique em Importar para este Mundo novamente para continuar com segurança.",

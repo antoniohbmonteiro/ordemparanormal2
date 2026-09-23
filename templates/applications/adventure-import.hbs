@@ -55,9 +55,11 @@
         {{#if actCards.length}}
           <div class="op2-adventure-import__act-cards">
             {{#each actCards}}
-              <article class="op2-adventure-import__act-card" aria-label="{{label}}">
+              <article class="op2-adventure-import__act-card{{#if selected}} op2-adventure-import__act-card--selected{{/if}}" aria-label="{{label}}">
                 <h3 class="op2-adventure-import__act-title">{{label}}</h3>
-                <p class="op2-adventure-import__act-status"><i class="fa-solid fa-check" aria-hidden="true"></i>{{status}}</p>
+                <p class="op2-adventure-import__act-status"><i class="fa-solid {{#if selectable}}fa-check{{else}}fa-circle-info{{/if}}" aria-hidden="true"></i>{{status}}</p>
+                <button type="button" data-action="toggleAct" data-act="{{act}}" aria-pressed="{{selected}}" {{#if ../isImporting}}disabled{{else}}{{#unless selectable}}disabled{{/unless}}{{/if}}>{{selectionLabel}}</button>
+                {{#each issues}}<p class="op2-adventure-import__status-issue">{{this}}</p>{{/each}}
                 <div class="op2-adventure-import__act-content">
                   {{#each content}}
                     <div class="op2-adventure-import__act-content-row">
@@ -89,9 +91,16 @@
     {{/if}}
   </section>
 
+  {{#if completionWarnings.length}}
+    <section class="op2-adventure-import__section" aria-label="{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.ImportWithWarnings"}}">
+      <p>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.ImportWithWarnings"}}</p>
+      <ul>{{#each completionWarnings}}<li>{{this}}</li>{{/each}}</ul>
+    </section>
+  {{/if}}
+
   <footer class="op2-adventure-import__actions">
     {{#if progress}}<p class="op2-adventure-import__progress" role="status" aria-live="polite">{{progress}}</p>{{/if}}
     <button type="button" data-action="analyzeFiles" {{#unless canAnalyze}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
-    <button type="button" data-action="importAssets" {{#unless canImport}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}</button>
+    <button type="button" data-action="importAssets" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
   </footer>
 </div>

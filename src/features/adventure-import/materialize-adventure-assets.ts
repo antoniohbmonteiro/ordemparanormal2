@@ -1,11 +1,13 @@
-import { sha256Hex } from "../../adapters/files/compute-sha256";
 import { openZipArchive, type OpenZipArchive, type ExtractableZipEntry } from "../../adapters/files/open-zip-archive";
 import { readZipCentralDirectory } from "../../adapters/files/read-zip-central-directory";
 import type { AdventureAssetStorage } from "../../adapters/foundry/adventure-asset-storage";
 import { KNOWN_ZIP_PACKAGES, ZIP_PACKAGE_BY_ACT } from "../../core/adventure-import/known-adventure-sources";
 import { assertDistinctZipPaths, safeZipEntryPath, type SafeZipEntryPath } from "../../core/adventure-import/safe-zip-entry-path";
-import { recognizeZipSource, type AdventureAct, type ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
-import { buildCanonicalZipFingerprintInput } from "../../core/adventure-import/zip-fingerprint";
+import { type AdventureAct, type ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
+import { buildStructuralZipPayload } from "../../core/adventure-import/zip-structural-manifest";
+import { analyzeZipActSource } from "./analyze-adventure-sources";
+import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
+import { assertImportableActs, evaluateActCompatibility } from "../../core/adventure-import/adventure-source-compatibility";
 import { adventureActRoot } from "./adventure-asset-layout";
 
 export interface MaterializedAsset {
@@ -17,6 +19,7 @@ export interface MaterializedAsset {
 export interface MaterializationResult {
   readonly assets: readonly MaterializedAsset[];
   readonly materializedActs: readonly AdventureAct[];
+  readonly warnings?: readonly { readonly act: AdventureAct; readonly path: string }[];
 }
 
 export type MaterializationStage = "preflight" | "directory" | "extract" | "upload";
@@ -40,6 +43,9 @@ export interface MaterializeAdventureAssetsInput {
   readonly actTwo: File | null;
   readonly actOneAnalysis: ZipSourceAnalysis | null;
   readonly actTwoAnalysis: ZipSourceAnalysis | null;
+  readonly pdfAnalysis: PdfSourceAnalysis;
+  readonly selectedActs: readonly AdventureAct[];
+  readonly acknowledgeWarnings: boolean;
   readonly storage: AdventureAssetStorage;
   readonly mimeTypes: Readonly<Record<string, string>>;
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
@@ -57,6 +63,7 @@ interface PreparedAct {
   readonly archive: OpenZipArchive;
   readonly paths: readonly SafeZipEntryPath[];
   readonly files: readonly PreparedFile[];
+  readonly missingSupplementalPaths: readonly string[];
 }
 
 function mimeForFile(path: SafeZipEntryPath, mimeTypes: Readonly<Record<string, string>>): string {
@@ -75,14 +82,21 @@ async function prepareAct(
   act: AdventureAct,
   storage: AdventureAssetStorage,
   mimeTypes: Readonly<Record<string, string>>,
+  pdfAnalysis: PdfSourceAnalysis,
+  acknowledgeWarnings: boolean,
 ): Promise<PreparedAct> {
-  const { entries: manifest, issues } = await readZipCentralDirectory(file);
-  if (issues.some((issue) => issue.severity === "error")) throw new Error(`Invalid ZIP for ${act}`);
-  const fingerprint = await sha256Hex(new TextEncoder().encode(buildCanonicalZipFingerprintInput(manifest)));
-  const recognition = recognizeZipSource(manifest, fingerprint, act, KNOWN_ZIP_PACKAGES, issues);
+  const recognition = await analyzeZipActSource(file, act);
   if (recognition.status !== "recognized" || recognition.edition !== ZIP_PACKAGE_BY_ACT[act]) {
     throw new Error(`ZIP is no longer recognized for ${act}`);
   }
+  const compatibility = evaluateActCompatibility(act, pdfAnalysis, recognition);
+  assertImportableActs({ actOne: compatibility, actTwo: compatibility }, [act], acknowledgeWarnings);
+  const { entries: manifest, issues } = await readZipCentralDirectory(file);
+  if (issues.some((issue) => issue.severity === "error")) throw new Error(`Invalid ZIP for ${act}`);
+  const payload = buildStructuralZipPayload(manifest);
+  const canonicalByOriginal = new Map(payload.map((entry) => [safeZipEntryPath(entry.originalPath).relativePath, entry.path]));
+  const logicalRootPrefix = KNOWN_ZIP_PACKAGES[recognition.edition].logicalRootPrefix;
+  const supplemental = new Set(KNOWN_ZIP_PACKAGES[recognition.edition].supplemental?.map((entry) => entry.path) ?? []);
 
   const archive = await openZipArchive(file);
   try {
@@ -100,15 +114,27 @@ async function prepareAct(
     }
     if (archive.entries.some((entry) => entry.symlink)) throw new Error(`ZIP contains a symlink for ${act}`);
 
-    const files = archive.entries.flatMap((entry, index): PreparedFile[] =>
-      entry.directory ? [] : [{ path: paths[index], mime: mimeForFile(paths[index], mimeTypes), entry }],
-    );
+    // Complete the CRC and size preflight for every payload before any selected Act writes.
+    for (const [index, entry] of archive.entries.entries()) {
+      const canonical = canonicalByOriginal.get(paths[index].relativePath);
+      if (canonical === undefined || entry.directory) continue;
+      const blob = await entry.extract();
+      if (blob.size !== entry.uncompressedSize) throw new Error(`Extracted size differs for ${canonical}`);
+    }
+
+    const files = archive.entries.flatMap((entry, index): PreparedFile[] => {
+      const canonical = canonicalByOriginal.get(paths[index].relativePath);
+      if (entry.directory || canonical === undefined || supplemental.has(canonical)) return [];
+      const logicalPath = safeZipEntryPath(logicalRootPrefix ? `${logicalRootPrefix}/${canonical}` : canonical);
+      return [{ path: logicalPath, mime: mimeForFile(logicalPath, mimeTypes), entry }];
+    });
     return {
       act,
       root: adventureActRoot(storage.worldId, act),
       archive,
-      paths,
+      paths: files.map((prepared) => prepared.path),
       files,
+      missingSupplementalPaths: recognition.missingSupplementalPaths ?? [],
     };
   } catch (error) {
     await archive.close();
@@ -128,14 +154,23 @@ function directoriesForAct(prepared: PreparedAct): readonly string[] {
 }
 
 export async function materializeAdventureAssets(input: MaterializeAdventureAssetsInput): Promise<MaterializationResult> {
+  const selectedActs = input.selectedActs;
+  try {
+    assertImportableActs({
+      actOne: evaluateActCompatibility("actOne", input.pdfAnalysis, input.actOneAnalysis),
+      actTwo: evaluateActCompatibility("actTwo", input.pdfAnalysis, input.actTwoAnalysis),
+    }, selectedActs, input.acknowledgeWarnings);
+  } catch (error) {
+    throw new MaterializationError(error instanceof Error ? error.message : String(error), null, null, [], "preflight", { cause: error });
+  }
   const selected = ([
     ["actOne", input.actOne, input.actOneAnalysis],
     ["actTwo", input.actTwo, input.actTwoAnalysis],
   ] as const).filter((candidate): candidate is readonly [AdventureAct, File, ZipSourceAnalysis] =>
-    candidate[1] !== null && candidate[2]?.status === "recognized"
+    selectedActs.includes(candidate[0]) && candidate[1] !== null && candidate[2]?.status === "recognized"
       && candidate[2].edition === ZIP_PACKAGE_BY_ACT[candidate[0]],
   );
-  if (selected.length === 0) throw new MaterializationError("No recognized ZIP selected", null, null, [], "preflight");
+  if (selected.length !== selectedActs.length) throw new MaterializationError("Selected ZIP sources changed", null, null, [], "preflight");
 
   const prepared: PreparedAct[] = [];
   const confirmed: MaterializedAsset[] = [];
@@ -146,7 +181,8 @@ export async function materializeAdventureAssets(input: MaterializeAdventureAsse
     // All selected archives are checked before the first directory is created.
     for (const [act, file] of selected) {
       currentAct = act;
-      prepared.push(await prepareAct(file, act, input.storage, input.mimeTypes));
+      prepared.push(await prepareAct(file, act, input.storage, input.mimeTypes,
+        input.pdfAnalysis, input.acknowledgeWarnings));
     }
     const total = prepared.reduce((sum, act) => sum + act.files.length, 0);
     await input.onProgress?.(0, total);
@@ -170,7 +206,8 @@ export async function materializeAdventureAssets(input: MaterializeAdventureAsse
         await input.onProgress?.(confirmed.length, total);
       }
     }
-    return { assets: confirmed, materializedActs: selected.map(([act]) => act) };
+    return { assets: confirmed, materializedActs: selected.map(([act]) => act),
+      warnings: prepared.flatMap((act) => act.missingSupplementalPaths.map((path) => ({ act: act.act, path }))) };
   } catch (error) {
     throw new MaterializationError(
       error instanceof Error ? error.message : String(error), currentAct, currentEntry, [...confirmed],

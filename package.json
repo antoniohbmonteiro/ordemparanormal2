@@ -1,6 +1,6 @@
 {
   "name": "ordemparanormal2",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
@@ -21,6 +21,7 @@
     "@dfreds/foundry-types": "^14.366.1",
     "@foundryvtt/foundryvtt-cli": "^0.0.6",
     "@types/node": "^24.0.0",
+    "tsx": "^4.23.15",
     "typescript": "~7.0.2",
     "vite": "~8.2.2",
     "vitest": "~4.1.10"

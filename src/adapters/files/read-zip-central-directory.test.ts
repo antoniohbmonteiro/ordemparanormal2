@@ -8,6 +8,7 @@ interface SyntheticEntry {
   readonly crc32: number;
   readonly utf8?: boolean;
   readonly encrypted?: boolean;
+  readonly unixMode?: number;
 }
 
 function u16(value: number): number[] {
@@ -45,7 +46,7 @@ function buildCentralDirectoryRecord(entry: SyntheticEntry): number[] {
     ...u16(0),
     ...u16(0),
     ...u16(0),
-    ...u32(0),
+    ...u32(entry.unixMode ? entry.unixMode * 0x10000 : 0),
     ...u32(0),
     ...nameBytes,
   ];
@@ -110,5 +111,11 @@ describe("readZipCentralDirectory", () => {
     const { entries, issues } = await readZipCentralDirectory(file);
     expect(entries).toHaveLength(1);
     expect(issues).toEqual([{ code: "zip-encrypted-entries-unsupported", severity: "error" }]);
+  });
+
+  it("rejects a Unix symlink from central-directory metadata before a legacy hash can match", async () => {
+    const file = buildSyntheticZipFile([{ path: "Tokens/link.png", size: 6, crc32: 1, unixMode: 0xa1ff }]);
+    expect((await readZipCentralDirectory(file)).issues)
+      .toContainEqual({ code: "zip-invalid-entries", severity: "error" });
   });
 });

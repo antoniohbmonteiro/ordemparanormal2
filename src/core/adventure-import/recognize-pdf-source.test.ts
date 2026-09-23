@@ -1,173 +1,130 @@
 import { describe, expect, it } from "vitest";
-
-import type { KnownPdfEdition, PdfEditionId } from "./known-adventure-sources";
-import type { PdfParseAttempt, PdfPrePasswordFacts } from "./pdf-source-facts";
+import { KNOWN_PDF_EDITIONS, type KnownPdfEdition, type PdfEditionId } from "./known-adventure-sources";
+import type { PdfParsedFacts, PdfPrePasswordFacts } from "./pdf-source-facts";
 import { recognizePdfSource } from "./recognize-pdf-source";
 
-const KNOWN_HASH = "a".repeat(64);
-const UNKNOWN_HASH = "b".repeat(64);
-
-const KNOWN_EDITIONS: Record<PdfEditionId, KnownPdfEdition> = {
-  "playtest-alpha-v1.1": {
-    sha256: KNOWN_HASH,
-    encryptionProfile: { v: 5, r: 6, length: 256, streamFilter: "StdCF", stringFilter: "StdCF" },
-    structural: { producer: "Test Producer", lang: "pt-BR", pageCount: 10 },
-  },
+const KNOWN: Record<PdfEditionId, KnownPdfEdition> = {
   "playtest-alpha-v1.0": {
-    sha256: "c".repeat(64),
-    structural: {},
+    edition: "playtest-alpha-v1.0",
+    variant: "agents",
+    supportedActs: ["actOne", "actTwo"],
+    sha256Hashes: ["hash-v10"],
+    encryptionProfile: { v: 5, r: 6, length: 256, streamFilter: "StdCF", stringFilter: "StdCF" },
+    structural: { pageCount: 103, versionStampPattern: /v1\.0\b/, producer: "Original" },
+    contentSignatureSha256: "content-v10",
+  },
+  "playtest-alpha-v1.1": {
+    edition: "playtest-alpha-v1.1",
+    variant: "agents",
+    supportedActs: ["actOne", "actTwo"],
+    sha256Hashes: ["hash-v11"],
+    structural: { pageCount: 104, versionStampPattern: /v1\.1\b/, producer: "Original" },
+    contentSignatureSha256: "content-v11",
   },
 };
 
 function pre(overrides: Partial<PdfPrePasswordFacts> = {}): PdfPrePasswordFacts {
   return {
-    byteLength: 1000,
-    sha256: UNKNOWN_HASH,
-    pdfVersion: "1.7",
-    encryption: { present: false },
-    trailerId: null,
-    plaintextCatalogHints: null,
-    ...overrides,
+    byteLength: 1000, sha256: "unknown", pdfVersion: "1.7", encryption: { present: false },
+    trailerId: null, plaintextCatalogHints: null, ...overrides,
   };
 }
 
+function parsed(overrides: Partial<PdfParsedFacts> = {}) {
+  return { status: "success" as const, facts: {
+    pageCount: 103, producer: "Other tool", creator: "Other tool", lang: "en",
+    versionStampTag: "Pacote #8 | Agosto/2026 | v1.0", contentSignatureSha256: "content-v10",
+    ...overrides,
+  } };
+}
+
 describe("recognizePdfSource", () => {
-  it("returns invalid when the PDF header could not be found", () => {
-    const result = recognizePdfSource(pre({ pdfVersion: null }), { status: "not-attempted" }, KNOWN_EDITIONS);
-    expect(result.status).toBe("invalid");
-    expect(result.passwordRequired).toBe(false);
-    expect(result.issues).toEqual([{ code: "pdf-header-missing", severity: "error" }]);
+  it("preserves the measured original, unlocked and v1.1 binary hashes", () => {
+    for (const [sha256, edition] of [
+      ["697f767ffabe1cfa8b06fbc41bd12f7c29bbc1b9775f6663e0ec4950c31d8c95", "playtest-alpha-v1.0"],
+      ["4867109f62bab4ee95fbfcd81166a43f6ef5c5a0534ab8aabc50cf8531450d38", "playtest-alpha-v1.0"],
+      ["f51bf5de8a94c6fd38d92069a67e384f11c6bc989c13a5a08f297b88075727da", "playtest-alpha-v1.1"],
+    ] as const) {
+      expect(recognizePdfSource(pre({ sha256 }), { status: "not-attempted" }, KNOWN_PDF_EDITIONS))
+        .toMatchObject({ status: "recognized", matchMethod: "hash", edition });
+    }
   });
 
-  it("recognizes a known edition by hash even before any parse attempt, and keeps passwordRequired true", () => {
-    const result = recognizePdfSource(
-      pre({ sha256: KNOWN_HASH, encryption: { present: true } }),
-      { status: "not-attempted" },
-      KNOWN_EDITIONS,
-    );
-    expect(result).toMatchObject({
-      status: "recognized",
-      matchMethod: "hash",
-      edition: "playtest-alpha-v1.1",
-      passwordRequired: true,
-    });
-    expect(result.issues).toEqual([]);
+  it("recognizes the same content despite changed Producer, Creator and language", () => {
+    expect(recognizePdfSource(pre(), parsed(), KNOWN))
+      .toMatchObject({ status: "recognized", matchMethod: "content", edition: "playtest-alpha-v1.0" });
   });
 
-  it("keeps the hash-recognized edition and passwordRequired true after an incorrect password attempt", () => {
-    const result = recognizePdfSource(
-      pre({ sha256: KNOWN_HASH, encryption: { present: true } }),
-      { status: "incorrect-password" },
-      KNOWN_EDITIONS,
-    );
-    expect(result).toMatchObject({
-      status: "recognized",
-      matchMethod: "hash",
-      edition: "playtest-alpha-v1.1",
-      passwordRequired: true,
-    });
-    expect(result.issues).toEqual([{ code: "pdf-incorrect-password", severity: "warning" }]);
+  it("recognizes the measured v1.0 content in an unlocked PDF with a new binary hash", () => {
+    expect(recognizePdfSource(pre({ sha256: "0f00f934d66ebe1569a7f219585bc44e8dfe0bca4179b2fcafd56aa45a10eca3" }),
+      parsed({ producer: "iLovePDF", creator: null, lang: "pt-BR",
+        contentSignatureSha256: "1a52a85b71e22c5e87c85a87a24efeb169d33f6b5f4fee45a2a70e8814159e1b" }),
+      KNOWN_PDF_EDITIONS))
+      .toMatchObject({ status: "recognized", matchMethod: "content", edition: "playtest-alpha-v1.0" });
   });
 
-  it("clears passwordRequired once a real parse attempt succeeds, keeping the hash-based edition", () => {
-    const parseAttempt: PdfParseAttempt = {
-      status: "success",
-      facts: { pageCount: 10, producer: "Anything", creator: null, lang: null, versionStampTag: null },
-    };
-    const result = recognizePdfSource(
-      pre({ sha256: KNOWN_HASH, encryption: { present: true } }),
-      parseAttempt,
-      KNOWN_EDITIONS,
-    );
-    expect(result).toMatchObject({
-      status: "recognized",
-      matchMethod: "hash",
-      edition: "playtest-alpha-v1.1",
-      passwordRequired: false,
-    });
-    expect(result.issues).toEqual([]);
+  it("recognizes the measured v1.1 content only as v1.1", () => {
+    expect(recognizePdfSource(pre(), parsed({
+      pageCount: 104, versionStampTag: "Pacote #8 | Agosto/2026 | v1.1",
+      contentSignatureSha256: "bdee1ce4fba3281565e2f62ec3f5fdb8cf29578b01da36f715a3adb3d313d07b",
+    }), KNOWN_PDF_EDITIONS))
+      .toMatchObject({ status: "recognized", matchMethod: "content", edition: "playtest-alpha-v1.1" });
   });
 
-  it("clears passwordRequired on a generic parse failure without reactivating the password prompt", () => {
-    const result = recognizePdfSource(
-      pre({ sha256: KNOWN_HASH, encryption: { present: true } }),
-      { status: "failed" },
-      KNOWN_EDITIONS,
-    );
-    expect(result).toMatchObject({
-      status: "recognized",
-      matchMethod: "hash",
-      edition: "playtest-alpha-v1.1",
-      passwordRequired: false,
-    });
-    expect(result.issues).toEqual([{ code: "pdf-parse-failed", severity: "error" }]);
+  it("recognizes the measured survivors variant by hash and full text, without using its filename", () => {
+    const byHash = recognizePdfSource(pre({ sha256: "6b821c7118d31304273c085c53fc18e7f477548bd0bf781663b9e10b9fd82fa1" }),
+      parsed({ pageCount: 66, versionStampTag: "Pacote #8 | Agosto/2026 | v1.1",
+        contentSignatureSha256: "55eaf86fa6d9125b50ee59c4dde79600d542c691642781c2d17065227d0639f9" }), KNOWN_PDF_EDITIONS);
+    expect(byHash).toMatchObject({ status: "recognized", matchMethod: "hash", edition: "playtest-alpha-v1.1",
+      variant: "survivors", supportedActs: ["actOne"] });
+    expect(recognizePdfSource(pre(), parsed({ pageCount: 66, versionStampTag: "Pacote #8 | Agosto/2026 | v1.1",
+      contentSignatureSha256: "55eaf86fa6d9125b50ee59c4dde79600d542c691642781c2d17065227d0639f9" }),
+    KNOWN_PDF_EDITIONS)).toMatchObject({ status: "recognized", matchMethod: "content", variant: "survivors" });
+    expect(recognizePdfSource(pre(), parsed({ pageCount: 104, versionStampTag: "Pacote #8 | Agosto/2026 | v1.1",
+      contentSignatureSha256: "55eaf86fa6d9125b50ee59c4dde79600d542c691642781c2d17065227d0639f9" }),
+    KNOWN_PDF_EDITIONS).status).toBe("unknown");
   });
 
-  it("recognizes an unknown-hash PDF by a full structural descriptor match", () => {
-    const parseAttempt: PdfParseAttempt = {
-      status: "success",
-      facts: { pageCount: 10, producer: "Test Producer", creator: null, lang: "pt-BR", versionStampTag: null },
-    };
-    const result = recognizePdfSource(pre(), parseAttempt, KNOWN_EDITIONS);
-    expect(result).toMatchObject({
-      status: "recognized",
-      matchMethod: "structural-parsed",
-      edition: "playtest-alpha-v1.1",
-      passwordRequired: false,
-    });
+  it.each([
+    { contentSignatureSha256: "wrong" }, { contentSignatureSha256: null },
+    { pageCount: 104 }, { versionStampTag: "Pacote #8 | Agosto/2026 | v1.1" },
+  ])("rejects content or edition guard mismatches: %j", (change) => {
+    expect(recognizePdfSource(pre(), parsed(change), KNOWN))
+      .toMatchObject({ status: "unknown", matchMethod: "none", edition: null });
   });
 
-  it("never counts a partial structural match — one mismatched defined field is enough to reject it", () => {
-    const parseAttempt: PdfParseAttempt = {
-      status: "success",
-      // producer and lang match, but pageCount (also defined in the descriptor) does not.
-      facts: { pageCount: 999, producer: "Test Producer", creator: null, lang: "pt-BR", versionStampTag: null },
-    };
-    const result = recognizePdfSource(pre(), parseAttempt, KNOWN_EDITIONS);
-    expect(result.status).toBe("unknown");
-    expect(result.matchMethod).toBe("none");
-    expect(result.edition).toBeNull();
+  it("recognizes v1.1 only with its own content and guards", () => {
+    expect(recognizePdfSource(pre(), parsed({
+      pageCount: 104, versionStampTag: "Pacote #8 | Agosto/2026 | v1.1", contentSignatureSha256: "content-v11",
+    }), KNOWN)).toMatchObject({ status: "recognized", matchMethod: "content", edition: "playtest-alpha-v1.1" });
   });
 
-  it("never matches an edition whose structural descriptor is empty, however similar the facts look", () => {
-    const parseAttempt: PdfParseAttempt = {
-      status: "success",
-      facts: { pageCount: 1, producer: null, creator: null, lang: null, versionStampTag: null },
-    };
-    const result = recognizePdfSource(pre(), parseAttempt, KNOWN_EDITIONS);
-    expect(result.status).toBe("unknown");
-    expect(result.edition).toBeNull();
+  it("does not accept metadata and page count without a registered content signature", () => {
+    expect(recognizePdfSource(pre(), parsed({ producer: "Original", contentSignatureSha256: "wrong" }), KNOWN))
+      .toMatchObject({ status: "unknown", edition: null });
+    expect(recognizePdfSource(pre(), parsed(), KNOWN_PDF_EDITIONS))
+      .toMatchObject({ status: "unknown", edition: null });
   });
 
-  it("reports a structural-hint (never an edition) when the encryption profile matches a known one pre-password", () => {
-    const result = recognizePdfSource(
-      pre({
-        encryption: { present: true, v: 5, r: 6, length: 256, streamFilter: "StdCF", stringFilter: "StdCF" },
-      }),
-      { status: "not-attempted" },
-      KNOWN_EDITIONS,
-    );
-    expect(result.status).toBe("unknown");
-    expect(result.matchMethod).toBe("structural-hint");
-    expect(result.edition).toBeNull();
-    expect(result.passwordRequired).toBe(true);
+  it("preserves password handling for a hash match", () => {
+    const encrypted = pre({ sha256: "hash-v10", encryption: { present: true } });
+    expect(recognizePdfSource(encrypted, { status: "not-attempted" }, KNOWN))
+      .toMatchObject({ status: "recognized", matchMethod: "hash", passwordRequired: true });
+    expect(recognizePdfSource(encrypted, { status: "incorrect-password" }, KNOWN))
+      .toMatchObject({ status: "recognized", passwordRequired: true,
+        issues: [{ code: "pdf-incorrect-password", severity: "warning" }] });
+    expect(recognizePdfSource(encrypted, parsed(), KNOWN).passwordRequired).toBe(false);
   });
 
-  it("does not report a structural-hint when the encryption profile does not match any known one", () => {
-    const result = recognizePdfSource(
-      pre({ encryption: { present: true, v: 1, r: 2, length: 40, streamFilter: "V2", stringFilter: "V2" } }),
-      { status: "not-attempted" },
-      KNOWN_EDITIONS,
-    );
-    expect(result.matchMethod).toBe("none");
+  it("reports an encryption hint without assigning an edition", () => {
+    expect(recognizePdfSource(pre({ encryption: {
+      present: true, v: 5, r: 6, length: 256, streamFilter: "StdCF", stringFilter: "StdCF",
+    } }), { status: "password-required" }, KNOWN))
+      .toMatchObject({ status: "unknown", matchMethod: "structural-hint", edition: null });
   });
 
-  it("does not report a structural-hint for a generic parse failure, only for password-blocked states", () => {
-    const encryption = { present: true, v: 5, r: 6, length: 256, streamFilter: "StdCF", stringFilter: "StdCF" };
-    const failed = recognizePdfSource(pre({ encryption }), { status: "failed" }, KNOWN_EDITIONS);
-    expect(failed.matchMethod).toBe("none");
-
-    const passwordRequired = recognizePdfSource(pre({ encryption }), { status: "password-required" }, KNOWN_EDITIONS);
-    expect(passwordRequired.matchMethod).toBe("structural-hint");
+  it("rejects a missing PDF header", () => {
+    expect(recognizePdfSource(pre({ pdfVersion: null }), parsed(), KNOWN))
+      .toMatchObject({ status: "invalid", passwordRequired: false, issues: [{ code: "pdf-header-missing" }] });
   });
 });

@@ -1,4 +1,4 @@
-# Ordem Paranormal 2 — v0.4.4
+# Ordem Paranormal 2 — v0.4.5
 
 Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal.
 
@@ -8,29 +8,20 @@ Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ord
 
 ## Destaques
 
-- Corrige a validação restante na preparação de Scenes do **Importador de Aventura** em ambientes hospedados como o Forge.
-- O ícone de controle do Mestre, empacotado com o próprio sistema, não é mais procurado no armazenamento de arquivos do Mundo.
-- Nenhuma migração é necessária, e importações interrompidas podem ser executadas novamente com segurança.
+- O **Importador de Aventura** passa a reconhecer uma cópia legítima desbloqueada do PDF Playtest Alpha v1.0 que antes podia aparecer como não reconhecida.
+- Reconhece também duas variantes conhecidas do ZIP de extras do Ato II, preservando o suporte aos arquivos já aceitos dos Atos I e II.
+- Nenhuma migração de dados do Mundo é necessária.
 
-## Correção do Importador de Aventura
+## Reconhecimento dos arquivos
 
-Após a v0.4.3, a preparação da Scene ainda validava um asset do próprio sistema, o ícone `systems/ordemparanormal2/assets/scene-controls/gm-control-button.png`, pelo FilePicker do armazenamento `data` do Mundo. Esse caminho não é um diretório desse armazenamento, e no Forge a importação parava com:
-
-```text
-Falha na etapa Scene (validação):
-Directory systems/ordemparanormal2/assets/scene-controls
-does not exist or is not accessible in this storage location
-```
-
-A v0.4.4 remove essa validação. O asset é distribuído junto com o sistema e usado diretamente pela Scene. Os assets da aventura continuam usando os caminhos já confirmados durante a materialização. Instalações self-hosted continuam funcionando.
+A v0.4.5 corrige o reconhecimento de arquivos legítimos do playtest que podiam aparecer como não reconhecidos na análise inicial. O PDF v1.0 desbloqueado é identificado pelos metadados e pela marca de versão verificados; os ZIPs são aceitos somente quando correspondem a fingerprints conhecidos. O conteúdo e o fluxo de importação permanecem os mesmos.
 
 O Mestre continua selecionando seus próprios arquivos legalmente obtidos. **O sistema não inclui nem distribui PDFs, mapas, tokens, handouts ou outros arquivos oficiais.**
 
 ## Compatibilidade e atualização
 
-- Compatível com **Foundry VTT v14** e atualização direta da **v0.4.0 a v0.4.3**.
+- Compatível com **Foundry VTT v14** e atualização direta da **v0.4.4**.
 - Não há migração de dados do Mundo.
-- Quem teve a importação interrompida pode executar o importador novamente após atualizar. Handouts, Pontos de Interesse e Agentes já criados são preservados pela reconciliação existente, sem duplicação.
 
 O projeto continua **source-available** sob a PolyForm Strict License 1.0.0. Releases públicas até v0.0.22 permanecem sob os termos MIT aplicáveis às cópias já distribuídas.
 
@@ -45,7 +36,7 @@ https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/s
 Pacote:
 
 ```text
-ordemparanormal2-v0.4.4.zip
+ordemparanormal2-v0.4.5.zip
 ```
 
-**Comparar alterações**: https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.4.3...v0.4.4
+**Comparar alterações**: https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.4.4...v0.4.5

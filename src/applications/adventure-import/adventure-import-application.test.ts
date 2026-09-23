@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import type { AdventureSourceAnalysis } from "../../features/adventure-import/analyze-adventure-sources";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
+import { evaluateActCompatibility } from "../../core/adventure-import/adventure-source-compatibility";
 import { MaterializationError } from "../../features/adventure-import/materialize-adventure-assets";
 import { HandoutImportError } from "../../features/adventure-import/import-adventure-handouts";
 
@@ -28,7 +29,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
-  analyzeAdventureSources: mocks.analyzeAdventureSources,
+  analyzeAdventureSources: async (...args: unknown[]) => {
+    const analysis = await mocks.analyzeAdventureSources(...args);
+    return { ...analysis, acts: {
+      actOne: evaluateActCompatibility("actOne", analysis.pdf, analysis.actOne),
+      actTwo: evaluateActCompatibility("actTwo", analysis.pdf, analysis.actTwo),
+    } };
+  },
   analyzePdfSource: mocks.analyzePdfSource,
 }));
 
@@ -80,6 +87,8 @@ function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): P
     passwordRequired: false,
     matchMethod: "hash",
     edition: "playtest-alpha-v1.1",
+    variant: "agents",
+    supportedActs: ["actOne", "actTwo"],
     facts: {
       pre: {
         byteLength: 100,
@@ -91,7 +100,7 @@ function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): P
       },
       parseAttempt: {
         status: "success",
-        facts: { pageCount: 104, producer: null, creator: null, lang: null, versionStampTag: null },
+        facts: { pageCount: 104, producer: null, creator: null, lang: null, versionStampTag: null, contentSignatureSha256: null },
       },
     },
     issues: [],
@@ -100,7 +109,10 @@ function unencryptedRecognizedPdf(overrides: Partial<PdfSourceAnalysis> = {}): P
 }
 
 function emptyAnalysis(pdf: PdfSourceAnalysis): AdventureSourceAnalysis {
-  return { pdf, actOne: null, actTwo: null };
+  return { pdf, actOne: null, actTwo: null, acts: {
+    actOne: evaluateActCompatibility("actOne", pdf, null),
+    actTwo: evaluateActCompatibility("actTwo", pdf, null),
+  } };
 }
 
 class MockFileInput {
@@ -181,6 +193,7 @@ interface TestActContent {
 interface TestActCard {
   label: string;
   status: string;
+  selectable: boolean;
   content: readonly TestActContent[];
 }
 
@@ -294,6 +307,11 @@ function action(app: TestApplication, name: string, slot?: Slot): Promise<void> 
   return Promise.resolve(Application.DEFAULT_OPTIONS.actions[name].call(app, {} as PointerEvent, target));
 }
 
+function toggleAct(app: TestApplication, act: "actOne" | "actTwo"): Promise<void> {
+  const target = { dataset: { act } } as unknown as HTMLElement;
+  return Promise.resolve(Application.DEFAULT_OPTIONS.actions.toggleAct.call(app, {} as PointerEvent, target));
+}
+
 describe("Adventure Import Application", () => {
   it("keeps native window options and GM-only access", () => {
     expect(Application.DEFAULT_OPTIONS.position).toEqual({ width: 800, height: "auto" });
@@ -402,7 +420,8 @@ describe("Adventure Import Application", () => {
     expect(result.hasAnalysis).toBe(true);
     expect(result.pdfStatus?.modifier).toBe("recognized");
     expect(result.pdfStatus?.text).toContain("PageCount(104)");
-    expect(result.actCards).toEqual([]);
+    expect(result.actCards).toHaveLength(2);
+    expect(result.actCards.every((card) => !card.selectable)).toBe(true);
     expect(pdf.arrayBuffer).not.toHaveBeenCalled();
     expect(pdf.text).not.toHaveBeenCalled();
 
@@ -433,7 +452,7 @@ describe("Adventure Import Application", () => {
     await action(app, "analyzeFiles");
     const result = await app._prepareContext();
     expect(result.pdfStatus?.text).toContain("PageCount(104)");
-    expect(result.actCards).toHaveLength(1);
+    expect(result.actCards).toHaveLength(2);
     expect(result.actCards[0]).toMatchObject({ label: "ORDEMPARANORMAL2.AdventureImport.ActOne",
       content: [{ count: 5 }, { count: 18 }, { count: 29 }, { count: 1 }] });
     expect(result.actCards[0].content.map(row => row.icon)).toEqual([
@@ -618,6 +637,55 @@ describe("Adventure Import Application", () => {
     expect(mocks.importAdventureAgents.mock.invocationCallOrder[0]).toBeLessThan(mocks.importAdventureScenes.mock.invocationCallOrder[0]);
     expect(info).toHaveBeenCalledOnce();
     expect(Application.DEFAULT_OPTIONS.actions).not.toHaveProperty("importHandouts");
+  });
+
+  it("keeps Ato II unavailable for the survivors PDF even when its ZIP is selected", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("gratuito.pdf"));
+    app.inputs.actOne.select(file("ato-um.zip"));
+    app.inputs.actTwo.select(file("ato-dois.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({
+      pdf: unencryptedRecognizedPdf({ variant: "survivors", supportedActs: ["actOne"],
+        facts: { ...unencryptedRecognizedPdf().facts, parseAttempt: { status: "success", facts: {
+          pageCount: 66, producer: null, creator: null, lang: null,
+          versionStampTag: "v1.1", contentSignatureSha256: "survivors",
+        } } } }),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", issues: [], inventory: null },
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", issues: [], inventory: null },
+    });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actOne"] });
+    await action(app, "analyzeFiles");
+    const context = await app._prepareContext();
+    expect(context.actCards.map((card) => card.selectable)).toEqual([true, false]);
+    expect(context.actCards[1].status).toContain("PdfActUnavailable");
+    await toggleAct(app, "actTwo");
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).toHaveBeenCalledWith(expect.objectContaining({
+      selectedActs: ["actOne"], acknowledgeWarnings: false,
+    }));
+  });
+
+  it("requires explicit selection for a ZIP with missing EMF and keeps the final warning", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("agentes.pdf")); app.inputs.actTwo.select(file("ato-dois.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(), actOne: null,
+      actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", inventory: null,
+        matchMethod: "hash", missingSupplementalPaths: ["Handouts/Audio EMF 1.mp3"],
+        issues: [{ code: "zip-supplemental-missing", severity: "warning", path: "Handouts/Audio EMF 1.mp3" }] },
+    });
+    mocks.materializeAdventureAssets.mockResolvedValue({ assets: [], materializedActs: ["actTwo"],
+      warnings: [{ act: "actTwo", path: "Handouts/Audio EMF 1.mp3" }] });
+    await action(app, "analyzeFiles");
+    expect((await app._prepareContext()).canImport).toBe(false);
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled();
+    await toggleAct(app, "actTwo");
+    expect((await app._prepareContext()).canImport).toBe(true);
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).toHaveBeenCalledWith(expect.objectContaining({
+      selectedActs: ["actTwo"], acknowledgeWarnings: true,
+    }));
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("ImportSuccessWithWarnings"));
   });
 
   it.each(["playtest-alpha-v1.0", "playtest-alpha-v1.1"] as const)(
@@ -892,7 +960,7 @@ describe("Adventure Import prototype template and styles", () => {
       actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", issues: [], inventory: null } });
     await action(app, "analyzeFiles");
     const both = render(await app._prepareContext());
-    expect(both.match(/class="op2-adventure-import__act-card"/g)).toHaveLength(2);
+    expect(both.match(/op2-adventure-import__act-card(?: op2-adventure-import__act-card--selected)?"/g)).toHaveLength(2);
     expect(both).toContain("op2-adventure-import__act-content-count\">29</span>");
     expect(both).toContain("op2-adventure-import__act-content-count\">25</span>");
     expect(both).not.toContain("Pasta técnica");
@@ -907,7 +975,7 @@ describe("Adventure Import prototype template and styles", () => {
       actTwo: { act: "actTwo", status: "recognized", edition: "ato-ii-extras", issues: [], inventory: null } });
     await action(app, "analyzeFiles");
     const one = render(await app._prepareContext());
-    expect(one.match(/class="op2-adventure-import__act-card"/g)).toHaveLength(1);
+    expect(one.match(/op2-adventure-import__act-card(?: op2-adventure-import__act-card--selected)?"/g)).toHaveLength(2);
     expect(one).toContain("AdventureImport.Analysis.Zip.Unknown");
     expect(one).toContain("AdventureImport.ActTwo");
   });

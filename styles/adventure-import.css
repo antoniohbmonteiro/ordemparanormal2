@@ -255,6 +255,16 @@
   background: var(--op2-input-bg);
 }
 
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-card--selected {
+  border-color: var(--op2-positive);
+}
+
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__act-card [data-action="toggleAct"] {
+  margin: 0 0 .55rem;
+  padding: .3rem .5rem;
+  font-size: .76rem;
+}
+
 .ordemparanormal2.op2-adventure-import .op2-adventure-import__act-card:only-child {
   grid-column: 1 / -1;
 }

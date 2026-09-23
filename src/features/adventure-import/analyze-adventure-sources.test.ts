@@ -21,7 +21,7 @@ const ENCRYPTED_PDF = [
 
 const SUCCESSFUL_PARSE = {
   status: "success" as const,
-  facts: { pageCount: 1, producer: null, creator: null, lang: null, versionStampTag: null },
+  facts: { pageCount: 1, producer: null, creator: null, lang: null, versionStampTag: null, contentSignatureSha256: null },
 };
 
 function u16(value: number): number[] {
@@ -90,8 +90,8 @@ describe("analyzeZipActSource", () => {
       totalFiles: 2,
       totalBytes: 30,
       topLevelFolders: [
-        { name: "Tokens", fileCount: 1 },
         { name: "Handouts", fileCount: 1 },
+        { name: "Tokens", fileCount: 1 },
       ],
     });
   });

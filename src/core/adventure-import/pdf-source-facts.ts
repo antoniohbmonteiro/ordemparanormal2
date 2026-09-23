@@ -31,6 +31,7 @@ export interface PdfParsedFacts {
   readonly creator: string | null;
   readonly lang: string | null;
   readonly versionStampTag: string | null;
+  readonly contentSignatureSha256: string | null;
 }
 
 export type PdfParseAttempt =

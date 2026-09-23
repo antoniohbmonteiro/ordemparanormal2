@@ -58,7 +58,12 @@ function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
     createFolder: async data => { writes.push("folder"); const id = `${data.documentType}-${data.flag.folderId}`; folderWorld.push({ id, name: data.name, color: data.color, type: data.documentType, parentId: data.parentId, flag: data.flag }); return id; },
     updateFolder: async (id, data) => { writes.push("folder"); const index = folderWorld.findIndex(folder => folder.id === id); folderWorld[index] = { ...folderWorld[index], ...data, flag: data.flag as AdventureFolderFlag }; },
   };
-  const pdf = { status: "recognized", passwordRequired: false, edition: "playtest-alpha-v1.1", facts: { parseAttempt: { status: "success" } } } as PdfSourceAnalysis;
+  const pdf: PdfSourceAnalysis = { status: "recognized", passwordRequired: false, matchMethod: "hash",
+    edition: "playtest-alpha-v1.1", variant: "agents", supportedActs: ["actOne", "actTwo"], issues: [],
+    facts: { pre: { byteLength: 1, sha256: "test", pdfVersion: "1.7", encryption: { present: false },
+      trailerId: null, plaintextCatalogHints: null }, parseAttempt: { status: "success", facts: {
+        pageCount: 104, producer: null, creator: null, lang: null, versionStampTag: "v1.1", contentSignatureSha256: null,
+      } } } };
   const decide = vi.fn(async () => "restore" as const);
   const lookup = { worldId: "test", findExisting: vi.fn(async (dir: string, name: string) => `${dir}/${name}`) };
   const input = { definition, presets, revision: 1, acts, pdf, actors: port, folders,
@@ -68,6 +73,13 @@ function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
 function resource(a: MutableActor) { return a.system.resources as { health: { value: number; max: number }; determination: { value: number; max: number } }; }
 
 describe("Adventure preset Actor import", () => {
+  it("rejects an explicit Ato II request for the survivors PDF before Actor writes", async () => {
+    const h = harness(["actTwo"]);
+    const pdf: PdfSourceAnalysis = { ...h.input.pdf, variant: "survivors", supportedActs: ["actOne"] };
+    await expect(importAdventureAgents({ ...h.input, pdf })).rejects.toThrow(/cobre/);
+    expect(h.writes).toEqual([]);
+  });
+
   it.each(["relative", "hosted"])("uses %s materialized portrait and token paths without browsing", async representation => {
     const h = harness(["actOne"]);
     const selected = presets.filter(p => p.act === "actOne");

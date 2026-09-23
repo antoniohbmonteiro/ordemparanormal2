@@ -1,7 +1,7 @@
 import type {
   KnownPdfEdition,
   KnownPdfEncryptionProfile,
-  KnownPdfStructuralDescriptor,
+  PdfDocumentVariant,
   PdfEditionId,
 } from "./known-adventure-sources";
 import type { PdfEncryptionFacts, PdfParseAttempt, PdfParsedFacts, PdfPrePasswordFacts } from "./pdf-source-facts";
@@ -12,6 +12,8 @@ export interface PdfSourceAnalysis {
   readonly passwordRequired: boolean;
   readonly matchMethod: MatchMethod;
   readonly edition: PdfEditionId | null;
+  readonly variant: PdfDocumentVariant | null;
+  readonly supportedActs: readonly ("actOne" | "actTwo")[];
   readonly facts: { readonly pre: PdfPrePasswordFacts; readonly parseAttempt: PdfParseAttempt };
   readonly issues: readonly AdventureImportIssue[];
 }
@@ -29,46 +31,33 @@ function matchesEncryptionProfile(
   );
 }
 
-function matchesStructuralDescriptor(
-  facts: PdfParsedFacts,
-  descriptor: KnownPdfStructuralDescriptor,
-): boolean {
-  const checks: boolean[] = [];
-
-  if (descriptor.producer !== undefined) checks.push(facts.producer === descriptor.producer);
-  if (descriptor.creator !== undefined) checks.push(facts.creator === descriptor.creator);
-  if (descriptor.lang !== undefined) checks.push(facts.lang === descriptor.lang);
-  if (descriptor.versionStampPattern !== undefined) {
-    checks.push(descriptor.versionStampPattern.test(facts.versionStampTag ?? ""));
-  }
-  if (descriptor.pageCount !== undefined) checks.push(facts.pageCount === descriptor.pageCount);
-
-  return checks.length > 0 && checks.every(Boolean);
+function matchesContentSignature(facts: PdfParsedFacts, edition: KnownPdfEdition): boolean {
+  return edition.contentSignatureSha256 !== undefined
+    && facts.contentSignatureSha256 === edition.contentSignatureSha256
+    && edition.structural.pageCount !== undefined
+    && facts.pageCount === edition.structural.pageCount
+    && edition.structural.versionStampPattern !== undefined
+    && edition.structural.versionStampPattern.test(facts.versionStampTag ?? "");
 }
 
 function findEditionByHash(
   sha256: string,
-  knownEditions: Record<PdfEditionId, KnownPdfEdition>,
-): PdfEditionId | null {
-  const entry = (Object.entries(knownEditions) as [PdfEditionId, KnownPdfEdition][]).find(
-    ([, edition]) => edition.sha256 === sha256,
-  );
-  return entry ? entry[0] : null;
+  knownEditions: Readonly<Record<string, KnownPdfEdition>>,
+): KnownPdfEdition | null {
+  return Object.values(knownEditions).find((document) => document.sha256Hashes.includes(sha256)) ?? null;
 }
 
-function findEditionByStructuralDescriptor(
+function findEditionByContentSignature(
   facts: PdfParsedFacts,
-  knownEditions: Record<PdfEditionId, KnownPdfEdition>,
-): PdfEditionId | null {
-  const matches = (Object.entries(knownEditions) as [PdfEditionId, KnownPdfEdition][]).filter(([, edition]) =>
-    matchesStructuralDescriptor(facts, edition.structural),
-  );
-  return matches.length === 1 ? matches[0][0] : null;
+  knownEditions: Readonly<Record<string, KnownPdfEdition>>,
+): KnownPdfEdition | null {
+  const matches = Object.values(knownEditions).filter((document) => matchesContentSignature(facts, document));
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function hasEncryptionProfileHint(
   encryption: PdfEncryptionFacts,
-  knownEditions: Record<PdfEditionId, KnownPdfEdition>,
+  knownEditions: Readonly<Record<string, KnownPdfEdition>>,
 ): boolean {
   if (!encryption.present) return false;
   return Object.values(knownEditions).some(
@@ -87,7 +76,7 @@ const PASSWORD_REQUIRED_BY_STATUS: Record<PdfParseAttempt["status"], boolean> = 
 export function recognizePdfSource(
   pre: PdfPrePasswordFacts,
   parseAttempt: PdfParseAttempt,
-  knownEditions: Record<PdfEditionId, KnownPdfEdition>,
+  knownEditions: Readonly<Record<string, KnownPdfEdition>>,
 ): PdfSourceAnalysis {
   if (pre.pdfVersion === null) {
     return {
@@ -95,6 +84,7 @@ export function recognizePdfSource(
       passwordRequired: false,
       matchMethod: "none",
       edition: null,
+      variant: null, supportedActs: [],
       facts: { pre, parseAttempt },
       issues: [{ code: "pdf-header-missing", severity: "error" }],
     };
@@ -108,26 +98,26 @@ export function recognizePdfSource(
     issues.push({ code: "pdf-parse-failed", severity: "error" });
   }
 
-  const hashEdition = findEditionByHash(pre.sha256, knownEditions);
-  if (hashEdition !== null) {
+  const hashDocument = findEditionByHash(pre.sha256, knownEditions);
+  if (hashDocument !== null) {
     return {
       status: "recognized",
       passwordRequired,
       matchMethod: "hash",
-      edition: hashEdition,
+      edition: hashDocument.edition, variant: hashDocument.variant, supportedActs: hashDocument.supportedActs,
       facts: { pre, parseAttempt },
       issues,
     };
   }
 
   if (parseAttempt.status === "success") {
-    const structuralEdition = findEditionByStructuralDescriptor(parseAttempt.facts, knownEditions);
-    if (structuralEdition !== null) {
+    const contentDocument = findEditionByContentSignature(parseAttempt.facts, knownEditions);
+    if (contentDocument !== null) {
       return {
         status: "recognized",
         passwordRequired,
-        matchMethod: "structural-parsed",
-        edition: structuralEdition,
+        matchMethod: "content",
+        edition: contentDocument.edition, variant: contentDocument.variant, supportedActs: contentDocument.supportedActs,
         facts: { pre, parseAttempt },
         issues,
       };
@@ -137,6 +127,7 @@ export function recognizePdfSource(
       passwordRequired,
       matchMethod: "none",
       edition: null,
+      variant: null, supportedActs: [],
       facts: { pre, parseAttempt },
       issues,
     };
@@ -155,6 +146,7 @@ export function recognizePdfSource(
     passwordRequired,
     matchMethod,
     edition: null,
+    variant: null, supportedActs: [],
     facts: { pre, parseAttempt },
     issues,
   };

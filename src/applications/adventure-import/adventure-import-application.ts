@@ -4,7 +4,7 @@ import type {
   HandlebarsTemplatePart,
 } from "@client/applications/api/handlebars-application.mjs";
 
-import type { AdventureImportIssueCode } from "../../core/adventure-import/recognition-status";
+import type { AdventureImportIssueCode, MatchMethod } from "../../core/adventure-import/recognition-status";
 import type { PdfEditionId, ZipPackageId } from "../../core/adventure-import/known-adventure-sources";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import type { AdventureAct, ZipSourceAnalysis } from "../../core/adventure-import/recognize-zip-source";
@@ -43,6 +43,7 @@ import { PLAYTEST_ALPHA_POI_PRESETS, PLAYTEST_ALPHA_POI_PRESET_REVISION } from "
 import { createAdventurePoiItemPort } from "../../adapters/foundry/adventure-poi-items";
 import { importAdventurePois, PoiImportError } from "../../features/adventure-import/import-adventure-pois";
 import { openAdventureImportPoiConflictDialog } from "./adventure-import-poi-conflict-dialog";
+import { assertImportableActs, evaluateActCompatibility, type ActCompatibility } from "../../core/adventure-import/adventure-source-compatibility";
 
 const ADVENTURE_IMPORT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/adventure-import.hbs";
@@ -66,8 +67,13 @@ interface ActContentViewModel {
 }
 
 interface DetectedActViewModel {
+  readonly act: AdventureAct;
   readonly label: string;
   readonly status: string;
+  readonly selectable: boolean;
+  readonly selected: boolean;
+  readonly selectionLabel: string;
+  readonly issues: readonly string[];
   readonly content: readonly ActContentViewModel[];
 }
 
@@ -79,11 +85,13 @@ interface AdventureImportRenderContext {
   readonly canAnalyze: boolean;
   readonly hasAnalysis: boolean;
   readonly canImport: boolean;
+  readonly importLabel: string;
   readonly isImporting: boolean;
   readonly progress: string;
   readonly pdfStatus: SourceStatusViewModel | null;
   readonly actCards: readonly DetectedActViewModel[];
   readonly otherStatuses: readonly SourceStatusViewModel[];
+  readonly completionWarnings: readonly string[];
 }
 
 const localize = (key: string): string => game.i18n.localize(`ORDEMPARANORMAL2.AdventureImport.${key}`);
@@ -104,15 +112,35 @@ const ISSUE_LOCALIZATION_KEY: Record<AdventureImportIssueCode, string> = {
   "zip-eocd-not-found": "ZipEocdNotFound",
   "zip-zip64-unsupported": "ZipZip64Unsupported",
   "zip-encrypted-entries-unsupported": "ZipEncryptedEntriesUnsupported",
+  "zip-invalid-entries": "ZipInvalidEntries",
   "zip-wrong-act-slot": "ZipWrongActSlot",
+  "zip-supplemental-missing": "ZipSupplementalMissing",
+  "zip-supplemental-mismatch": "ZipSupplementalMismatch",
+  "zip-required-mismatch": "ZipRequiredMismatch",
+  "zip-content-mismatch": "ZipContentMismatch",
+  "zip-unexpected-payload": "ZipUnexpectedPayload",
 };
+
+function matchMethodLabel(method: MatchMethod): string {
+  return localize(`Analysis.MatchMethod.${{
+    hash: "Hash", content: "Content", structural: "Structural",
+    "structural-hint": "StructuralHint", none: "None",
+  }[method]}`);
+}
 
 function editionLabel(id: PdfEditionId | ZipPackageId): string {
   return localize(EDITION_LABEL_KEY[id]);
 }
 
+function pdfEditionLabel(analysis: PdfSourceAnalysis): string {
+  const edition = analysis.edition ? editionLabel(analysis.edition) : "";
+  return analysis.variant === "survivors" ? `${edition} · ${localize("Analysis.Pdf.SurvivorsLabel")}` : edition;
+}
+
 function localizeIssues(issues: PdfSourceAnalysis["issues"] | ZipSourceAnalysis["issues"]): readonly string[] {
-  return issues.map((issue) => localize(`Analysis.Issues.${ISSUE_LOCALIZATION_KEY[issue.code]}`));
+  return issues.map((issue) => issue.path
+    ? format(`Analysis.Issues.${ISSUE_LOCALIZATION_KEY[issue.code]}`, { path: issue.path })
+    : localize(`Analysis.Issues.${ISSUE_LOCALIZATION_KEY[issue.code]}`));
 }
 
 function buildPdfStatusViewModel(analysis: PdfSourceAnalysis | null): SourceStatusViewModel | null {
@@ -122,13 +150,13 @@ function buildPdfStatusViewModel(analysis: PdfSourceAnalysis | null): SourceStat
   const issues = localizeIssues(analysis.issues);
 
   if (analysis.passwordRequired) {
-    const edition = analysis.edition ? editionLabel(analysis.edition) : null;
+    const edition = analysis.edition ? pdfEditionLabel(analysis) : null;
     return {
       label,
       modifier: "password-required",
       icon: "fa-solid fa-lock",
       text: edition
-        ? format("Analysis.Pdf.RecognizedPasswordRequired", { edition })
+        ? `${format("Analysis.Pdf.RecognizedPasswordRequired", { edition })} · ${matchMethodLabel(analysis.matchMethod)}`
         : localize("Analysis.Pdf.PasswordRequired"),
       issues,
     };
@@ -139,12 +167,12 @@ function buildPdfStatusViewModel(analysis: PdfSourceAnalysis | null): SourceStat
       const pages = analysis.facts.parseAttempt.status === "success"
         ? format("Analysis.Inventory.PageCount", { count: String(analysis.facts.parseAttempt.facts.pageCount) })
         : null;
-      const edition = analysis.edition ? editionLabel(analysis.edition) : "";
+      const edition = pdfEditionLabel(analysis);
       return {
         label,
         modifier: "recognized",
         icon: "fa-solid fa-check",
-        text: pages && analysis.edition ? `${edition} · ${pages}` : format("Analysis.Pdf.Recognized", { edition }),
+        text: `${pages && analysis.edition ? `${edition} · ${pages}` : format("Analysis.Pdf.Recognized", { edition })} · ${matchMethodLabel(analysis.matchMethod)}`,
         issues,
       };
     }
@@ -164,13 +192,13 @@ function buildZipStatusViewModel(label: string, analysis: ZipSourceAnalysis | nu
 
   switch (analysis.status) {
     case "recognized":
-      return { label, modifier: "recognized", icon: "fa-solid fa-check", text: localize("Analysis.Zip.Recognized"), issues };
+      return { label, modifier: "recognized", icon: "fa-solid fa-check", text: `${localize("Analysis.Zip.Recognized")} · ${matchMethodLabel(analysis.matchMethod)}`, issues };
     case "unsupported":
       return {
         label,
         modifier: "unsupported",
         icon: "fa-solid fa-triangle-exclamation",
-        text: format("Analysis.Zip.Unsupported", { edition: analysis.edition ? editionLabel(analysis.edition) : "" }),
+        text: `${format("Analysis.Zip.Unsupported", { edition: analysis.edition ? editionLabel(analysis.edition) : "" })} · ${matchMethodLabel(analysis.matchMethod)}`,
         issues,
       };
     case "unknown":
@@ -193,12 +221,25 @@ function isRecognizedAct(act: AdventureAct, analysis: ZipSourceAnalysis | null):
   return analysis?.status === "recognized" && analysis.edition === PLAYTEST_ALPHA_ADVENTURE.packageIds[act];
 }
 
-function buildDetectedActViewModel(act: AdventureAct, analysis: ZipSourceAnalysis | null): DetectedActViewModel | null {
-  if (!isRecognizedAct(act, analysis)) return null;
+function buildDetectedActViewModel(act: AdventureAct, analysis: ZipSourceAnalysis | null,
+  compatibility: ActCompatibility, selected: boolean): DetectedActViewModel {
+  const selectable = compatibility.state === "ready" || compatibility.state === "ready-with-warnings";
+  const reason = compatibility.reason ? localize(`Analysis.Availability.${{
+    "pdf-unusable": "PdfUnusable", "pdf-act-unavailable": "PdfActUnavailable",
+    "zip-not-provided": "ZipNotProvided", "zip-not-recognized": "ZipNotRecognized",
+  }[compatibility.reason]}`) : "";
   return {
+    act,
     label: localize(act === "actOne" ? "ActOne" : "ActTwo"),
-    status: localize("Analysis.Zip.Recognized"),
-    content: [
+    status: selectable ? `${localize(compatibility.state === "ready" ? "Analysis.Availability.Ready" : "Analysis.Availability.ReadyWithWarnings")}
+      · ${matchMethodLabel(analysis!.matchMethod)}` : reason,
+    selectable, selected,
+    selectionLabel: localize(selected ? "Actions.DeselectAct" : "Actions.SelectAct"),
+    issues: analysis ? [
+      ...localizeIssues(analysis.issues),
+      ...(compatibility.state === "ready-with-warnings" ? [localize("Analysis.SupplementalNotUsed")] : []),
+    ] : [],
+    content: selectable ? [
       { icon: "fa-solid fa-users", label: localize("Analysis.Content.Agents"),
         count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.actors, PLAYTEST_ALPHA_AGENT_PRESETS, act) },
       { icon: "fa-solid fa-book-open", label: localize("Analysis.Content.Handouts"),
@@ -207,7 +248,7 @@ function buildDetectedActViewModel(act: AdventureAct, analysis: ZipSourceAnalysi
         count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.pointsOfInterest, PLAYTEST_ALPHA_POI_PRESETS, act) },
       { icon: "fa-solid fa-map", label: localize("Analysis.Content.Scenes"),
         count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.scenes, PLAYTEST_ALPHA_SCENE_PRESETS, act) },
-    ],
+    ] : [],
   };
 }
 
@@ -221,6 +262,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       selectZip: AdventureImportApplication.#onSelectZip,
       analyzeFiles: AdventureImportApplication.#onAnalyzeFiles,
       importAssets: AdventureImportApplication.#onImportAssets,
+      toggleAct: AdventureImportApplication.#onToggleAct,
     },
     classes: ["ordemparanormal2", "op2-adventure-import"],
     position: { width: 800, height: "auto" as const },
@@ -245,10 +287,12 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   };
   #password: string | null = null;
   #analysis: AdventureSourceAnalysis | null = null;
+  readonly #selectedActs = new Set<AdventureAct>();
   #result: MaterializationResult | null = null;
   #confirmedOnFailure: readonly MaterializedAsset[] = [];
   #isImporting = false;
   #progress = "";
+  #completionWarnings: readonly string[] = [];
 
   protected override _canRender(options: ApplicationRenderOptions): boolean | void {
     if (!game.user.isGM) return false;
@@ -258,7 +302,9 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   protected override _onClose(options: ApplicationClosingOptions): void {
     this.#password = null;
     this.#analysis = null;
+    this.#selectedActs.clear();
     this.#result = null;
+    this.#completionWarnings = [];
     this.#confirmedOnFailure = [];
     super._onClose(options);
   }
@@ -270,18 +316,22 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       actTwoName: this.#files.actTwo?.name ?? "",
       canAnalyze: this.#files.pdf !== null && !this.#isImporting,
       hasAnalysis: this.#analysis !== null,
-      canImport: !this.#isImporting && game.user.isGM
-        && usableAdventurePdf(this.#analysis?.pdf ?? null)
-        && game.users.activeGM?.id === game.user.id && Boolean(
-        (this.#files.actOne && this.#analysis?.actOne?.status === "recognized" && this.#analysis.actOne.edition === "ato-i-extras")
-        || (this.#files.actTwo && this.#analysis?.actTwo?.status === "recognized" && this.#analysis.actTwo.edition === "ato-ii-extras"),
-      ),
+      canImport: !this.#isImporting && game.user.isGM && game.users.activeGM?.id === game.user.id
+        && this.#selectedActs.size > 0 && [...this.#selectedActs].every((act) => {
+          const state = this.#analysis?.acts[act].state;
+          return state === "ready" || state === "ready-with-warnings";
+        }),
+      importLabel: localize([...this.#selectedActs].some((act) => this.#analysis?.acts[act].state === "ready-with-warnings")
+        ? "Actions.ImportWithWarnings" : "Actions.Import"),
       isImporting: this.#isImporting,
       progress: this.#progress,
+      completionWarnings: this.#completionWarnings,
       pdfStatus: buildPdfStatusViewModel(this.#analysis?.pdf ?? null),
       actCards: [
-        buildDetectedActViewModel("actOne", this.#analysis?.actOne ?? null),
-        buildDetectedActViewModel("actTwo", this.#analysis?.actTwo ?? null),
+        this.#analysis ? buildDetectedActViewModel("actOne", this.#analysis.actOne,
+          this.#analysis.acts.actOne, this.#selectedActs.has("actOne")) : null,
+        this.#analysis ? buildDetectedActViewModel("actTwo", this.#analysis.actTwo,
+          this.#analysis.acts.actTwo, this.#selectedActs.has("actTwo")) : null,
       ].filter((act): act is DetectedActViewModel => act !== null),
       otherStatuses: ([
         ["actOne", this.#analysis?.actOne ?? null],
@@ -313,7 +363,9 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         if (!file) return;
         this.#files[slot] = file;
         this.#analysis = null;
+        this.#selectedActs.clear();
         this.#result = null;
+        this.#completionWarnings = [];
         this.#confirmedOnFailure = [];
         if (slot === "pdf") this.#password = null;
         void this.render().catch((error) => {
@@ -343,6 +395,16 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     if (slot === "actOne" || slot === "actTwo") this.#openFilePicker(slot);
   }
 
+  static async #onToggleAct(this: AdventureImportApplication, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    const act = target.dataset.act;
+    if ((act !== "actOne" && act !== "actTwo") || this.#isImporting || !this.#analysis) return;
+    const state = this.#analysis.acts[act].state;
+    if (state !== "ready" && state !== "ready-with-warnings") return;
+    if (this.#selectedActs.has(act)) this.#selectedActs.delete(act);
+    else this.#selectedActs.add(act);
+    await this.render();
+  }
+
   static async #onAnalyzeFiles(this: AdventureImportApplication): Promise<void> {
     if (!game.user.isGM || !this.#files.pdf || this.#isImporting) return;
 
@@ -358,11 +420,16 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       if (password !== null && this.#files.pdf) {
         const pdfRetry = await analyzePdfSource(this.#files.pdf, password);
         if (pdfRetry.facts.parseAttempt.status === "success") this.#password = password;
-        analysis = { ...analysis, pdf: pdfRetry };
+        analysis = { ...analysis, pdf: pdfRetry, acts: {
+          actOne: evaluateActCompatibility("actOne", pdfRetry, analysis.actOne),
+          actTwo: evaluateActCompatibility("actTwo", pdfRetry, analysis.actTwo),
+        } };
       }
     }
 
     this.#analysis = analysis;
+    this.#selectedActs.clear();
+    for (const act of ["actOne", "actTwo"] as const) if (analysis.acts[act].state === "ready") this.#selectedActs.add(act);
     await this.render();
   }
 
@@ -371,8 +438,9 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     const files = { actOne: this.#files.actOne, actTwo: this.#files.actTwo };
     const analysis = this.#analysis;
     if (!usableAdventurePdf(analysis.pdf)) return;
-    if (!((files.actOne && analysis.actOne?.status === "recognized" && analysis.actOne.edition === "ato-i-extras")
-      || (files.actTwo && analysis.actTwo?.status === "recognized" && analysis.actTwo.edition === "ato-ii-extras"))) return;
+    const requestedActs = [...this.#selectedActs];
+    const acknowledgeWarnings = requestedActs.some((act) => analysis.acts[act].state === "ready-with-warnings");
+    try { assertImportableActs(analysis.acts, requestedActs, acknowledgeWarnings); } catch { return; }
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
@@ -380,11 +448,15 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     try {
       await this.render();
       this.#result = null;
+      this.#completionWarnings = [];
       this.#confirmedOnFailure = [];
       this.#result = await materializeAdventureAssets({
         ...files,
         actOneAnalysis: analysis.actOne,
         actTwoAnalysis: analysis.actTwo,
+        pdfAnalysis: analysis.pdf,
+        selectedActs: requestedActs,
+        acknowledgeWarnings,
         storage: createAdventureAssetStorage(),
         mimeTypes: CONST.UPLOADABLE_FILE_EXTENSIONS,
         onProgress: async (completed, total) => {
@@ -487,7 +559,11 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         }
         summaries.push(format("Actions.ScenesSummary", { created: String(scenes.created), updated: String(scenes.updated), unchanged: String(scenes.unchanged), preserved: String(scenes.preserved) }));
       }
-      ui.notifications.info([localize("Actions.ImportSuccess"), ...summaries].join(" "));
+      this.#completionWarnings = (this.#result.warnings ?? []).map((warning) => warning.path);
+      ui.notifications.info([localize("Actions.ImportSuccess"),
+        ...(this.#completionWarnings.length ? [format("Actions.ImportSuccessWithWarnings", {
+          count: String(this.#completionWarnings.length),
+        })] : []), ...summaries].join(" "));
     } catch (error) {
       if (stage === "pois") {
         const counts = error instanceof PoiImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };

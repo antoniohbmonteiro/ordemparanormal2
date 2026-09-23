@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-09-22
+
+### Fixed
+
+- Fixed Adventure Importer Scene preparation on hosted environments by no longer validating packaged system assets through the World data FilePicker.
+
 ## [0.4.3] - 2026-09-22
 
 ### Fixed

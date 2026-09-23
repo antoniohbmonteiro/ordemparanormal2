@@ -41,11 +41,11 @@ export function registerPoiCanvas(): void {
         isBlockedAt: isTokenInteractionAt,
         open: target => openInvestigationApplication({
           sceneId: env.canvas?.scene?.id ?? "",
-          regionId: target.regionId,
+          itemUuid: target.itemUuid,
           name: target.name,
         }),
       });
-      // Reveal management from the canvas is GM-only; players have no selectPoi tool.
+      // Visibility management from the canvas is GM-only; players have no selectPoi tool.
       if (game.user?.isGM) {
         stopContextMenu = listenPoiSceneContextMenu({
           view,
@@ -67,11 +67,9 @@ export function registerPoiCanvas(): void {
   for (const hook of ["createItem", "updateItem", "deleteItem"]) {
     Hooks.on(hook, (item: unknown) => session?.invalidateItems(uuid => uuid === (item as { uuid: string }).uuid));
   }
-  Hooks.on("updateCompendium", (pack: unknown) =>
-    session?.invalidateItems(uuid => uuid.startsWith(`Compendium.${(pack as { collection: string }).collection}.`)));
   Hooks.on("updateUser", (user: unknown) => {
     if (user !== game.user) return;
-    // Rebuild only when the viewer's role actually flips (GM sees all, player sees revealed).
+    // Rebuild only when the viewer's role actually flips.
     if (!session || !!game.user?.isGM !== startedAsGM) start();
   });
 }

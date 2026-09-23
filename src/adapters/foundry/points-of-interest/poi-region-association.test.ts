@@ -8,24 +8,24 @@ describe("POI Region association", () => {
     "rejects unusable association %j", value => expect(parsePoiRegionAssociation(value)).toBeNull(),
   );
 
-  it("reads only the canonical reference without resolving or retaining extra data", () => {
+  it("rejects old Compendium associations", () => {
     const getFlag = vi.fn(() => ({ itemUuid: "Compendium.world.poi.Item.abc", secret: "ignored" }));
-    expect(readPoiRegionAssociation({ getFlag })).toEqual({ itemUuid: "Compendium.world.poi.Item.abc" });
+    expect(readPoiRegionAssociation({ getFlag })).toBeNull();
     expect(getFlag).toHaveBeenCalledExactlyOnceWith("ordemparanormal2", "pointOfInterest");
   });
 
-  it("keeps a non-blank name snapshot and drops a blank or non-string one", () => {
+  it("ignores legacy name snapshots", () => {
     expect(parsePoiRegionAssociation({ itemUuid: "Item.a", name: "Armário Azul" }))
-      .toEqual({ itemUuid: "Item.a", name: "Armário Azul" });
+      .toEqual({ itemUuid: "Item.a" });
     expect(parsePoiRegionAssociation({ itemUuid: "Item.a", name: "  " })).toEqual({ itemUuid: "Item.a" });
     expect(parsePoiRegionAssociation({ itemUuid: "Item.a", name: 5 })).toEqual({ itemUuid: "Item.a" });
   });
 
-  it("writes the name snapshot alongside the uuid when present", () => {
+  it("writes only the uuid", () => {
     const create = vi.fn((value: unknown) => ({ replacement: value }));
     vi.stubGlobal("foundry", { data: { operators: { ForcedReplacement: { create } } } });
-    buildPoiRegionAssociationUpdate({ kind: "associate", association: { itemUuid: "Item.a", name: "Sala" } });
-    expect(create).toHaveBeenCalledExactlyOnceWith({ itemUuid: "Item.a", name: "Sala" });
+    buildPoiRegionAssociationUpdate({ kind: "associate", association: { itemUuid: "Item.a" } });
+    expect(create).toHaveBeenCalledExactlyOnceWith({ itemUuid: "Item.a" });
   });
 
   it("leaves the entire update untouched for an unchanged draft", () => {

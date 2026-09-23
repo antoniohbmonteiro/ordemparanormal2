@@ -1,6 +1,5 @@
 import type { Graphics, Polygon } from "pixi.js";
 import { readPoiRegionAssociation } from "./poi-region-association";
-import { isPoiRevealedTo, readPoiRegionReveal } from "./poi-region-reveal";
 
 export interface PoiPoint { readonly x: number; readonly y: number }
 
@@ -30,7 +29,7 @@ export interface PoiRegionView {
   readonly id: string;
   readonly itemUuid: string;
   readonly geometry: PoiGeometry;
-  /** Safe display-name snapshot from the association flag; absent on legacy associations. */
+  /** Name obtained from the GM-authorized Scene projection. */
   readonly name?: string;
 }
 
@@ -38,12 +37,13 @@ export function readPoiCanvasRegion(
   region: PoiCanvasRegion,
   sceneId: string,
   viewer: PoiRegionViewer,
+  allowed: ReadonlyMap<string, string>,
 ): PoiRegionView | null {
   if (!region.id || region.parent?.id !== sceneId || !region.viewed) return null;
   const association = readPoiRegionAssociation(region);
   if (!association) return null;
-  if (!viewer.isGM && !isPoiRevealedTo(readPoiRegionReveal(region), viewer.userId, false)) return null;
+  if (!allowed.has(association.itemUuid)) return null;
   const geometry = region.polygonTree;
   if (!(geometry.area > 0)) return null;
-  return { id: region.id, itemUuid: association.itemUuid, geometry, name: association.name };
+  return { id: region.id, itemUuid: association.itemUuid, geometry, name: allowed.get(association.itemUuid) };
 }

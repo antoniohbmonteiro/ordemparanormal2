@@ -100,7 +100,7 @@ describe("POI Scene Controls", () => {
     });
     expect(controls[controlName].activeTool).toBe(isGM ? "selectPoi" : "");
     if (!isGM) {
-      expect(Object.keys(controls[controlName].tools)).toEqual(["investigationMode"]);
+      expect(Object.keys(controls[controlName].tools)).toEqual(["investigationMode", "scenePois"]);
       expect(controls[controlName]).not.toHaveProperty("layer");
       expect(prepareSceneControls).not.toHaveBeenCalled();
     }
@@ -111,17 +111,18 @@ describe("POI Scene Controls", () => {
     addPoiSceneControls(controls);
     const group = controls[controlName];
     const expected = [
-      ["selectPoi", "Selecionar POI", "native-icon-select"],
-      ["createRectangle", "Criar POI retangular", "native-icon-rectangle"],
-      ["createEllipse", "Criar POI elíptico", "native-icon-ellipse"],
-      ["createPolygon", "Criar POI poligonal", "native-icon-polygon"],
-      ["addArea", "Adicionar área ao POI", "fa-solid fa-plus"],
-      ["createHole", "Criar buraco no POI", "native-icon-hole"],
+      ["selectPoi", "Selecionar ponto de interesse", "native-icon-select"],
+      ["createRectangle", "Criar ponto de interesse retangular", "native-icon-rectangle"],
+      ["createEllipse", "Criar ponto de interesse elíptico", "native-icon-ellipse"],
+      ["createPolygon", "Criar ponto de interesse poligonal", "native-icon-polygon"],
+      ["addArea", "Adicionar área ao ponto de interesse", "fa-solid fa-plus"],
+      ["createHole", "Criar buraco no ponto de interesse", "native-icon-hole"],
     ];
 
-    expect(Object.keys(group.tools)).toEqual(["investigationMode", ...expected.map(([name]) => name)]);
+    expect(Object.keys(group.tools)).toEqual(["investigationMode", "scenePois", ...expected.map(([name]) => name)]);
     expect(group.tools.investigationMode).toMatchObject({ name: "investigationMode", order: 0, toggle: true, button: false, active: false, creation: false, control: false, interaction: false });
-    expect(Object.values(group.tools).slice(1)).toEqual(expected.map(([name, title, icon], order) => ({
+    expect(group.tools.scenePois).toMatchObject({ name: "scenePois", button: true, toggle: false });
+    expect(Object.values(group.tools).slice(2)).toEqual(expected.map(([name, title, icon], order) => ({
       name, title, icon, order: order + 1,
       button: false,
       toggle: false,

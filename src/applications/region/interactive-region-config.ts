@@ -187,7 +187,7 @@ export class InteractiveRegionConfig extends RegionConfig {
       this.#selection = selection;
       this.#draft = {
         kind: "associate",
-        association: { itemUuid: selection.itemUuid, name: selection.name },
+        association: { itemUuid: selection.itemUuid },
       };
     }
     await this.render({ force: true });

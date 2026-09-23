@@ -109,7 +109,7 @@ export type PoiInvestigationPlayerInformationView = (
       readonly visibility: "hidden";
     }
 ) & {
-  /** Present only after this placement has revealed the information. */
+  /** Present only when the selected Agent knows this information. */
   readonly content?: string;
 };
 
@@ -124,7 +124,7 @@ export interface PoiInvestigationGmInformationView {
   readonly difficulty: number;
   readonly content: string;
   readonly showDifficultyToPlayers: boolean;
-  readonly isRevealed: boolean;
+  readonly knownCount: number;
 }
 
 export interface PoiInvestigationGmSkillView {
@@ -149,7 +149,7 @@ export interface PoiInvestigationPlayerViewData
 /** Full local-GM presentation; never returned to a non-GM requester. */
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";
-  readonly associationItemUuid: string;
+  readonly itemUuid: string;
   readonly skills: readonly PoiInvestigationGmSkillView[];
   readonly gmContext: string;
 }

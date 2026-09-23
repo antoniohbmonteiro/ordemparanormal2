@@ -160,6 +160,7 @@
     "styles/poi-region-config.css",
     "styles/poi-actions-menu.css",
     "styles/investigation-application.css",
+    "styles/poi-scene-panel.css",
     "styles/gm-tools-palette.css",
     "styles/adventure-import.css",
     "styles/equipment-item-sheet.css",

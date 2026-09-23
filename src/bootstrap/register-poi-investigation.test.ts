@@ -1,47 +1,32 @@
 import { afterEach, expect, it, vi } from "vitest";
+
+const { mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries, registerPoiInvestigationQuery } = vi.hoisted(() => ({
+  mutatePoi: vi.fn().mockResolvedValue({ ok: true }),
+  reconcileScenePoiMembership: vi.fn().mockResolvedValue(undefined),
+  registerPoiRuntimeQueries: vi.fn(), registerPoiInvestigationQuery: vi.fn(),
+}));
+vi.mock("../adapters/foundry/points-of-interest/poi-runtime-queries", () => ({ mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries }));
+vi.mock("../adapters/foundry/points-of-interest/poi-investigation-query", () => ({ registerPoiInvestigationQuery }));
 import { registerPoiInvestigation } from "./register-poi-investigation";
-import { POI_INVESTIGATION_QUERY } from "../adapters/foundry/points-of-interest/poi-investigation-query";
+afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-const { refreshInvestigationApplication } = vi.hoisted(() => ({
-  refreshInvestigationApplication: vi.fn(),
-}));
-vi.mock("../applications/points-of-interest/investigation-application", () => ({
-  refreshInvestigationApplication,
-}));
-
-afterEach(() => vi.unstubAllGlobals());
-
-it("registers the query and refreshes only the placement whose reveal state changed", () => {
-  const queries: Record<string, unknown> = {};
+it("lets only the active GM add Region associations and reconcile at startup", async () => {
   const hooks = new Map<string, (...args: unknown[]) => void>();
-  vi.stubGlobal("CONFIG", { queries });
-  vi.stubGlobal("Hooks", {
-    on: (name: string, callback: (...args: unknown[]) => void) => hooks.set(name, callback),
-  });
-  vi.stubGlobal("foundry", {
-    utils: {
-      hasProperty: (object: object, path: string) => path.split(".").reduce<unknown>(
-        (value, key) => value && typeof value === "object"
-          ? (value as Record<string, unknown>)[key]
-          : undefined,
-        object,
-      ) !== undefined,
-    },
-  });
+  const gm = { id: "gm", isGM: true };
+  const other = { id: "other", isGM: true };
+  const game = { user: other, users: { activeGM: gm }, i18n: { localize: (key: string) => key } };
+  vi.stubGlobal("game", game);
+  vi.stubGlobal("Hooks", { on: (name: string, fn: (...args: unknown[]) => void) => hooks.set(name, fn),
+    once: (name: string, fn: (...args: unknown[]) => void) => hooks.set(name, fn) });
   registerPoiInvestigation();
-  expect(typeof queries[POI_INVESTIGATION_QUERY]).toBe("function");
-  const updateRegion = hooks.get("updateRegion")!;
-  updateRegion(
-    { id: "region", parent: { id: "scene" } },
-    { flags: { ordemparanormal2: { pointOfInterestInformationReveal: {
-      itemUuid: "Item.poi", informationIds: ["opaque"],
-    } } } },
-  );
-  expect(refreshInvestigationApplication).toHaveBeenCalledExactlyOnceWith("scene", "region");
-
-  updateRegion(
-    { id: "other", parent: { id: "scene" } },
-    { shapes: [] },
-  );
-  expect(refreshInvestigationApplication).toHaveBeenCalledOnce();
+  const region = { parent: { id: "scene" }, getFlag: () => ({ itemUuid: "Item.poi" }) };
+  hooks.get("updateRegion")!(region);
+  hooks.get("ready")!();
+  expect(mutatePoi).not.toHaveBeenCalled();
+  expect(reconcileScenePoiMembership).toHaveBeenCalledOnce();
+  game.user = gm;
+  hooks.get("createRegion")!(region);
+  await vi.waitFor(() => expect(mutatePoi).toHaveBeenCalledWith({ action: "add", sceneId: "scene", itemUuid: "Item.poi" }));
+  expect(registerPoiRuntimeQueries).toHaveBeenCalledOnce();
+  expect(registerPoiInvestigationQuery).toHaveBeenCalledOnce();
 });

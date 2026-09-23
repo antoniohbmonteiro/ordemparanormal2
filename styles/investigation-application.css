@@ -310,3 +310,13 @@
   }
   .op2-poi-investigation .op2-investigation-reveal { padding-inline: 4px; }
 }
+
+.op2-poi-investigation .op2-investigation-agent-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+.op2-poi-investigation .op2-investigation-agent-label select { min-width: 180px; }
+.op2-poi-agent-dialog { display: grid; gap: 8px; }
+.op2-poi-agent-dialog label { display: flex; gap: 8px; align-items: center; }

@@ -76,10 +76,15 @@ describe("Foundry Adventure POI Item adapter", () => {
     item.data.folder = "manual-folder";
     item.data.ownership = { default: 2 };
     item.data.flags.other = { key: "preserved" };
+    item.data.flags.ordemparanormal2.pointOfInterestVisibility = { mode: "users", users: ["player"], notified: ["player"] };
+    item.data.flags.ordemparanormal2.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.agent", informationIds: ["clue"] }] };
     item.data.system.gmContext = "Edição manual";
     await port.updateItem(id, poiSystem(preset), flag);
     expect(item.toObject()).toMatchObject({ name: "Nome editado", img: "custom.png", folder: "manual-folder",
-      ownership: { default: 2 }, flags: { other: { key: "preserved" } }, system: poiSystem(preset) });
+      ownership: { default: 2 }, flags: { other: { key: "preserved" }, ordemparanormal2: {
+        pointOfInterestVisibility: { mode: "users", users: ["player"], notified: ["player"] },
+        pointOfInterestKnowledge: { agents: [{ actorUuid: "Actor.agent", informationIds: ["clue"] }] },
+      } }, system: poiSystem(preset) });
     await port.completeItem(id, { ...flag, state: "complete", baseline: "digest" });
     expect(port.listItems()[0].flag).toMatchObject({ state: "complete", baseline: "digest" });
   });

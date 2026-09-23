@@ -19,6 +19,11 @@ function onInvestigationModeChange(_event?: Event, active = false): void {
   investigationMode.set(active);
 }
 
+function onScenePoisChange(): void {
+  const id = (globalThis as typeof globalThis & { canvas?: { scene?: { id?: string } } }).canvas?.scene?.id;
+  if (id) void import("../../../applications/points-of-interest/poi-scene-panel").then(({ openPoiScenePanel }) => openPoiScenePanel(id));
+}
+
 export function syncInvestigationModeControl(): void {
   const controls = (ui as typeof ui & { controls?: {
     controls: Record<string, SceneControl>; render(): unknown;
@@ -63,6 +68,13 @@ export function addPoiSceneControls(controls: Record<string, SceneControl>): voi
     active: investigationMode.get(), creation: false, control: false, interaction: false,
     onChange: onInvestigationModeChange,
   };
+  const panel: PoiSceneControlTool = {
+    name: "scenePois", order: 7,
+    title: game.i18n.localize(`${LOCALIZATION_PREFIX}.ScenePois`),
+    icon: "fa-solid fa-list", button: true, toggle: false,
+    creation: false, control: false, interaction: false,
+    onChange: onScenePoisChange,
+  };
 
   const order = Object.entries(controls).reduce(
     (nextOrder, [name, control]) => name === CONTROL_NAME
@@ -80,7 +92,7 @@ export function addPoiSceneControls(controls: Record<string, SceneControl>): voi
     // An empty default lets Foundry choose null when only toggles are available.
     activeTool: native ? "selectPoi" : "",
     ...(native ? { layer: native.layer, onToolChange: onPoiToolChange } : {}),
-    tools: { investigationMode: mode, ...tools },
+    tools: { investigationMode: mode, scenePois: panel, ...tools },
   };
   controls[CONTROL_NAME] = control;
 }

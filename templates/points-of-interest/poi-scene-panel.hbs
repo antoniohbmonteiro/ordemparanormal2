@@ -1,0 +1,49 @@
+<section class="op2-poi-scene-panel">
+  <header class="op2-poi-scene-panel__header">
+    <div class="op2-poi-scene-panel__heading">
+      <h2>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Title"}}</h2>
+      <p>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.InScene"}} <strong>{{sceneName}}</strong></p>
+    </div>
+    {{#if isGM}}
+      <button type="button" class="op2-poi-scene-panel__add" data-action="add">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        {{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Add"}}
+      </button>
+    {{/if}}
+  </header>
+
+  {{#if loading}}<p class="op2-poi-scene-panel__status" role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Loading"}}</p>{{/if}}
+  {{#if error}}<p class="op2-poi-scene-panel__status" role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Failed"}}</p>{{/if}}
+
+  {{#unless loading}}
+  {{#unless error}}
+    <ul class="op2-poi-scene-panel__list">
+      {{#each entries}}
+        <li class="op2-poi-scene-panel__row" data-item-uuid="{{itemUuid}}">
+          <span class="op2-poi-scene-panel__image" aria-hidden="true">
+            {{#if img}}<img src="{{img}}" alt="" />{{else}}<i class="fa-solid fa-location-dot"></i>{{/if}}
+          </span>
+          <div class="op2-poi-scene-panel__identity">
+            <button type="button" class="op2-poi-scene-panel__name" data-action="open">{{name}}</button>
+            <p class="op2-poi-scene-panel__meta">
+              <span><i class="fa-solid {{visibilityIcon}}" aria-hidden="true"></i> {{visibilityLabel}}</span>
+              <span class="op2-poi-scene-panel__separator" aria-hidden="true">·</span>
+              <span>{{locationLabel}}</span>
+            </p>
+          </div>
+          {{#if @root.isGM}}
+            <button type="button" class="op2-poi-scene-panel__menu-trigger" data-poi-menu-trigger
+              aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Actions'}}"
+              title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Actions'}}">
+              <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+            </button>
+          {{/if}}
+        </li>
+      {{else}}
+        <li class="op2-poi-scene-panel__empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Empty"}}</li>
+      {{/each}}
+    </ul>
+    <footer class="op2-poi-scene-panel__footer">{{count}} {{countLabel}}</footer>
+  {{/unless}}
+  {{/unless}}
+</section>

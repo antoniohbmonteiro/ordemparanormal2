@@ -25,7 +25,7 @@ describe("POI canvas lifecycle registration", () => {
     const { hooks, user, session } = register();
     vi.stubGlobal("canvas", { ready: true });
     registerPoiCanvas();
-    expect(hooks.size).toBe(13);
+    expect(hooks.size).toBe(12);
     hooks.get("canvasReady")!(); expect(createPoiCanvasSession).toHaveBeenCalledOnce();
     hooks.get("canvasPan")!({}, { level: "second" }); expect(session.pan).toHaveBeenCalledWith({ level: "second" });
     hooks.get("canvasTearDown")!(); hooks.get("canvasInit")!(); hooks.get("canvasReady")!();
@@ -35,10 +35,6 @@ describe("POI canvas lifecycle registration", () => {
     hooks.get("updateItem")!({ uuid: "Item.a" });
     const itemMatches = session.invalidateItems.mock.calls[0][0];
     expect(itemMatches("Item.a")).toBe(true); expect(itemMatches("Item.b")).toBe(false);
-    hooks.get("updateCompendium")!({ collection: "world.poi" });
-    const packMatches = session.invalidateItems.mock.calls[1][0];
-    expect(packMatches("Compendium.world.poi.Item.a")).toBe(true);
-    expect(packMatches("Compendium.world.poi2.Item.a")).toBe(false);
     // GM demotion rebuilds the session (now a player session); a role-stable update is a no-op.
     user.isGM = false; hooks.get("updateUser")!(user);
     expect(session.destroy).toHaveBeenCalledTimes(2);

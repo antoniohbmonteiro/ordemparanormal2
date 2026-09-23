@@ -3,6 +3,7 @@ import type { InvestigationMode } from "./investigation-mode";
 import { findPoiHover, listenPoiPointer, orderPoiHover } from "./poi-canvas-hover";
 import { readPoiCanvasRegion, type PoiCanvasRegion, type PoiPoint, type PoiRegionView } from "./poi-canvas-regions";
 import { createPoiCanvasRenderer, type PoiRenderCanvas, type PoiVisuals } from "./poi-canvas-renderer";
+import { requestPoiScene, subscribePoiInvalidation } from "./poi-runtime-queries";
 
 export interface PoiSessionCanvas extends PoiRenderCanvas {
   readonly ready: boolean;
@@ -14,7 +15,7 @@ export interface PoiSessionEnvironment {
   readonly canvas: PoiSessionCanvas;
   readonly mode: InvestigationMode;
   readonly focus: EventTarget;
-  /** The viewer's id; the GM sees every eligible POI, a player only the ones revealed to this id. */
+  /** The viewer's id for authorized Scene projections. */
   readonly userId: string;
   isGM(): boolean;
   localize(key: string): string;
@@ -22,7 +23,7 @@ export interface PoiSessionEnvironment {
 
 interface Entry { readonly view: PoiRegionView; name: string }
 
-/** A POI hit under a client point: enough to open its sheet and manage its reveal. */
+/** A POI hit under a client point: enough to open its window and manage visibility. */
 export interface PoiActionTarget {
   readonly regionId: string;
   readonly itemUuid: string;
@@ -58,6 +59,8 @@ export function createPoiCanvasSession(
   let pointer: PoiPoint | null = null;
   let lastViewedLevelId = env.canvas.level?.id ?? null;
   let disposed = false;
+  let allowed = new Map<string, string>();
+  let loadRevision = 0;
   renderer.setVisible(env.mode.get());
   const active = () => !disposed && env.canvas.ready && env.canvas.scene === scene;
   const viewer = () => ({ isGM: env.isGM(), userId: env.userId });
@@ -86,7 +89,7 @@ export function createPoiCanvasSession(
   }
 
   function upsert(region: PoiCanvasRegion): void {
-    const view = readPoiCanvasRegion(region, scene.id, viewer());
+    const view = readPoiCanvasRegion(region, scene.id, viewer(), allowed);
     if (!view) {
       if (region.id && entries.delete(region.id)) renderer.remove(region.id);
       return;
@@ -95,7 +98,7 @@ export function createPoiCanvasSession(
     const prior = entries.get(view.id);
     if (prior && prior.view.geometry === view.geometry && prior.view.itemUuid === view.itemUuid) {
       if (prior.view.name === view.name) return;
-      // Only the safe-name snapshot changed: swap the entry, leave the geometry node untouched.
+      // Only the projected name changed: swap the entry, leave the geometry node untouched.
       entries.set(view.id, { view, name: gm ? prior.name : view.name ?? unnamed });
       return;
     }
@@ -124,7 +127,7 @@ export function createPoiCanvasSession(
   }
 
   function invalidateItems(matches: (uuid: string) => boolean): void {
-    // Players never resolve Items: their label comes from the association snapshot via upsert().
+    // Players never resolve Items: their label comes from the authorized Scene projection.
     if (!active() || !env.isGM()) return;
     for (const uuid of names.keys()) if (matches(uuid)) names.delete(uuid);
     for (const entry of entries.values()) {
@@ -144,6 +147,17 @@ export function createPoiCanvasSession(
   const stopPointer = listenPoiPointer(env.canvas.app.view, env.focus, point => {
     pointer = point; refreshHover();
   });
+  async function refreshAllowed(): Promise<void> {
+    const revision = ++loadRevision;
+    allowed = new Map();
+    reconcile();
+    const result = await requestPoiScene(scene.id);
+    if (!active() || revision !== loadRevision) return;
+    allowed = new Map("entries" in result ? result.entries.map(entry => [entry.itemUuid, entry.name]) : []);
+    reconcile();
+  }
+  const stopInvalidation = subscribePoiInvalidation(() => { void refreshAllowed(); });
+  void refreshAllowed();
   reconcile();
 
   return {
@@ -178,6 +192,7 @@ export function createPoiCanvasSession(
       disposed = true;
       stopPointer();
       stopMode();
+      stopInvalidation();
       entries.clear(); names.clear(); candidates = []; pointer = null; lastViewedLevelId = null;
       renderer.destroy();
     },

@@ -8,13 +8,23 @@ Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ord
 
 ## Destaques
 
-- O **Importador de Aventura** passa a reconhecer uma cópia legítima desbloqueada do PDF Playtest Alpha v1.0 que antes podia aparecer como não reconhecida.
-- Reconhece também duas variantes conhecidas do ZIP de extras do Ato II, preservando o suporte aos arquivos já aceitos dos Atos I e II.
-- Nenhuma migração de dados do Mundo é necessária.
+- O **Importador de Aventura** reconhece PDFs compatíveis pela assinatura do conteúdo quando o hash binário muda, incluindo cópias legítimas desbloqueadas ou regravadas.
+- Suporta o PDF **Playtest Alpha v1.1 Sobreviventes**, distribuição gratuita que cobre o **Ato I**, e permite selecionar os atos a importar conforme as fontes disponíveis.
+- Reconhece, com aviso, o pacote conhecido do Ato II ao qual faltam somente três áudios EMF suplementares que a importação atual não utiliza.
 
 ## Reconhecimento dos arquivos
 
-A v0.4.5 corrige o reconhecimento de arquivos legítimos do playtest que podiam aparecer como não reconhecidos na análise inicial. O PDF v1.0 desbloqueado é identificado pelos metadados e pela marca de versão verificados; os ZIPs são aceitos somente quando correspondem a fingerprints conhecidos. O conteúdo e o fluxo de importação permanecem os mesmos.
+A v0.4.5 fortalece o reconhecimento sem dispensar a validação das fontes. Hashes conhecidos continuam como caminho rápido. Quando o hash binário de um PDF muda, o importador pode reconhecer uma versão compatível pela assinatura do texto completo, após verificar a leitura, a contagem de páginas e a marca de versão. O PDF v1.1 Sobreviventes é uma fonte oficial válida para o Ato I; a variante Agentes cobre os Atos I e II.
+
+Para os ZIPs, um hash conhecido validado também é o caminho rápido. Após um miss, o importador compara a estrutura dos arquivos necessários e confirma seu conteúdo. Isso permite reconhecer reempacotamentos e recompressões compatíveis, mantendo as validações de segurança. O relatório diferencia a disponibilidade de cada ato, e o Mestre escolhe explicitamente quais atos importar.
+
+O caso conhecido do Ato II em que faltam **somente** os arquivos abaixo é reconhecido com aviso:
+
+- `Handouts/Audio EMF 1.mp3`
+- `Handouts/Audio EMF 2.mp3`
+- `Handouts/Audio EMF 3.mp3`
+
+Esses três áudios são suplementares conhecidos e não são utilizados pela importação atual. Nesse caso, o Mestre pode escolher **Importar mesmo assim**. Arquivos necessários ausentes ou alterados, diferenças desconhecidas, pacote do ato errado e ZIPs inválidos ou inseguros continuam bloqueados.
 
 O Mestre continua selecionando seus próprios arquivos legalmente obtidos. **O sistema não inclui nem distribui PDFs, mapas, tokens, handouts ou outros arquivos oficiais.**
 

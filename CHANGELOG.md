@@ -4,11 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.4.5] - 2026-09-22
+## [0.4.5] - 2026-09-23
+
+### Added
+
+- Added support for the Playtest Alpha v1.1 Survivors PDF, the free distribution covering Act I.
+- Added explicit act selection and per-act source compatibility, so an available Act I can be imported without Act II sources.
+- Added a compatibility report with warnings for known safe omissions of supplemental files.
+
+### Changed
+
+- Kept known PDF hashes as the fast path and added recognition by complete text content signature after a binary hash miss.
+- Recognize ZIPs in layers: validated known fingerprint, structural identity, and content confirmation after a fingerprint miss.
+- Revalidate selected sources before materialization and do not store the three known supplemental Act II EMF audio files.
 
 ### Fixed
 
-- Recognize verified unlocked Playtest Alpha v1.0 PDFs through their complete structural descriptor and known Act II extras variants through multiple explicit fingerprints.
+- Recognize compatible legitimate unlocked or resaved PDFs whose binary hash differs from the known copy.
+- Allow conscious import, with a warning, of the known Act II package missing only `Handouts/Audio EMF 1.mp3`, `Handouts/Audio EMF 2.mp3`, and `Handouts/Audio EMF 3.mp3`.
 
 ## [0.4.4] - 2026-09-22
 

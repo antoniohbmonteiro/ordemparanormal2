@@ -68,6 +68,7 @@ describe("Foundry Adventure POI Item adapter", () => {
     const port = createAdventurePoiItemPort();
     expect(() => port.validateCandidate(preset, flag)).not.toThrow();
     const id = await port.createItem(preset, "icons/svg/item-bag.svg", "poi-folder", flag, placement);
+    expect(world[0].data.system).not.toHaveProperty("skills");
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: "pointOfInterest",
       img: "icons/svg/item-bag.svg", folder: "poi-folder", ownership: { default: 0 } }));
     const item = world[0];
@@ -101,5 +102,27 @@ describe("Foundry Adventure POI Item adapter", () => {
     expect(world[0].img).toBe("worlds/test/bookshelf.jpg");
     expect(await port.updateImageIfFallback(id, "worlds/test/other.jpg")).toBe(false);
     expect(world[0].img).toBe("worlds/test/bookshelf.jpg");
+  });
+
+  it("remaps known retired information IDs when restoring a modified imported POI", async () => {
+    const preset = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.22")!;
+    const flag: PoiImportFlag = { importer: "pointOfInterest", adventureId: "playtest-alpha", documentId: preset.id,
+      act: preset.act, version: 1, presetRevision: 2, state: "incomplete" };
+    const placement: AdventureFolderPlacementFlag = { version: 1, adventureId: "playtest-alpha",
+      documentType: "Item", documentId: preset.id, act: preset.act, folderId: "pointsOfInterest" };
+    const port = createAdventurePoiItemPort();
+    const id = await port.createItem(preset, "icons/svg/item-bag.svg", "poi-folder", flag, placement);
+    const item = world[0];
+    item.data.flags.ordemparanormal2.pointOfInterestKnowledge = { agents: [
+      { actorUuid: "Actor.first", informationIds: ["emailBoxTechnology", "unknown"] },
+      { actorUuid: "Actor.second", informationIds: ["emailBoxResearch", "emailBoxTechnology"] },
+    ] };
+    item.data.system.skills = [{ skill: "technology", information: [] }];
+    await port.updateItem(id, poiSystem(preset), flag);
+    expect(item.data.system).not.toHaveProperty("skills");
+    expect(item.getFlag("ordemparanormal2", "pointOfInterestKnowledge")).toEqual({ agents: [
+      { actorUuid: "Actor.first", informationIds: ["emailBoxResearch", "unknown"] },
+      { actorUuid: "Actor.second", informationIds: ["emailBoxResearch"] },
+    ] });
   });
 });

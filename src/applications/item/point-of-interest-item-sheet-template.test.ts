@@ -34,37 +34,30 @@ describe("Point of Interest Item Sheet template", () => {
     expect(template).toContain('<prose-mirror name="system.gmContext"');
   });
 
-  it("renders skill groups with information-only rows", () => {
+  it("renders information cards with approach controls", () => {
     expect(template).toContain(
       "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Difficulty",
     );
     expect(template).toContain(
       "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Information",
     );
-    expect(template).toContain('data-action="addSkill"');
     expect(template).toContain('data-action="addInformation"');
     expect(template).toContain('data-action="removeInformation"');
-    expect(template).toContain('data-action="removeSkill"');
-    expect(template).not.toContain('data-information-field="skill"');
-    expect(template).toContain('data-information-field="difficulty"');
-    expect(template).toContain('data-information-field="content"');
-
-    const eachGroups = template.indexOf("{{#each poi.skills}}");
-    const eachInformation = template.indexOf("{{#each information}}");
-    expect(eachGroups).toBeGreaterThan(-1);
-    expect(eachInformation).toBeGreaterThan(eachGroups);
-    expect(template).not.toContain("<select data-information-edit");
+    expect(template).toContain('data-action="addApproach"');
+    expect(template).toContain('data-action="removeApproach"');
+    expect(template).toContain('data-poi-edit="skill"');
+    expect(template).toContain('data-poi-edit="specialization"');
+    expect(template).toContain('data-poi-edit="difficulty"');
+    expect(template).toContain('data-poi-edit="content"');
+    expect(template.indexOf("{{#each approaches}}")).toBeGreaterThan(template.indexOf("{{#each poi.information}}"));
   });
 
-  it("keeps difficulty visibility on each information and has no separate skill grid", () => {
-    expect(template).toContain('data-information-field="showDifficultyToPlayers"');
-    expect(template).not.toContain("data-listed-skill");
-    expect(template).not.toContain("op2-poi-sheet__skill-options");
-    expect(template).not.toContain("data-difficulty-visibility-edit");
+  it("keeps difficulty visibility on each approach", () => {
+    expect(template).toContain('data-poi-edit="showDifficultyToPlayers"');
   });
 
   it("never exposes the entry id as an editable field or execution state", () => {
-    expect(template).not.toContain('data-information-field="id"');
+    expect(template).not.toContain('data-poi-edit="id"');
     expect(template).not.toContain("discovered");
   });
 });

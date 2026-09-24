@@ -1,5 +1,5 @@
-import { skillLabel } from "../../../config/skills";
-import { readPointOfInterestSkills, type PoiInvestigationViewData } from "../../../documents/item/point-of-interest-data";
+import { skillLabel, type SkillKey } from "../../../config/skills";
+import { readPointOfInterestInformation, type PointOfInterestApproach, type PointOfInterestInformation, type PoiInvestigationViewData } from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 
 export interface PoiInvestigationRequest {
@@ -10,6 +10,17 @@ export interface PoiInvestigationRequest {
 }
 export type PoiInvestigationError = "unavailable" | "forbidden" | "no-gm";
 export type PoiInvestigationResult = { readonly view: PoiInvestigationViewData } | { readonly error: PoiInvestigationError };
+
+interface DerivedRow { readonly entry: PointOfInterestInformation; readonly approach: PointOfInterestApproach }
+function groupApproaches(information: readonly PointOfInterestInformation[]): ReadonlyMap<SkillKey, readonly DerivedRow[]> {
+  const groups = new Map<SkillKey, DerivedRow[]>();
+  for (const entry of information) for (const approach of entry.approaches) {
+    const rows = groups.get(approach.skill) ?? [];
+    rows.push({ entry, approach });
+    groups.set(approach.skill, rows);
+  }
+  return groups;
+}
 
 function authorized(request: PoiInvestigationRequest):
   | { item: foundry.documents.Item; user: foundry.documents.User; actor: foundry.documents.Actor | null }
@@ -43,18 +54,21 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   ]);
   const latest = authorized(request);
   if ("error" in latest) return latest;
-  const skills = readPointOfInterestSkills(latest.item.system);
+  const groups = groupApproaches(readPointOfInterestInformation(latest.item.system));
   const knowledge = readPoiKnowledge(latest.item);
   const known = new Set(knowledge.find(entry => entry.actorUuid === actor?.uuid)?.informationIds ?? []);
   const base = { name: latest.item.name, description, img: latest.item.img ?? "" };
   const view: PoiInvestigationViewData = user.isGM
     ? { ...base, audience: "gm", itemUuid: latest.item.uuid, gmContext,
-        skills: skills.map(group => ({ key: group.skill, name: skillLabel(group.skill),
-          information: group.information.map(entry => ({ ...entry,
+        skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
+          information: rows.map(({ entry, approach }) => ({ id: entry.id, content: entry.content,
+            difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
+            ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
-    : { ...base, audience: "player", skills: skills.map(group => ({ key: group.skill, name: skillLabel(group.skill),
-        information: group.information.map(entry => ({
-          ...(entry.showDifficultyToPlayers ? { visibility: "public" as const, difficulty: entry.difficulty } : { visibility: "hidden" as const }),
+    : { ...base, audience: "player", skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
+        information: rows.map(({ entry, approach }) => ({
+          ...(approach.showDifficultyToPlayers ? { visibility: "public" as const, difficulty: approach.difficulty } : { visibility: "hidden" as const }),
+          ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
           ...(known.has(entry.id) ? { content: entry.content } : {}),
         })) })) };
   return { view };

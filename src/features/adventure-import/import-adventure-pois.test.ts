@@ -33,7 +33,7 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
     flag: PoiImportFlag, placement: Parameters<PoiItemPort["createItem"]>[4]) {
     const id = `item-${this.items.length + 1}`;
     this.items.push({ id, type: "pointOfInterest", folderId, img, flag, folderPlacement: placement,
-      system: structuredClone({ publicDescription: preset.publicDescription, gmContext: preset.gmContext, skills: preset.skills }) });
+      system: structuredClone({ publicDescription: preset.publicDescription, gmContext: preset.gmContext, information: preset.information }) });
     this.writes++;
     return id;
   }
@@ -109,11 +109,11 @@ describe("Adventure Point of Interest import", () => {
     expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.05")?.name).toContain("Rabiscos");
     expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.09")?.gmContext).toContain("05C");
     expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actTwo.map.25")?.name).toBe("Freezer");
-    expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actTwo.map.21")?.skills).toEqual([]);
+    expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actTwo.map.21")?.information).toEqual([]);
     const tattoo = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.character.tattoo")!;
-    expect(tattoo.skills.find(group => group.skill === "medicine")?.information[0].id)
-      .not.toBe(tattoo.skills.find(group => group.skill === "survival")?.information[0].id);
-    expect(PLAYTEST_ALPHA_POI_PRESETS.every(p => p.skills.every(group => group.skill !== "aptitude"))).toBe(true);
+    expect(tattoo.information.find(entry => entry.id === "scarAgeMedicine")?.approaches.map(approach => approach.skill))
+      .toEqual(["medicine", "survival"]);
+    expect(PLAYTEST_ALPHA_POI_PRESETS.every(p => p.information.every(entry => entry.approaches.every(approach => approach.skill !== "aptitude")))).toBe(true);
     expect(PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId).map(p => [p.id, p.imageAssetId])).toEqual([
       ["actOne.map.11", "actOne.handout.06"], ["actOne.map.12", "actOne.handout.07"],
       ["actOne.map.13", "actOne.handout.08"], ["actOne.map.14", "actOne.handout.09"],
@@ -282,8 +282,8 @@ describe("Adventure Point of Interest import", () => {
   it("rejects invalid content before creating a Folder or Item", async () => {
     const world = new FakeWorld();
     const invalid = PLAYTEST_ALPHA_POI_PRESETS.map(p => p.id === "actTwo.map.25"
-      ? { ...p, skills: [{ skill: "notRegistered", information: [{ id: "bad", difficulty: 6,
-        content: "Pista", showDifficultyToPlayers: false }] }] } : p);
+      ? { ...p, information: [{ id: "bad", content: "Pista", approaches: [
+        { skill: "notRegistered", difficulty: 6, showDifficultyToPlayers: false }] }] } : p);
     expect(() => validateAdventurePoiData(invalid.at(-1))).toThrow();
     await expect(run(world, ["actOne"], undefined, invalid)).rejects.toMatchObject({ stage: "preflight" });
     expect(world.writes).toBe(0);
@@ -305,7 +305,7 @@ describe("Adventure Point of Interest import", () => {
     await expect(run(world, ["actOne"])).rejects.toMatchObject({ stage: "preflight" });
     world.items.pop();
     world.items.push({ id: "manual", type: "pointOfInterest", folderId: null, img: "custom.png", flag: null,
-      folderPlacement: null, system: { publicDescription: "", gmContext: "", skills: [] } });
+      folderPlacement: null, system: { publicDescription: "", gmContext: "", information: [] } });
     expect(await run(world, ["actOne"])).toMatchObject({ unchanged: 29 });
     expect(world.items).toHaveLength(30);
   });

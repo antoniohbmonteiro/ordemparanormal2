@@ -11,7 +11,7 @@ function world() {
   const scene = { id: "scene", regions, getFlag: (_scope: string, key: string) => sceneFlags[key],
     update: vi.fn(async (data: Record<string, unknown>) => { sceneFlags.pointOfInterestItems = data["flags.ordemparanormal2.pointOfInterestItems"]; }) };
   const item = { id: "poi", uuid: "Item.poi", type: "pointOfInterest", name: "Armário", img: "icon.svg", isEmbedded: false, pack: null,
-    ownership: { default: 0 }, system: { skills: [{ skill: "perception", information: [{ id: "clue", difficulty: 6, content: "segredo", showDifficultyToPlayers: false }] }] },
+    ownership: { default: 0 }, system: { information: [{ id: "clue", content: "segredo", approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] }] },
     getFlag: (_scope: string, key: string) => flags[key],
     testUserPermission: () => false,
     update: vi.fn(async (data: Record<string, unknown>) => {

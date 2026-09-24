@@ -3,7 +3,7 @@ import actOneMap from "./playtest-alpha/act-one-map.json";
 import actTwoMap from "./playtest-alpha/act-two-map.json";
 import { validateAdventurePoiData, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
 
-export const PLAYTEST_ALPHA_POI_PRESET_REVISION = 1;
+export const PLAYTEST_ALPHA_POI_PRESET_REVISION = 2;
 const data: readonly unknown[] = [...characters, ...actOneMap, ...actTwoMap];
 export const PLAYTEST_ALPHA_POI_PRESETS: readonly AdventurePoiPreset[] = data.map(value => {
   validateAdventurePoiData(value);

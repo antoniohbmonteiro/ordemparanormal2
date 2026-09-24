@@ -1,5 +1,5 @@
 import { SYSTEM_ID } from "../../../config/system-config";
-import { readPointOfInterestSkills } from "../../../documents/item/point-of-interest-data";
+import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { publishPoiRevealNotice } from "./publish-poi-reveal-notice";
 import { associatedRegionIds, isGmControlledPoi, isPoiVisibleTo, isWorldPoiUuid, POI_KNOWLEDGE_PATH, POI_SCENE_ITEMS_PATH, POI_VISIBILITY_PATH, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 
@@ -98,7 +98,7 @@ async function writeMutation(input: PoiMutation, requester: foundry.documents.Us
   } else if (input.action === "knowledge") {
     if (!item) return { ok: false, reason: "unavailable" };
     if (typeof input.informationId !== "string" || !Array.isArray(input.actorUuids)) return { ok: false, reason: "invalid" };
-    const validIds = new Set(readPointOfInterestSkills(item.system).flatMap(skill => skill.information.map(info => info.id)));
+    const validIds = new Set(readPointOfInterestInformation(item.system).map(info => info.id));
     if (!validIds.has(input.informationId) || input.actorUuids.some(uuid => typeof uuid !== "string" || !/^Actor\.[^.]+$/u.test(uuid))) return { ok: false, reason: "invalid" };
     const actors = [...new Set(input.actorUuids)].map(uuid => game.actors.get(uuid.slice(6)));
     if (actors.length !== input.actorUuids.length || actors.some(actor => !actor || actor.type !== "agent")) return { ok: false, reason: "invalid" };

@@ -1,5 +1,4 @@
-import { isSkillKey } from "../../config/skills";
-import { POINT_OF_INTEREST_DIFFICULTY_MIN, type PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
+import { isPointOfInterestInformationList, type PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
 import type { AdventureDefinition } from "./adventure-definition";
 import type { AdventureAct } from "./recognize-zip-source";
 
@@ -21,36 +20,24 @@ function keysAre(value: Record<string, unknown>, keys: readonly string[]): boole
 
 export function validateAdventurePoiData(value: unknown): asserts value is AdventurePoiPreset {
   const preset = record(value);
-  if (!preset || !keysAre(preset, ["id", "act", "name", "publicDescription", "gmContext", "skills",
+  if (!preset || !keysAre(preset, ["id", "act", "name", "publicDescription", "gmContext", "information",
     ...(preset.imageAssetId === undefined ? [] : ["imageAssetId"])])
     || (preset.act !== "actOne" && preset.act !== "actTwo")
     || typeof preset.id !== "string" || !preset.id.startsWith(`${preset.act}.`)
     || typeof preset.name !== "string" || !preset.name.trim()
     || (preset.imageAssetId !== undefined && (typeof preset.imageAssetId !== "string" || !preset.imageAssetId.trim()))
     || typeof preset.publicDescription !== "string" || typeof preset.gmContext !== "string"
-    || !Array.isArray(preset.skills)) throw new Error("Preset de POI inválido.");
-
-  const seenSkills = new Set<string>();
-  const seenIds = new Set<string>();
-  for (const value of preset.skills) {
-    const group = record(value);
-    if (!group || !keysAre(group, ["skill", "information"]) || !isSkillKey(group.skill)
-      || seenSkills.has(group.skill) || !Array.isArray(group.information) || !group.information.length) {
-      throw new Error(`Grupo de perícia inválido no POI ${preset.id}.`);
-    }
-    seenSkills.add(group.skill);
-    for (const value of group.information) {
-      const entry = record(value);
-      if (!entry || !keysAre(entry, ["id", "difficulty", "content", "showDifficultyToPlayers"])
-        || typeof entry.id !== "string" || !entry.id.trim() || seenIds.has(entry.id)
-        || typeof entry.difficulty !== "number" || !Number.isInteger(entry.difficulty)
-        || entry.difficulty < POINT_OF_INTEREST_DIFFICULTY_MIN
-        || typeof entry.content !== "string" || !entry.content.trim()
-        || entry.showDifficultyToPlayers !== false) {
-        throw new Error(`Informação inválida no POI ${preset.id}.`);
-      }
-      seenIds.add(entry.id);
-    }
+    || !isPointOfInterestInformationList(preset.information)) throw new Error("Preset de POI inválido.");
+  for (const value of preset.information) {
+    const entry = record(value)!;
+    if (!keysAre(entry, ["id", "content", "approaches"])
+      || !(entry.content as string).trim()
+      || (entry.approaches as unknown[]).some(value => {
+        const approach = record(value);
+        return !approach || !keysAre(approach, ["skill", "difficulty", "showDifficultyToPlayers",
+          ...(approach.skill === "aptitude" ? ["specialization"] : [])])
+          || approach.showDifficultyToPlayers !== false;
+      })) throw new Error(`Informação inválida no POI ${preset.id}.`);
   }
 }
 
@@ -75,5 +62,5 @@ export function validateAdventurePoiReferences(definition: AdventureDefinition, 
 }
 
 export function poiSystem(preset: AdventurePoiPreset): PointOfInterestSystemData {
-  return { publicDescription: preset.publicDescription, gmContext: preset.gmContext, skills: preset.skills };
+  return { publicDescription: preset.publicDescription, gmContext: preset.gmContext, information: preset.information };
 }

@@ -9,7 +9,7 @@ import type {
   PoiInvestigationPlayerSkillView,
 } from "../../documents/item/point-of-interest-data";
 import type { AgentCheckSelection } from "../../application/checks/build-agent-check";
-import type { SkillKey } from "../../config/skills";
+import { aptitudeSpecializationLabel, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
 import { mutatePoi, subscribePoiInvalidation } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
 import {
@@ -52,6 +52,7 @@ export interface PlayerInvestigationInformationRow {
   readonly isRevealed: boolean;
   readonly difficulty?: number;
   readonly content: string;
+  readonly specializationLabel?: string;
 }
 
 export interface PlayerInvestigationSkillViewModel {
@@ -70,6 +71,7 @@ export interface GmInvestigationInformationRow {
   readonly difficulty: number;
   readonly content: string;
   readonly revealLabel: string;
+  readonly specializationLabel?: string;
 }
 
 export interface GmInvestigationSkillViewModel {
@@ -139,6 +141,7 @@ export function buildInvestigationRenderContext(
             knownCount: entry.knownCount,
             difficulty: entry.difficulty,
             content: entry.content,
+            ...(entry.specialization ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
             revealLabel: `${localize("Reveal")} — ${skill.name}`,
           })),
         })),
@@ -158,6 +161,7 @@ export function buildInvestigationRenderContext(
           isHidden: entry.visibility === "hidden",
           isRevealed: Object.hasOwn(entry, "content"),
           content: entry.content ?? "",
+          ...(entry.specialization ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
           ...(entry.visibility === "public" ? { difficulty: entry.difficulty } : {}),
         })),
       })),
@@ -328,7 +332,8 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     try {
       let selection: AgentCheckSelection | null;
       if (skill.key === "aptitude") {
-        const specialization = await selectInvestigationAptitudeSpecialization();
+        const allowed = [...new Set(skill.information.flatMap(entry => entry.specialization ? [entry.specialization] : []))] as AptitudeSpecializationKey[];
+        const specialization = await selectInvestigationAptitudeSpecialization(allowed);
         selection = specialization
           ? { kind: "aptitude", key: specialization }
           : null;

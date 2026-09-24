@@ -7,83 +7,58 @@
       <input type="text" name="name" value="{{poi.name}}" autocomplete="off"{{#unless editable}} disabled{{/unless}} />
     </label>
   </header>
-
   <div class="op2-poi-sheet__body">
     <section class="op2-poi-sheet__description">
       <span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.PublicDescription"}}</span>
-      <prose-mirror name="system.publicDescription" value="{{poi.publicDescription}}" toggled="true" document-uuid="{{poi.uuid}}"{{#unless editable}} disabled{{/unless}}>
-        {{{poi.enrichedPublicDescription}}}
-      </prose-mirror>
+      <prose-mirror name="system.publicDescription" value="{{poi.publicDescription}}" toggled="true" document-uuid="{{poi.uuid}}"{{#unless editable}} disabled{{/unless}}>{{{poi.enrichedPublicDescription}}}</prose-mirror>
     </section>
-
     <fieldset class="op2-poi-sheet__gm">
       <legend>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.GmContextLegend"}}</legend>
-      <prose-mirror name="system.gmContext" value="{{poi.gmContext}}" toggled="true" document-uuid="{{poi.uuid}}"{{#unless editable}} disabled{{/unless}}>
-        {{{poi.enrichedGmContext}}}
-      </prose-mirror>
+      <prose-mirror name="system.gmContext" value="{{poi.gmContext}}" toggled="true" document-uuid="{{poi.uuid}}"{{#unless editable}} disabled{{/unless}}>{{{poi.enrichedGmContext}}}</prose-mirror>
     </fieldset>
-
     <section class="op2-poi-sheet__information-section">
       <header class="op2-poi-sheet__toolbar">
         <h2>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Information"}}</h2>
-        {{#if editable}}
-          <button type="button" data-action="addSkill"{{#unless poi.canAddSkill}} disabled{{/unless}}><i class="fa-solid fa-plus"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddSkill"}}</button>
-        {{/if}}
+        {{#if editable}}<button type="button" data-action="addInformation"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddInformation"}}</button>{{/if}}
       </header>
-
-      <div class="op2-poi-sheet__skill-groups">
-        {{#each poi.skills}}
-          <section class="op2-poi-sheet__skill-group" data-skill="{{skill}}">
-            <header class="op2-poi-sheet__skill-header">
-              <h3>{{skillLabel}}</h3>
-              {{#if @root.editable}}
-                <button type="button" class="op2-poi-sheet__remove-skill" data-action="removeSkill" data-skill="{{skill}}" title="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveSkill'}}">
-                  <i class="fa-solid fa-trash" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveSkill"}}
-                </button>
-              {{/if}}
+      <div class="op2-poi-sheet__information-list">
+        {{#each poi.information}}
+          <section class="op2-poi-sheet__information-card" data-information-id="{{id}}">
+            <header class="op2-poi-sheet__information-header">
+              <h3>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Information"}} {{displayIndex}}</h3>
+              {{#if @root.editable}}<button type="button" class="op2-poi-sheet__remove" data-action="removeInformation" data-information-id="{{id}}" title="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveInformation'}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>{{/if}}
             </header>
-            <table class="op2-poi-sheet__information">
-              <thead>
-                <tr>
-                  <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Difficulty"}}</th>
-                  <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.ShowDifficulty"}}</th>
-                  <th scope="col">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Information"}}</th>
-                  <th scope="col"><span class="op2-poi-sheet__sr-only">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Actions"}}</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#each information}}
-                  <tr>
-                    <td>
-                      <input type="number" min="1" step="1" inputmode="numeric" value="{{difficulty}}" data-information-edit data-skill="{{../skill}}" data-information-id="{{id}}" data-information-field="difficulty"{{#unless @root.editable}} disabled{{/unless}} />
-                    </td>
-                    <td>
-                      <label class="op2-poi-sheet__difficulty-visibility">
-                        <input type="checkbox" data-information-edit data-skill="{{../skill}}" data-information-id="{{id}}" data-information-field="showDifficultyToPlayers" {{#if showDifficultyToPlayers}}checked{{/if}}{{#unless @root.editable}} disabled{{/unless}} />
-                        <span class="op2-poi-sheet__sr-only">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.ShowDifficultyToPlayers"}}</span>
-                      </label>
-                    </td>
-                    <td>
-                      <textarea rows="2" data-information-edit data-skill="{{../skill}}" data-information-id="{{id}}" data-information-field="content"{{#unless @root.editable}} disabled{{/unless}}>{{content}}</textarea>
-                    </td>
-                    <td>
-                      {{#if @root.editable}}
-                        <button type="button" class="op2-poi-sheet__remove" data-action="removeInformation" data-skill="{{../skill}}" data-information-id="{{id}}" title="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveInformation'}}">
-                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                        </button>
-                      {{/if}}
-                    </td>
-                  </tr>
-                {{/each}}
-              </tbody>
-            </table>
-            {{#if @root.editable}}
-              <button type="button" class="op2-poi-sheet__add-information" data-action="addInformation" data-skill="{{skill}}"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddInformation"}}</button>
-            {{/if}}
+            <label class="op2-poi-sheet__content-label">
+              <span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Information"}}</span>
+              <textarea rows="2" data-poi-edit="content" data-information-id="{{id}}"{{#unless @root.editable}} disabled{{/unless}}>{{content}}</textarea>
+            </label>
+            <div class="op2-poi-sheet__approaches">
+              <h4>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Approaches"}}</h4>
+              {{#each approaches}}
+                <div class="op2-poi-sheet__approach">
+                  <label><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill"}}</span>
+                    <select data-poi-edit="skill" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}}>
+                      {{#each skillOptions}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+                    </select>
+                  </label>
+                  {{#if isAptitude}}
+                    <label><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Specialization"}}</span>
+                      <select data-poi-edit="specialization" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}}>
+                        {{#each specializationOptions}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+                      </select>
+                    </label>
+                  {{/if}}
+                  <label class="op2-poi-sheet__difficulty"><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Difficulty"}}</span>
+                    <input type="number" min="1" step="1" inputmode="numeric" value="{{difficulty}}" data-poi-edit="difficulty" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}} />
+                  </label>
+                  <label class="op2-poi-sheet__visibility"><input type="checkbox" data-poi-edit="showDifficultyToPlayers" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#if showDifficultyToPlayers}} checked{{/if}}{{#unless @root.editable}} disabled{{/unless}} /><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.ShowDifficulty"}}</span></label>
+                  {{#if @root.editable}}<button type="button" class="op2-poi-sheet__remove" data-action="removeApproach" data-information-id="{{../id}}" data-approach-index="{{index}}" title="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveApproach'}}"{{#unless ../canRemoveApproach}} disabled{{/unless}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>{{/if}}
+                </div>
+              {{/each}}
+              {{#if @root.editable}}<button type="button" class="op2-poi-sheet__add-approach" data-action="addApproach" data-information-id="{{id}}"{{#unless canAddApproach}} disabled{{/unless}}><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddApproach"}}</button>{{/if}}
+            </div>
           </section>
-        {{else}}
-          <p class="op2-poi-sheet__empty">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.EmptyInformation"}}</p>
-        {{/each}}
+        {{else}}<p class="op2-poi-sheet__empty">{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.EmptyInformation"}}</p>{{/each}}
       </div>
     </section>
   </div>

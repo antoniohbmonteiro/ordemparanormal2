@@ -1,268 +1,163 @@
-import { isSkillKey, type SkillKey } from "../../config/skills";
+import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
 
-/** Minimum confirmed Difficulty for Point of Interest information. */
 export const POINT_OF_INTEREST_DIFFICULTY_MIN = 1;
-
-/** A stable, skill-owned piece of information. */
+export type OrdinaryPoiSkillKey = Exclude<SkillKey, "aptitude">;
+export type PointOfInterestApproach = {
+  readonly skill: OrdinaryPoiSkillKey;
+  readonly difficulty: number;
+  readonly showDifficultyToPlayers: boolean;
+} | {
+  readonly skill: "aptitude";
+  readonly specialization: AptitudeSpecializationKey;
+  readonly difficulty: number;
+  readonly showDifficultyToPlayers: boolean;
+};
 export interface PointOfInterestInformation {
   readonly id: string;
-  readonly difficulty: number;
   readonly content: string;
-  readonly showDifficultyToPlayers: boolean;
+  readonly approaches: readonly PointOfInterestApproach[];
 }
-
-/** The canonical group for one skill inside a Point of Interest. */
-export interface PointOfInterestSkill {
-  readonly skill: SkillKey;
-  readonly information: readonly PointOfInterestInformation[];
-}
-
-/** Persisted `system` shape of a Point of Interest Item. */
 export interface PointOfInterestSystemData {
   readonly publicDescription: string;
   readonly gmContext: string;
-  readonly skills: readonly PointOfInterestSkill[];
+  readonly information: readonly PointOfInterestInformation[];
 }
 
-export type PointOfInterestInformationDraft = {
-  readonly difficulty: number;
-  readonly content?: string;
-  readonly showDifficultyToPlayers?: boolean;
-};
-
-export type PointOfInterestInformationPatch = Partial<
-  Pick<PointOfInterestInformation, "difficulty" | "content" | "showDifficultyToPlayers">
->;
-
-function isNonBlankString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+const aptitude = SKILL_DEFINITIONS.find(definition => definition.key === "aptitude");
+const specializationKeys = new Set<string>(
+  aptitude && "specializations" in aptitude
+    ? aptitude.specializations.map(specialization => specialization.key) : [],
+);
+export function isAptitudeSpecializationKey(value: unknown): value is AptitudeSpecializationKey {
+  return typeof value === "string" && specializationKeys.has(value);
 }
-
-export function isPointOfInterestInformation(
-  value: unknown,
-): value is PointOfInterestInformation {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PointOfInterestInformation>;
-  return (
-    isNonBlankString(candidate.id) &&
-    typeof candidate.difficulty === "number" &&
-    Number.isInteger(candidate.difficulty) &&
-    candidate.difficulty >= POINT_OF_INTEREST_DIFFICULTY_MIN &&
-    typeof candidate.content === "string" &&
-    typeof candidate.showDifficultyToPlayers === "boolean"
-  );
+export function isPointOfInterestApproach(value: unknown): value is PointOfInterestApproach {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (!isSkillKey(candidate.skill) || !Number.isInteger(candidate.difficulty)
+    || (candidate.difficulty as number) < POINT_OF_INTEREST_DIFFICULTY_MIN
+    || typeof candidate.showDifficultyToPlayers !== "boolean") return false;
+  return candidate.skill === "aptitude"
+    ? isAptitudeSpecializationKey(candidate.specialization)
+    : candidate.specialization === undefined;
 }
-
-export function isPointOfInterestSkill(value: unknown): value is PointOfInterestSkill {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PointOfInterestSkill>;
-  return (
-    isSkillKey(candidate.skill) &&
-    Array.isArray(candidate.information) &&
-    candidate.information.length > 0 &&
-    candidate.information.every(isPointOfInterestInformation)
-  );
+export function approachIdentity(approach: PointOfInterestApproach): string {
+  return approach.skill === "aptitude" ? `${approach.skill}:${approach.specialization}` : approach.skill;
 }
-
-/**
- * Defensively reads only the current grouped shape. Invalid or duplicate
- * groups and entries are omitted; the removed flat shape is never interpreted.
- */
-export function readPointOfInterestSkills(system: unknown): readonly PointOfInterestSkill[] {
+export function isPointOfInterestInformation(value: unknown): value is PointOfInterestInformation {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== "string" || !candidate.id.trim()
+    || typeof candidate.content !== "string" || !Array.isArray(candidate.approaches)
+    || candidate.approaches.length === 0 || !candidate.approaches.every(isPointOfInterestApproach)) return false;
+  const identities = candidate.approaches.map(approachIdentity);
+  return new Set(identities).size === identities.length;
+}
+export function isPointOfInterestInformationList(value: unknown): value is readonly PointOfInterestInformation[] {
+  if (!Array.isArray(value) || !value.every(isPointOfInterestInformation)) return false;
+  const ids = value.map(entry => entry.id);
+  return new Set(ids).size === ids.length;
+}
+/** Runtime reads never interpret the legacy grouped shape. */
+export function readPointOfInterestInformation(system: unknown): readonly PointOfInterestInformation[] {
   if (!system || typeof system !== "object") return [];
-  const skills = (system as { readonly skills?: unknown }).skills;
-  if (!Array.isArray(skills)) return [];
-
-  const seenSkills = new Set<SkillKey>();
-  const seenInformationIds = new Set<string>();
-  const result: PointOfInterestSkill[] = [];
-
-  for (const value of skills) {
-    if (!isPointOfInterestSkill(value) || seenSkills.has(value.skill)) continue;
-    const ids = value.information.map(({ id }) => id);
-    if (
-      new Set(ids).size !== ids.length ||
-      ids.some((id) => seenInformationIds.has(id))
-    ) continue;
-
-    seenSkills.add(value.skill);
-    ids.forEach((id) => seenInformationIds.add(id));
-    result.push({
-      skill: value.skill,
-      information: value.information.map((entry) => ({
-        id: entry.id,
-        difficulty: entry.difficulty,
-        content: entry.content,
-        showDifficultyToPlayers: entry.showDifficultyToPlayers,
-      })),
-    });
-  }
-  return result;
+  const value = (system as { readonly information?: unknown }).information;
+  if (!isPointOfInterestInformationList(value)) return [];
+  return value.map(entry => ({ ...entry, approaches: entry.approaches.map(approach => approach.skill === "aptitude"
+    ? { ...approach } : { skill: approach.skill, difficulty: approach.difficulty,
+        showDifficultyToPlayers: approach.showDifficultyToPlayers }) }));
+}
+function assertValidInformation(list: readonly PointOfInterestInformation[]): void {
+  if (!isPointOfInterestInformationList(list)) throw new Error("Invalid Point of Interest information.");
+}
+export function addPointOfInterestInformation(
+  list: readonly PointOfInterestInformation[], id: string, approach: PointOfInterestApproach,
+  content = "",
+): readonly PointOfInterestInformation[] {
+  const next = [...list, { id, content, approaches: [approach] }];
+  assertValidInformation(next);
+  return next;
+}
+export function updatePointOfInterestInformation(
+  list: readonly PointOfInterestInformation[], id: string, content: string,
+): readonly PointOfInterestInformation[] {
+  if (!list.some(entry => entry.id === id)) throw new Error(`Unknown Point of Interest information id: ${id}`);
+  const next = list.map(entry => entry.id === id ? { ...entry, content } : entry);
+  assertValidInformation(next);
+  return next;
+}
+export function removePointOfInterestInformation(
+  list: readonly PointOfInterestInformation[], id: string,
+): readonly PointOfInterestInformation[] {
+  return list.filter(entry => entry.id !== id);
+}
+export function addPointOfInterestApproach(
+  list: readonly PointOfInterestInformation[], id: string, approach: PointOfInterestApproach,
+): readonly PointOfInterestInformation[] {
+  if (!list.some(entry => entry.id === id)) throw new Error(`Unknown Point of Interest information id: ${id}`);
+  const next = list.map(entry => entry.id === id
+    ? { ...entry, approaches: [...entry.approaches, approach] } : entry);
+  assertValidInformation(next);
+  return next;
+}
+export function updatePointOfInterestApproach(
+  list: readonly PointOfInterestInformation[], id: string, index: number,
+  approach: PointOfInterestApproach,
+): readonly PointOfInterestInformation[] {
+  const entry = list.find(candidate => candidate.id === id);
+  if (!entry || !entry.approaches[index]) throw new Error(`Unknown Point of Interest approach: ${id}/${index}`);
+  const next = list.map(candidate => candidate.id === id
+    ? { ...candidate, approaches: candidate.approaches.map((value, i) => i === index ? approach : value) }
+    : candidate);
+  assertValidInformation(next);
+  return next;
+}
+export function removePointOfInterestApproach(
+  list: readonly PointOfInterestInformation[], id: string, index: number,
+): readonly PointOfInterestInformation[] {
+  const entry = list.find(candidate => candidate.id === id);
+  if (!entry || !entry.approaches[index] || entry.approaches.length === 1)
+    throw new Error(`Cannot remove Point of Interest approach: ${id}/${index}`);
+  return list.map(candidate => candidate.id === id
+    ? { ...candidate, approaches: candidate.approaches.filter((_, i) => i !== index) }
+    : candidate);
 }
 
 export type PoiInvestigationPlayerInformationView = (
-  | {
-      readonly visibility: "public";
-      readonly difficulty: number;
-    }
-  | {
-      readonly visibility: "hidden";
-    }
-) & {
-  /** Present only when the selected Agent knows this information. */
-  readonly content?: string;
-};
-
+  | { readonly visibility: "public"; readonly difficulty: number }
+  | { readonly visibility: "hidden" }
+) & { readonly content?: string; readonly specialization?: AptitudeSpecializationKey };
 export interface PoiInvestigationPlayerSkillView {
   readonly key: SkillKey;
   readonly name: string;
   readonly information: readonly PoiInvestigationPlayerInformationView[];
 }
-
 export interface PoiInvestigationGmInformationView {
   readonly id: string;
   readonly difficulty: number;
   readonly content: string;
   readonly showDifficultyToPlayers: boolean;
   readonly knownCount: number;
+  readonly specialization?: AptitudeSpecializationKey;
 }
-
 export interface PoiInvestigationGmSkillView {
   readonly key: SkillKey;
   readonly name: string;
   readonly information: readonly PoiInvestigationGmInformationView[];
 }
-
 interface PoiInvestigationBaseViewData {
   readonly name: string;
   readonly description: string;
   readonly img: string;
 }
-
-/** Whitelisted player presentation; array length intentionally exposes clue count. */
-export interface PoiInvestigationPlayerViewData
-  extends PoiInvestigationBaseViewData {
+export interface PoiInvestigationPlayerViewData extends PoiInvestigationBaseViewData {
   readonly audience: "player";
   readonly skills: readonly PoiInvestigationPlayerSkillView[];
 }
-
-/** Full local-GM presentation; never returned to a non-GM requester. */
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";
   readonly itemUuid: string;
   readonly skills: readonly PoiInvestigationGmSkillView[];
   readonly gmContext: string;
 }
-
-export type PoiInvestigationViewData =
-  | PoiInvestigationPlayerViewData
-  | PoiInvestigationGmViewData;
-
-function assertInformationIdAvailable(
-  skills: readonly PointOfInterestSkill[],
-  id: string,
-): void {
-  if (!isNonBlankString(id)) {
-    throw new Error("Point of Interest information id must be non-blank.");
-  }
-  if (skills.some((group) => group.information.some((entry) => entry.id === id))) {
-    throw new Error(`Point of Interest information id already exists: ${id}`);
-  }
-}
-
-function createInformation(
-  id: string,
-  draft: PointOfInterestInformationDraft,
-): PointOfInterestInformation {
-  const information = {
-    id,
-    difficulty: draft.difficulty,
-    content: draft.content ?? "",
-    showDifficultyToPlayers: draft.showDifficultyToPlayers === true,
-  };
-  if (!isPointOfInterestInformation(information)) {
-    throw new Error("Invalid Point of Interest information.");
-  }
-  return information;
-}
-
-export function addPointOfInterestSkill(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-  draft: PointOfInterestInformationDraft,
-): readonly PointOfInterestSkill[] {
-  if (skills.some((group) => group.skill === skill)) {
-    throw new Error(`Point of Interest skill already exists: ${skill}`);
-  }
-  assertInformationIdAvailable(skills, informationId);
-  return [
-    ...skills,
-    { skill, information: [createInformation(informationId, draft)] },
-  ];
-}
-
-export function addPointOfInterestInformation(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-  draft: PointOfInterestInformationDraft,
-): readonly PointOfInterestSkill[] {
-  if (!skills.some((group) => group.skill === skill)) {
-    throw new Error(`Unknown Point of Interest skill: ${skill}`);
-  }
-  assertInformationIdAvailable(skills, informationId);
-  const information = createInformation(informationId, draft);
-  return skills.map((group) =>
-    group.skill === skill
-      ? { ...group, information: [...group.information, information] }
-      : group,
-  );
-}
-
-export function updatePointOfInterestInformation(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-  patch: PointOfInterestInformationPatch,
-): readonly PointOfInterestSkill[] {
-  const group = skills.find((candidate) => candidate.skill === skill);
-  const current = group?.information.find(({ id }) => id === informationId);
-  if (!current) {
-    throw new Error(`Unknown Point of Interest information id: ${informationId}`);
-  }
-  const updated = { ...current, ...patch };
-  if (!isPointOfInterestInformation(updated)) {
-    throw new Error("Invalid Point of Interest information.");
-  }
-  return skills.map((candidate) =>
-    candidate.skill === skill
-      ? {
-          ...candidate,
-          information: candidate.information.map((entry) =>
-            entry.id === informationId ? updated : entry,
-          ),
-        }
-      : candidate,
-  );
-}
-
-/** Removes the group too when its last information is removed. */
-export function removePointOfInterestInformation(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-): readonly PointOfInterestSkill[] {
-  return skills.flatMap((group) => {
-    if (group.skill !== skill) return [group];
-    const information = group.information.filter(({ id }) => id !== informationId);
-    return information.length > 0 ? [{ ...group, information }] : [];
-  });
-}
-
-export function removePointOfInterestSkill(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-): readonly PointOfInterestSkill[] {
-  return skills.filter((group) => group.skill !== skill);
-}
+export type PoiInvestigationViewData = PoiInvestigationPlayerViewData | PoiInvestigationGmViewData;

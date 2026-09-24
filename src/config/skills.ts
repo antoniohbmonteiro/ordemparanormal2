@@ -164,3 +164,10 @@ type AptitudeDefinition = Extract<
 
 export type AptitudeSpecializationKey =
   AptitudeDefinition["specializations"][number]["key"];
+
+export function aptitudeSpecializationLabel(key: AptitudeSpecializationKey): string {
+  const definition = SKILL_DEFINITIONS.find(skill => skill.key === "aptitude");
+  return definition && "specializations" in definition
+    ? definition.specializations.find(specialization => specialization.key === key)?.label ?? key
+    : key;
+}

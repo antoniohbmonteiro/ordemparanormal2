@@ -1,92 +1,58 @@
 import { describe, expect, it } from "vitest";
-
 import {
-  addPointOfInterestInformation,
-  addPointOfInterestSkill,
-  isPointOfInterestInformation,
-  isPointOfInterestSkill,
-  readPointOfInterestSkills,
-  removePointOfInterestInformation,
-  removePointOfInterestSkill,
-  updatePointOfInterestInformation,
-  type PointOfInterestSkill,
+  addPointOfInterestApproach, addPointOfInterestInformation,
+  isPointOfInterestInformationList, readPointOfInterestInformation,
+  removePointOfInterestApproach, removePointOfInterestInformation,
+  updatePointOfInterestApproach, updatePointOfInterestInformation,
+  type PointOfInterestInformation,
 } from "./point-of-interest-data";
 
-const information = (id: string, difficulty = 6) => ({
-  id,
-  difficulty,
-  content: `Info ${id}`,
-  showDifficultyToPlayers: false,
-});
-
-const groups: readonly PointOfInterestSkill[] = [
-  { skill: "perception", information: [information("a"), information("b", 8)] },
-  { skill: "crime", information: [information("c", 10)] },
+const research = { skill: "research" as const, difficulty: 6, showDifficultyToPlayers: false };
+const technology = { skill: "technology" as const, difficulty: 8, showDifficultyToPlayers: true };
+const information: readonly PointOfInterestInformation[] = [
+  { id: "emailBox", content: "Caixa de e-mail", approaches: [research, technology] },
 ];
 
-describe("Point of Interest grouped shape", () => {
-  it("accepts information without a repeated skill and groups with 1..N information", () => {
-    expect(isPointOfInterestInformation(information("a"))).toBe(true);
-    expect(isPointOfInterestSkill(groups[0])).toBe(true);
-    expect(isPointOfInterestSkill({ skill: "perception", information: [] })).toBe(false);
-    expect(readPointOfInterestSkills({
-      skills: [{ skill: "perception", information: [{ ...information("a"), skill: "crime" }] }],
-    })[0].information[0]).not.toHaveProperty("skill");
+describe("Point of Interest information", () => {
+  it("accepts ordered information with several approaches and rejects invalid identities", () => {
+    expect(isPointOfInterestInformationList(information)).toBe(true);
+    expect(isPointOfInterestInformationList([...information, information[0]])).toBe(false);
+    expect(isPointOfInterestInformationList([{ ...information[0], approaches: [research, research] }])).toBe(false);
+    expect(isPointOfInterestInformationList([{ ...information[0], approaches: [] }])).toBe(false);
+    expect(isPointOfInterestInformationList([{ ...information[0], approaches: [
+      { skill: "aptitude", difficulty: 6, showDifficultyToPlayers: false },
+    ] }])).toBe(false);
+    expect(isPointOfInterestInformationList([{ ...information[0], approaches: [
+      { ...research, specialization: "arts" },
+    ] }])).toBe(false);
+    expect(isPointOfInterestInformationList([{ ...information[0], approaches: [
+      { skill: "aptitude", specialization: "arts", difficulty: 6, showDifficultyToPlayers: false },
+      { skill: "aptitude", specialization: "humanities", difficulty: 8, showDifficultyToPlayers: true },
+    ] }])).toBe(true);
   });
 
-  it("reads zero skills and never interprets the removed flat shape", () => {
-    expect(readPointOfInterestSkills({ skills: [] })).toEqual([]);
-    expect(readPointOfInterestSkills({ information: [{ ...information("a"), skill: "perception" }] })).toEqual([]);
+  it("reads only the canonical shape", () => {
+    expect(readPointOfInterestInformation({ information })).toEqual(information);
+    expect(readPointOfInterestInformation({ skills: [{ skill: "research", information: [] }] })).toEqual([]);
   });
 
-  it("defensively drops invalid or duplicate skill groups and duplicate ids", () => {
-    expect(readPointOfInterestSkills({
-      skills: [
-        groups[0],
-        { skill: "perception", information: [information("z")] },
-        { skill: "crime", information: [] },
-        { skill: "occultism", information: [information("a")] },
-      ],
-    })).toEqual(groups.slice(0, 1));
+  it("mutates by information identity without changing order or siblings", () => {
+    const added = addPointOfInterestInformation(information, "meetingDate", research);
+    expect(added.map(entry => entry.id)).toEqual(["emailBox", "meetingDate"]);
+    expect(added[1]).toEqual({ id: "meetingDate", content: "", approaches: [research] });
+    expect(() => addPointOfInterestInformation(added, "emailBox", research)).toThrow();
+    const edited = updatePointOfInterestInformation(added, "meetingDate", "16 de março");
+    expect(edited[1].content).toBe("16 de março");
+    expect(removePointOfInterestInformation(edited, "meetingDate")).toEqual(information);
   });
 
-});
-
-describe("Point of Interest grouped mutations", () => {
-  it("appends a skill with its first information and rejects duplicate skills", () => {
-    const next = addPointOfInterestSkill(groups, "research", "new", { difficulty: 1 });
-    expect(next.slice(0, 2)).toEqual(groups);
-    expect(next[2]).toEqual({
-      skill: "research",
-      information: [{ id: "new", difficulty: 1, content: "", showDifficultyToPlayers: false }],
-    });
-    expect(() => addPointOfInterestSkill(next, "research", "other", { difficulty: 1 })).toThrow();
-  });
-
-  it("adds and edits information only inside the selected group with stable ids", () => {
-    const added = addPointOfInterestInformation(groups, "crime", "d", { difficulty: 7 });
-    expect(added[0]).toBe(groups[0]);
-    expect(added[1].information.map(({ id }) => id)).toEqual(["c", "d"]);
-    const updated = updatePointOfInterestInformation(added, "crime", "d", {
-      difficulty: 9,
-      content: "Changed",
-    });
-    expect(updated[1].information[1]).toEqual({
-      id: "d",
-      difficulty: 9,
-      content: "Changed",
-      showDifficultyToPlayers: false,
-    });
-    expect(() => addPointOfInterestInformation(groups, "crime", "a", { difficulty: 1 })).toThrow();
-  });
-
-  it("removes one information while preserving siblings and removes the group at zero", () => {
-    const oneRemoved = removePointOfInterestInformation(groups, "perception", "a");
-    expect(oneRemoved[0].information).toEqual([information("b", 8)]);
-    expect(removePointOfInterestInformation(oneRemoved, "perception", "b")).toEqual([groups[1]]);
-  });
-
-  it("removes a skill and all of its information", () => {
-    expect(removePointOfInterestSkill(groups, "perception")).toEqual([groups[1]]);
+  it("edits approaches, rejects semantic duplicates and protects the last one", () => {
+    const one = [{ ...information[0], approaches: [research] }];
+    const added = addPointOfInterestApproach(one, "emailBox", technology);
+    expect(added[0].approaches).toEqual([research, technology]);
+    expect(() => addPointOfInterestApproach(added, "emailBox", research)).toThrow();
+    expect(() => updatePointOfInterestApproach(added, "emailBox", 1, research)).toThrow();
+    expect(removePointOfInterestApproach(added, "emailBox", 1)).toEqual(one);
+    expect(() => removePointOfInterestApproach(one, "emailBox", 0)).toThrow();
   });
 });

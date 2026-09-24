@@ -16,10 +16,14 @@ if (!aptitude || !("specializations" in aptitude)) {
 const specializations = aptitude.specializations;
 
 /** Opens the small prerequisite choice used before the regular Check Dialog. */
-export async function selectInvestigationAptitudeSpecialization(): Promise<
+export async function selectInvestigationAptitudeSpecialization(
+  allowed: readonly AptitudeSpecializationKey[],
+): Promise<
   AptitudeSpecializationKey | null
 > {
-  const options = specializations
+  const available = specializations.filter(({ key }) => allowed.includes(key));
+  if (available.length === 0) return null;
+  const options = available
     .map(({ key, label }) => `<option value="${key}">${label}</option>`)
     .join("");
   const result = await foundry.applications.api.DialogV2.input<
@@ -41,7 +45,7 @@ export async function selectInvestigationAptitudeSpecialization(): Promise<
         if (!(field instanceof HTMLSelectElement)) {
           throw new Error("Missing Aptitude specialization selection.");
         }
-        const selected = specializations.find(({ key }) => key === field.value);
+        const selected = available.find(({ key }) => key === field.value);
         if (!selected) throw new Error("Invalid Aptitude specialization selection.");
         return selected.key;
       },

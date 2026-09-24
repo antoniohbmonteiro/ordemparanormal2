@@ -320,3 +320,4 @@
 .op2-poi-investigation .op2-investigation-agent-label select { min-width: 180px; }
 .op2-poi-agent-dialog { display: grid; gap: 8px; }
 .op2-poi-agent-dialog label { display: flex; gap: 8px; align-items: center; }
+.op2-investigation-specialization { display: block; margin-bottom: .2rem; font-size: .75rem; }

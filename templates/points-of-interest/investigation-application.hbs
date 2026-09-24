@@ -72,6 +72,7 @@
                   </div>
 
                   <div class="op2-investigation-information" role="cell">
+                    {{#if specializationLabel}}<strong class="op2-investigation-specialization">{{specializationLabel}}</strong>{{/if}}
                     <div class="op2-investigation-information__content">{{#if @root.isGm}}{{content}}{{else}}{{#if isRevealed}}{{content}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}{{/if}}{{/if}}</div>
                   </div>
                 </div>

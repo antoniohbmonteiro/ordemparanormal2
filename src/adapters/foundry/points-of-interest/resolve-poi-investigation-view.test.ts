@@ -14,10 +14,15 @@ function fixture() {
   const item = { id: "poi", uuid: "Item.poi", type: "pointOfInterest", name: "Computador", img: "icon.svg",
     isEmbedded: false, pack: null, ownership: { default: 0 },
     testUserPermission: () => false, getFlag: (_scope: string, key: string) => flags[key],
-    system: { publicDescription: "público", gmContext: "privado", skills: [{ skill: "technology", information: [
-      { id: "secret", difficulty: 9, content: "senha", showDifficultyToPlayers: false },
-      { id: "other", difficulty: 6, content: "arquivo", showDifficultyToPlayers: true },
-    ] }] } };
+    system: { publicDescription: "público", gmContext: "privado", information: [
+      { id: "secret", content: "senha", approaches: [
+        { skill: "technology", difficulty: 9, showDifficultyToPlayers: false },
+        { skill: "research", difficulty: 8, showDifficultyToPlayers: true },
+      ] },
+      { id: "other", content: "arquivo", approaches: [
+        { skill: "technology", difficulty: 6, showDifficultyToPlayers: true },
+      ] },
+    ] } };
   const scene = { getFlag: (_scope: string, key: string) => key === "pointOfInterestItems" ? ["Item.poi"] : undefined };
   const game = { users: { get: (id: string) => users.find(user => user.id === id), contents: users },
     scenes: { get: (id: string) => id === "scene" ? scene : undefined },
@@ -40,6 +45,9 @@ it("delivers only information known by the selected OWNER Agent", async () => {
   ]);
   expect("view" in second && second.view.skills[0].information).toEqual([
     { visibility: "hidden" }, { visibility: "public", difficulty: 6 },
+  ]);
+  expect("view" in first && first.view.skills[1].information).toEqual([
+    { visibility: "public", difficulty: 8, content: "senha" },
   ]);
   const serialized = JSON.stringify(second);
   expect(serialized).not.toContain("privado");

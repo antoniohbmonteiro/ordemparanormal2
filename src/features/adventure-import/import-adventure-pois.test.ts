@@ -1,11 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
-import { PLAYTEST_ALPHA_POI_PRESETS } from "../../config/adventure-poi-presets/playtest-alpha";
-import { validateAdventurePoiData, validateAdventurePoiReferences } from "../../core/adventure-import/adventure-poi-data";
+import { PLAYTEST_ALPHA_POI_SOURCES } from "../../config/adventure-poi-sources/playtest-alpha";
+import { validateAdventurePoiData, validateAdventurePoiReferences, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
 import { importAdventurePois, type PoiImportFlag, type PoiItemPort, type PoiItemSnapshot } from "./import-adventure-pois";
 import type { AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
 import type { AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import type { MaterializationResult } from "./materialize-adventure-assets";
+
+const SYNTHETIC_POI_PRESETS: readonly AdventurePoiPreset[] = PLAYTEST_ALPHA_POI_SOURCES.map(source => ({
+  id: source.id, act: source.act, name: source.heading,
+  ...(source.imageAssetId ? { imageAssetId: source.imageAssetId } : {}),
+  publicDescription: `<p>Synthetic ${source.id}</p>`, gmContext: `Synthetic GM ${source.id}`,
+  information: source.informationIds.map(id => ({ id, content: `Synthetic ${id}`,
+    approaches: id === "scarAgeMedicine" ? [
+      { skill: "medicine", difficulty: 6, showDifficultyToPlayers: false },
+      { skill: "survival", difficulty: 6, showDifficultyToPlayers: false },
+    ] : [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] })),
+}));
 
 class FakeWorld implements PoiItemPort, AdventureFolderPort {
   readonly items: PoiItemSnapshot[] = [];
@@ -16,7 +27,7 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
   isAuthorized() { return true; }
   listItems() { return this.items; }
   listFolders() { return this.folders; }
-  validateCandidate(_preset: typeof PLAYTEST_ALPHA_POI_PRESETS[number], _flag: PoiImportFlag) {}
+  validateCandidate(_preset: typeof SYNTHETIC_POI_PRESETS[number], _flag: PoiImportFlag) {}
   async createFolder(data: Parameters<AdventureFolderPort["createFolder"]>[0]) {
     const id = `folder-${this.folders.length + 1}`;
     this.folders.push({ id, name: data.name, color: data.color, type: data.documentType,
@@ -29,7 +40,7 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
     this.folders[index] = { ...this.folders[index], ...data };
     this.writes++;
   }
-  async createItem(preset: typeof PLAYTEST_ALPHA_POI_PRESETS[number], img: string, folderId: string,
+  async createItem(preset: typeof SYNTHETIC_POI_PRESETS[number], img: string, folderId: string,
     flag: PoiImportFlag, placement: Parameters<PoiItemPort["createItem"]>[4]) {
     const id = `item-${this.items.length + 1}`;
     this.items.push({ id, type: "pointOfInterest", folderId, img, flag, folderPlacement: placement,
@@ -63,7 +74,7 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
 
 function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
   decide: Parameters<typeof importAdventurePois>[0]["decide"] = async () => "preserve",
-  presets: readonly unknown[] = PLAYTEST_ALPHA_POI_PRESETS, revision = 1,
+  presets: readonly unknown[] = SYNTHETIC_POI_PRESETS, revision = 3,
   assetSource: AdventureAssetResolutionSource = { kind: "worldStorage", lookup: world.lookup }) {
   return importAdventurePois({ definition: PLAYTEST_ALPHA_ADVENTURE, presets, revision,
     acts, items: world, folders: world, assetSource, decide });
@@ -72,7 +83,7 @@ function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
 describe("Adventure Point of Interest import", () => {
   it.each(["relative", "hosted"])("uses %s materialized POI images and reimports without browsing", async representation => {
     const world = new FakeWorld();
-    const imagePresets = PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId);
+    const imagePresets = SYNTHETIC_POI_PRESETS.filter(p => p.imageAssetId);
     const paths = new Map(imagePresets.map(p => [p.id,
       `${representation === "hosted" ? "https://assets.example.test/prefix/" : ""}worlds/test-world/${encodeURIComponent(p.imageAssetId!)}.jpg`]));
     const result: MaterializationResult = { materializedActs: ["actOne"], assets: imagePresets.map(p => {
@@ -103,18 +114,18 @@ describe("Adventure Point of Interest import", () => {
   });
 
   it("validates the complete catalog, stable IDs and representative content boundaries", () => {
-    expect(() => validateAdventurePoiReferences(PLAYTEST_ALPHA_ADVENTURE, PLAYTEST_ALPHA_POI_PRESETS)).not.toThrow();
-    expect(PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.act === "actOne")).toHaveLength(29);
-    expect(PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.act === "actTwo")).toHaveLength(25);
-    expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.05")?.name).toContain("Rabiscos");
-    expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.09")?.gmContext).toContain("05C");
-    expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actTwo.map.25")?.name).toBe("Freezer");
-    expect(PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actTwo.map.21")?.information).toEqual([]);
-    const tattoo = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.character.tattoo")!;
+    expect(() => validateAdventurePoiReferences(PLAYTEST_ALPHA_ADVENTURE, SYNTHETIC_POI_PRESETS)).not.toThrow();
+    expect(SYNTHETIC_POI_PRESETS.filter(p => p.act === "actOne")).toHaveLength(29);
+    expect(SYNTHETIC_POI_PRESETS.filter(p => p.act === "actTwo")).toHaveLength(25);
+    expect(SYNTHETIC_POI_PRESETS.find(p => p.id === "actOne.map.05")?.name).toContain("Rabiscos");
+    expect(SYNTHETIC_POI_PRESETS.find(p => p.id === "actOne.map.09")?.gmContext).toContain("Synthetic GM");
+    expect(SYNTHETIC_POI_PRESETS.find(p => p.id === "actTwo.map.25")?.name).toBe("Freezer");
+    expect(SYNTHETIC_POI_PRESETS.find(p => p.id === "actTwo.map.21")?.information).toEqual([]);
+    const tattoo = SYNTHETIC_POI_PRESETS.find(p => p.id === "actOne.character.tattoo")!;
     expect(tattoo.information.find(entry => entry.id === "scarAgeMedicine")?.approaches.map(approach => approach.skill))
       .toEqual(["medicine", "survival"]);
-    expect(PLAYTEST_ALPHA_POI_PRESETS.every(p => p.information.every(entry => entry.approaches.every(approach => approach.skill !== "aptitude")))).toBe(true);
-    expect(PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId).map(p => [p.id, p.imageAssetId])).toEqual([
+    expect(SYNTHETIC_POI_PRESETS.every(p => p.information.every(entry => entry.approaches.every(approach => approach.showDifficultyToPlayers === false)))).toBe(true);
+    expect(SYNTHETIC_POI_PRESETS.filter(p => p.imageAssetId).map(p => [p.id, p.imageAssetId])).toEqual([
       ["actOne.map.11", "actOne.handout.06"], ["actOne.map.12", "actOne.handout.07"],
       ["actOne.map.13", "actOne.handout.08"], ["actOne.map.14", "actOne.handout.09"],
       ["actOne.map.15", "actOne.handout.10"],
@@ -122,9 +133,9 @@ describe("Adventure Point of Interest import", () => {
   });
 
   it("rejects absent, cross-Act and non-image assets in preset preflight", async () => {
-    const preset = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.11")!;
+    const preset = SYNTHETIC_POI_PRESETS.find(p => p.id === "actOne.map.11")!;
     for (const imageAssetId of ["missing", "actTwo.handout.03", "actTwo.handout.01.print"]) {
-      const invalid = PLAYTEST_ALPHA_POI_PRESETS.map(p => p.id === preset.id ? { ...p, imageAssetId } : p);
+      const invalid = SYNTHETIC_POI_PRESETS.map(p => p.id === preset.id ? { ...p, imageAssetId } : p);
       const world = new FakeWorld();
       await expect(run(world, ["actOne"], undefined, invalid)).rejects.toMatchObject({ stage: "preflight" });
       expect(world.writes).toBe(0);
@@ -133,7 +144,7 @@ describe("Adventure Point of Interest import", () => {
     const invalidDefinition = { ...PLAYTEST_ALPHA_ADVENTURE,
       assets: PLAYTEST_ALPHA_ADVENTURE.assets.map(asset => asset.id === preset.imageAssetId
         ? { ...asset, source: { ...asset.source, originalEntryPath: "Handouts/book.pdf" } } : asset) };
-    expect(() => validateAdventurePoiReferences(invalidDefinition, PLAYTEST_ALPHA_POI_PRESETS)).toThrow("Imagem de POI inválida");
+    expect(() => validateAdventurePoiReferences(invalidDefinition, SYNTHETIC_POI_PRESETS)).toThrow("Imagem de POI inválida");
   });
 
   it("resolves five Act I images from world storage before creating their Items", async () => {
@@ -144,7 +155,7 @@ describe("Adventure Point of Interest import", () => {
       expect.stringContaining("/act-1/Arquivos para o público - Ato I/Handouts"),
       "Handout 06 - Estante de Livros.jpg",
     );
-    for (const preset of PLAYTEST_ALPHA_POI_PRESETS.filter(p => p.imageAssetId)) {
+    for (const preset of SYNTHETIC_POI_PRESETS.filter(p => p.imageAssetId)) {
       const item = world.items.find(candidate => (candidate.flag as PoiImportFlag).documentId === preset.id)!;
       expect(item.img).toContain(".jpg");
       expect(item.folderId).toBe("folder-3");
@@ -200,7 +211,7 @@ describe("Adventure Point of Interest import", () => {
     expect(world.items[0].system.gmContext).toBe("Edição manual");
     expect(world.items[0].folderId).toBeNull();
     expect(await run(world, ["actOne"], async () => "restore")).toMatchObject({ updated: 1, unchanged: 28 });
-    expect(world.items[0].system.gmContext).toBe(PLAYTEST_ALPHA_POI_PRESETS[0].gmContext);
+    expect(world.items[0].system.gmContext).toBe(SYNTHETIC_POI_PRESETS[0].gmContext);
     expect(world.items[0].folderId).toBeNull();
   });
 
@@ -246,11 +257,11 @@ describe("Adventure Point of Interest import", () => {
   it("applies a later preset revision without treating untouched content as a manual conflict", async () => {
     const world = new FakeWorld();
     await run(world, ["actOne"]);
-    const revised = PLAYTEST_ALPHA_POI_PRESETS.map(p => p.id === "actOne.map.01"
+    const revised = SYNTHETIC_POI_PRESETS.map(p => p.id === "actOne.map.01"
       ? { ...p, gmContext: `${p.gmContext} Revisão editorial.` } : p);
     const decide = async () => { throw new Error("Não deveria solicitar decisão."); };
-    expect(await run(world, ["actOne"], decide, revised, 2)).toMatchObject({ updated: 29, preserved: 0 });
-    expect((world.items[0].flag as PoiImportFlag).presetRevision).toBe(2);
+    expect(await run(world, ["actOne"], decide, revised, 4)).toMatchObject({ updated: 29, preserved: 0 });
+    expect((world.items[0].flag as PoiImportFlag).presetRevision).toBe(4);
     expect(world.items.find(item => (item.flag as PoiImportFlag).documentId === "actOne.map.01")?.system.gmContext)
       .toContain("Revisão editorial.");
   });
@@ -281,7 +292,7 @@ describe("Adventure Point of Interest import", () => {
 
   it("rejects invalid content before creating a Folder or Item", async () => {
     const world = new FakeWorld();
-    const invalid = PLAYTEST_ALPHA_POI_PRESETS.map(p => p.id === "actTwo.map.25"
+    const invalid = SYNTHETIC_POI_PRESETS.map(p => p.id === "actTwo.map.25"
       ? { ...p, information: [{ id: "bad", content: "Pista", approaches: [
         { skill: "notRegistered", difficulty: 6, showDifficultyToPlayers: false }] }] } : p);
     expect(() => validateAdventurePoiData(invalid.at(-1))).toThrow();

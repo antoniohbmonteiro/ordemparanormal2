@@ -1,8 +1,6 @@
 {
-  "schemaVersion": 1,
-  "id": "actOne.edgar",
-  "act": "actOne",
-  "name": "Edgar",
+  "schemaVersion": 2,
+  "key": "agent-02",
   "level": 2,
   "resources": {
     "healthMax": 18,
@@ -42,24 +40,10 @@
     "technology": 4,
     "vigor": 6
   },
-  "profile": {
-    "name": "Executor",
-    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000001"
-  },
-  "occupation": {
-    "name": "Operário",
-    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000005"
-  },
-  "abilities": [
-    {
-      "name": "Ímpeto",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000008"
-    },
-    {
-      "name": "Esforço e Suor",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000004"
-    }
-  ],
-  "portraitAssetId": "actOne.edgar.portrait",
-  "tokenAssetId": "actOne.edgar.token"
+  "profileUuid": "Compendium.ordemparanormal2.profiles.Item.profile000000001",
+  "occupationUuid": "Compendium.ordemparanormal2.occupations.Item.occupation000005",
+  "abilityUuids": [
+    "Compendium.ordemparanormal2.abilities.Item.ability000000008",
+    "Compendium.ordemparanormal2.abilities.Item.ability000000004"
+  ]
 }

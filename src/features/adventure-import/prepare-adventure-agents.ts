@@ -1,8 +1,10 @@
 import { SKILL_DEFINITIONS } from "../../config/skills";
 import type { PlaytestAlphaAgentPreset } from "../../config/adventure-agent-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES, type AdventureAgentSource } from "../../config/adventure-agent-sources/playtest-alpha";
 import { validateAdventureAgentData, adventureDataRecord as record } from "../../core/adventure-import/adventure-agent-data";
 import { validateAdventureAgentReferences, type AdventureDefinition } from "../../core/adventure-import/adventure-definition";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
+import { agentNameFromZipEntries } from "../../core/adventure-import/agent-entry-name";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import { resolveAdventureAsset, type AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import type { AdventureFolderPlacementFlag } from "./adventure-folders";
@@ -16,7 +18,7 @@ export interface AgentPortableItem {
 }
 export interface PreparedAgentItem extends AgentPortableItem { readonly id: string; readonly existing: boolean; readonly grant: boolean }
 export interface PreparedAdventureAgent {
-  readonly preset: PlaytestAlphaAgentPreset; readonly flag: AgentImportFlag;
+  readonly preset: PlaytestAlphaAgentPreset; readonly source: AdventureAgentSource; readonly name: string; readonly flag: AgentImportFlag;
   readonly actorId: string | null; readonly previousState: string | null; readonly divergent: boolean;
   readonly img: string; readonly token: string; readonly items: readonly PreparedAgentItem[];
   readonly removeIds: readonly string[]; readonly profileId: string;
@@ -44,6 +46,19 @@ export interface PrepareAdventureAgentsInput {
 export function usableAdventurePdf(pdf: PdfSourceAnalysis | null): boolean {
   return pdf?.status === "recognized" && !pdf.passwordRequired && pdf.facts.parseAttempt.status === "success"
     && (pdf.edition === "playtest-alpha-v1.0" || pdf.edition === "playtest-alpha-v1.1");
+}
+function agentNameFromMaterialization(source: AdventureAgentSource, definition: AdventureDefinition,
+  assetSource: AdventureAssetResolutionSource): string {
+  if (assetSource.kind !== "materialization") throw new Error("Nome do Agent requer o ZIP desta importação.");
+  const materialization = assetSource.result;
+  function entryPath(assetId: string): string {
+    const reference = definition.assets.find(asset => asset.id === assetId);
+    const matches = materialization.assets.filter(asset => asset.act === source.act
+      && asset.originalEntryPath === reference?.source.originalEntryPath);
+    if (matches.length !== 1 || !matches[0].sourceEntryPath) throw new Error(`Entry real ausente ou ambíguo: ${assetId}.`);
+    return matches[0].sourceEntryPath;
+  }
+  return agentNameFromZipEntries(entryPath(source.portraitAssetId), entryPath(source.tokenAssetId));
 }
 export function readAgentImportFlag(actor: AgentActorSource, adventureId: string): AgentImportFlag | null {
   const flag = importFlag(actor);
@@ -94,14 +109,17 @@ export async function prepareAdventureAgents(input: PrepareAdventureAgentsInput)
   if (acts.some((act) => !pdf.supportedActs.includes(act))) throw new Error("O PDF selecionado não cobre todos os atos solicitados.");
   if (!Number.isInteger(input.revision) || input.revision < 1) throw new Error("Revisão de presets inválida.");
   for (const preset of presets) validateAdventureAgentData(preset, SKILL_DEFINITIONS);
-  const issues = validateAdventureAgentReferences(definition, presets);
+  const issues = validateAdventureAgentReferences(definition, PLAYTEST_ALPHA_AGENT_SOURCES, presets.map(p => p.key));
   if (issues.length) throw new Error(issues.join("; "));
-  const selected = definition.actors.map(r => presets.find(p => p.id === r.presetId)!).filter(p => acts.includes(p.act));
+  const selected = definition.actors.map(r => {
+    const source = PLAYTEST_ALPHA_AGENT_SOURCES.find(s => s.documentId === r.presetId)!;
+    return { source, preset: presets.find(p => p.key === source.presetKey)! };
+  }).filter(({ source }) => acts.includes(source.act));
   const existing = actors.listActors();
   const byId = new Map<string, { actor: AgentActorSource; flag: AgentImportFlag }>();
   for (const actor of existing) {
     const raw = importFlag(actor);
-    if (raw?.adventureId === definition.id && raw.importer === "actor" && typeof raw.documentId === "string" && !selected.some(p => p.id === raw.documentId)) continue;
+    if (raw?.adventureId === definition.id && raw.importer === "actor" && typeof raw.documentId === "string" && !selected.some(p => p.source.documentId === raw.documentId)) continue;
     const flag = readAgentImportFlag(actor, definition.id);
     if (!flag) continue;
     if (byId.has(flag.documentId)) throw new Error("Identidade de Actor duplicada.");
@@ -114,13 +132,14 @@ export async function prepareAdventureAgents(input: PrepareAdventureAgentsInput)
     return cache.get(uuid)!;
   }
   const result: PreparedAdventureAgent[] = [];
-  for (const preset of selected) {
+  for (const { source, preset } of selected) {
     try {
-      const img = await resolveAdventureAsset(definition, preset.portraitAssetId, input.assetSource);
-      const token = await resolveAdventureAsset(definition, preset.tokenAssetId, input.assetSource);
-      const profile = structuredClone(await resolve(preset.profile.uuid, "profile"));
-      const occupation = await resolve(preset.occupation.uuid, "occupation");
-      const abilities = await Promise.all(preset.abilities.map(r => resolve(r.uuid, "ability")));
+      const img = await resolveAdventureAsset(definition, source.portraitAssetId, input.assetSource);
+      const token = await resolveAdventureAsset(definition, source.tokenAssetId, input.assetSource);
+      const name = agentNameFromMaterialization(source, definition, input.assetSource);
+      const profile = structuredClone(await resolve(preset.profileUuid, "profile"));
+      const occupation = await resolve(preset.occupationUuid, "occupation");
+      const abilities = await Promise.all(preset.abilityUuids.map(uuid => resolve(uuid, "ability")));
       const grants = profile.system.abilityGrants;
       if (!Array.isArray(grants) || !grants.every(g => typeof record(g)?.uuid === "string")) throw new Error("Grants canônicos inválidos.");
       const original = grants.map(g => record(g)!.uuid as string);
@@ -128,10 +147,10 @@ export async function prepareAdventureAgents(input: PrepareAdventureAgentsInput)
       const effective = original.map(uuid => preset.profileGrantReplacements?.find(r => r.grantUuid === uuid)?.replacementUuid ?? uuid);
       if (new Set(effective).size !== effective.length || effective.some(uuid => !abilities.some(a => a.uuid === uuid))) throw new Error("Grant efetivo ausente da lista desejada.");
       profile.system.abilityGrants = effective.map(uuid => ({ uuid }));
-      const previous = byId.get(preset.id), actor = previous?.actor;
-      const flag: AgentImportFlag = { importer: "actor", adventureId: definition.id, documentId: preset.id, version: 1,
-        presetId: preset.id, presetRevision: input.revision, edition: pdf.edition!, act: preset.act,
-        portraitAssetId: preset.portraitAssetId, tokenAssetId: preset.tokenAssetId, state: "incomplete", ...(previous?.flag.baseline ? { baseline: previous.flag.baseline } : {}) };
+      const previous = byId.get(source.documentId), actor = previous?.actor;
+      const flag: AgentImportFlag = { importer: "actor", adventureId: definition.id, documentId: source.documentId, version: 1,
+        presetId: source.documentId, presetRevision: input.revision, edition: pdf.edition!, act: source.act,
+        portraitAssetId: source.portraitAssetId, tokenAssetId: source.tokenAssetId, state: "incomplete", ...(previous?.flag.baseline ? { baseline: previous.flag.baseline } : {}) };
       const owned = actor ? managedItems(actor, previous!.flag) : [];
       const sameProfile = owned.find(i => i.type === "profile" && importFlag(i)?.uuid === profile.uuid);
       const profileId = sameProfile?._id ?? actors.newId();
@@ -153,11 +172,11 @@ export async function prepareAdventureAgents(input: PrepareAdventureAgentsInput)
         items.push({ ...(preparedGrant ?? snapshot), id: same?._id ?? actors.newId(), existing: Boolean(same), grant: effective.includes(snapshot.uuid) });
       }
       for (const i of owned) if (!items.some(p => p.id === i._id)) remove.add(i._id);
-      const agent: PreparedAdventureAgent = { preset, flag, actorId: actor?._id ?? null, previousState: actor ? relevantAgentState(actor) : null,
+      const agent: PreparedAdventureAgent = { preset, source, name, flag, actorId: actor?._id ?? null, previousState: actor ? relevantAgentState(actor) : null,
         divergent: actor ? await hasAgentDivergence(actor, previous!.flag) : false, img, token, items, removeIds: [...remove], profileId };
       actors.validatePrepared(agent);
       result.push(agent);
-    } catch (cause) { throw new Error(`${preset.act === "actOne" ? "Ato I" : "Ato II"} · ${preset.name}: ${cause instanceof Error ? cause.message : "Falha ao preparar agente."}`, { cause }); }
+    } catch (cause) { throw new Error(`${source.act === "actOne" ? "Ato I" : "Ato II"} · ${source.documentId}: ${cause instanceof Error ? cause.message : "Falha ao preparar agente."}`, { cause }); }
   }
   if (!actors.isAuthorized()) throw new Error("O GM ativo mudou. Execute a importação novamente.");
   return result;

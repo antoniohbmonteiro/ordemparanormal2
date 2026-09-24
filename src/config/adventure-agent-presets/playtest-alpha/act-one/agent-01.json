@@ -1,8 +1,6 @@
 {
-  "schemaVersion": 1,
-  "id": "actOne.kenia",
-  "act": "actOne",
-  "name": "Kênia",
+  "schemaVersion": 2,
+  "key": "agent-01",
   "level": 2,
   "resources": {
     "healthMax": 12,
@@ -42,24 +40,10 @@
     "technology": 8,
     "vigor": 6
   },
-  "profile": {
-    "name": "Analista",
-    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000002"
-  },
-  "occupation": {
-    "name": "Profissional de Escritório",
-    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000008"
-  },
-  "abilities": [
-    {
-      "name": "Avaliação",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000002"
-    },
-    {
-      "name": "Conhecimento Técnico",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000003"
-    }
-  ],
-  "portraitAssetId": "actOne.kenia.portrait",
-  "tokenAssetId": "actOne.kenia.token"
+  "profileUuid": "Compendium.ordemparanormal2.profiles.Item.profile000000002",
+  "occupationUuid": "Compendium.ordemparanormal2.occupations.Item.occupation000008",
+  "abilityUuids": [
+    "Compendium.ordemparanormal2.abilities.Item.ability000000002",
+    "Compendium.ordemparanormal2.abilities.Item.ability000000003"
+  ]
 }

@@ -9,6 +9,7 @@ import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pd
 import { evaluateActCompatibility } from "../../core/adventure-import/adventure-source-compatibility";
 import { MaterializationError } from "../../features/adventure-import/materialize-adventure-assets";
 import { HandoutImportError } from "../../features/adventure-import/import-adventure-handouts";
+import { PLAYTEST_ALPHA_POI_SOURCES } from "../../config/adventure-poi-sources/playtest-alpha";
 
 type Slot = "pdf" | "actOne" | "actTwo";
 
@@ -26,7 +27,12 @@ const mocks = vi.hoisted(() => ({
   importAdventureHandouts: vi.fn(),
   createAdventureHandoutJournalPort: vi.fn(),
   createAdventureFolderPort: vi.fn(),
+  readAdventurePoiPages: vi.fn(),
+  prepareAdventurePois: vi.fn(),
 }));
+
+vi.mock("../../adapters/files/read-adventure-poi-pages", () => ({ readAdventurePoiPages: mocks.readAdventurePoiPages }));
+vi.mock("../../features/adventure-import/prepare-adventure-pois", () => ({ prepareAdventurePois: mocks.prepareAdventurePois }));
 
 vi.mock("../../features/adventure-import/analyze-adventure-sources", () => ({
   analyzeAdventureSources: async (...args: unknown[]) => {
@@ -286,6 +292,10 @@ beforeEach(() => {
   mocks.importAdventureHandouts.mockReset().mockResolvedValue({ created: 0, updated: 0, unchanged: 0 });
   mocks.createAdventureHandoutJournalPort.mockReset().mockReturnValue({ isAuthorized: () => true });
   mocks.createAdventureFolderPort.mockReset().mockReturnValue({ isAuthorized: () => true, listFolders: () => [] });
+  mocks.readAdventurePoiPages.mockReset().mockResolvedValue([]);
+  mocks.prepareAdventurePois.mockReset().mockImplementation((_definition, _pdf, _pages, acts: readonly string[]) => ({
+    acts, presets: PLAYTEST_ALPHA_POI_SOURCES.filter(source => acts.includes(source.act)).map(source => ({ id: source.id, act: source.act })),
+  }));
 });
 
 afterAll(() => vi.unstubAllGlobals());
@@ -613,13 +623,13 @@ describe("Adventure Import Application", () => {
     await importing;
     expect(mocks.importAdventureHandouts).toHaveBeenCalledOnce();
     expect(mocks.importAdventurePois).toHaveBeenCalledOnce();
-    expect(mocks.importAdventurePois.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 2 });
+    expect(mocks.importAdventurePois.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 3 });
     expect(mocks.importAdventureHandouts.mock.calls[0][0]).toMatchObject({
       acts: ["actOne", "actTwo"], assetSource: { kind: "materialization" },
       definition: expect.objectContaining({ id: "playtest-alpha" }),
     });
     expect(mocks.importAdventureAgents).toHaveBeenCalledOnce();
-    expect(mocks.importAdventureAgents.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 1 });
+    expect(mocks.importAdventureAgents.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 2 });
     expect(mocks.importAdventureScenes).toHaveBeenCalledOnce();
     expect(mocks.importAdventureScenes.mock.calls[0][0]).toMatchObject({ materialization: { materializedActs: ["actOne", "actTwo"] } });
     const folderPort = mocks.createAdventureFolderPort.mock.results[0].value;
@@ -689,7 +699,7 @@ describe("Adventure Import Application", () => {
   });
 
   it.each(["playtest-alpha-v1.0", "playtest-alpha-v1.1"] as const)(
-    "uses the same POI presets for recognized PDF edition %s",
+    "uses prepared POIs for recognized PDF edition %s",
     async edition => {
       const app = new Application(); attach(app);
       app.inputs.pdf.select(file(`${edition}.pdf`));
@@ -706,12 +716,26 @@ describe("Adventure Import Application", () => {
 
       const input = mocks.importAdventurePois.mock.calls[0][0];
       expect(input.acts).toEqual(["actOne"]);
-      expect(input.presets).toHaveLength(54);
+      expect(input.presets).toHaveLength(29);
       expect(input.presets[0].id).toBe("actOne.character.alan");
-      expect(input.presets.at(-1).id).toBe("actTwo.map.25");
-      expect(input.revision).toBe(2);
+      expect(input.presets.at(-1).id).toBe("actOne.map.24");
+      expect(input.revision).toBe(3);
     },
   );
+
+  it("stops before materialization when POI preparation is ambiguous", async () => {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("agentes.pdf")); app.inputs.actOne.select(file("ato-um.zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(),
+      actOne: { act: "actOne", status: "recognized", edition: "ato-i-extras", inventory: null, issues: [] },
+      actTwo: null });
+    mocks.prepareAdventurePois.mockImplementationOnce(() => { throw new Error("Quadro ambíguo"); });
+    await action(app, "analyzeFiles");
+    await action(app, "importAssets");
+    expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled();
+    expect(mocks.importAdventureHandouts).not.toHaveBeenCalled();
+    expect(errorNotification).toHaveBeenCalledOnce();
+  });
 
   it("blocks every document importer when the shared Folder preflight finds a structural conflict", async () => {
     const app = new Application(); attach(app);

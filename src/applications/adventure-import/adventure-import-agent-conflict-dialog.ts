@@ -4,7 +4,7 @@ import type { PreparedAdventureAgent } from "../../features/adventure-import/pre
 export async function openAdventureImportAgentConflictDialog(agents: readonly PreparedAdventureAgent[]): Promise<AgentConflictDecision> {
   const content = await foundry.applications.handlebars.renderTemplate(
     "systems/ordemparanormal2/templates/applications/adventure-import-agent-conflict-dialog.hbs",
-    { agents: agents.map(a => ({ name: a.preset.name, act: a.preset.act === "actOne" ? "Ato I" : "Ato II" })) },
+    { agents: agents.map(a => ({ name: a.name, act: a.source.act === "actOne" ? "Ato I" : "Ato II" })) },
   );
   const result = await foundry.applications.api.DialogV2.wait({
     window: { title: "ORDEMPARANORMAL2.AdventureImport.AgentConflict.Title" },

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAdventureAgentActorPort, portableSystemUpdate } from "./adventure-agent-actors";
 import { PLAYTEST_ALPHA_AGENT_PRESETS } from "../../config/adventure-agent-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES } from "../../config/adventure-agent-sources/playtest-alpha";
 import type { PreparedAdventureAgent, PreparedAgentItem } from "../../features/adventure-import/prepare-adventure-agents";
 import { stableSerialize, type AgentActorSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 
@@ -67,10 +68,11 @@ describe("Foundry Adventure Actor boundary", () => {
       img: "portrait.png", "prototypeToken.texture.src": "token.png" });
   });
   it("confirms a restored incomplete Alan even when a recovery update returns undefined", async () => {
-    const preset = PLAYTEST_ALPHA_AGENT_PRESETS.find(p => p.id === "actOne.alan")!;
-    const flag = { importer: "actor", adventureId: "playtest-alpha", documentId: preset.id, version: 1,
-      presetId: preset.id, presetRevision: 1, edition: "playtest-alpha-v1.1", act: preset.act,
-      portraitAssetId: preset.portraitAssetId, tokenAssetId: preset.tokenAssetId, state: "incomplete" };
+    const source = PLAYTEST_ALPHA_AGENT_SOURCES.find(p => p.documentId === "actOne.alan")!;
+    const preset = PLAYTEST_ALPHA_AGENT_PRESETS.find(p => p.key === source.presetKey)!;
+    const flag = { importer: "actor", adventureId: "playtest-alpha", documentId: source.documentId, version: 1,
+      presetId: source.documentId, presetRevision: 1, edition: "playtest-alpha-v1.1", act: source.act,
+      portraitAssetId: source.portraitAssetId, tokenAssetId: source.tokenAssetId, state: "incomplete" };
     const agent = { preset, img: "portrait.png", token: "token.png", flag } as PreparedAdventureAgent;
     const serialized: AgentActorSource = { _id: "alan", type: "agent", name: "Renamed Alan", img: agent.img,
       system: { level: 9, attributes: structuredClone(preset.attributes), skills: structuredClone(preset.skills),
@@ -104,7 +106,7 @@ describe("Foundry Adventure Actor boundary", () => {
     ["flags.ordemparanormal2.adventureImport.state", "complete"],
     ["flags.ordemparanormal2.adventureImport.presetRevision", 99],
   ])("rejects an unapplied Actor restore and identifies %s even with a truthy update result", async (path, value) => {
-    const preset = PLAYTEST_ALPHA_AGENT_PRESETS.find(p => p.id === "actOne.alan")!;
+    const preset = PLAYTEST_ALPHA_AGENT_PRESETS.find(p => p.key === "agent-03")!;
     const agent = { preset, img: "portrait.png", token: "token.png", flag: { state: "incomplete", presetRevision: 1 } } as PreparedAdventureAgent;
     const serialized: AgentActorSource = { _id: "alan", type: "agent", name: "Alan", img: agent.img,
       system: { level: preset.level, attributes: structuredClone(preset.attributes), skills: structuredClone(preset.skills),

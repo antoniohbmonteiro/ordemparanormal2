@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PLAYTEST_ALPHA_POI_PRESETS } from "../../config/adventure-poi-presets/playtest-alpha";
-import { poiSystem } from "../../core/adventure-import/adventure-poi-data";
+import { poiSystem, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
 import type { AdventureFolderPlacementFlag } from "../../features/adventure-import/adventure-folders";
 import type { PoiImportFlag } from "../../features/adventure-import/import-adventure-pois";
 import { createAdventurePoiItemPort } from "./adventure-poi-items";
@@ -17,6 +16,8 @@ type ItemData = Record<string, unknown> & {
 };
 
 const world: NativeItem[] = [];
+function makePreset(id: string): AdventurePoiPreset { return { id, act: "actOne", name: "POI sintético",
+  publicDescription: "<p>Descrição</p>", gmContext: "Contexto", information: [] }; }
 const create = vi.fn(async (data: ItemData) => {
   const item = new NativeItem({ ...structuredClone(data), _id: `item-${world.length + 1}` });
   world.push(item);
@@ -60,7 +61,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("Foundry Adventure POI Item adapter", () => {
   it("creates a GM-only world Item and restores only managed system fields", async () => {
-    const preset = PLAYTEST_ALPHA_POI_PRESETS[0];
+    const preset = makePreset("actOne.map.01");
     const flag: PoiImportFlag = { importer: "pointOfInterest", adventureId: "playtest-alpha", documentId: preset.id,
       act: preset.act, version: 1, presetRevision: 1, state: "incomplete" };
     const placement: AdventureFolderPlacementFlag = { version: 1, adventureId: "playtest-alpha",
@@ -91,7 +92,7 @@ describe("Foundry Adventure POI Item adapter", () => {
   });
 
   it("upgrades only the original fallback image", async () => {
-    const preset = PLAYTEST_ALPHA_POI_PRESETS.find(p => p.id === "actOne.map.11")!;
+    const preset = makePreset("actOne.map.11");
     const flag: PoiImportFlag = { importer: "pointOfInterest", adventureId: "playtest-alpha", documentId: preset.id,
       act: preset.act, version: 1, presetRevision: 1, state: "incomplete" };
     const placement: AdventureFolderPlacementFlag = { version: 1, adventureId: "playtest-alpha",

@@ -9,10 +9,13 @@ import { analyzeZipActSource } from "./analyze-adventure-sources";
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import { assertImportableActs, evaluateActCompatibility } from "../../core/adventure-import/adventure-source-compatibility";
 import { adventureActRoot } from "./adventure-asset-layout";
+import { agentNameFromZipEntries } from "../../core/adventure-import/agent-entry-name";
+import type { AdventureDefinition } from "../../core/adventure-import/adventure-definition";
 
 export interface MaterializedAsset {
   readonly act: AdventureAct;
   readonly originalEntryPath: string;
+  readonly sourceEntryPath?: string;
   readonly storedPath: string;
 }
 
@@ -48,11 +51,17 @@ export interface MaterializeAdventureAssetsInput {
   readonly acknowledgeWarnings: boolean;
   readonly storage: AdventureAssetStorage;
   readonly mimeTypes: Readonly<Record<string, string>>;
+  readonly agentEntrySources?: {
+    readonly definition: AdventureDefinition;
+    readonly sources: readonly { readonly documentId: string; readonly act: AdventureAct;
+      readonly portraitAssetId: string; readonly tokenAssetId: string }[];
+  };
   readonly onProgress?: (completed: number, total: number) => void | Promise<void>;
 }
 
 interface PreparedFile {
   readonly path: SafeZipEntryPath;
+  readonly sourceEntryPath: string;
   readonly mime: string;
   readonly entry: ExtractableZipEntry;
 }
@@ -126,7 +135,7 @@ async function prepareAct(
       const canonical = canonicalByOriginal.get(paths[index].relativePath);
       if (entry.directory || canonical === undefined || supplemental.has(canonical)) return [];
       const logicalPath = safeZipEntryPath(logicalRootPrefix ? `${logicalRootPrefix}/${canonical}` : canonical);
-      return [{ path: logicalPath, mime: mimeForFile(logicalPath, mimeTypes), entry }];
+      return [{ path: logicalPath, sourceEntryPath: entry.path, mime: mimeForFile(logicalPath, mimeTypes), entry }];
     });
     return {
       act,
@@ -151,6 +160,21 @@ function directoriesForAct(prepared: PreparedAct): readonly string[] {
     }
   }
   return [...dirs].sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
+}
+
+function assertAgentSourceEntries(prepared: PreparedAct,
+  contract: NonNullable<MaterializeAdventureAssetsInput["agentEntrySources"]>): void {
+  function actualEntry(assetId: string): string {
+    const asset = contract.definition.assets.find(candidate => candidate.id === assetId);
+    if (!asset || asset.source.act !== prepared.act) throw new Error(`Asset de Agent inválido: ${assetId}.`);
+    const matches = prepared.files.filter(file => file.path.originalPath === asset.source.originalEntryPath);
+    if (matches.length !== 1) throw new Error(`Entry de Agent ausente ou ambíguo: ${assetId}.`);
+    return matches[0].sourceEntryPath;
+  }
+  for (const source of contract.sources.filter(source => source.act === prepared.act)) {
+    try { agentNameFromZipEntries(actualEntry(source.portraitAssetId), actualEntry(source.tokenAssetId)); }
+    catch (error) { throw new Error(`Entries de Agent incompatíveis: ${source.documentId}.`, { cause: error }); }
+  }
 }
 
 export async function materializeAdventureAssets(input: MaterializeAdventureAssetsInput): Promise<MaterializationResult> {
@@ -184,6 +208,7 @@ export async function materializeAdventureAssets(input: MaterializeAdventureAsse
       prepared.push(await prepareAct(file, act, input.storage, input.mimeTypes,
         input.pdfAnalysis, input.acknowledgeWarnings));
     }
+    if (input.agentEntrySources) for (const act of prepared) assertAgentSourceEntries(act, input.agentEntrySources);
     const total = prepared.reduce((sum, act) => sum + act.files.length, 0);
     await input.onProgress?.(0, total);
     for (const act of prepared) {
@@ -202,7 +227,8 @@ export async function materializeAdventureAssets(input: MaterializeAdventureAsse
         const directory = file.path.directory ? `${act.root}/${file.path.directory}` : act.root;
         stage = "upload";
         const storedPath = await input.storage.uploadAndConfirm(directory, upload);
-        confirmed.push({ act: act.act, originalEntryPath: file.path.originalPath, storedPath });
+        confirmed.push({ act: act.act, originalEntryPath: file.path.originalPath,
+          sourceEntryPath: file.sourceEntryPath, storedPath });
         await input.onProgress?.(confirmed.length, total);
       }
     }

@@ -1,8 +1,6 @@
 {
-  "schemaVersion": 1,
-  "id": "actOne.victor",
-  "act": "actOne",
-  "name": "Victor",
+  "schemaVersion": 2,
+  "key": "agent-05",
   "level": 2,
   "resources": {
     "healthMax": 14,
@@ -42,24 +40,10 @@
     "technology": 4,
     "vigor": 6
   },
-  "profile": {
-    "name": "Vigilante",
-    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000003"
-  },
-  "occupation": {
-    "name": "Professor",
-    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000007"
-  },
-  "abilities": [
-    {
-      "name": "Prontidão",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000014"
-    },
-    {
-      "name": "Mentoria",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000011"
-    }
-  ],
-  "portraitAssetId": "actOne.victor.portrait",
-  "tokenAssetId": "actOne.victor.token"
+  "profileUuid": "Compendium.ordemparanormal2.profiles.Item.profile000000003",
+  "occupationUuid": "Compendium.ordemparanormal2.occupations.Item.occupation000007",
+  "abilityUuids": [
+    "Compendium.ordemparanormal2.abilities.Item.ability000000014",
+    "Compendium.ordemparanormal2.abilities.Item.ability000000011"
+  ]
 }

@@ -108,7 +108,7 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
     if (!Number.isInteger(input.revision) || input.revision < 1 || !input.acts.length
       || new Set(input.acts).size !== input.acts.length
       || input.acts.some(act => act !== "actOne" && act !== "actTwo")) throw new Error("Escopo ou revisão de POI inválidos.");
-    validateAdventurePoiReferences(input.definition, input.presets);
+    validateAdventurePoiReferences(input.definition, input.presets, input.acts);
     const catalog = input.presets as readonly AdventurePoiPreset[];
     for (const preset of catalog) input.items.validateCandidate(preset, flagFor(input.definition, preset, input.revision));
     const selected = input.definition.pointsOfInterest.map(ref => catalog.find(p => p.id === ref.presetId)!)

@@ -48,23 +48,29 @@ export interface AdventurePointOfInterestReference { readonly presetId: string }
 
 export function validateAdventureAgentReferences(
   definition: AdventureDefinition,
-  presets: readonly { readonly id: string; readonly act: AdventureAct; readonly portraitAssetId: string; readonly tokenAssetId: string }[],
+  sources: readonly { readonly presetKey: string; readonly documentId: string; readonly act: AdventureAct; readonly portraitAssetId: string; readonly tokenAssetId: string }[],
+  presetKeys: readonly string[],
 ): readonly string[] {
   const issues: string[] = [];
   const assets = new Map(definition.assets.map(asset => [asset.id, asset]));
-  const catalog = new Map(presets.map(preset => [preset.id, preset]));
+  const catalog = new Map(sources.map(source => [source.documentId, source]));
   if (assets.size !== definition.assets.length) issues.push("Duplicate asset IDs");
-  if (catalog.size !== presets.length) issues.push("Duplicate preset IDs");
+  if (catalog.size !== sources.length) issues.push("Duplicate source IDs");
+  if (new Set(presetKeys).size !== presetKeys.length || new Set(sources.map(source => source.presetKey)).size !== sources.length
+    || sources.length !== presetKeys.length || sources.some(source => !presetKeys.includes(source.presetKey))) issues.push("Invalid mechanical preset keys");
   const ids = new Set<string>();
   for (const { presetId } of definition.actors) {
     if (!presetId.trim() || ids.has(presetId)) issues.push(`Duplicate or empty preset reference: ${presetId}`);
     ids.add(presetId);
-    const preset = catalog.get(presetId);
-    if (!preset) { issues.push(`Unknown preset: ${presetId}`); continue; }
-    for (const [assetId, kind] of [[preset.portraitAssetId, "portrait"], [preset.tokenAssetId, "token"]] as const) {
+    const source = catalog.get(presetId);
+    if (!source) { issues.push(`Unknown preset: ${presetId}`); continue; }
+    for (const [assetId, kind] of [[source.portraitAssetId, "portrait"], [source.tokenAssetId, "token"]] as const) {
       const asset = assets.get(assetId);
-      if (!asset || asset.kind !== kind || asset.source.act !== preset.act) issues.push(`Invalid ${kind} reference: ${presetId}`);
+      if (!asset || asset.kind !== kind || asset.source.act !== source.act) issues.push(`Invalid ${kind} reference: ${presetId}`);
     }
+  }
+  if (ids.size !== sources.length || sources.some(source => !ids.has(source.documentId))) {
+    issues.push("Missing actor references");
   }
   return issues;
 }

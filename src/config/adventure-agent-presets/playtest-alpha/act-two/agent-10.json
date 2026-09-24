@@ -1,8 +1,6 @@
 {
-  "schemaVersion": 1,
-  "id": "actTwo.heitor",
-  "act": "actTwo",
-  "name": "Heitor",
+  "schemaVersion": 2,
+  "key": "agent-10",
   "level": 6,
   "resources": {
     "healthMax": 34,
@@ -42,30 +40,13 @@
       "tactics": 8
     }
   },
-  "profile": {
-    "name": "Executor",
-    "uuid": "Compendium.ordemparanormal2.profiles.Item.profile000000001"
-  },
-  "occupation": {
-    "name": "Policial",
-    "uuid": "Compendium.ordemparanormal2.occupations.Item.occupation000006"
-  },
-  "abilities": [
-    {
-      "name": "Ímpeto (Aprimorado)",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000018"
-    },
-    {
-      "name": "Incansável",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000009"
-    },
-    {
-      "name": "Linha de Tiro",
-      "uuid": "Compendium.ordemparanormal2.abilities.Item.ability000000010"
-    }
+  "profileUuid": "Compendium.ordemparanormal2.profiles.Item.profile000000001",
+  "occupationUuid": "Compendium.ordemparanormal2.occupations.Item.occupation000006",
+  "abilityUuids": [
+    "Compendium.ordemparanormal2.abilities.Item.ability000000018",
+    "Compendium.ordemparanormal2.abilities.Item.ability000000009",
+    "Compendium.ordemparanormal2.abilities.Item.ability000000010"
   ],
-  "portraitAssetId": "actTwo.heitor.portrait",
-  "tokenAssetId": "actTwo.heitor.token",
   "profileGrantReplacements": [
     {
       "grantUuid": "Compendium.ordemparanormal2.abilities.Item.ability000000008",

@@ -41,12 +41,14 @@ export function validateAdventurePoiData(value: unknown): asserts value is Adven
   }
 }
 
-export function validateAdventurePoiReferences(definition: AdventureDefinition, presets: readonly unknown[]): asserts presets is readonly AdventurePoiPreset[] {
+export function validateAdventurePoiReferences(definition: AdventureDefinition, presets: readonly unknown[],
+  acts: readonly AdventureAct[] = ["actOne", "actTwo"]): asserts presets is readonly AdventurePoiPreset[] {
   for (const preset of presets) validateAdventurePoiData(preset);
   const catalog = presets as readonly AdventurePoiPreset[];
-  const ids = new Set(catalog.map(preset => preset.id));
-  const references = definition.pointsOfInterest.map(ref => ref.presetId);
-  if (ids.size !== catalog.length || new Set(references).size !== references.length
+  const ids = new Set(catalog.filter(preset => acts.includes(preset.act)).map(preset => preset.id));
+  const references = definition.pointsOfInterest.filter(ref => acts.some(act => ref.presetId.startsWith(`${act}.`)))
+    .map(ref => ref.presetId);
+  if (new Set(catalog.map(preset => preset.id)).size !== catalog.length || new Set(references).size !== references.length
     || ids.size !== references.length || references.some(id => !ids.has(id))) {
     throw new Error("Referências de POI ausentes ou duplicadas.");
   }

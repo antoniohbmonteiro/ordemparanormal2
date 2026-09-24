@@ -36,6 +36,8 @@ import type { ZipSourceAnalysis } from "../../core/adventure-import/recognize-zi
 import type { PdfSourceAnalysis } from "../../core/adventure-import/recognize-pdf-source";
 import { analyzeZipActSource } from "./analyze-adventure-sources";
 import { materializeAdventureAssets, MaterializationError } from "./materialize-adventure-assets";
+import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES } from "../../config/adventure-agent-sources/playtest-alpha";
 
 async function zipFile(entries: readonly [string, string][]): Promise<File> {
   const writer = new ZipWriter(new BlobWriter("application/zip"), { useWebWorkers: false });
@@ -102,6 +104,32 @@ beforeEach(async () => {
 });
 
 describe("materializeAdventureAssets", () => {
+  it("binds real portrait and token entries before writes and rejects mismatched identities", async () => {
+    const alan = PLAYTEST_ALPHA_AGENT_SOURCES.find(source => source.documentId === "actOne.alan")!;
+    const edgar = PLAYTEST_ALPHA_AGENT_SOURCES.find(source => source.documentId === "actOne.edgar")!;
+    const path = (id: string) => PLAYTEST_ALPHA_ADVENTURE.assets.find(asset => asset.id === id)!.source.originalEntryPath;
+    const file = await zipFile([
+      [path(alan.portraitAssetId), "portrait"], [path(alan.tokenAssetId), "token"],
+      [path(edgar.tokenAssetId), "other-token"],
+    ]);
+    mocks.hashes["ato-i-extras"].logicalRootPrefix = path(alan.portraitAssetId).split("/")[0];
+    const analysis = await recognizeForTest(file, "actOne");
+    const target = storage();
+    const base = { actOne: file, actTwo: null, actOneAnalysis: analysis, actTwoAnalysis: null,
+      pdfAnalysis: PDF, selectedActs: ["actOne"] as const, acknowledgeWarnings: false,
+      storage: target, mimeTypes: MIME };
+    await expect(materializeAdventureAssets({ ...base, agentEntrySources: {
+      definition: PLAYTEST_ALPHA_ADVENTURE,
+      sources: [{ ...alan, tokenAssetId: edgar.tokenAssetId }],
+    } })).rejects.toMatchObject({ stage: "preflight", confirmedAssets: [] });
+    expect(target.created).toEqual([]); expect(target.uploads).toEqual([]);
+    const result = await materializeAdventureAssets({ ...base, agentEntrySources: {
+      definition: PLAYTEST_ALPHA_ADVENTURE, sources: [alan],
+    } });
+    expect(result.assets.find(asset => asset.originalEntryPath === path(alan.portraitAssetId))?.sourceEntryPath)
+      .toBe(path(alan.portraitAssetId));
+  });
+
   it("keeps a validated legacy ZIP hash on the central-directory fast path", async () => {
     const file = await zipFile([["Mapa/a.jpg", "map"]]);
     const { entries } = await readZipCentralDirectory(file);

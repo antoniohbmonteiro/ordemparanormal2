@@ -1,7 +1,6 @@
 import { poiSystem, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
 import { stableSerialize } from "../../core/adventure-import/adventure-agent-reconciliation";
 import type { PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
-import { knownPoiAliasesForImport, remapKnownPoiKnowledge } from "../../migrations/migrate-poi-information";
 import { ADVENTURE_FOLDER_PLACEMENT_FLAG_PATH, type AdventureFolderPlacementFlag } from "../../features/adventure-import/adventure-folders";
 import { ADVENTURE_POI_FALLBACK_IMAGE, ADVENTURE_POI_FLAG_PATH,
   type PoiImportFlag, type PoiItemPort, type PoiItemSnapshot } from "../../features/adventure-import/import-adventure-pois";
@@ -69,21 +68,13 @@ export function createAdventurePoiItemPort(): PoiItemPort {
     async updateItem(id, system: PointOfInterestSystemData, flag) {
       guard();
       const item = itemById(id);
-      const aliases = knownPoiAliasesForImport(flag);
-      const oldKnowledge = item.getFlag(SCOPE, "pointOfInterestKnowledge");
-      const newKnowledge = remapKnownPoiKnowledge(oldKnowledge, aliases);
       const update: Record<string, unknown> = {
         system: foundry.data.operators.ForcedReplacement.create(structuredClone(system)),
         [ADVENTURE_POI_FLAG_PATH]: foundry.data.operators.ForcedReplacement.create(structuredClone(flag)),
       };
-      if (newKnowledge !== undefined && stableSerialize(newKnowledge) !== stableSerialize(oldKnowledge)) {
-        update[`flags.${SCOPE}.pointOfInterestKnowledge`] = foundry.data.operators.ForcedReplacement.create(newKnowledge);
-      }
       await item.update(update);
       if (stableSerialize(snapshot(item).system) !== stableSerialize(system)
-        || stableSerialize(item.getFlag(SCOPE, "adventureImport")) !== stableSerialize(flag)
-        || (newKnowledge !== undefined
-          && stableSerialize(item.getFlag(SCOPE, "pointOfInterestKnowledge")) !== stableSerialize(newKnowledge))) {
+        || stableSerialize(item.getFlag(SCOPE, "adventureImport")) !== stableSerialize(flag)) {
         throw new Error(`Atualização do POI não confirmada: ${id}.`);
       }
     },

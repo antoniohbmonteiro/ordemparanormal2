@@ -5,12 +5,10 @@ import {
 } from "../config/system-config";
 import { migrateAgentOccupations } from "../migrations/migrate-agent-occupation";
 import { migrateAbilityUses } from "../migrations/migrate-ability-uses";
-import { migratePoiInformation, PoiMigrationPreflightError } from "../migrations/migrate-poi-information";
 
 interface MigrationGame {
   readonly actors: Iterable<foundry.documents.Actor>;
   readonly items: Iterable<foundry.documents.Item>;
-  readonly scenes: Iterable<foundry.documents.Scene>;
 }
 
 interface DataMigration {
@@ -28,10 +26,6 @@ function migrations(): readonly DataMigration[] {
     {
       version: 2,
       run: () => migrateAbilityUses(migrationGame.items, migrationGame.actors),
-    },
-    {
-      version: 3,
-      run: () => migratePoiInformation(migrationGame.items, migrationGame.actors, migrationGame.scenes),
     },
   ];
 }
@@ -69,10 +63,6 @@ async function runReadyMigrations(): Promise<void> {
     await runPendingDataMigrations();
   } catch (error) {
     console.error(`${SYSTEM_ID} | Data migration failed`, error);
-    if (error instanceof PoiMigrationPreflightError) {
-      ui.notifications.error(`Migração 3 bloqueada. Revise estes Pontos de Interesse: ${error.issues.map(issue => `${issue.uuid} (${issue.reason})`).join("; ")}`, { permanent: true });
-      return;
-    }
     ui.notifications.error(
       game.i18n.localize("ORDEMPARANORMAL2.Migrations.Errors.Failed"),
     );

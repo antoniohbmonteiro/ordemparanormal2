@@ -38,13 +38,13 @@ describe("data migration runner", () => {
     );
   });
 
-  it("runs pending migrations and persists version 3", async () => {
+  it("runs pending migrations and persists version 2", async () => {
     const settings = stubGame(0);
     await runPendingDataMigrations();
     expect(settings.set).toHaveBeenCalledWith(
       "ordemparanormal2",
       "dataMigrationVersion",
-      3,
+      2,
     );
   });
 
@@ -53,11 +53,12 @@ describe("data migration runner", () => {
     await runPendingDataMigrations();
     expect(inactive.get).not.toHaveBeenCalled();
 
-    const current = stubGame(3);
+    const current = stubGame(2);
     await runPendingDataMigrations();
     expect(current.set).not.toHaveBeenCalled();
 
-    const future = stubGame(4);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const future = stubGame(3);
     await runPendingDataMigrations();
     expect(future.set).not.toHaveBeenCalled();
   });
@@ -86,51 +87,24 @@ describe("data migration runner", () => {
     expect(settings.set).not.toHaveBeenCalled();
   });
 
-  it("migrates legacy Aptitude without notifying the GM", async () => {
-    const source = { system: { publicDescription: "", gmContext: "", information: [],
-      skills: [{ skill: "aptitude", information: [{ id: "clue", content: "", difficulty: 6,
-        showDifficultyToPlayers: false }] }] } };
+  it("does not inspect or migrate POIs at startup", async () => {
     const poi = {
-      uuid: "Item.aptitude", type: "pointOfInterest",
-      toObject: () => structuredClone(source),
-      getFlag: () => undefined,
-      update: vi.fn(async (changes: { system: { value: typeof source.system } }) => {
-        source.system = structuredClone(changes.system.value);
-      }),
+      uuid: "Item.poi", type: "pointOfInterest",
+      toObject: vi.fn(() => { throw new Error("POI read during startup"); }),
+      update: vi.fn(),
     };
-    const settings = stubGame(2, true, [], [poi]);
+    const settings = stubGame(1, true, [], [poi]);
     const error = vi.fn();
     const once = vi.fn();
     vi.stubGlobal("ui", { notifications: { error } });
     vi.stubGlobal("Hooks", { once });
-    vi.stubGlobal("foundry", { data: { operators: { ForcedReplacement: {
-      create: (value: unknown) => ({ value }),
-    } } } });
     registerDataMigrations();
     await once.mock.calls[0][1]();
     await vi.waitFor(() => expect(settings.set).toHaveBeenCalledWith(
-      "ordemparanormal2", "dataMigrationVersion", 3,
+      "ordemparanormal2", "dataMigrationVersion", 2,
     ));
-    expect(poi.update).toHaveBeenCalledTimes(1);
-    expect(source.system).not.toHaveProperty("skills");
+    expect(poi.toObject).not.toHaveBeenCalled();
+    expect(poi.update).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
-  });
-
-  it("reports every unsafe POI and leaves the world at version 2", async () => {
-    const invalid = (uuid: string) => ({ uuid, type: "pointOfInterest", toObject: () => ({ system: {
-      publicDescription: "", gmContext: "", information: [],
-      skills: [{ skill: "research", information: [] }],
-    } }) });
-    const settings = stubGame(2, true, [], [invalid("Item.first"), invalid("Item.second")]);
-    const error = vi.fn();
-    const once = vi.fn();
-    vi.stubGlobal("ui", { notifications: { error } });
-    vi.stubGlobal("Hooks", { once });
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    registerDataMigrations();
-    await once.mock.calls[0][1]();
-    await vi.waitFor(() => expect(error).toHaveBeenCalled());
-    expect(settings.set).not.toHaveBeenCalled();
-    expect(error).toHaveBeenCalledWith(expect.stringMatching(/Item\.first.*Item\.second/u), { permanent: true });
   });
 });

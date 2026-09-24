@@ -30,7 +30,6 @@ beforeAll(async () => {
     data: {
       fields: {
         ArrayField: MockArrayField,
-        AnyField: MockField,
         BooleanField: MockField,
         NumberField: MockField,
         SchemaField: MockSchemaField,
@@ -49,22 +48,19 @@ describe("PointOfInterestDataModel", () => {
       publicDescription: MockField;
       gmContext: MockField;
       information: MockArrayField;
-      skills: MockField;
     };
 
     expect(Object.keys(schema)).toEqual([
       "publicDescription",
       "gmContext",
       "information",
-      "skills",
     ]);
     expect(schema.publicDescription.options).toMatchObject({
       blank: true,
       initial: "",
     });
     expect(schema.gmContext.options).toMatchObject({ blank: true, initial: "" });
-    expect(schema.skills.options).toMatchObject({ required: false });
-    expect(schema.skills.options).not.toHaveProperty("initial");
+    expect(schema).not.toHaveProperty("skills");
   });
 
   it("models ordered information and approaches with canonical constraints", () => {
@@ -110,15 +106,6 @@ describe("PointOfInterestDataModel", () => {
     expect(validate([entry, entry])).toBe(false);
     expect(validate([{ ...entry, approaches: [] }])).toBe(false);
     expect(validate([{ ...entry, approaches: [approach, approach] }])).toBe(false);
-  });
-
-  it("does not convert legacy data in migrateData, including partial updates", () => {
-    expect(
-      Object.prototype.hasOwnProperty.call(
-        PointOfInterestDataModel,
-        "migrateData",
-      ),
-    ).toBe(false);
   });
 });
 

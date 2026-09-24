@@ -43,8 +43,6 @@ type PointOfInterestSchema = {
     foundry.data.fields.ModelPropsFromSchema<InformationSchema>[],
     true, false, true
   >;
-  /** Temporary migration input, never emitted by new authoring paths. */
-  skills: foundry.data.fields.AnyField;
 };
 
 function richText(): RequiredStringField {
@@ -81,8 +79,6 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
         }),
         { required: true, nullable: false, initial: [], validate: isPointOfInterestInformationList },
       ),
-      // AnyField avoids normalizing malformed legacy data before the global pre-flight can report it.
-      skills: new foundry.data.fields.AnyField({ required: false, nullable: true }),
     };
   }
 }

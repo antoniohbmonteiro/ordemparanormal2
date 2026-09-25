@@ -5,8 +5,10 @@ import type { PointOfInterestApproach } from "../../documents/item/point-of-inte
 import type { AdventurePdfTextItem, AdventurePdfTextPage } from "../../adapters/files/read-adventure-poi-pages";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { PdfEditionId } from "../../core/adventure-import/known-adventure-sources";
+import { escapeHtmlText, renderGmContextHtml, type GmContextBlock, type GmContextContent, type GmContextEntry } from "./gm-context-html";
 
-interface PositionedItem extends AdventurePdfTextItem { readonly page: number }
+// A marker is a bullet or icon glyph with no text of its own; only its position is structural.
+interface PositionedItem extends AdventurePdfTextItem { readonly page: number; readonly marker?: true }
 interface Section { readonly source: AdventurePoiSource; readonly heading: PositionedItem; readonly items: readonly PositionedItem[] }
 interface TableRow { readonly text: string; readonly skillText: string; readonly difficulty: number; readonly conditional: boolean }
 
@@ -14,27 +16,27 @@ const normalize = (value: string): string => value.normalize("NFD").replace(/[\u
   .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 // Bullets and ornaments arrive as C0/C1 control or private-use glyphs; they are layout, not text.
 const cleanText = (value: string): string => value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\ue000-\uf8ff]/gu, "");
+const continuationSuffix = /\(\s*CONTINUA[\u00c7C][\u00c3A]O\s*\)\s*$/u;
 const isContinuationHeading = (item: PositionedItem): boolean => item.height >= 9.9
-  && item.text === item.text.toLocaleUpperCase("pt-BR") && /\(\s*CONTINUA[\u00c7C][\u00c3A]O\s*\)\s*$/u.test(item.text);
+  && item.text === item.text.toLocaleUpperCase("pt-BR") && continuationSuffix.test(item.text);
 // Printed POI numbers are oversized digits placed beside the heading as a visual anchor.
 const isNumberBadge = (item: PositionedItem, heading: PositionedItem): boolean => /^\d{1,2}$/u.test(item.text.trim())
   && item.height >= heading.height * 1.5;
 function positionItems(page: AdventurePdfTextPage): PositionedItem[] {
   return page.items.flatMap(item => {
     const text = cleanText(item.text);
-    return text.trim() ? [{ ...item, text, page: page.number }] : [];
+    if (text.trim()) return [{ ...item, text, page: page.number }];
+    return /[\u0080-\u009f]/u.test(item.text) ? [{ ...item, text: "", page: page.number, marker: true as const }] : [];
   });
 }
 const conditionalQualifier = /\b(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|ao desbloquear|ao abrir|ao tocar|caso tenha|se (?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m))\b/iu;
 const conditionalInformation = /^\s*(?:(?:\(?\s*(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|caso tenha|ao (?:usar|acessar|abrir|encontrar|hackear|desbloquear)|se (?:tiver|for|houver|estiver|(?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m)))\b)|(?:[1-9]\d?(?:\s+ou\s+[1-9]\d?)?\s+))/iu;
-// Quotes are safe in HTML text. Foundry's HTML sanitizer decodes quote entities in text nodes.
-const escapeHtml = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;");
-function paragraph(value: string): string { return value.trim() ? `<p>${escapeHtml(value.trim())}</p>` : ""; }
+function paragraph(value: string): string { return value.trim() ? `<p>${escapeHtmlText(value.trim())}</p>` : ""; }
+const tidyText = (value: string): string => value.replace(/\s+([,.;:!?])/gu, "$1").replace(/([([{“])\s+/gu, "$1")
+  .replace(/\s+([)\]}”])/gu, "$1").replace(/\s+/gu, " ").trim();
 function joinText(items: readonly PositionedItem[]): string {
-  return [...items].sort((a, b) => b.y - a.y || a.x - b.x || a.order - b.order)
-    .map(item => item.text.trim()).filter(Boolean).join(" ").replace(/\s+([,.;:!?])/gu, "$1")
-    .replace(/([([{“])\s+/gu, "$1").replace(/\s+([)\]}”])/gu, "$1").replace(/\s+/gu, " ").trim();
+  return tidyText([...items].sort((a, b) => b.y - a.y || a.x - b.x || a.order - b.order)
+    .map(item => item.text.trim()).filter(Boolean).join(" "));
 }
 function sectionStarts(pages: readonly AdventurePdfTextPage[], act: AdventureAct, edition: PdfEditionId): readonly Section[] {
   const sources = PLAYTEST_ALPHA_POI_SOURCES.filter(source => source.act === act);
@@ -184,6 +186,227 @@ function descriptionItems(heading: PositionedItem, remaining: readonly Positione
   }
   return result;
 }
+// GM context layout. Items are read in content-stream order, which follows the book's text frames and
+// table rows; visual lines are consecutive items sharing a baseline.
+interface Line {
+  readonly items: readonly PositionedItem[]; readonly page: number; readonly y: number;
+  readonly x: number; readonly textX: number; readonly height: number; readonly marker: boolean;
+}
+function joinFlow(items: readonly PositionedItem[], uppercaseHyphens = false): string {
+  const words = items.filter(item => !item.marker && item.text.trim());
+  let text = "";
+  for (const [index, item] of words.entries()) {
+    const value = item.text.trim();
+    const previous = words[index - 1];
+    const lineBreak = previous !== undefined && Math.abs(previous.y - item.y) > 2;
+    if (!text) text = value;
+    else if (/^d\d+$/u.test(value) && /\d$/u.test(text)) text += value; // dice notation: "3" + "d6"
+    else if (lineBreak && /\p{L}-$/u.test(text) && /^\p{Ll}/u.test(value)) text += value; // "entendê-" + "lo."
+    else if (lineBreak && / -$/u.test(text) && (/\p{L} -$/u.test(text) && /^\p{Ll}/u.test(value)
+      || uppercaseHyphens && /\p{Lu} -$/u.test(text) && /^\p{Lu}/u.test(value))) text = text.slice(0, -2) + value;
+    else text += ` ${value}`;
+  }
+  return tidyText(text);
+}
+const joinLines = (lines: readonly Line[]): string => joinFlow(lines.flatMap(line => line.items));
+// Small print (table cells, tool explanations) never shares a visual line with body text, even at the same
+// baseline; digits and dice keep the class of the text around them.
+function toLines(items: readonly PositionedItem[], heading: PositionedItem): Line[] {
+  const groups: PositionedItem[][] = [];
+  const small = (item: PositionedItem) => item.height < heading.height * 0.85;
+  for (const item of items) {
+    const group = groups.at(-1);
+    const neutral = item.marker || /^(?:\d{1,2}|d\d+)$/u.test(item.text.trim());
+    const classOf = group?.filter(entry => !entry.marker && !/^(?:\d{1,2}|d\d+)$/u.test(entry.text.trim())).at(-1);
+    if (group && group[0].page === item.page && Math.abs(group[0].y - item.y) <= 2
+      && (neutral || !classOf || small(classOf) === small(item))) group.push(item);
+    else groups.push([item]);
+  }
+  return groups.map(group => {
+    const words = group.filter(item => !item.marker);
+    const body = words.reduce<PositionedItem | undefined>((best, item) => !best || item.text.length > best.text.length ? item : best, undefined);
+    return { items: group, page: group[0].page, y: group[0].y, x: group[0].x, textX: words[0]?.x ?? group[0].x,
+      height: body?.height ?? group[0].height, marker: group[0].marker === true };
+  });
+}
+const lineText = (line: Line): string => joinFlow(line.items);
+const isUpperCaseText = (value: string): boolean => /\p{Lu}.*\p{Lu}/u.test(value) && !/\p{Ll}/u.test(value);
+// Line spacing inside a paragraph is ~1.45x the font size; paragraph breaks are wider.
+const continues = (previous: Line | undefined, line: Line): boolean => previous !== undefined
+  && previous.page === line.page && Math.abs(previous.y - line.y) <= previous.height * 1.75;
+const sameBaseline = (previous: Line | undefined, line: Line): boolean => previous !== undefined
+  && previous.page === line.page && Math.abs(previous.y - line.y) <= 2;
+const isSmallPrint = (line: Line, heading: PositionedItem): boolean => line.height < heading.height * 0.85;
+function isAccessAnchor(lines: readonly Line[], index: number): boolean {
+  const first = lines[index].items.find(item => !item.marker);
+  return first !== undefined && isUpperCaseText(first.text) && /^(?:DESAFIO|BLOQUEIO|MECANICA)/u.test(normalize(first.text))
+    && normalize(lines.slice(index, index + 3).map(lineText).join(" ")).includes("ACESSO");
+}
+const isToolsHeading = (line: Line): boolean => line.items.length === 1 && normalize(line.items[0].text) === "FERRAMENTAS";
+// Box titles are printed larger than the POI heading, or centred right above the text they introduce.
+function isTitle(lines: readonly Line[], index: number, heading: PositionedItem): boolean {
+  const line = lines[index];
+  const next = lines[index + 1];
+  if (sameBaseline(lines[index - 1], line) || line.items.length !== 1 || line.marker || isSmallPrint(line, heading)
+    || !isUpperCaseText(line.items[0].text) || line.items[0].text.trim().endsWith(":")) return false;
+  return line.items[0].height >= heading.height * 1.15 || next !== undefined && next.page === line.page
+    && line.y - next.y > 0 && line.y - next.y <= 30 && next.x <= line.textX - 40;
+}
+const isBlockStart = (lines: readonly Line[], index: number, heading: PositionedItem): boolean =>
+  isAccessAnchor(lines, index) || isToolsHeading(lines[index]) || isTitle(lines, index, heading);
+const actionLine = /^(?:•\s*|[A-ZÀ-Ý]{3,}(?:\s+[A-ZÀ-Ý]{2,})*\s*(?:\(|-\s))/u;
+// Paragraphs and bulleted lists. Aligned flows (GM text, box bodies) end where the left margin changes;
+// access-challenge bodies also open an entry at each action ("ARROMBAR (…)", "• …").
+function flowContent(lines: readonly Line[], start: number, end: number, heading: PositionedItem,
+  options: { readonly aligned: boolean; readonly actions: boolean }): { readonly content: GmContextContent[]; readonly next: number } {
+  const content: GmContextContent[] = [];
+  let paragraph: Line[] = [];
+  let entries: GmContextEntry[] = [];
+  let entry: Line[] = [];
+  let entryX = 0;
+  let baseX: number | undefined;
+  const flushEntry = () => { if (entry.length) entries.push({ text: joinLines(entry).replace(/^•\s*/u, "") }); entry = []; };
+  const flushEntries = () => { flushEntry(); if (entries.length) content.push({ type: "entries", entries }); entries = []; };
+  const flushParagraph = () => { if (paragraph.length) content.push({ type: "paragraph", text: joinLines(paragraph) }); paragraph = []; };
+  let index = start;
+  for (; index < end; index++) {
+    const line = lines[index];
+    const previous = lines[index - 1];
+    // Same baseline: the rest of the visual line in another font size.
+    if (index > start && sameBaseline(previous, line) && (entry.length || paragraph.length)) {
+      (entry.length ? entry : paragraph).push(line);
+      continue;
+    }
+    if (isBlockStart(lines, index, heading)) break;
+    const lead = line.marker ? line.x : line.textX;
+    if (options.aligned) {
+      baseX ??= lead;
+      const listContinuation = entry.length > 0 && Math.abs(line.textX - entryX) <= 3;
+      if (Math.abs(lead - baseX) > 3 && !listContinuation) break;
+    }
+    const opensEntry = line.marker || options.actions && actionLine.test(lineText(line));
+    if (opensEntry) {
+      flushParagraph(); flushEntry();
+      entry = [line];
+      entryX = (line.items.find(item => !item.marker && item.text.trim() !== "•") ?? line.items[0]).x;
+      continue;
+    }
+    if (entry.length && continues(previous, line) && Math.abs(line.textX - entryX) <= 3) { entry.push(line); continue; }
+    flushEntries();
+    if (paragraph.length && continues(previous, line) && (!options.aligned || Math.abs(line.textX - paragraph[0].textX) <= 3)) {
+      paragraph.push(line);
+    } else { flushParagraph(); paragraph = [line]; }
+  }
+  flushEntries(); flushParagraph();
+  return { content, next: index };
+}
+function accessBlock(lines: readonly Line[], start: number, heading: PositionedItem): { readonly block: GmContextBlock; readonly next: number } {
+  const anchor = lines[start];
+  const contentX = anchor.textX + 50;
+  let index = start;
+  while (index < lines.length && (index === start || !isBlockStart(lines, index, heading)) && lines[index].x < contentX) index++;
+  const labelItems = lines.slice(start, index).flatMap(line => line.items).filter(item => !item.marker && item.text.trim());
+  const contentStart = index;
+  while (index < lines.length && !isBlockStart(lines, index, heading) && lines[index].x >= contentX) index++;
+  // The stacked label names the challenge ("DESAFIO DE ACESSO", then the obstacle); smaller-print
+  // uppercase lines are its subtitle, and mixed-case lines are notes about it.
+  const titleItems = labelItems.filter(item => isUpperCaseText(item.text) || item.text.trim() === "-");
+  const kindEnd = titleItems.findIndex(item => normalize(item.text).endsWith("ACESSO")) + 1;
+  const kind = joinFlow(titleItems.slice(0, kindEnd)).replace(/:$/u, "");
+  const obstacle = joinFlow(titleItems.slice(kindEnd).map(item => item.height < anchor.height * 0.95 && !item.text.trim().startsWith("(")
+    ? { ...item, text: `(${item.text.trim()})` } : item), true);
+  const notes = joinFlow(labelItems.filter(item => !titleItems.includes(item)));
+  const body = flowContent(lines, contentStart, index, heading, { aligned: false, actions: true }).content;
+  return { next: index, block: { type: "section", title: obstacle ? `${kind}: ${obstacle}` : kind,
+    content: [...(notes ? [{ type: "paragraph" as const, text: notes }] : []), ...body] } };
+}
+function labelText(lines: readonly Line[]): string {
+  const parts: Line[][] = [];
+  for (const [index, line] of lines.entries()) {
+    if (parts.length && continues(lines[index - 1], line)) parts.at(-1)!.push(line);
+    else parts.push([line]);
+  }
+  return parts.map(joinLines).reduce((label, part) => !label ? part : part.startsWith("(") ? `${label} ${part}` : `${label} · ${part}`, "");
+}
+// Tool tables are emitted row by row: the tool's label cell, then its explanation cell. Both cells are
+// vertically centred on the row, which confirms each pairing; anything else stays a plain paragraph.
+function toolsBlock(lines: readonly Line[], start: number, heading: PositionedItem): { readonly block: GmContextBlock; readonly next: number } {
+  const runs: Array<{ readonly label: boolean; readonly lines: Line[] }> = [];
+  let labelX: number | undefined;
+  let index = start + 1;
+  for (; index < lines.length && !isBlockStart(lines, index, heading); index++) {
+    const line = lines[index];
+    let label: boolean;
+    if (isSmallPrint(line, heading)) label = false;
+    else if (labelX !== undefined ? Math.abs(line.textX - labelX) <= 3 : !runs.length && opensToolRow(lines, index, heading)) {
+      label = true; labelX = line.textX;
+    } else break;
+    const run = runs.at(-1);
+    if (run?.label === label) run.lines.push(line);
+    else runs.push({ label, lines: [line] });
+  }
+  const title = lineText(lines[start]);
+  const center = (cell: readonly Line[]) => (cell[0].y + cell.at(-1)!.y) / 2;
+  const leading = runs[0] && !runs[0].label ? [{ type: "paragraph" as const, text: joinLines(runs[0].lines) }] : [];
+  const rows = runs.slice(leading.length);
+  const entries: GmContextEntry[] = [];
+  for (let row = 0; row < rows.length; row += 2) {
+    const [label, text] = [rows[row], rows[row + 1]];
+    if (!label?.label || !text || text.label || label.lines[0].page !== text.lines.at(-1)!.page
+      || Math.abs(center(label.lines) - center(text.lines)) > 6) {
+      return { next: index, block: { type: "section", title, content: [{ type: "paragraph", text: joinLines(runs.flatMap(run => run.lines)) }] } };
+    }
+    entries.push({ label: labelText(label.lines), text: joinLines(text.lines) });
+  }
+  return { next: index, block: { type: "section", title, content: [...leading, ...(entries.length ? [{ type: "entries" as const, entries }] : [])] } };
+}
+function opensToolRow(lines: readonly Line[], index: number, heading: PositionedItem): boolean {
+  const line = lines[index];
+  const next = lines.slice(index + 1).find(candidate => Math.abs(candidate.textX - line.textX) > 3);
+  return next !== undefined && isSmallPrint(next, heading) && next.textX > line.textX + 30;
+}
+function gmContextBlocks(items: readonly PositionedItem[], heading: PositionedItem): GmContextBlock[] {
+  const lines = toLines(items, heading);
+  const blocks: GmContextBlock[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    if (isAccessAnchor(lines, index) || isToolsHeading(lines[index])) {
+      const { block, next } = isToolsHeading(lines[index]) ? toolsBlock(lines, index, heading) : accessBlock(lines, index, heading);
+      const previous = blocks.at(-1);
+      // A tools table split across pages repeats its heading; keep it as one section.
+      if (previous?.type === "section" && block.type === "section" && previous.title === block.title && isToolsHeading(lines[index])) {
+        const [tail, head] = [previous.content.at(-1), block.content[0]];
+        blocks[blocks.length - 1] = { ...previous, content: tail?.type === "entries" && head?.type === "entries"
+          ? [...previous.content.slice(0, -1), { type: "entries", entries: [...tail.entries, ...head.entries] }, ...block.content.slice(1)]
+          : [...previous.content, ...block.content] };
+      } else blocks.push(block);
+      index = next;
+    } else if (isTitle(lines, index, heading)) {
+      const { content, next } = flowContent(lines, index + 1, lines.length, heading, { aligned: true, actions: false });
+      blocks.push({ type: "section", title: lineText(lines[index]), content });
+      index = next;
+    } else {
+      const { content, next } = flowContent(lines, index, lines.length, heading, { aligned: true, actions: false });
+      // An aligned flow always takes its first line; a margin change starts a new flow on the next pass.
+      blocks.push(...content);
+      index = next;
+    }
+  }
+  return blocks;
+}
+// Loose GM text after a titled block would read as part of it; group it under the context heading.
+function groupLooseContent(blocks: readonly GmContextBlock[]): GmContextBlock[] {
+  const grouped: GmContextBlock[] = [];
+  for (const block of blocks) {
+    const last = grouped.at(-1);
+    if (block.type === "section" || !grouped.some(entry => entry.type === "section")) grouped.push(block);
+    else if (last?.type === "section" && last.title === GM_CONTEXT_TITLE) grouped[grouped.length - 1] = { ...last, content: [...last.content, block] };
+    else grouped.push({ type: "section", title: GM_CONTEXT_TITLE, content: [block] });
+  }
+  return grouped;
+}
+const GM_CONTEXT_TITLE = "CONTEXTO";
+const CONDITIONAL_TITLE = "INFORMAÇÕES CONDICIONAIS";
 function sectionContent(input: Section): AdventurePoiPreset {
   const heading = input.heading;
   // When the section's table starts on the heading page, it marks the left edge of the section's column there;
@@ -191,8 +414,15 @@ function sectionContent(input: Section): AdventurePoiPreset {
   const tableHeader = input.items.find(item => item.page === heading.page && normalize(item.text) === "PERICIA");
   const foreignColumn = (item: PositionedItem) => tableHeader !== undefined && item.page === heading.page
     && item.x < Math.min(heading.x, tableHeader.x) - 18;
-  const section = { ...input, items: input.items.filter(item => !isContinuationHeading(item) && !isNumberBadge(item, heading)
-    && !foreignColumn(item)) };
+  // The section only resumes on a later page below its own "(CONTINUAÇÃO)" heading; anything else on those
+  // pages (chapter openings, rule boxes, other rooms) is outside this POI.
+  const resumeAt = new Map(input.items.filter(item => item.page !== heading.page && isContinuationHeading(item)
+    && normalize(item.text.replace(continuationSuffix, "")) === normalize(heading.text)).map(item => [item.page, item.y]));
+  const outsidePage = (item: PositionedItem) => item.page !== heading.page && !(item.y < (resumeAt.get(item.page) ?? -Infinity) - 1);
+  const inSection = input.items.filter(item => !isContinuationHeading(item) && !isNumberBadge(item, heading)
+    && !foreignColumn(item) && !outsidePage(item));
+  const markers = inSection.filter(item => item.marker && item.y >= 55 && (item.page !== heading.page || item.y < heading.y - 5));
+  const section = { ...input, items: inSection.filter(item => !item.marker) };
   const { rows, used } = tableRows(section);
   const contextIndexes = section.source.contextRowIndexes ?? [];
   if (new Set(contextIndexes).size !== contextIndexes.length
@@ -207,12 +437,13 @@ function sectionContent(input: Section): AdventurePoiPreset {
   const contextItems = remaining.filter(item => !descriptionSet.has(item));
   const sectionConditional = headingConditional;
   const information: Array<{ id: string; content: string; approaches: readonly PointOfInterestApproach[] }> = [];
-  const conditionalRows: string[] = [];
+  const conditionalRows: GmContextEntry[] = [];
+  // Rows kept out of information[] by the catalog are not conditional; they stay as neutral GM context.
+  const contextRows: GmContextEntry[] = [];
   for (const [rowIndex, row] of rows.entries()) {
-    if (sectionConditional || row.conditional || contextIndexes.includes(rowIndex)) {
-      conditionalRows.push(`${row.skillText} · DT ${row.difficulty}: ${row.text}`);
-      continue;
-    }
+    const entry = { label: `${row.skillText} · DT ${row.difficulty}`, text: row.text };
+    if (sectionConditional || row.conditional) { conditionalRows.push(entry); continue; }
+    if (contextIndexes.includes(rowIndex)) { contextRows.push(entry); continue; }
     const id = section.source.informationIds[information.length];
     if (!id) throw new Error(`ID de informação ausente: ${section.source.id}; linha ${rowIndex}; ${rows.map(value => `${value.skillText}:${value.difficulty}:${value.conditional}`).join("|")}.`);
     information.push({ id, content: row.text, approaches: approaches(row.skillText, row.difficulty) });
@@ -220,12 +451,18 @@ function sectionContent(input: Section): AdventurePoiPreset {
   if (information.length !== section.source.informationIds.length) {
     throw new Error(`Quantidade de informações divergente: ${section.source.id} (${information.length}/${section.source.informationIds.length}; ${rows.map(row => `${row.skillText}:${row.difficulty}:${row.conditional}`).join("|")}).`);
   }
-  const gmText = joinText(contextItems.filter(item => item.page !== heading.page || item.y < heading.y - 5));
+  const gmItems = [...contextItems.filter(item => item.page !== heading.page || item.y < heading.y - 5), ...markers]
+    .sort((a, b) => a.page - b.page || a.order - b.order);
+  const gmContext = renderGmContextHtml([
+    ...(headingConditional && description ? [{ type: "paragraph" as const, text: description }] : []),
+    ...groupLooseContent([...gmContextBlocks(gmItems, heading),
+      ...(contextRows.length ? [{ type: "entries" as const, entries: contextRows }] : [])]),
+    ...(conditionalRows.length ? [{ type: "section" as const, title: CONDITIONAL_TITLE,
+      content: [{ type: "entries" as const, entries: conditionalRows }] }] : []),
+  ]);
   const result: AdventurePoiPreset = { id: section.source.id, act: section.source.act, name: heading.text.trim(),
     ...(section.source.imageAssetId ? { imageAssetId: section.source.imageAssetId } : {}),
-    publicDescription: headingConditional ? "" : paragraph(description),
-    gmContext: [headingConditional ? paragraph(description) : "", paragraph(gmText),
-      ...conditionalRows.map(paragraph)].join(""), information };
+    publicDescription: headingConditional ? "" : paragraph(description), gmContext, information };
   validateAdventurePoiData(result);
   return result;
 }

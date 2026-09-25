@@ -99,6 +99,18 @@
   height: auto;
 }
 
+.op2-poi-investigation .op2-investigation-gm-context__content h3 {
+  margin: 14px 0 6px;
+  padding: 0 0 3px;
+  border-bottom: 1px solid var(--op2-border);
+  font-size: .8em;
+  letter-spacing: .06em;
+}
+.op2-poi-investigation .op2-investigation-gm-context__content h3:first-child { margin-top: 0; }
+.op2-poi-investigation .op2-investigation-gm-context__content ul { margin: 4px 0 10px; padding-left: 1.2em; }
+.op2-poi-investigation .op2-investigation-gm-context__content li { margin: 3px 0; }
+.op2-poi-investigation .op2-investigation-gm-context__content li > p { margin: 0; }
+
 .op2-poi-investigation .op2-investigation-panel,
 .op2-poi-investigation .op2-investigation-gm-context {
   margin-top: 12px;

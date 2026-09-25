@@ -65,7 +65,7 @@ describe("Playtest Alpha POI parser", () => {
         information: `Contexto "restrito", d'água & <sinal>.` },
     ], `Uma "sala", d'água & <sinal>.`));
     expect(preset.publicDescription).toBe(`<p>Uma "sala", d'água &amp; &lt;sinal&gt;.</p>`);
-    expect(preset.gmContext).toContain(`<p>Pesquisar (requer pista anterior) · DT 8: Contexto "restrito", d'água &amp; &lt;sinal&gt;.</p>`);
+    expect(preset.gmContext).toContain(`<li><p><strong>Pesquisar (requer pista anterior) · DT 8:</strong> Contexto "restrito", d'água &amp; &lt;sinal&gt;.</p></li>`);
     expect(preset.information[0].content).toBe(`Texto "claro", d'água & <sinal>.`);
     expect(`${preset.publicDescription}${preset.gmContext}`).not.toMatch(/&quot;|&#39;/u);
   });
@@ -89,6 +89,19 @@ describe("Playtest Alpha POI parser", () => {
     expect(preset.gmContext).toContain("Requer acesso prévio");
     expect(preset.gmContext).toContain("3 jogadores");
     expect(preset.information.map(entry => entry.content).join(" ")).not.toMatch(/Segredo|Memória|Arquivo|Variante/u);
+  });
+
+  it("keeps catalog context rows as neutral GM context, apart from conditional rows", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], contextRowIndexes: [1] }, page([
+      { skill: "Percepção", difficulty: 6, information: "Pista pública." },
+      { skill: "Percepção", difficulty: 6, information: "Linha repetida." },
+      { skill: "Intuição (apenas Ana)", difficulty: 8, information: "Pista condicional." },
+    ]));
+    expect(preset.information.map(entry => [entry.id, entry.content])).toEqual([["ordinary", "Pista pública."]]);
+    expect(preset.gmContext).toBe("<ul><li><p><strong>Percepção · DT 6:</strong> Linha repetida.</p></li></ul>"
+      + "<h3>INFORMAÇÕES CONDICIONAIS</h3><ul><li><p><strong>Intuição (apenas Ana) · DT 8:</strong> Pista condicional.</p></li></ul>");
+    const conditionalSection = preset.gmContext.slice(preset.gmContext.indexOf("<h3>INFORMAÇÕES CONDICIONAIS</h3>"));
+    expect(conditionalSection).not.toContain("Linha repetida.");
   });
 
   it("requires a canonical Aptitude specialization", () => {
@@ -116,9 +129,9 @@ describe("Playtest Alpha POI parser", () => {
       ["silver", ["aptitude:currentAffairs"], "Uma tradição de prata."],
       ["wedding", ["aptitude:currentAffairs"], "Uma data de casamento."],
     ]);
-    expect(preset.gmContext).toContain("<p>Intuição (apenas Victor e Alan) · DT 4: Memória pessoal.</p>");
-    expect(preset.gmContext).toContain("<p>Pesquisar (requer ter encontrado a foto) · DT 6: Uma data no verso.</p>");
-    expect(preset.gmContext).toContain("<p>Pesquisar (requer ter encontrado a foto) · DT 10: Um nome na vela.</p>");
+    expect(preset.gmContext).toContain("<li><p><strong>Intuição (apenas Victor e Alan) · DT 4:</strong> Memória pessoal.</p></li>");
+    expect(preset.gmContext).toContain("<li><p><strong>Pesquisar (requer ter encontrado a foto) · DT 6:</strong> Uma data no verso.</p></li>");
+    expect(preset.gmContext).toContain("<li><p><strong>Pesquisar (requer ter encontrado a foto) · DT 10:</strong> Um nome na vela.</p></li>");
     expect(preset.gmContext).toContain("<p>Nota do mestre.</p>");
     expect(allText(preset)).not.toMatch(/CONTINUA[ÇC][ÃA]O/iu);
   });
@@ -128,7 +141,7 @@ describe("Playtest Alpha POI parser", () => {
     const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [] }, first, next);
     expect(preset.information).toEqual([]);
     expect(preset.publicDescription).toBe("");
-    const rows = [...preset.gmContext.matchAll(/<p>([^<·]+) · DT (\d+):/gu)].map(match => `${match[1].trim()}/${match[2]}`);
+    const rows = [...preset.gmContext.matchAll(/<strong>([^<·]+) · DT (\d+):<\/strong>/gu)].map(match => `${match[1].trim()}/${match[2]}`);
     expect(rows).toEqual(["Percepção/6", "Intuição (apenas Victor e Alan)/4", "Intuição/6", "Medicina ou Sobrevivência/6",
       "Pesquisar (requer ter encontrado a foto)/6", "Pesquisar (requer ter encontrado a foto)/10",
       "Aptidão (Atualidades)/6", "Aptidão (Atualidades)/10"]);
@@ -162,11 +175,10 @@ describe("Playtest Alpha POI parser", () => {
       { text: "06", x: 484, y: 360, height: 18 },
       { text: "FERRAMENTAS", x: 264, y: 337 },
       { text: "Laboratório", x: 74, y: 318, height: 9 }, { text: "Portátil", x: 74, y: 305, height: 9 },
-      { text: "O sangue é antigo.", x: 147, y: 303 },
+      { text: "O sangue é antigo.", x: 147, y: 311 },
     ]));
     expect(preset.publicDescription).toBe("<p>Uma faca longa.</p>");
-    expect(preset.gmContext).toContain("FERRAMENTAS");
-    expect(preset.gmContext).toContain("O sangue é antigo.");
+    expect(preset.gmContext).toBe("<h3>FERRAMENTAS</h3><ul><li><p><strong>Laboratório Portátil:</strong> O sangue é antigo.</p></li></ul>");
     expect(preset.gmContext).not.toContain("06");
   });
 
@@ -199,7 +211,96 @@ describe("Playtest Alpha POI parser", () => {
     expect(allText(preset)).not.toMatch(controlOrPrivateUse);
     expect(preset.publicDescription).toBe("<p>Uma sala com decoração.</p>");
     expect(preset.information[0].content).toBe("Ação útil.");
-    expect(preset.gmContext).toBe("<p>Anotação à mão.</p>");
+    expect(preset.gmContext).toBe("<ul><li><p>Anotação à mão.</p></li></ul>");
+  });
+
+  describe("GM context structure", () => {
+    it("groups an access challenge, keeps GM paragraphs apart and lists conditional rows", () => {
+      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["keys"] }, layout(38, [
+        { text: "SALA DE TESTE", x: 94, y: 621, height: 10 },
+        { text: "Um depósito trancado.", x: 94, y: 608, height: 9 },
+        { text: "DESAFIO", x: 79, y: 572, height: 9 }, { text: "DE ACESSO", x: 68.5, y: 560, height: 9 },
+        { text: "\u008a", x: 68.5, y: 548, height: 9 }, { text: "PORTA", x: 74.6, y: 548, height: 9 },
+        { text: "TRANCADA", x: 68.5, y: 536, height: 9 },
+        { text: "ARROMBAR (DT 10, PA 10)", x: 136, y: 574, height: 9 },
+        { text: "DESTRANCAR (senha: 3", x: 136, y: 555, height: 9 }, { text: "d6", x: 240, y: 554, height: 14 },
+        { text: ", 3 tentativas)", x: 250, y: 555, height: 9 },
+        { text: "Perícia", x: 63, y: 517 }, { text: "DT", x: 135, y: 517 }, { text: "Informação", x: 158.6, y: 517 },
+        { text: "Percepção", x: 63, y: 492 }, { text: "6", x: 138.6, y: 492 }, { text: "Chaves & <cadeados>.", x: 158.6, y: 492 },
+        { text: "Intuição (apenas Ana)", x: 63, y: 460 }, { text: "6", x: 138.6, y: 460 }, { text: "Um arrepio.", x: 158.6, y: 460 },
+        { text: "Primeiro parágrafo do mestre,", x: 103, y: 427, height: 9 },
+        { text: "que continua aqui.", x: 103, y: 414, height: 9 },
+        { text: "Segundo parágrafo.", x: 103, y: 395, height: 9 },
+      ]));
+      expect(preset.gmContext).toBe("<h3>DESAFIO DE ACESSO: PORTA TRANCADA</h3>"
+        + "<ul><li><p>ARROMBAR (DT 10, PA 10)</p></li><li><p>DESTRANCAR (senha: 3d6, 3 tentativas)</p></li></ul>"
+        + "<h3>CONTEXTO</h3><p>Primeiro parágrafo do mestre, que continua aqui.</p><p>Segundo parágrafo.</p>"
+        + "<h3>INFORMAÇÕES CONDICIONAIS</h3><ul><li><p><strong>Intuição (apenas Ana) · DT 6:</strong> Um arrepio.</p></li></ul>");
+      expect(preset.publicDescription).toBe("<p>Um depósito trancado.</p>");
+      expect(preset.information).toEqual([{ id: "keys", content: "Chaves & <cadeados>.",
+        approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] }]);
+    });
+
+    it("pairs each tool label with its explanation, including multi-part labels", () => {
+      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [] }, layout(85, [
+        { text: "SALA DE TESTE", x: 105, y: 370, height: 10 },
+        { text: "Uma faca.", x: 105, y: 357, height: 9 },
+        { text: "FERRAMENTAS", x: 264, y: 337 },
+        { text: "Laboratório", x: 74, y: 318, height: 9 }, { text: "Portátil", x: 74, y: 305, height: 9 },
+        { text: "Sequência", x: 74, y: 287, height: 9 }, { text: "Mínima: 4", x: 74, y: 274, height: 9 },
+        { text: "O sangue é de", x: 147, y: 303 }, { text: "alguém & <outro>.", x: 147, y: 289 },
+        { text: "Leitor", x: 74, y: 256, height: 9 }, { text: "Infravermelho", x: 74, y: 243, height: 9 },
+        { text: "Movimentos violentos.", x: 147, y: 255 }, { text: "Rastro fantasma.", x: 147, y: 243 },
+        { text: "A faca foi usada.", x: 115, y: 215, height: 9 },
+      ]));
+      expect(preset.gmContext).toBe("<h3>FERRAMENTAS</h3><ul>"
+        + "<li><p><strong>Laboratório Portátil · Sequência Mínima: 4:</strong> O sangue é de alguém &amp; &lt;outro&gt;.</p></li>"
+        + "<li><p><strong>Leitor Infravermelho:</strong> Movimentos violentos. Rastro fantasma.</p></li></ul>"
+        + "<h3>CONTEXTO</h3><p>A faca foi usada.</p>");
+    });
+
+    it("keeps a tools note without tool labels as a paragraph", () => {
+      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [] }, layout(95, [
+        { text: "SALA DE TESTE", x: 143, y: 541, height: 10 },
+        { text: "Quatro pôsteres.", x: 143, y: 528, height: 9 },
+        { text: "FERRAMENTAS", x: 277, y: 508 },
+        { text: "Todas as ferramentas resultam em leitura normal.", x: 145, y: 490 },
+        { text: "Os pôsteres não têm nada relevante.", x: 145, y: 463, height: 9 },
+      ]));
+      expect(preset.gmContext).toBe("<h3>FERRAMENTAS</h3><p>Todas as ferramentas resultam em leitura normal.</p>"
+        + "<h3>CONTEXTO</h3><p>Os pôsteres não têm nada relevante.</p>");
+    });
+
+    it("keeps unstructured GM text as plain paragraphs", () => {
+      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"] }, layout(35, [
+        { text: "SALA DE TESTE", x: 70, y: 700, height: 11 },
+        { text: "Uma sala.", x: 70, y: 686 },
+        { text: "Perícia", x: 70, y: 650 }, { text: "DT", x: 150, y: 650 }, { text: "Informação", x: 180, y: 650 },
+        { text: "Percepção", x: 70, y: 620 }, { text: "6", x: 150, y: 620 }, { text: "Pista.", x: 180, y: 620 },
+        { text: "Primeira nota", x: 90, y: 580, height: 9 }, { text: "do mestre.", x: 90, y: 567, height: 9 },
+        { text: "Segunda nota.", x: 90, y: 548, height: 9 },
+      ]));
+      expect(preset.gmContext).toBe("<p>Primeira nota do mestre.</p><p>Segunda nota.</p>");
+      expect(preset.information.every(entry => !/<[a-z]/iu.test(entry.content))).toBe(true);
+    });
+
+    it("keeps printed titles and bullet lists in reading order and stops at pages without a continuation", () => {
+      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [] }, layout(58, [
+        { text: "SALA DE TESTE", x: 98, y: 706, height: 10 },
+        { text: "Um freezer.", x: 98, y: 693, height: 9 },
+        { text: "CONTEÚDO", x: 253, y: 592, height: 9 },
+        { text: "Ao abrir, há:", x: 67, y: 574, height: 9 },
+        { text: "\u008a", x: 67, y: 561, height: 9 }, { text: "Uma chave.", x: 75.5, y: 561, height: 9 },
+        { text: "\u008a", x: 67, y: 548, height: 9 }, { text: "Um bilhete", x: 75.5, y: 548, height: 9 },
+        { text: "dobrado.", x: 75.5, y: 535, height: 9 },
+        { text: "Nota do mestre.", x: 108, y: 500, height: 9 },
+      ]), layout(59, [
+        { text: "OUTRO CAPÍTULO", x: 68, y: 690, height: 36 },
+        { text: "Texto de outra seção.", x: 68, y: 665, height: 10.5 },
+      ]));
+      expect(preset.gmContext).toBe("<h3>CONTEÚDO</h3><p>Ao abrir, há:</p><ul><li><p>Uma chave.</p></li><li><p>Um bilhete dobrado.</p></li></ul>"
+        + "<h3>CONTEXTO</h3><p>Nota do mestre.</p>");
+    });
   });
 
   it("fails on malformed tables and unknown conditional qualifiers", () => {

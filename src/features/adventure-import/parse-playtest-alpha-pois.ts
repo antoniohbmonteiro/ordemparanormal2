@@ -180,6 +180,13 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
         conditional: conditionalQualifier.test(qualifier) || conditionalInformation.test(text) || variants !== undefined,
         ...(variants ? { variants } : {}) });
     }
+    // Every number printed in a cell belongs to a row. A bare number left inside the rows' area of the information
+    // column is a stray layout glyph (it arrives out of the reading flow), not text for the GM context.
+    const rowsBottom = Math.min(...table.filter(item => used.has(item) && item.page === header.skill.page).map(item => item.y));
+    for (const item of table) {
+      if (!used.has(item) && item.page === header.skill.page && /^\d{1,2}$/u.test(item.text.trim())
+        && item.x >= header.information.x - 13 && item.y < header.skill.y && item.y > rowsBottom) used.add(item);
+    }
   }
   return { rows, used };
 }

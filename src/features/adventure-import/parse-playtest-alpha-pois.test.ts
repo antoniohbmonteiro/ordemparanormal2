@@ -224,6 +224,25 @@ describe("Playtest Alpha POI parser", () => {
     expect(() => parsePlaytestAlphaPoiSection(fixture, withoutCondition)).toThrow("Condição de DT alternativa não reconhecida");
   });
 
+  it("drops a stray bare number drawn inside the table rows but keeps the numbers of cells and GM text", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["bowl", "keys"] }, layout(93, [
+      { text: "SALA DE TESTE", x: 129, y: 720, height: 10 }, { text: "Um depósito com 2 portas.", x: 129, y: 707, height: 9 },
+      { text: "Perícia", x: 74, y: 660 }, { text: "DT", x: 148, y: 660 }, { text: "Informação", x: 171, y: 660 },
+      { text: "Percepção", x: 74, y: 618 },
+      { text: "6", x: 151, y: 636 }, { text: "Uma tigela com 6 marcas.", x: 171, y: 636 },
+      { text: "8", x: 151, y: 600 }, { text: "Duas chaves iguais.", x: 171, y: 600 },
+      { text: "5", x: 131, y: 540, height: 9 }, { text: "Nota do mestre sobre 3 chaves.", x: 145, y: 540, height: 9 },
+      // Out of the reading flow: the last item of the page, between two rows of the information column.
+      { text: "6", x: 288, y: 620, height: 9 },
+    ]));
+    expect(preset.information.map(entry => [entry.id, entry.content, entry.approaches[0].difficulty])).toEqual([
+      ["bowl", "Uma tigela com 6 marcas.", 6], ["keys", "Duas chaves iguais.", 8],
+    ]);
+    expect(preset.publicDescription).toBe("<p>Um depósito com 2 portas.</p>");
+    expect(preset.gmContext).toBe("<p>5 Nota do mestre sobre 3 chaves.</p>");
+    expect(preset.gmContext).not.toMatch(/<p>6<\/p>/u);
+  });
+
   it("keeps catalog context rows as neutral GM context, out of information and apart from situational rows", () => {
     const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], contextRowIndexes: [1],
       situationalInformation: [{ row: 2, id: "anaClue" }] }, page([

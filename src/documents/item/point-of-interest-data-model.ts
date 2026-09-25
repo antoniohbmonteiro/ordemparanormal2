@@ -1,12 +1,15 @@
 import { SKILL_KEYS, type SkillKey } from "../../config/skills";
 import {
+  POINT_OF_INTEREST_AVAILABILITY_MODES,
   POINT_OF_INTEREST_DIFFICULTY_MIN,
   isPointOfInterestInformationList,
+  type PointOfInterestAvailabilityMode,
 } from "./point-of-interest-data";
 
 export type {
   PointOfInterestApproach,
   PointOfInterestInformation,
+  PointOfInterestInformationAvailability,
   PointOfInterestSystemData,
 } from "./point-of-interest-data";
 
@@ -29,10 +32,17 @@ type ApproachArrayField = foundry.data.fields.ArrayField<
   foundry.data.fields.ModelPropsFromSchema<ApproachSchema>[],
   true, false, true
 >;
+type AvailabilitySchema = {
+  mode: foundry.data.fields.StringField<
+    PointOfInterestAvailabilityMode, PointOfInterestAvailabilityMode, true, false, true
+  >;
+  condition: RequiredStringField;
+};
 type InformationSchema = {
   id: NonBlankStringField;
   content: RequiredStringField;
   approaches: ApproachArrayField;
+  availability: foundry.data.fields.SchemaField<AvailabilitySchema>;
 };
 type PointOfInterestSchema = {
   publicDescription: RequiredStringField;
@@ -76,6 +86,14 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
             }),
             { required: true, nullable: false, initial: [], min: 1 },
           ),
+          // Stored information without availability predates it; cleaning fills "always" without a migration.
+          availability: new foundry.data.fields.SchemaField({
+            mode: new foundry.data.fields.StringField<
+              PointOfInterestAvailabilityMode, PointOfInterestAvailabilityMode, true, false, true
+            >({ required: true, nullable: false, blank: false,
+              choices: [...POINT_OF_INTEREST_AVAILABILITY_MODES], initial: "always" }),
+            condition: new foundry.data.fields.StringField({ required: true, nullable: false, blank: true, initial: "" }),
+          }, { required: true, nullable: false }),
         }),
         { required: true, nullable: false, initial: [], validate: isPointOfInterestInformationList },
       ),

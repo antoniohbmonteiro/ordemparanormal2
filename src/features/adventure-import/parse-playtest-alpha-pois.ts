@@ -1,7 +1,8 @@
 import { PLAYTEST_ALPHA_POI_SOURCES, type AdventurePoiSource } from "../../config/adventure-poi-sources/playtest-alpha";
 import { SKILL_DEFINITIONS, type SkillKey, type AptitudeSpecializationKey } from "../../config/skills";
 import { validateAdventurePoiData, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
-import type { PointOfInterestApproach } from "../../documents/item/point-of-interest-data";
+import { POINT_OF_INTEREST_ALWAYS_AVAILABLE, type PointOfInterestApproach,
+  type PointOfInterestInformation } from "../../documents/item/point-of-interest-data";
 import type { AdventurePdfTextItem, AdventurePdfTextPage } from "../../adapters/files/read-adventure-poi-pages";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { PdfEditionId } from "../../core/adventure-import/known-adventure-sources";
@@ -10,7 +11,11 @@ import { escapeHtmlText, renderGmContextHtml, type GmContextBlock, type GmContex
 // A marker is a bullet or icon glyph with no text of its own; only its position is structural.
 interface PositionedItem extends AdventurePdfTextItem { readonly page: number; readonly marker?: true }
 interface Section { readonly source: AdventurePoiSource; readonly heading: PositionedItem; readonly items: readonly PositionedItem[] }
-interface TableRow { readonly text: string; readonly skillText: string; readonly difficulty: number; readonly conditional: boolean }
+interface TableVariant { readonly label: string; readonly text: string }
+interface TableRow {
+  readonly text: string; readonly skillText: string; readonly difficulty: number; readonly conditional: boolean;
+  readonly variants?: readonly TableVariant[];
+}
 
 const normalize = (value: string): string => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -31,6 +36,8 @@ function positionItems(page: AdventurePdfTextPage): PositionedItem[] {
 }
 const conditionalQualifier = /\b(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|ao desbloquear|ao abrir|ao tocar|caso tenha|se (?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m))\b/iu;
 const conditionalInformation = /^\s*(?:(?:\(?\s*(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|caso tenha|ao (?:usar|acessar|abrir|encontrar|hackear|desbloquear)|se (?:tiver|for|houver|estiver|(?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m)))\b)|(?:[1-9]\d?(?:\s+ou\s+[1-9]\d?)?\s+))/iu;
+// A prerequisite printed beside a skill name, e.g. "Intuição (apenas Victor e Alan)".
+const prerequisiteParenthetical = /\([^)]*(?:requer|apenas|somente|exclusiv)[^)]*\)/giu;
 function paragraph(value: string): string { return value.trim() ? `<p>${escapeHtmlText(value.trim())}</p>` : ""; }
 const tidyText = (value: string): string => value.replace(/\s+([,.;:!?])/gu, "$1").replace(/([([{“])\s+/gu, "$1")
   .replace(/\s+([)\]}”])/gu, "$1").replace(/\s+/gu, " ").trim();
@@ -67,7 +74,7 @@ const skills = SKILL_DEFINITIONS.flatMap(def => [[def.label, def.key] as const,
   .sort((a, b) => b[0].length - a[0].length);
 const startsWithSkill = (text: string): boolean => skills.some(([name]) => normalize(text).startsWith(normalize(name)));
 function approaches(label: string, difficulty: number): readonly PointOfInterestApproach[] {
-  const cleaned = label.replace(/\([^)]*(?:requer|apenas|somente|exclusiv)[^)]*\)/giu, "").trim();
+  const cleaned = label.replace(prerequisiteParenthetical, "").trim();
   const parts = cleaned.split(/\s+ou\s+/iu);
   const result: PointOfInterestApproach[] = [];
   for (const part of parts) {
@@ -139,7 +146,9 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
         } else {
           lastSkill = `${lastSkill} ${skillText}`.trim();
           for (let previous = groupStart; previous < rows.length; previous++) {
-            rows[previous] = { ...rows[previous], skillText: lastSkill, conditional: conditionalQualifier.test(lastSkill) };
+            rows[previous] = { ...rows[previous], skillText: lastSkill,
+              conditional: conditionalQualifier.test(lastSkill) || conditionalInformation.test(rows[previous].text)
+                || rows[previous].variants !== undefined };
           }
         }
       }
@@ -157,11 +166,34 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
       const qualifier = lastSkill;
       if (!qualifier) throw new Error(`Informação de POI sem perícia: ${section.source.id}.`);
       for (const item of [...left, difficultyItem, ...info]) used.add(item);
+      const variants = playerCountVariants(info);
       rows.push({ text, skillText: qualifier, difficulty: Number(difficultyItem.text),
-        conditional: conditionalQualifier.test(qualifier) || conditionalInformation.test(text) });
+        conditional: conditionalQualifier.test(qualifier) || conditionalInformation.test(text) || variants !== undefined,
+        ...(variants ? { variants } : {}) });
     }
   }
   return { rows, used };
+}
+// A paragraph meant for one group size opens with the book's player-count icon ("3", "4 ou 5") at the cell's
+// left edge. Each variant keeps the text the cell prints before the first icon.
+function playerCountVariants(info: readonly PositionedItem[]): readonly TableVariant[] | undefined {
+  const ordered = [...info].sort((a, b) => b.y - a.y || a.x - b.x || a.order - b.order);
+  const left = Math.min(...ordered.map(item => item.x));
+  const opens = (item: PositionedItem, index: number) => /^[1-9]$/u.test(item.text.trim()) && Math.abs(item.x - left) <= 1
+    && ordered[index + 1] !== undefined && Math.abs(ordered[index + 1].y - item.y) <= 2;
+  const first = ordered.findIndex(opens);
+  if (first < 0) return undefined;
+  const variants: Array<{ readonly label: PositionedItem[]; readonly text: PositionedItem[] }> = [];
+  for (const [index, item] of ordered.entries()) {
+    if (index < first) continue;
+    const variant = variants.at(-1);
+    if (opens(item, index)) variants.push({ label: [item], text: [] });
+    else if (variant && !variant.text.length && /^(?:ou|ou\s+[1-9]|[1-9])$/u.test(item.text.trim())
+      && Math.abs(item.y - variant.label[0].y) <= 2) variant.label.push(item);
+    else variant!.text.push(item);
+  }
+  const common = ordered.slice(0, first);
+  return variants.map(({ label, text }) => ({ label: joinText(label), text: joinText([...common, ...text]) }));
 }
 // The public description is the paragraph set flush under the heading. Side blocks (access challenges,
 // tools, tables) and neighbouring columns start at another x, so the first misaligned line ends it.
@@ -406,7 +438,39 @@ function groupLooseContent(blocks: readonly GmContextBlock[]): GmContextBlock[] 
   return grouped;
 }
 const GM_CONTEXT_TITLE = "CONTEXTO";
-const CONDITIONAL_TITLE = "INFORMAÇÕES CONDICIONAIS";
+// Conditions are GM-facing text the system never interprets: each part keeps its printed wording, unwrapped
+// from parentheses and punctuated as a sentence.
+function conditionText(parts: readonly string[]): string {
+  return parts.map(part => tidyText(part).replace(/^\(([\s\S]*)\)$/u, "$1").trim()).filter(Boolean)
+    .map(part => `${part.charAt(0).toLocaleUpperCase("pt-BR")}${part.slice(1)}${/[.!?]$/u.test(part) ? "" : "."}`)
+    .join(" ");
+}
+// A prerequisite printed at the start of the information cell: "(Requer …) texto" or "Se um personagem …, texto".
+function leadingCondition(text: string): { readonly condition: string; readonly content: string } | null {
+  if (!conditionalInformation.test(text)) return null;
+  const parenthetical = /^(\([^()]*\))\s*(\S[\s\S]*)$/u.exec(text);
+  if (parenthetical) return { condition: parenthetical[1], content: parenthetical[2] };
+  // The clause is the prerequisite and also reads as part of the information, so the content keeps it.
+  const clause = /^(se\s[^,.]+),\s*\S/iu.exec(text);
+  return clause ? { condition: clause[1], content: text } : null;
+}
+interface SituationalRow { readonly variant?: string; readonly content: string; readonly condition: string }
+function situationalRows(sourceId: string, row: TableRow, sectionCondition: string): readonly SituationalRow[] {
+  const shared = [sectionCondition, ...row.skillText.match(prerequisiteParenthetical) ?? []];
+  const cells = row.variants ?? [{ label: "", text: row.text }];
+  return cells.map(({ label, text }) => {
+    const leading = leadingCondition(text);
+    // Recognised as conditional, but its prerequisite cannot be separated from the text.
+    if (!leading && !label && conditionalInformation.test(text)) {
+      throw new Error(`Condição de informação não reconhecida: ${sourceId}; ${row.skillText} · DT ${row.difficulty}.`);
+    }
+    const condition = conditionText([...shared, ...leading ? [leading.condition] : [],
+      ...label ? [`Apenas se o grupo tiver ${label} jogadores`] : []]);
+    if (!condition) throw new Error(`Condição de informação ausente: ${sourceId}; ${row.skillText} · DT ${row.difficulty}.`);
+    return { ...label ? { variant: label } : {}, content: leading?.content ?? text, condition };
+  });
+}
+const bindingKey = (row: number, variant?: string): string => variant ? `${row}:${variant}` : String(row);
 function sectionContent(input: Section): AdventurePoiPreset {
   const heading = input.heading;
   // When the section's table starts on the heading page, it marks the left edge of the section's column there;
@@ -435,21 +499,44 @@ function sectionContent(input: Section): AdventurePoiPreset {
   const descriptionSet = new Set(descriptionItems(heading, remaining));
   const description = joinText([...descriptionSet]);
   const contextItems = remaining.filter(item => !descriptionSet.has(item));
-  const sectionConditional = headingConditional;
-  const information: Array<{ id: string; content: string; approaches: readonly PointOfInterestApproach[] }> = [];
-  const conditionalRows: GmContextEntry[] = [];
-  // Rows kept out of information[] by the catalog are not conditional; they stay as neutral GM context.
+  const sectionCondition = headingConditional ? joinText(sameLine) : "";
+  const rowSummary = () => rows.map((row, index) => `${index}:${row.skillText}:${row.difficulty}:${row.conditional}`
+    + (row.variants ? `[${row.variants.map(variant => variant.label).join("/")}]` : "")).join("|");
+  // Situational IDs come only from explicit catalog bindings; an unbound or unused binding aborts the import.
+  const bindings = new Map((section.source.situationalInformation ?? []).map(binding =>
+    [bindingKey(binding.row, binding.variant), binding.id]));
+  const boundKeys = new Set<string>();
+  const information: PointOfInterestInformation[] = [];
+  let alwaysCount = 0;
+  // Rows kept out of information[] by the catalog stay as neutral GM context.
   const contextRows: GmContextEntry[] = [];
   for (const [rowIndex, row] of rows.entries()) {
-    const entry = { label: `${row.skillText} · DT ${row.difficulty}`, text: row.text };
-    if (sectionConditional || row.conditional) { conditionalRows.push(entry); continue; }
-    if (contextIndexes.includes(rowIndex)) { contextRows.push(entry); continue; }
-    const id = section.source.informationIds[information.length];
-    if (!id) throw new Error(`ID de informação ausente: ${section.source.id}; linha ${rowIndex}; ${rows.map(value => `${value.skillText}:${value.difficulty}:${value.conditional}`).join("|")}.`);
-    information.push({ id, content: row.text, approaches: approaches(row.skillText, row.difficulty) });
+    if (contextIndexes.includes(rowIndex)) {
+      contextRows.push({ label: `${row.skillText} · DT ${row.difficulty}`, text: row.text });
+      continue;
+    }
+    const rowApproaches = approaches(row.skillText, row.difficulty);
+    if (!sectionCondition && !row.conditional) {
+      const id = section.source.informationIds[alwaysCount++];
+      if (!id) throw new Error(`ID de informação ausente: ${section.source.id}; linha ${rowIndex}; ${rowSummary()}.`);
+      information.push({ id, content: row.text, approaches: rowApproaches, availability: { ...POINT_OF_INTEREST_ALWAYS_AVAILABLE } });
+      continue;
+    }
+    for (const entry of situationalRows(section.source.id, row, sectionCondition)) {
+      const key = bindingKey(rowIndex, entry.variant);
+      const id = bindings.get(key);
+      if (!id) throw new Error(`ID de informação situacional ausente: ${section.source.id}; linha ${key}; ${rowSummary()}.`);
+      boundKeys.add(key);
+      information.push({ id, content: entry.content, approaches: rowApproaches,
+        availability: { mode: "situational", condition: entry.condition } });
+    }
   }
-  if (information.length !== section.source.informationIds.length) {
-    throw new Error(`Quantidade de informações divergente: ${section.source.id} (${information.length}/${section.source.informationIds.length}; ${rows.map(row => `${row.skillText}:${row.difficulty}:${row.conditional}`).join("|")}).`);
+  if (alwaysCount !== section.source.informationIds.length) {
+    throw new Error(`Quantidade de informações divergente: ${section.source.id} (${alwaysCount}/${section.source.informationIds.length}; ${rowSummary()}).`);
+  }
+  const unbound = [...bindings.keys()].filter(key => !boundKeys.has(key));
+  if (unbound.length) {
+    throw new Error(`Vínculo de informação situacional sem linha correspondente: ${section.source.id} (${unbound.join(", ")}; ${rowSummary()}).`);
   }
   const gmItems = [...contextItems.filter(item => item.page !== heading.page || item.y < heading.y - 5), ...markers]
     .sort((a, b) => a.page - b.page || a.order - b.order);
@@ -457,8 +544,6 @@ function sectionContent(input: Section): AdventurePoiPreset {
     ...(headingConditional && description ? [{ type: "paragraph" as const, text: description }] : []),
     ...groupLooseContent([...gmContextBlocks(gmItems, heading),
       ...(contextRows.length ? [{ type: "entries" as const, entries: contextRows }] : [])]),
-    ...(conditionalRows.length ? [{ type: "section" as const, title: CONDITIONAL_TITLE,
-      content: [{ type: "entries" as const, entries: conditionalRows }] }] : []),
   ]);
   const result: AdventurePoiPreset = { id: section.source.id, act: section.source.act, name: heading.text.trim(),
     ...(section.source.imageAssetId ? { imageAssetId: section.source.imageAssetId } : {}),

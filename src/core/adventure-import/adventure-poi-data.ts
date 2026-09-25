@@ -30,7 +30,9 @@ export function validateAdventurePoiData(value: unknown): asserts value is Adven
     || !isPointOfInterestInformationList(preset.information)) throw new Error("Preset de POI inválido.");
   for (const value of preset.information) {
     const entry = record(value)!;
-    if (!keysAre(entry, ["id", "content", "approaches"])
+    const availability = record(entry.availability);
+    if (!keysAre(entry, ["id", "content", "approaches", "availability"])
+      || !availability || !keysAre(availability, ["mode", "condition"])
       || !(entry.content as string).trim()
       || (entry.approaches as unknown[]).some(value => {
         const approach = record(value);

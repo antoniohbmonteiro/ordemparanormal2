@@ -333,3 +333,22 @@
 .op2-poi-agent-dialog { display: grid; gap: 8px; }
 .op2-poi-agent-dialog label { display: flex; gap: 8px; align-items: center; }
 .op2-investigation-specialization { display: block; margin-bottom: .2rem; font-size: .75rem; }
+.op2-poi-investigation .op2-investigation-situational {
+  margin: 0 0 .3rem;
+  color: var(--op2-text);
+  font-size: 12px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+.op2-poi-investigation .op2-investigation-situational__badge {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--op2-border-strong);
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}

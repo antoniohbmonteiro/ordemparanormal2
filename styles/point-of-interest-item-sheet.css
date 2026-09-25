@@ -32,6 +32,9 @@
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__information-header h3 { margin: 0; font-size: .85rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__content-label { display: flex; flex-direction: column; gap: .25rem; margin-top: .6rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__content-label textarea { width: 100%; min-height: 3rem; resize: vertical; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__availability { display: flex; align-items: end; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__availability > label { display: flex; flex-direction: column; gap: .2rem; flex: 0 0 9rem; font-size: .7rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__availability > .op2-poi-sheet__condition { min-width: 12rem; flex: 1 1 12rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__approaches { margin-top: .8rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__approaches h4 { margin: 0 0 .5rem; font-size: .75rem; text-transform: uppercase; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__approach { display: flex; align-items: end; flex-wrap: wrap; gap: .5rem; padding: .45rem 0; border-top: 1px solid var(--op2-poi-border); }

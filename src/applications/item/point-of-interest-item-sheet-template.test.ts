@@ -56,6 +56,15 @@ describe("Point of Interest Item Sheet template", () => {
     expect(template).toContain('data-poi-edit="showDifficultyToPlayers"');
   });
 
+  it("edits availability per information and shows the condition field only when situational", () => {
+    expect(template).toContain('data-poi-edit="availability"');
+    expect(template).toContain("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Availability");
+    const condition = template.indexOf('data-poi-edit="condition"');
+    expect(template.lastIndexOf("{{#if showCondition}}", condition)).toBeGreaterThan(template.indexOf('data-poi-edit="availability"'));
+    expect(template.indexOf("{{#each approaches}}")).toBeGreaterThan(condition);
+    expect(template).not.toMatch(/<prose-mirror[^>]*content/u);
+  });
+
   it("never exposes the entry id as an editable field or execution state", () => {
     expect(template).not.toContain('data-poi-edit="id"');
     expect(template).not.toContain("discovered");

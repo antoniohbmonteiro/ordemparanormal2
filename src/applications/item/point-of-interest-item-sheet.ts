@@ -4,13 +4,14 @@ import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/ap
 import { isSkillKey } from "../../config/skills";
 import { createPointOfInterestInformationId } from "../../adapters/foundry/points-of-interest/create-point-of-interest-information-id";
 import {
+  POINT_OF_INTEREST_ALWAYS_AVAILABLE,
   addPointOfInterestApproach, addPointOfInterestInformation, isAptitudeSpecializationKey,
   readPointOfInterestInformation,
   removePointOfInterestApproach, removePointOfInterestInformation,
-  updatePointOfInterestApproach, updatePointOfInterestInformation,
+  updatePointOfInterestApproach, updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
   type PointOfInterestApproach, type PointOfInterestInformation,
 } from "../../documents/item/point-of-interest-data";
-import { APTITUDE_OPTIONS, buildInformationViewModels, readApproachFieldPatch,
+import { APTITUDE_OPTIONS, buildInformationViewModels, readApproachFieldPatch, readSituationalAvailability,
   type InformationViewModel } from "./point-of-interest-information-editor";
 import { selectPoiApproach } from "./point-of-interest-approach-dialog";
 
@@ -46,6 +47,8 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     main: { template: POI_SHEET_TEMPLATE, scrollable: [".op2-poi-sheet__body"] },
   };
   #updateQueue: Promise<void> = Promise.resolve();
+  /** Information switched to Situacional here whose condition is not saved yet (never persisted as such). */
+  #pendingSituational = new Set<string>();
   get #canAuthor(): boolean { return game.user.isGM && this.isEditable; }
   #enqueue(operation: () => Promise<void>): void {
     this.#updateQueue = this.#updateQueue.then(operation).catch(async (error: unknown) => {
@@ -77,8 +80,36 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     return { ...context, canViewAuthoring: true, editable: this.#canAuthor, poi: {
       name: item.name, img: item.img ?? "icons/svg/item-bag.svg", uuid: item.uuid,
       publicDescription, enrichedPublicDescription, gmContext, enrichedGmContext,
-      information: buildInformationViewModels(readPointOfInterestInformation(item.system)),
+      information: buildInformationViewModels(readPointOfInterestInformation(item.system), this.#pendingSituational),
     } };
+  }
+  #onAvailabilityChange(id: string, control: HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement): void {
+    const current = readPointOfInterestInformation((this.document as foundry.documents.Item).system)
+      .find(entry => entry.id === id);
+    if (!current) return;
+    if (control.dataset.poiEdit === "condition") {
+      const availability = readSituationalAvailability(control.value);
+      if (!availability) {
+        ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Errors.ConditionRequired"));
+        void this.render();
+        return;
+      }
+      this.#pendingSituational.delete(id);
+      this.#enqueueInformationChange(list => updatePointOfInterestInformationAvailability(list, id, availability));
+      return;
+    }
+    if (control.value === "situational") {
+      if (current.availability.mode === "situational") return;
+      // A situational information needs its condition, so the switch is saved together with the first condition.
+      this.#pendingSituational.add(id);
+      void this.render().then(() => this.element.querySelector<HTMLInputElement>(
+        `[data-poi-edit="condition"][data-information-id="${CSS.escape(id)}"]`)?.focus());
+      return;
+    }
+    this.#pendingSituational.delete(id);
+    if (current.availability.mode === "always") { void this.render(); return; }
+    this.#enqueueInformationChange(list => updatePointOfInterestInformationAvailability(list, id,
+      POINT_OF_INTEREST_ALWAYS_AVAILABLE));
   }
   protected override _attachPartListeners(partId: string, htmlElement: HTMLElement, options: HandlebarsRenderOptions): void {
     super._attachPartListeners(partId, htmlElement, options);
@@ -91,6 +122,10 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
         if (!id) return;
         if (control.dataset.poiEdit === "content") {
           this.#enqueueInformationChange(list => updatePointOfInterestInformation(list, id, control.value));
+          return;
+        }
+        if (control.dataset.poiEdit === "availability" || control.dataset.poiEdit === "condition") {
+          this.#onAvailabilityChange(id, control);
           return;
         }
         const index = Number(control.dataset.approachIndex);

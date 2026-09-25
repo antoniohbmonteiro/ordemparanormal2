@@ -46,7 +46,7 @@
                   {{#if @root.isPlayer}}
                     {{#if isFirst}}
                       <div class="op2-investigation-action" role="cell">
-                        <button type="button" class="op2-investigation-examine" data-action="examine" data-skill="{{../key}}" aria-label="{{../examineLabel}}" title="{{../examineLabel}}" {{#unless @root.canExamine}}disabled{{/unless}}><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></button>
+                        {{#if ../hasUndiscovered}}<button type="button" class="op2-investigation-examine" data-action="examine" data-skill="{{../key}}" aria-label="{{../examineLabel}}" title="{{../examineLabel}}" {{#unless @root.canExamine}}disabled{{/unless}}><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></button>{{/if}}
                       </div>
                     {{/if}}
                   {{else}}
@@ -73,6 +73,9 @@
 
                   <div class="op2-investigation-information" role="cell">
                     {{#if specializationLabel}}<strong class="op2-investigation-specialization">{{specializationLabel}}</strong>{{/if}}
+                    {{#if isSituational}}
+                      <p class="op2-investigation-situational"><span class="op2-investigation-situational__badge">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Situational"}}</span> <span class="op2-investigation-situational__condition">{{condition}}</span></p>
+                    {{/if}}
                     <div class="op2-investigation-information__content">{{#if @root.isGm}}{{content}}{{else}}{{#if isRevealed}}{{content}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}{{/if}}{{/if}}</div>
                   </div>
                 </div>

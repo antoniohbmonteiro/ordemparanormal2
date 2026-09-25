@@ -108,7 +108,8 @@ describe("Foundry Adventure POI Item adapter", () => {
 
   it("reports nested information paths without disclosing content", async () => {
     const preset = { ...makePreset("actOne.map.09"), information: Array.from({ length: 3 }, (_, index) => ({
-      id: `clue-${index}`, content: `Texto privado ${index}`, approaches: [
+      id: `clue-${index}`, content: `Texto privado ${index}`,
+      availability: { mode: "always" as const, condition: "" as const }, approaches: [
         { skill: "perception" as const, difficulty: 6, showDifficultyToPlayers: false },
       ],
     })) };
@@ -130,7 +131,8 @@ describe("Foundry Adventure POI Item adapter", () => {
     const preset = { ...makePreset("actOne.map.09"),
       publicDescription: `<p>Um "texto", d'água &amp; &lt;sinal&gt;.</p>`,
       gmContext: `<p>Outro "texto", d'água &amp; &lt;sinal&gt;.</p>`,
-      information: [{ id: "clue", content: `Texto "simples", d'água & <sinal>.`, approaches: [
+      information: [{ id: "clue", content: `Texto "simples", d'água & <sinal>.`,
+        availability: { mode: "situational" as const, condition: "Requer a chave." }, approaches: [
         { skill: "perception" as const, difficulty: 6, showDifficultyToPlayers: false },
       ] }] };
     const flag: PoiImportFlag = { importer: "pointOfInterest", adventureId: "playtest-alpha", documentId: preset.id,
@@ -145,6 +147,7 @@ describe("Foundry Adventure POI Item adapter", () => {
     item.data.folder = "manual-folder";
     item.data.ownership = { default: 2 };
     item.data.flags.ordemparanormal2.pointOfInterestVisibility = { mode: "users", users: ["player"] };
+    // Knowledge of a situational information is ordinary knowledge and survives a managed update.
     item.data.flags.ordemparanormal2.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.agent", informationIds: ["clue"] }] };
     sanitizeHtmlOnUpdate = true;
     await expect(port.updateItem(id, poiSystem(preset), flag)).resolves.toBeUndefined();

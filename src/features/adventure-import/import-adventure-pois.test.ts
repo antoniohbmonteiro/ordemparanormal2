@@ -3,7 +3,7 @@ import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/pla
 import { PLAYTEST_ALPHA_POI_SOURCES } from "../../config/adventure-poi-sources/playtest-alpha";
 import { validateAdventurePoiData, validateAdventurePoiReferences, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
 import { managedDigest } from "../../core/adventure-import/adventure-agent-reconciliation";
-import { importAdventurePois, type PoiImportFlag, type PoiItemPort, type PoiItemSnapshot } from "./import-adventure-pois";
+import { importAdventurePois, managedPoiDigest, type PoiImportFlag, type PoiItemPort, type PoiItemSnapshot } from "./import-adventure-pois";
 import type { AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
 import type { AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import type { MaterializationResult } from "./materialize-adventure-assets";
@@ -12,12 +12,22 @@ const SYNTHETIC_POI_PRESETS: readonly AdventurePoiPreset[] = PLAYTEST_ALPHA_POI_
   id: source.id, act: source.act, name: source.heading,
   ...(source.imageAssetId ? { imageAssetId: source.imageAssetId } : {}),
   publicDescription: `<p>Synthetic ${source.id}</p>`, gmContext: `Synthetic GM ${source.id}`,
-  information: source.informationIds.map(id => ({ id, content: `Synthetic ${id}`,
-    approaches: id === "scarAgeMedicine" ? [
-      { skill: "medicine", difficulty: 6, showDifficultyToPlayers: false },
-      { skill: "survival", difficulty: 6, showDifficultyToPlayers: false },
-    ] : [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] })),
+  information: [
+    ...source.informationIds.map(id => ({ id, content: `Synthetic ${id}`,
+      availability: { mode: "always" as const, condition: "" as const },
+      approaches: id === "scarAgeMedicine" ? [
+        { skill: "medicine" as const, difficulty: 6, showDifficultyToPlayers: false },
+        { skill: "survival" as const, difficulty: 6, showDifficultyToPlayers: false },
+      ] : [{ skill: "perception" as const, difficulty: 6, showDifficultyToPlayers: false }] })),
+    ...(source.situationalInformation ?? []).map(({ id }) => ({ id, content: `Synthetic ${id}`,
+      availability: { mode: "situational" as const, condition: `Synthetic condition ${id}` },
+      approaches: [{ skill: "intuition" as const, difficulty: 6, showDifficultyToPlayers: false }] })),
+  ],
 }));
+/** The persisted shape of an Item imported before information availability existed. */
+function withoutAvailability(system: PoiItemSnapshot["system"]): PoiItemSnapshot["system"] {
+  return { ...system, information: system.information.map(({ availability: _availability, ...entry }) => entry) } as never;
+}
 
 class FakeWorld implements PoiItemPort, AdventureFolderPort {
   readonly items: PoiItemSnapshot[] = [];
@@ -221,7 +231,7 @@ describe("Adventure Point of Interest import", () => {
     } : preset);
     expect(await run(world, ["actOne"], undefined, presets)).toMatchObject({ created: 29 });
     const item = world.items.find(candidate => (candidate.flag as PoiImportFlag).documentId === "actOne.map.09")!;
-    expect((item.flag as PoiImportFlag).baseline).toBe(await managedDigest(item.system));
+    expect((item.flag as PoiImportFlag).baseline).toBe(await managedPoiDigest(item.system));
     expect(item.system.publicDescription).toBe(presets.find(preset => preset.id === "actOne.map.09")!.publicDescription);
     const writes = world.writes;
     expect(await run(world, ["actOne"], undefined, presets)).toMatchObject({ unchanged: 29, updated: 0, preserved: 0 });
@@ -293,6 +303,55 @@ describe("Adventure Point of Interest import", () => {
     expect((world.items[0].flag as PoiImportFlag).presetRevision).toBe(4);
     expect(world.items.find(item => (item.flag as PoiImportFlag).documentId === "actOne.map.01")?.system.gmContext)
       .toContain("Revisão editorial.");
+  });
+
+  it("persists situational information and keeps a second identical import unchanged", async () => {
+    const world = new FakeWorld();
+    expect(await run(world, ["actOne", "actTwo"], undefined, undefined, 4)).toMatchObject({ created: 54 });
+    const freezer = world.items.find(item => (item.flag as PoiImportFlag).documentId === "actOne.map.24")!;
+    expect(freezer.system.information).toHaveLength(9);
+    expect(freezer.system.information.every(entry => entry.availability.mode === "situational")).toBe(true);
+    const writes = world.writes;
+    const decide = async () => { throw new Error("Não deveria solicitar decisão."); };
+    expect(await run(world, ["actOne", "actTwo"], decide, undefined, 4))
+      .toMatchObject({ created: 0, updated: 0, unchanged: 54, preserved: 0 });
+    expect(world.writes).toBe(writes);
+  });
+
+  it("upgrades Items imported before availability existed without reporting them as manual edits", async () => {
+    const world = new FakeWorld();
+    const revisionThree = SYNTHETIC_POI_PRESETS.map(preset => ({ ...preset,
+      information: preset.information.filter(entry => entry.availability.mode === "always") }));
+    await run(world, ["actOne"], undefined, revisionThree, 3);
+    // Revision 3 baselines digested information without availability; the model now reads "always" for it.
+    for (const [index, item] of world.items.entries()) {
+      world.items[index] = { ...item, flag: { ...(item.flag as PoiImportFlag),
+        baseline: await managedDigest(withoutAvailability(item.system)) } };
+    }
+    world.items[1] = { ...world.items[1], system: withoutAvailability(world.items[1].system) };
+    const decide = async () => { throw new Error("Não deveria solicitar decisão."); };
+    expect(await run(world, ["actOne"], decide, undefined, 4)).toMatchObject({ updated: 29, preserved: 0 });
+    const freezer = world.items.find(item => (item.flag as PoiImportFlag).documentId === "actOne.map.24")!;
+    expect(freezer.system.information.map(entry => entry.id)).toEqual(
+      PLAYTEST_ALPHA_POI_SOURCES.find(source => source.id === "actOne.map.24")!.situationalInformation!.map(binding => binding.id));
+    expect((freezer.flag as PoiImportFlag).presetRevision).toBe(4);
+    expect(await run(world, ["actOne"], decide, undefined, 4)).toMatchObject({ unchanged: 29 });
+  });
+
+  it("treats a manual availability change as a divergence to preserve or restore", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actOne"], undefined, undefined, 4);
+    const index = world.items.findIndex(item => (item.flag as PoiImportFlag).documentId === "actOne.map.24");
+    const manual = world.items[index].system.information.map((entry, position) => position === 0
+      ? { ...entry, availability: { mode: "always" as const, condition: "" as const } } : entry);
+    world.items[index] = { ...world.items[index], system: { ...world.items[index].system, information: manual } };
+    const decisions: number[] = [];
+    expect(await run(world, ["actOne"], async divergent => { decisions.push(divergent.length); return "preserve"; }, undefined, 4))
+      .toMatchObject({ preserved: 1, unchanged: 28 });
+    expect(decisions).toEqual([1]);
+    expect(world.items[index].system.information[0].availability.mode).toBe("always");
+    expect(await run(world, ["actOne"], async () => "restore", undefined, 4)).toMatchObject({ updated: 1 });
+    expect(world.items[index].system.information[0].availability.mode).toBe("situational");
   });
 
   it("cancels a divergent batch before Item or Folder writes", async () => {

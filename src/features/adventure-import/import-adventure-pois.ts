@@ -83,6 +83,23 @@ function readFlag(value: unknown, adventureId: string): PoiImportFlag | null {
   }
   return flag as unknown as PoiImportFlag;
 }
+/**
+ * Digest of the managed `system`. Baselines recorded before information availability existed carry no
+ * availability, and the DataModel now fills "always" into that same stored source; omitting the default keeps
+ * those baselines valid, so untouched Items are not reported as manual edits.
+ */
+export function managedPoiDigest(system: PointOfInterestSystemData): Promise<string> {
+  const information: unknown = system.information;
+  return managedDigest(Array.isArray(information)
+    ? { ...system, information: information.map(omitDefaultAvailability) } : system);
+}
+function omitDefaultAvailability(entry: unknown): unknown {
+  const value = record(entry);
+  const availability = record(value?.availability);
+  if (!value || availability?.mode !== "always" || availability.condition !== "") return entry;
+  const { availability: _default, ...rest } = value;
+  return rest;
+}
 function relevantState(item: PoiItemSnapshot): string {
   return stableSerialize({ type: item.type, flag: item.flag, system: item.system,
     folderId: item.folderId, folderPlacement: item.folderPlacement });
@@ -131,10 +148,10 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
     for (const preset of selected) {
       const item = existing.get(preset.id);
       const flag = flagFor(input.definition, preset, input.revision);
-      const desiredDigest = await managedDigest(poiSystem(preset));
+      const desiredDigest = await managedPoiDigest(poiSystem(preset));
       const previous = item ? readFlag(item.flag, input.definition.id)! : null;
       prepared.push({ preset, itemId: item?.id ?? null, previousState: item ? relevantState(item) : null, flag,
-        desiredDigest, divergent: !!item && (previous?.state !== "complete" || await managedDigest(item.system) !== previous.baseline) });
+        desiredDigest, divergent: !!item && (previous?.state !== "complete" || await managedPoiDigest(item.system) !== previous.baseline) });
     }
     stage = "confirmation";
     const divergent = prepared.filter(p => p.divergent);
@@ -170,7 +187,7 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
         imageUpdated = await input.items.updateImageIfFallback(previous.id, image);
       }
       if (plan.divergent && decision === "preserve") counts.preserved++;
-      else if (previous && !plan.divergent && await managedDigest(previous.system) === plan.desiredDigest
+      else if (previous && !plan.divergent && await managedPoiDigest(previous.system) === plan.desiredDigest
         && readFlag(previous.flag, input.definition.id)?.presetRevision === input.revision) {
         if (imageUpdated) counts.updated++; else counts.unchanged++;
       }
@@ -180,12 +197,12 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
           image ?? ADVENTURE_POI_FALLBACK_IMAGE, folders.get(plan.preset.act)!.poiId, plan.flag, placement);
         if (plan.itemId) await input.items.updateItem(id, poiSystem(plan.preset), plan.flag);
         const persisted = input.items.listItems().find(item => item.id === id);
-        if (!persisted || await managedDigest(persisted.system) !== plan.desiredDigest
+        if (!persisted || await managedPoiDigest(persisted.system) !== plan.desiredDigest
           || stableSerialize(readFlag(persisted.flag, input.definition.id)) !== stableSerialize(plan.flag)) {
           throw new Error(`Dados persistidos do POI não confirmados: ${presetId}.`);
         }
         stage = "baseline";
-        await input.items.completeItem(id, { ...plan.flag, state: "complete", baseline: await managedDigest(persisted.system) });
+        await input.items.completeItem(id, { ...plan.flag, state: "complete", baseline: await managedPoiDigest(persisted.system) });
         const complete = input.items.listItems().find(item => item.id === id);
         if (!complete || readFlag(complete.flag, input.definition.id)?.state !== "complete") throw new Error(`Baseline de POI não confirmado: ${presetId}.`);
         if (plan.itemId) counts.updated++; else counts.created++;

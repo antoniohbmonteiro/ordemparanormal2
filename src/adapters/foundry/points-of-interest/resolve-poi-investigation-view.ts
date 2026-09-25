@@ -1,5 +1,8 @@
 import { skillLabel, type SkillKey } from "../../../config/skills";
-import { readPointOfInterestInformation, type PointOfInterestApproach, type PointOfInterestInformation, type PoiInvestigationViewData } from "../../../documents/item/point-of-interest-data";
+import {
+  playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
+  type PointOfInterestApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
+} from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 
 export interface PoiInvestigationRequest {
@@ -54,16 +57,19 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   ]);
   const latest = authorized(request);
   if ("error" in latest) return latest;
-  const groups = groupApproaches(readPointOfInterestInformation(latest.item.system));
+  const information = readPointOfInterestInformation(latest.item.system);
   const knowledge = readPoiKnowledge(latest.item);
   const known = new Set(knowledge.find(entry => entry.actorUuid === actor?.uuid)?.informationIds ?? []);
   const base = { name: latest.item.name, description, img: latest.item.img ?? "" };
+  // A player's groups are built only from information they may receive, so a skill with nothing else is absent.
+  const groups = groupApproaches(user.isGM ? information : playerVisiblePointOfInterestInformation(information, known));
   const view: PoiInvestigationViewData = user.isGM
     ? { ...base, audience: "gm", itemUuid: latest.item.uuid, gmContext,
         skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
           information: rows.map(({ entry, approach }) => ({ id: entry.id, content: entry.content,
             difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
             ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
+            ...(entry.availability.mode === "situational" ? { condition: entry.availability.condition } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
     : { ...base, audience: "player", skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
         information: rows.map(({ entry, approach }) => ({

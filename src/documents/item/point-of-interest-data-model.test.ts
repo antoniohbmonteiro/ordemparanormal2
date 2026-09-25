@@ -77,6 +77,7 @@ describe("PointOfInterestDataModel", () => {
       "id",
       "content",
       "approaches",
+      "availability",
     ]);
     expect(entry.fields.id.options).toMatchObject({ blank: false });
     expect(entry.fields.content.options).toMatchObject({ blank: true });
@@ -90,6 +91,26 @@ describe("PointOfInterestDataModel", () => {
     expect(approaches.element.fields.difficulty.options).not.toHaveProperty("max");
     expect(approaches.element.fields.showDifficultyToPlayers.options).toMatchObject({ initial: false });
     expect(approaches.element.fields.specialization.options).toMatchObject({ required: false });
+  });
+
+  it("defaults information availability to always so stored information without it needs no migration", () => {
+    const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
+    const availability = schema.information.element.fields.availability as unknown as MockSchemaField;
+    expect(availability.options).toMatchObject({ required: true, nullable: false });
+    expect(Object.keys(availability.fields)).toEqual(["mode", "condition"]);
+    expect(availability.fields.mode.options).toMatchObject({
+      required: true, blank: false, choices: ["always", "situational"], initial: "always",
+    });
+    expect(availability.fields.condition.options).toMatchObject({ required: true, blank: true, initial: "" });
+  });
+
+  it("rejects situational information without a condition", () => {
+    const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
+    const validate = schema.information.options.validate as (value: unknown) => boolean;
+    const entry = { id: "a", content: "", approaches: [{ skill: "crime", difficulty: 6, showDifficultyToPlayers: false }] };
+    expect(validate([{ ...entry, availability: { mode: "always", condition: "" } }])).toBe(true);
+    expect(validate([{ ...entry, availability: { mode: "situational", condition: "Requer a chave." } }])).toBe(true);
+    expect(validate([{ ...entry, availability: { mode: "situational", condition: "" } }])).toBe(false);
   });
 
   it("rejects duplicate IDs, empty approaches and duplicate semantic approaches", () => {

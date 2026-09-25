@@ -623,7 +623,7 @@ describe("Adventure Import Application", () => {
     await importing;
     expect(mocks.importAdventureHandouts).toHaveBeenCalledOnce();
     expect(mocks.importAdventurePois).toHaveBeenCalledOnce();
-    expect(mocks.importAdventurePois.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 3 });
+    expect(mocks.importAdventurePois.mock.calls[0][0]).toMatchObject({ acts: ["actOne", "actTwo"], revision: 4 });
     expect(mocks.importAdventureHandouts.mock.calls[0][0]).toMatchObject({
       acts: ["actOne", "actTwo"], assetSource: { kind: "materialization" },
       definition: expect.objectContaining({ id: "playtest-alpha" }),
@@ -719,7 +719,7 @@ describe("Adventure Import Application", () => {
       expect(input.presets).toHaveLength(29);
       expect(input.presets[0].id).toBe("actOne.character.alan");
       expect(input.presets.at(-1).id).toBe("actOne.map.24");
-      expect(input.revision).toBe(3);
+      expect(input.revision).toBe(4);
     },
   );
 

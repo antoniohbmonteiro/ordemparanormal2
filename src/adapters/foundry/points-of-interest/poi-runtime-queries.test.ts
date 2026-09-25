@@ -123,6 +123,20 @@ describe("POI runtime ownership", () => {
     ] });
   });
 
+  it("reveals situational information like any other information, and still rejects unknown IDs", async () => {
+    const f = world();
+    await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" });
+    (f.item.system.information as unknown[]).push({ id: "vault", content: "cofre", availability: {
+      mode: "situational", condition: "Requer a chave." },
+      approaches: [{ skill: "perception", difficulty: 8, showDifficultyToPlayers: false }] });
+    const reveal = (informationId: string) => mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi",
+      informationId, actorUuids: ["Actor.a1"] });
+    expect(await reveal("clue")).toEqual({ ok: true });
+    expect(await reveal("vault")).toEqual({ ok: true });
+    expect(f.flags.pointOfInterestKnowledge).toEqual({ agents: [{ actorUuid: "Actor.a1", informationIds: ["clue", "vault"] }] });
+    expect(await reveal("missing")).toEqual({ ok: false, reason: "invalid" });
+  });
+
   it("invalidates other clients only after a successful write", async () => {
     const f = world();
     f.player.active = true;

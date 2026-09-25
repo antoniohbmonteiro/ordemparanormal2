@@ -32,6 +32,18 @@
               <span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.Information"}}</span>
               <textarea rows="2" data-poi-edit="content" data-information-id="{{id}}"{{#unless @root.editable}} disabled{{/unless}}>{{content}}</textarea>
             </label>
+            <div class="op2-poi-sheet__availability">
+              <label><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Availability"}}</span>
+                <select data-poi-edit="availability" data-information-id="{{id}}"{{#unless @root.editable}} disabled{{/unless}}>
+                  {{#each availabilityOptions}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{localize label}}</option>{{/each}}
+                </select>
+              </label>
+              {{#if showCondition}}
+                <label class="op2-poi-sheet__condition"><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Condition"}}</span>
+                  <input type="text" value="{{condition}}" autocomplete="off" data-poi-edit="condition" data-information-id="{{id}}"{{#unless @root.editable}} disabled{{/unless}} />
+                </label>
+              {{/if}}
+            </div>
             <div class="op2-poi-sheet__approaches">
               <h4>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Approaches"}}</h4>
               {{#each approaches}}

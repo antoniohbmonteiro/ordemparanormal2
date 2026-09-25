@@ -12,10 +12,22 @@ export type PointOfInterestApproach = {
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
 };
+export const POINT_OF_INTEREST_AVAILABILITY_MODES = ["always", "situational"] as const;
+export type PointOfInterestAvailabilityMode = typeof POINT_OF_INTEREST_AVAILABILITY_MODES[number];
+/**
+ * Whether an information can be investigated now. A situational condition is GM-facing text that the system
+ * never interprets: the GM decides when it holds. It is unrelated to what an Agent already knows.
+ */
+export type PointOfInterestInformationAvailability =
+  | { readonly mode: "always"; readonly condition: "" }
+  | { readonly mode: "situational"; readonly condition: string };
+// Not frozen: Foundry cleans update data in place, so written data always receives a copy of it.
+export const POINT_OF_INTEREST_ALWAYS_AVAILABLE: PointOfInterestInformationAvailability = { mode: "always", condition: "" };
 export interface PointOfInterestInformation {
   readonly id: string;
   readonly content: string;
   readonly approaches: readonly PointOfInterestApproach[];
+  readonly availability: PointOfInterestInformationAvailability;
 }
 export interface PointOfInterestSystemData {
   readonly publicDescription: string;
@@ -44,12 +56,37 @@ export function isPointOfInterestApproach(value: unknown): value is PointOfInter
 export function approachIdentity(approach: PointOfInterestApproach): string {
   return approach.skill === "aptitude" ? `${approach.skill}:${approach.specialization}` : approach.skill;
 }
+/**
+ * Normalizes a stored availability. Information persisted before availability existed has none and is always
+ * available; the DataModel supplies the same default when it cleans that source. Returns null when invalid.
+ */
+export function readPointOfInterestInformationAvailability(value: unknown): PointOfInterestInformationAvailability | null {
+  if (value === undefined) return POINT_OF_INTEREST_ALWAYS_AVAILABLE;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const { mode, condition } = value as Record<string, unknown>;
+  if (mode === "always" && (condition === undefined || condition === "")) return POINT_OF_INTEREST_ALWAYS_AVAILABLE;
+  return mode === "situational" && typeof condition === "string" && condition.trim()
+    ? { mode, condition } : null;
+}
+export function isSituationalPointOfInterestInformation(entry: PointOfInterestInformation): boolean {
+  return entry.availability.mode === "situational";
+}
+/**
+ * Information a player may receive for an Agent: always-available information, plus situational information the
+ * Agent already knows. Unknown situational information must not leave the GM client in any form.
+ */
+export function playerVisiblePointOfInterestInformation(
+  information: readonly PointOfInterestInformation[], knownIds: ReadonlySet<string>,
+): readonly PointOfInterestInformation[] {
+  return information.filter(entry => !isSituationalPointOfInterestInformation(entry) || knownIds.has(entry.id));
+}
 export function isPointOfInterestInformation(value: unknown): value is PointOfInterestInformation {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Record<string, unknown>;
   if (typeof candidate.id !== "string" || !candidate.id.trim()
     || typeof candidate.content !== "string" || !Array.isArray(candidate.approaches)
-    || candidate.approaches.length === 0 || !candidate.approaches.every(isPointOfInterestApproach)) return false;
+    || candidate.approaches.length === 0 || !candidate.approaches.every(isPointOfInterestApproach)
+    || !readPointOfInterestInformationAvailability(candidate.availability)) return false;
   const identities = candidate.approaches.map(approachIdentity);
   return new Set(identities).size === identities.length;
 }
@@ -63,9 +100,11 @@ export function readPointOfInterestInformation(system: unknown): readonly PointO
   if (!system || typeof system !== "object") return [];
   const value = (system as { readonly information?: unknown }).information;
   if (!isPointOfInterestInformationList(value)) return [];
-  return value.map(entry => ({ ...entry, approaches: entry.approaches.map(approach => approach.skill === "aptitude"
-    ? { ...approach } : { skill: approach.skill, difficulty: approach.difficulty,
-        showDifficultyToPlayers: approach.showDifficultyToPlayers }) }));
+  return value.map(entry => ({ id: entry.id, content: entry.content,
+    approaches: entry.approaches.map(approach => approach.skill === "aptitude"
+      ? { ...approach } : { skill: approach.skill, difficulty: approach.difficulty,
+          showDifficultyToPlayers: approach.showDifficultyToPlayers }),
+    availability: { ...readPointOfInterestInformationAvailability(entry.availability)! } }));
 }
 function assertValidInformation(list: readonly PointOfInterestInformation[]): void {
   if (!isPointOfInterestInformationList(list)) throw new Error("Invalid Point of Interest information.");
@@ -74,7 +113,15 @@ export function addPointOfInterestInformation(
   list: readonly PointOfInterestInformation[], id: string, approach: PointOfInterestApproach,
   content = "",
 ): readonly PointOfInterestInformation[] {
-  const next = [...list, { id, content, approaches: [approach] }];
+  const next = [...list, { id, content, approaches: [approach], availability: { ...POINT_OF_INTEREST_ALWAYS_AVAILABLE } }];
+  assertValidInformation(next);
+  return next;
+}
+export function updatePointOfInterestInformationAvailability(
+  list: readonly PointOfInterestInformation[], id: string, availability: PointOfInterestInformationAvailability,
+): readonly PointOfInterestInformation[] {
+  if (!list.some(entry => entry.id === id)) throw new Error(`Unknown Point of Interest information id: ${id}`);
+  const next = list.map(entry => entry.id === id ? { ...entry, availability: { ...availability } } : entry);
   assertValidInformation(next);
   return next;
 }
@@ -132,6 +179,18 @@ export interface PoiInvestigationPlayerSkillView {
   readonly name: string;
   readonly information: readonly PoiInvestigationPlayerInformationView[];
 }
+/**
+ * Information a player can still examine for. The sanitized projection already omits unknown situational
+ * information and carries content only for known information, so an entry without content is undiscovered.
+ */
+export function examinablePlayerInformation(
+  skill: PoiInvestigationPlayerSkillView,
+): readonly PoiInvestigationPlayerInformationView[] {
+  return skill.information.filter(entry => !Object.hasOwn(entry, "content"));
+}
+export function examinableAptitudeSpecializations(skill: PoiInvestigationPlayerSkillView): readonly AptitudeSpecializationKey[] {
+  return [...new Set(examinablePlayerInformation(skill).flatMap(entry => entry.specialization ? [entry.specialization] : []))];
+}
 export interface PoiInvestigationGmInformationView {
   readonly id: string;
   readonly difficulty: number;
@@ -139,6 +198,8 @@ export interface PoiInvestigationGmInformationView {
   readonly showDifficultyToPlayers: boolean;
   readonly knownCount: number;
   readonly specialization?: AptitudeSpecializationKey;
+  /** Present only for situational information; GM-private. */
+  readonly condition?: string;
 }
 export interface PoiInvestigationGmSkillView {
   readonly key: SkillKey;

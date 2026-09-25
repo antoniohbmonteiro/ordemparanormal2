@@ -4,12 +4,14 @@ import type {
 } from "@client/applications/_types.mjs";
 import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 
-import type {
-  PoiInvestigationGmSkillView,
-  PoiInvestigationPlayerSkillView,
+import {
+  examinableAptitudeSpecializations,
+  examinablePlayerInformation,
+  type PoiInvestigationGmSkillView,
+  type PoiInvestigationPlayerSkillView,
 } from "../../documents/item/point-of-interest-data";
 import type { AgentCheckSelection } from "../../application/checks/build-agent-check";
-import { aptitudeSpecializationLabel, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
+import { aptitudeSpecializationLabel, type SkillKey } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
 import { mutatePoi, subscribePoiInvalidation } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
 import {
@@ -59,6 +61,8 @@ export interface PlayerInvestigationSkillViewModel {
   readonly key: PoiInvestigationPlayerSkillView["key"];
   readonly name: string;
   readonly examineLabel: string;
+  /** Examinar is offered only while the skill still has information the Agent has not discovered. */
+  readonly hasUndiscovered: boolean;
   readonly informationCount: number;
   readonly information: readonly PlayerInvestigationInformationRow[];
 }
@@ -67,6 +71,8 @@ export interface GmInvestigationInformationRow {
   readonly id: string;
   readonly isFirst: boolean;
   readonly isDifficultyHidden: boolean;
+  readonly isSituational: boolean;
+  readonly condition: string;
   readonly knownCount: number;
   readonly difficulty: number;
   readonly content: string;
@@ -137,6 +143,8 @@ export function buildInvestigationRenderContext(
           information: skill.information.map((entry, index) => ({
             isFirst: index === 0,
             isDifficultyHidden: !entry.showDifficultyToPlayers,
+            isSituational: entry.condition !== undefined,
+            condition: entry.condition ?? "",
             id: entry.id,
             knownCount: entry.knownCount,
             difficulty: entry.difficulty,
@@ -155,6 +163,7 @@ export function buildInvestigationRenderContext(
         key: skill.key,
         name: skill.name,
         examineLabel: `${localize("ExamineWith")} ${skill.name}`,
+        hasUndiscovered: examinablePlayerInformation(skill).length > 0,
         informationCount: skill.information.length,
         information: skill.information.map((entry, index) => ({
           isFirst: index === 0,
@@ -332,8 +341,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     try {
       let selection: AgentCheckSelection | null;
       if (skill.key === "aptitude") {
-        const allowed = [...new Set(skill.information.flatMap(entry => entry.specialization ? [entry.specialization] : []))] as AptitudeSpecializationKey[];
-        const specialization = await selectInvestigationAptitudeSpecialization(allowed);
+        const specialization = await selectInvestigationAptitudeSpecialization(examinableAptitudeSpecializations(skill));
         selection = specialization
           ? { kind: "aptitude", key: specialization }
           : null;

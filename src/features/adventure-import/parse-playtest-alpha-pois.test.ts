@@ -56,52 +56,138 @@ function continuedTable(headingSuffix: FixtureItem[] = []): AdventurePdfTextPage
   ])];
 }
 
+const always = { mode: "always", condition: "" } as const;
+const situational = (condition: string) => ({ mode: "situational", condition }) as const;
+const summary = (preset: { information: readonly { id: string; availability: { condition: string } }[] }) =>
+  preset.information.map(entry => [entry.id, entry.availability.condition]);
+
 describe("Playtest Alpha POI parser", () => {
   it("uses Foundry-stable HTML text without encoding quotes and leaves information as plain text", () => {
-    const fixture = { ...source, informationIds: ["ordinary"] };
+    const fixture = { ...source, informationIds: ["ordinary"], situationalInformation: [{ row: 1, id: "restricted" }] };
     const preset = parsePlaytestAlphaPoiSection(fixture, page([
       { skill: "Percepção", difficulty: 6, information: `Texto "claro", d'água & <sinal>.` },
       { skill: "Pesquisar (requer pista anterior)", difficulty: 8,
         information: `Contexto "restrito", d'água & <sinal>.` },
     ], `Uma "sala", d'água & <sinal>.`));
     expect(preset.publicDescription).toBe(`<p>Uma "sala", d'água &amp; &lt;sinal&gt;.</p>`);
-    expect(preset.gmContext).toContain(`<li><p><strong>Pesquisar (requer pista anterior) · DT 8:</strong> Contexto "restrito", d'água &amp; &lt;sinal&gt;.</p></li>`);
     expect(preset.information[0].content).toBe(`Texto "claro", d'água & <sinal>.`);
+    expect(preset.information[1].content).toBe(`Contexto "restrito", d'água & <sinal>.`);
     expect(`${preset.publicDescription}${preset.gmContext}`).not.toMatch(/&quot;|&#39;/u);
   });
 
-  it("persists ordinary and alternative approaches, but keeps prerequisites only in GM context", () => {
-    const preset = parsePlaytestAlphaPoiSection(source, page([
+  it("publishes ordinary rows as always and prerequisite rows as situational information", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, situationalInformation: [
+      { row: 2, id: "lockedSecret" }, { row: 3, id: "personalMemory" }, { row: 4, id: "closedFile" },
+    ] }, page([
       { skill: "Percepção", difficulty: 6, information: "Informação <pública>." },
       { skill: "Medicina ou Sobrevivência", difficulty: 8, information: "Vestígio comum." },
       { skill: "Pesquisar (requer pista anterior)", difficulty: 6, information: "Segredo bloqueado." },
       { skill: "Intuição (apenas Victor e Alan)", difficulty: 8, information: "Memória pessoal." },
       { skill: "Tecnologia", difficulty: 10, information: "(Requer acesso prévio) Arquivo fechado." },
-      { skill: "Pesquisar", difficulty: 8, information: "3 jogadores: Variante do grupo." },
     ]));
-    expect(preset.information.map(entry => entry.id)).toEqual(["ordinary", "alternatives"]);
-    expect(preset.information[0].content).toContain("Informação <pública>.");
+    expect(preset.information).toEqual([
+      { id: "ordinary", content: "Informação <pública>.", availability: always,
+        approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] },
+      { id: "alternatives", content: "Vestígio comum.", availability: always, approaches: [
+        { skill: "medicine", difficulty: 8, showDifficultyToPlayers: false },
+        { skill: "survival", difficulty: 8, showDifficultyToPlayers: false },
+      ] },
+      { id: "lockedSecret", content: "Segredo bloqueado.", availability: situational("Requer pista anterior."),
+        approaches: [{ skill: "research", difficulty: 6, showDifficultyToPlayers: false }] },
+      { id: "personalMemory", content: "Memória pessoal.", availability: situational("Apenas Victor e Alan."),
+        approaches: [{ skill: "intuition", difficulty: 8, showDifficultyToPlayers: false }] },
+      { id: "closedFile", content: "Arquivo fechado.", availability: situational("Requer acesso prévio."),
+        approaches: [{ skill: "technology", difficulty: 10, showDifficultyToPlayers: false }] },
+    ]);
     expect(preset.publicDescription).toContain("&amp;");
-    expect(preset.information[1].approaches.map(approach => approach.skill)).toEqual(["medicine", "survival"]);
-    expect(preset.information[1].approaches.every(approach => approach.showDifficultyToPlayers === false)).toBe(true);
-    expect(preset.gmContext).toContain("requer pista anterior");
-    expect(preset.gmContext).toContain("apenas Victor e Alan");
-    expect(preset.gmContext).toContain("Requer acesso prévio");
-    expect(preset.gmContext).toContain("3 jogadores");
-    expect(preset.information.map(entry => entry.content).join(" ")).not.toMatch(/Segredo|Memória|Arquivo|Variante/u);
+    expect(preset.gmContext).toBe("");
   });
 
-  it("keeps catalog context rows as neutral GM context, apart from conditional rows", () => {
-    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], contextRowIndexes: [1] }, page([
+  it("keeps one information with two approaches when a situational row offers alternative skills", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [],
+      situationalInformation: [{ row: 0, id: "unlockedFiles" }] }, page([
+      { skill: "Pesquisar ou Tecnologia", difficulty: 6, information: "(Requer a senha) Arquivos abertos." },
+    ]));
+    expect(preset.information).toEqual([{ id: "unlockedFiles", content: "Arquivos abertos.",
+      availability: situational("Requer a senha."), approaches: [
+        { skill: "research", difficulty: 6, showDifficultyToPlayers: false },
+        { skill: "technology", difficulty: 6, showDifficultyToPlayers: false },
+      ] }]);
+  });
+
+  it("takes situational IDs only from explicit catalog bindings and fails on any unbound or unused binding", () => {
+    const rows = [
+      { skill: "Percepção", difficulty: 6, information: "Pista pública." },
+      { skill: "Intuição (apenas Ana)", difficulty: 8, information: "Pista condicional." },
+    ];
+    const fixture = { ...source, informationIds: ["ordinary"] };
+    expect(summary(parsePlaytestAlphaPoiSection({ ...fixture, situationalInformation: [{ row: 1, id: "anaMemory" }] }, page(rows))))
+      .toEqual([["ordinary", ""], ["anaMemory", "Apenas Ana."]]);
+    expect(() => parsePlaytestAlphaPoiSection(fixture, page(rows))).toThrow("ID de informação situacional ausente");
+    expect(() => parsePlaytestAlphaPoiSection({ ...fixture, situationalInformation: [{ row: 0, id: "wrongRow" }] }, page(rows)))
+      .toThrow("ID de informação situacional ausente");
+    expect(() => parsePlaytestAlphaPoiSection({ ...fixture, situationalInformation: [
+      { row: 1, id: "anaMemory" }, { row: 5, id: "missingRow" },
+    ] }, page(rows))).toThrow("Vínculo de informação situacional sem linha correspondente");
+    expect(() => parsePlaytestAlphaPoiSection({ ...fixture, situationalInformation: [{ row: 1, id: "ordinary" }] }, page(rows)))
+      .toThrow();
+  });
+
+  it("fails when a recognised prerequisite cannot be separated from the information text", () => {
+    expect(() => parsePlaytestAlphaPoiSection({ ...source, informationIds: [], situationalInformation: [{ row: 0, id: "variant" }] },
+      page([{ skill: "Pesquisar", difficulty: 8, information: "3 jogadores: Variante do grupo." }])))
+      .toThrow("Condição de informação não reconhecida");
+  });
+
+  it("splits a cell with player-count paragraphs into one situational information per group size", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], situationalInformation: [
+      { row: 1, variant: "3", id: "smallGroup" }, { row: 1, variant: "4 ou 5", id: "largeGroup" },
+      { row: 2, variant: "3 ou 4", id: "sharedSmall" }, { row: 2, variant: "5", id: "sharedFull" },
+    ] }, layout(41, [
+      { text: "SALA DE TESTE", x: 70, y: 700, height: 11 }, { text: "Uma sala.", x: 70, y: 686 },
+      { text: "Perícia", x: 70, y: 650 }, { text: "DT", x: 150, y: 650 }, { text: "Informação", x: 180, y: 650 },
+      { text: "Percepção", x: 70, y: 620 }, { text: "6", x: 150, y: 620 }, { text: "Pista comum.", x: 180, y: 620 },
+      { text: "Pesquisar", x: 70, y: 560 }, { text: "8", x: 150, y: 560 },
+      { text: "3", x: 180, y: 580 }, { text: "Um corpo no chão", x: 195, y: 580 }, { text: "da sala.", x: 180, y: 568 },
+      { text: "4", x: 180, y: 550 }, { text: "ou 5", x: 195, y: 550 }, { text: "Correntes soltas.", x: 225, y: 550 },
+      { text: "Intuição", x: 70, y: 470 }, { text: "6", x: 150, y: 470 },
+      { text: "(Requer as mensagens)", x: 180, y: 500 }, { text: "Um laço antigo.", x: 180, y: 488 },
+      { text: "3", x: 180, y: 470, height: 10 }, { text: "ou", x: 195, y: 470 }, { text: "4", x: 207, y: 470, height: 10 },
+      { text: "Ana se afastou.", x: 220, y: 470 },
+      { text: "5", x: 180, y: 450, height: 10 }, { text: "Ana e Bia se afastaram.", x: 195, y: 450 },
+    ]));
+    expect(preset.information.map(entry => [entry.id, entry.content, entry.availability.condition,
+      entry.approaches.map(approach => `${approach.skill}:${approach.difficulty}`).join("+")])).toEqual([
+      ["ordinary", "Pista comum.", "", "perception:6"],
+      ["smallGroup", "Um corpo no chão da sala.", "Apenas se o grupo tiver 3 jogadores.", "research:8"],
+      ["largeGroup", "Correntes soltas.", "Apenas se o grupo tiver 4 ou 5 jogadores.", "research:8"],
+      ["sharedSmall", "Um laço antigo. Ana se afastou.", "Requer as mensagens. Apenas se o grupo tiver 3 ou 4 jogadores.", "intuition:6"],
+      ["sharedFull", "Um laço antigo. Ana e Bia se afastaram.", "Requer as mensagens. Apenas se o grupo tiver 5 jogadores.", "intuition:6"],
+    ]);
+    expect(allText(preset)).not.toMatch(/\b4 ou 5\b|3 ou 4/u);
+    expect(() => parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], situationalInformation: [
+      { row: 1, id: "wholeRow" }, { row: 2, variant: "3 ou 4", id: "sharedSmall" }, { row: 2, variant: "5", id: "sharedFull" },
+    ] }, layout(41, [
+      { text: "SALA DE TESTE", x: 70, y: 700, height: 11 }, { text: "Uma sala.", x: 70, y: 686 },
+      { text: "Perícia", x: 70, y: 650 }, { text: "DT", x: 150, y: 650 }, { text: "Informação", x: 180, y: 650 },
+      { text: "Percepção", x: 70, y: 620 }, { text: "6", x: 150, y: 620 }, { text: "Pista comum.", x: 180, y: 620 },
+      { text: "Pesquisar", x: 70, y: 560 }, { text: "8", x: 150, y: 560 },
+      { text: "3", x: 180, y: 580 }, { text: "Um corpo.", x: 195, y: 580 },
+    ]))).toThrow("ID de informação situacional ausente");
+  });
+
+  it("keeps catalog context rows as neutral GM context, out of information and apart from situational rows", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], contextRowIndexes: [1],
+      situationalInformation: [{ row: 2, id: "anaClue" }] }, page([
       { skill: "Percepção", difficulty: 6, information: "Pista pública." },
       { skill: "Percepção", difficulty: 6, information: "Linha repetida." },
       { skill: "Intuição (apenas Ana)", difficulty: 8, information: "Pista condicional." },
     ]));
-    expect(preset.information.map(entry => [entry.id, entry.content])).toEqual([["ordinary", "Pista pública."]]);
-    expect(preset.gmContext).toBe("<ul><li><p><strong>Percepção · DT 6:</strong> Linha repetida.</p></li></ul>"
-      + "<h3>INFORMAÇÕES CONDICIONAIS</h3><ul><li><p><strong>Intuição (apenas Ana) · DT 8:</strong> Pista condicional.</p></li></ul>");
-    const conditionalSection = preset.gmContext.slice(preset.gmContext.indexOf("<h3>INFORMAÇÕES CONDICIONAIS</h3>"));
-    expect(conditionalSection).not.toContain("Linha repetida.");
+    expect(preset.information.map(entry => [entry.id, entry.content, entry.availability.mode])).toEqual([
+      ["ordinary", "Pista pública.", "always"], ["anaClue", "Pista condicional.", "situational"],
+    ]);
+    expect(preset.gmContext).toBe("<ul><li><p><strong>Percepção · DT 6:</strong> Linha repetida.</p></li></ul>");
+    expect(preset.gmContext).not.toMatch(/CONDICIONAIS|Pista condicional/u);
   });
 
   it("requires a canonical Aptitude specialization", () => {
@@ -120,31 +206,45 @@ describe("Playtest Alpha POI parser", () => {
   it("reads each skill of a table continued on a headerless, re-indented page", () => {
     const [first, next] = continuedTable();
     const preset = parsePlaytestAlphaPoiSection({ ...source,
-      informationIds: ["seen", "shiver", "wounds", "silver", "wedding"] }, first, next);
+      informationIds: ["seen", "shiver", "wounds", "silver", "wedding"], situationalInformation: [
+        { row: 1, id: "memory" }, { row: 4, id: "photoDate" }, { row: 5, id: "candleName" },
+      ] }, first, next);
     expect(preset.information.map(entry => [entry.id, entry.approaches.map(approach =>
-      "specialization" in approach ? `${approach.skill}:${approach.specialization}` : approach.skill), entry.content])).toEqual([
-      ["seen", ["perception"], "Pista visível."],
-      ["shiver", ["intuition"], "Um arrepio no símbolo."],
-      ["wounds", ["medicine", "survival"], "Três ferimentos."],
-      ["silver", ["aptitude:currentAffairs"], "Uma tradição de prata."],
-      ["wedding", ["aptitude:currentAffairs"], "Uma data de casamento."],
+      "specialization" in approach ? `${approach.skill}:${approach.specialization}` : approach.skill), entry.content,
+      entry.availability.condition])).toEqual([
+      ["seen", ["perception"], "Pista visível.", ""],
+      ["memory", ["intuition"], "Memória pessoal.", "Apenas Victor e Alan."],
+      ["shiver", ["intuition"], "Um arrepio no símbolo.", ""],
+      ["wounds", ["medicine", "survival"], "Três ferimentos.", ""],
+      ["photoDate", ["research"], "Uma data no verso.", "Requer ter encontrado a foto."],
+      ["candleName", ["research"], "Um nome na vela.", "Requer ter encontrado a foto."],
+      ["silver", ["aptitude:currentAffairs"], "Uma tradição de prata.", ""],
+      ["wedding", ["aptitude:currentAffairs"], "Uma data de casamento.", ""],
     ]);
-    expect(preset.gmContext).toContain("<li><p><strong>Intuição (apenas Victor e Alan) · DT 4:</strong> Memória pessoal.</p></li>");
-    expect(preset.gmContext).toContain("<li><p><strong>Pesquisar (requer ter encontrado a foto) · DT 6:</strong> Uma data no verso.</p></li>");
-    expect(preset.gmContext).toContain("<li><p><strong>Pesquisar (requer ter encontrado a foto) · DT 10:</strong> Um nome na vela.</p></li>");
-    expect(preset.gmContext).toContain("<p>Nota do mestre.</p>");
+    expect(preset.gmContext).toBe("<p>Nota do mestre.</p>");
     expect(allText(preset)).not.toMatch(/CONTINUA[ÇC][ÃA]O/iu);
   });
 
-  it("keeps every row of a conditional section in GM context with its own skill", () => {
+  it("makes every row of a conditional section situational, keeping the section and row prerequisites", () => {
     const [first, next] = continuedTable([{ text: "(requer ter aberto a sala)", x: 224, y: 259, height: 10.5 }]);
-    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [] }, first, next);
-    expect(preset.information).toEqual([]);
+    const ids = ["seen", "memory", "shiver", "wounds", "photoDate", "candleName", "silver", "wedding"];
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: [],
+      situationalInformation: ids.map((id, row) => ({ row, id })) }, first, next);
+    expect(summary(preset)).toEqual([
+      ["seen", "Requer ter aberto a sala."],
+      ["memory", "Requer ter aberto a sala. Apenas Victor e Alan."],
+      ["shiver", "Requer ter aberto a sala."],
+      ["wounds", "Requer ter aberto a sala."],
+      ["photoDate", "Requer ter aberto a sala. Requer ter encontrado a foto."],
+      ["candleName", "Requer ter aberto a sala. Requer ter encontrado a foto."],
+      ["silver", "Requer ter aberto a sala."],
+      ["wedding", "Requer ter aberto a sala."],
+    ]);
+    expect(preset.information.every(entry => entry.availability.mode === "situational")).toBe(true);
+    expect(preset.information.find(entry => entry.id === "wounds")?.approaches.map(approach => approach.skill))
+      .toEqual(["medicine", "survival"]);
     expect(preset.publicDescription).toBe("");
-    const rows = [...preset.gmContext.matchAll(/<strong>([^<·]+) · DT (\d+):<\/strong>/gu)].map(match => `${match[1].trim()}/${match[2]}`);
-    expect(rows).toEqual(["Percepção/6", "Intuição (apenas Victor e Alan)/4", "Intuição/6", "Medicina ou Sobrevivência/6",
-      "Pesquisar (requer ter encontrado a foto)/6", "Pesquisar (requer ter encontrado a foto)/10",
-      "Aptidão (Atualidades)/6", "Aptidão (Atualidades)/10"]);
+    expect(preset.gmContext).toBe("<p>Um corpo sobre a mesa.</p><p>Nota do mestre.</p>");
     expect(allText(preset)).not.toMatch(/CONTINUA[ÇC][ÃA]O/iu);
   });
 
@@ -215,8 +315,9 @@ describe("Playtest Alpha POI parser", () => {
   });
 
   describe("GM context structure", () => {
-    it("groups an access challenge, keeps GM paragraphs apart and lists conditional rows", () => {
-      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["keys"] }, layout(38, [
+    it("groups an access challenge, keeps GM paragraphs apart and leaves situational rows out of GM context", () => {
+      const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["keys"],
+        situationalInformation: [{ row: 1, id: "shiver" }] }, layout(38, [
         { text: "SALA DE TESTE", x: 94, y: 621, height: 10 },
         { text: "Um depósito trancado.", x: 94, y: 608, height: 9 },
         { text: "DESAFIO", x: 79, y: 572, height: 9 }, { text: "DE ACESSO", x: 68.5, y: 560, height: 9 },
@@ -234,11 +335,14 @@ describe("Playtest Alpha POI parser", () => {
       ]));
       expect(preset.gmContext).toBe("<h3>DESAFIO DE ACESSO: PORTA TRANCADA</h3>"
         + "<ul><li><p>ARROMBAR (DT 10, PA 10)</p></li><li><p>DESTRANCAR (senha: 3d6, 3 tentativas)</p></li></ul>"
-        + "<h3>CONTEXTO</h3><p>Primeiro parágrafo do mestre, que continua aqui.</p><p>Segundo parágrafo.</p>"
-        + "<h3>INFORMAÇÕES CONDICIONAIS</h3><ul><li><p><strong>Intuição (apenas Ana) · DT 6:</strong> Um arrepio.</p></li></ul>");
+        + "<h3>CONTEXTO</h3><p>Primeiro parágrafo do mestre, que continua aqui.</p><p>Segundo parágrafo.</p>");
       expect(preset.publicDescription).toBe("<p>Um depósito trancado.</p>");
-      expect(preset.information).toEqual([{ id: "keys", content: "Chaves & <cadeados>.",
-        approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] }]);
+      expect(preset.information).toEqual([
+        { id: "keys", content: "Chaves & <cadeados>.", availability: always,
+          approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] },
+        { id: "shiver", content: "Um arrepio.", availability: situational("Apenas Ana."),
+          approaches: [{ skill: "intuition", difficulty: 6, showDifficultyToPlayers: false }] },
+      ]);
     });
 
     it("pairs each tool label with its explanation, including multi-part labels", () => {

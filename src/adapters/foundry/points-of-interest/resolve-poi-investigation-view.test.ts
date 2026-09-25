@@ -1,4 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { examinableAptitudeSpecializations } from "../../../documents/item/point-of-interest-data";
+import { POI_INVESTIGATION_QUERY, registerPoiInvestigationQuery } from "./poi-investigation-query";
 import { resolvePoiInvestigationView } from "./resolve-poi-investigation-view";
 
 function fixture() {
@@ -14,6 +16,7 @@ function fixture() {
   const item = { id: "poi", uuid: "Item.poi", type: "pointOfInterest", name: "Computador", img: "icon.svg",
     isEmbedded: false, pack: null, ownership: { default: 0 },
     testUserPermission: () => false, getFlag: (_scope: string, key: string) => flags[key],
+    // Stored before information availability existed, so it reads as always available.
     system: { publicDescription: "público", gmContext: "privado", information: [
       { id: "secret", content: "senha", approaches: [
         { skill: "technology", difficulty: 9, showDifficultyToPlayers: false },
@@ -54,6 +57,97 @@ it("delivers only information known by the selected OWNER Agent", async () => {
   expect(serialized).not.toContain("senha");
   expect(serialized).not.toContain('"difficulty":9');
   expect(serialized).not.toContain('"id"');
+});
+
+function withSituational(f: ReturnType<typeof fixture>) {
+  f.item.system.information.push(
+    { id: "vault", content: "cofre secreto", availability: { mode: "situational", condition: "Requer a chave dourada." },
+      approaches: [{ skill: "technology", difficulty: 12, showDifficultyToPlayers: true }] } as never,
+    { id: "diary", content: "diário escondido", availability: { mode: "situational", condition: "Apenas a médica." },
+      approaches: [{ skill: "aptitude", specialization: "arts", difficulty: 7, showDifficultyToPlayers: true }] } as never,
+  );
+}
+
+it("gives the GM always and situational information, marking only the situational condition", async () => {
+  const f = fixture();
+  withSituational(f);
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["secret", "vault"] }] };
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", requesterUserId: "gm" });
+  const view = "view" in result && result.view.audience === "gm" ? result.view : null;
+  expect(view?.skills.map(skill => [skill.key, skill.information.map(entry => [entry.id, entry.condition ?? null, entry.knownCount])]))
+    .toEqual([
+      ["technology", [["secret", null, 1], ["other", null, 0], ["vault", "Requer a chave dourada.", 1]]],
+      ["research", [["secret", null, 1]]],
+      ["aptitude", [["diary", "Apenas a médica.", 0]]],
+    ]);
+});
+
+it("never sends unknown situational information, or any trace of it, to a player", async () => {
+  const f = fixture();
+  withSituational(f);
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
+    requesterUserId: "player" });
+  expect("view" in result && result.view.skills.map(skill => [skill.key, skill.information])).toEqual([
+    ["technology", [{ visibility: "hidden" }, { visibility: "public", difficulty: 6 }]],
+    ["research", [{ visibility: "public", difficulty: 8 }]],
+  ]);
+  const serialized = JSON.stringify(result);
+  for (const secret of ["cofre", "diário", "chave dourada", "médica", "vault", "diary", "situational", "condition",
+    "availability", '"difficulty":12', '"difficulty":7', "arts", "aptitude"]) expect(serialized).not.toContain(secret);
+});
+
+it("delivers known situational information as ordinary known content without its private condition", async () => {
+  const f = fixture();
+  withSituational(f);
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.b", informationIds: ["vault"] }] };
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
+    requesterUserId: "player" });
+  expect("view" in result && result.view.skills.find(skill => skill.key === "technology")?.information).toEqual([
+    { visibility: "hidden" }, { visibility: "public", difficulty: 6 }, { visibility: "public", difficulty: 12, content: "cofre secreto" },
+  ]);
+  const serialized = JSON.stringify(result);
+  for (const secret of ["chave dourada", "situational", "condition", "availability", "diário", "médica"]) {
+    expect(serialized).not.toContain(secret);
+  }
+});
+
+it("offers for Examinar only Aptitude specializations with examinable information in the player projection", async () => {
+  const f = fixture();
+  const aptitude = (specialization: string, difficulty: number) =>
+    [{ skill: "aptitude", specialization, difficulty, showDifficultyToPlayers: false }];
+  f.item.system.information.push(
+    { id: "news", content: "notícia", approaches: aptitude("currentAffairs", 6) } as never,
+    { id: "history", content: "história", approaches: aptitude("humanities", 8) } as never,
+    { id: "plan", content: "plano secreto", availability: { mode: "situational", condition: "Requer o mapa." },
+      approaches: aptitude("tactics", 10) } as never,
+  );
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.b", informationIds: ["history"] }] };
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
+    requesterUserId: "player" });
+  const skill = "view" in result && result.view.audience === "player"
+    ? result.view.skills.find(entry => entry.key === "aptitude") : undefined;
+  // Atualidades: always and unknown; Humanas: already known; Tática: unknown situational, absent from the projection.
+  expect(skill && examinableAptitudeSpecializations(skill)).toEqual(["currentAffairs"]);
+  expect(JSON.stringify(result)).not.toMatch(/tactics|plano secreto|Requer o mapa/u);
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.b", informationIds: ["news", "history"] }] };
+  const known = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
+    requesterUserId: "player" });
+  const knownSkill = "view" in known && known.view.audience === "player"
+    ? known.view.skills.find(entry => entry.key === "aptitude") : undefined;
+  expect(knownSkill && examinableAptitudeSpecializations(knownSkill)).toEqual([]);
+});
+
+it("answers a player's query with the sanitized projection even when the payload claims a GM requester", async () => {
+  const f = fixture();
+  withSituational(f);
+  const queries: Record<string, (data: unknown, context: unknown) => Promise<unknown>> = {};
+  vi.stubGlobal("CONFIG", { queries });
+  registerPoiInvestigationQuery();
+  const result = await queries[POI_INVESTIGATION_QUERY]({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
+    requesterUserId: "gm" }, { user: f.player }) as Awaited<ReturnType<typeof resolvePoiInvestigationView>>;
+  expect("view" in result && result.view.audience).toBe("player");
+  const serialized = JSON.stringify(result);
+  for (const secret of ["cofre", "chave dourada", "diário", "privado", "condition"]) expect(serialized).not.toContain(secret);
 });
 
 it("rejects hidden or unlinked POIs and a non-owned Agent", async () => {

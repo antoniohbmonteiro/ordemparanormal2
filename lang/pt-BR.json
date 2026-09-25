@@ -343,6 +343,7 @@
         "OtherSkill": "Outra perícia...",
         "UnavailableOtherSkill": "Outra perícia ainda não está disponível.",
         "UnavailableRevealAction": "Revelar informações ainda não está disponível nesta etapa.",
+        "Situational": "Situacional",
         "NoSkills": "Nenhuma perícia disponível.",
         "NoImage": "Imagem indisponível",
         "EnlargeImage": "Ampliar imagem",
@@ -661,7 +662,13 @@
         "PublicDescription": "Descrição pública",
         "GmContextLegend": "Somente o Mestre",
         "Skill": "Perícia",
-          "Specialization": "Especialização"
+          "Specialization": "Especialização",
+          "Availability": "Disponibilidade",
+          "Condition": "Condição"
+        },
+        "Availability": {
+          "Always": "Sempre",
+          "Situational": "Situacional"
         },
         "Table": {
           "Difficulty": "DT",
@@ -678,7 +685,8 @@
           "RemoveInformation": "Remover esta informação e suas formas de descobrir?"
         },
         "Errors": {
-          "UpdateFailed": "Não foi possível atualizar o Ponto de Interesse."
+          "UpdateFailed": "Não foi possível atualizar o Ponto de Interesse.",
+          "ConditionRequired": "Informe a condição da informação situacional."
       }
     },
     "ProfilePicker": {

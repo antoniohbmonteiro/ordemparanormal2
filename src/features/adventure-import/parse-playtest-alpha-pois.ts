@@ -12,6 +12,19 @@ interface TableRow { readonly text: string; readonly skillText: string; readonly
 
 const normalize = (value: string): string => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+// Bullets and ornaments arrive as C0/C1 control or private-use glyphs; they are layout, not text.
+const cleanText = (value: string): string => value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\ue000-\uf8ff]/gu, "");
+const isContinuationHeading = (item: PositionedItem): boolean => item.height >= 9.9
+  && item.text === item.text.toLocaleUpperCase("pt-BR") && /\(\s*CONTINUA[\u00c7C][\u00c3A]O\s*\)\s*$/u.test(item.text);
+// Printed POI numbers are oversized digits placed beside the heading as a visual anchor.
+const isNumberBadge = (item: PositionedItem, heading: PositionedItem): boolean => /^\d{1,2}$/u.test(item.text.trim())
+  && item.height >= heading.height * 1.5;
+function positionItems(page: AdventurePdfTextPage): PositionedItem[] {
+  return page.items.flatMap(item => {
+    const text = cleanText(item.text);
+    return text.trim() ? [{ ...item, text, page: page.number }] : [];
+  });
+}
 const conditionalQualifier = /\b(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|ao desbloquear|ao abrir|ao tocar|caso tenha|se (?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m))\b/iu;
 const conditionalInformation = /^\s*(?:(?:\(?\s*(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|caso tenha|ao (?:usar|acessar|abrir|encontrar|hackear|desbloquear)|se (?:tiver|for|houver|estiver|(?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m)))\b)|(?:[1-9]\d?(?:\s+ou\s+[1-9]\d?)?\s+))/iu;
 // Quotes are safe in HTML text. Foundry's HTML sanitizer decodes quote entities in text nodes.
@@ -27,7 +40,7 @@ function sectionStarts(pages: readonly AdventurePdfTextPage[], act: AdventureAct
   const sources = PLAYTEST_ALPHA_POI_SOURCES.filter(source => source.act === act);
   const items = pages.filter(page => act === "actOne" ? page.number >= 35 && page.number <= 59
     : page.number >= 82 && page.number <= 100)
-    .flatMap(page => page.items.filter(item => item.y >= 55).map(item => ({ ...item, page: page.number })));
+    .flatMap(page => positionItems(page).filter(item => item.y >= 55));
   const starts = sources.map(source => {
     const heading = source.headingByEdition?.[edition] ?? source.heading;
     const candidates = items.filter(item => item.height >= 9.9 && item.text === item.text.toLocaleUpperCase("pt-BR")
@@ -50,6 +63,7 @@ function sectionStarts(pages: readonly AdventurePdfTextPage[], act: AdventureAct
 const skills = SKILL_DEFINITIONS.flatMap(def => [[def.label, def.key] as const,
   ...("specializations" in def ? def.specializations.map(spec => [`${def.label} (${spec.label})`, `${def.key}:${spec.key}`] as const) : [])])
   .sort((a, b) => b[0].length - a[0].length);
+const startsWithSkill = (text: string): boolean => skills.some(([name]) => normalize(text).startsWith(normalize(name)));
 function approaches(label: string, difficulty: number): readonly PointOfInterestApproach[] {
   const cleaned = label.replace(/\([^)]*(?:requer|apenas|somente|exclusiv)[^)]*\)/giu, "").trim();
   const parts = cleaned.split(/\s+ou\s+/iu);
@@ -89,9 +103,17 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
       && Math.abs(item.x - header.difficulty.x) <= 20 && Number(item.text) >= 1
       && (item.page > header.skill.page || item.y < header.skill.y - 4)
       && table.some(info => info.page === item.page && info.x >= header.information.x - 13 && Math.abs(info.y - item.y) <= 22));
-    if (!difficultyItems.length && table.some(item => skills.some(([name]) => normalize(item.text).startsWith(normalize(name))))) {
+    if (!difficultyItems.length && table.some(item => startsWithSkill(item.text))) {
       throw new Error(`Quadro sem linhas válidas: ${section.source.id}.`);
     }
+    // A table continued on the next page has no header there and may sit at another indentation;
+    // anchor that page's skill column on the leftmost skill label beside its own difficulty cells.
+    const skillColumnX = (page: number): number => {
+      if (page === header.skill.page) return header.skill.x;
+      const labels = table.filter(item => item.page === page && item.x < header.difficulty.x - 5 && startsWithSkill(item.text)
+        && difficultyItems.some(difficulty => difficulty.page === page && difficulty.x > item.x && Math.abs(difficulty.y - item.y) <= 22));
+      return labels.length ? Math.min(...labels.map(item => item.x)) : header.skill.x;
+    };
     let lastSkill = "";
     let groupStart = rows.length;
     for (const [index, difficultyItem] of difficultyItems.entries()) {
@@ -104,12 +126,12 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
       const beforeNextDifficulty = (item: PositionedItem) => !next || item.page < next.page
         || item.page === next.page && item.order < next.order;
       const leftCandidates = table.filter(item => afterPrevious(item) && beforeCurrent(item)
-        && item.x < header.difficulty.x - 5 && item.x >= header.skill.x - 18);
-      const skillStart = leftCandidates.findIndex(item => skills.some(([name]) => normalize(item.text).startsWith(normalize(name))));
+        && item.x < header.difficulty.x - 5 && item.x >= skillColumnX(item.page) - 18);
+      const skillStart = leftCandidates.findIndex(item => startsWithSkill(item.text));
       const left = skillStart < 0 ? leftCandidates.filter(item => conditionalQualifier.test(item.text)) : leftCandidates.slice(skillStart);
       const skillText = joinText(left);
       if (skillText) {
-        if (skills.some(([name]) => normalize(skillText).startsWith(normalize(name)))) {
+        if (startsWithSkill(skillText)) {
           lastSkill = skillText;
           groupStart = rows.length;
         } else {
@@ -139,28 +161,50 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
   }
   return { rows, used };
 }
-function sectionContent(section: Section): AdventurePoiPreset {
+// The public description is the paragraph set flush under the heading. Side blocks (access challenges,
+// tools, tables) and neighbouring columns start at another x, so the first misaligned line ends it.
+function descriptionItems(heading: PositionedItem, remaining: readonly PositionedItem[]): PositionedItem[] {
+  const column = remaining.filter(item => item.page === heading.page && item.y < heading.y - 5 && item.x >= heading.x - 3)
+    .sort((a, b) => b.y - a.y || a.x - b.x);
+  const lines: PositionedItem[][] = [];
+  for (const item of column) {
+    const line = lines.at(-1);
+    if (line && Math.abs(line[0].y - item.y) <= 2) line.push(item);
+    else lines.push([item]);
+  }
+  const result: PositionedItem[] = [];
+  let prior = heading.y;
+  let maxGap = 21;
+  for (const line of lines) {
+    const gap = prior - line[0].y;
+    if (gap > maxGap || Math.abs(Math.min(...line.map(item => item.x)) - heading.x) > 3
+      || line.some(item => normalize(item.text) === "PERICIA")) break;
+    if (!result.length) maxGap = gap * 1.5;
+    result.push(...line); prior = line[0].y;
+  }
+  return result;
+}
+function sectionContent(input: Section): AdventurePoiPreset {
+  const heading = input.heading;
+  // When the section's table starts on the heading page, it marks the left edge of the section's column there;
+  // text further left belongs to a neighbouring column of the page layout, not to this POI.
+  const tableHeader = input.items.find(item => item.page === heading.page && normalize(item.text) === "PERICIA");
+  const foreignColumn = (item: PositionedItem) => tableHeader !== undefined && item.page === heading.page
+    && item.x < Math.min(heading.x, tableHeader.x) - 18;
+  const section = { ...input, items: input.items.filter(item => !isContinuationHeading(item) && !isNumberBadge(item, heading)
+    && !foreignColumn(item)) };
   const { rows, used } = tableRows(section);
   const contextIndexes = section.source.contextRowIndexes ?? [];
   if (new Set(contextIndexes).size !== contextIndexes.length
     || contextIndexes.some(index => !Number.isInteger(index) || index < 0 || index >= rows.length)) {
     throw new Error(`Vínculo de linha contextual inválido: ${section.source.id}.`);
   }
-  const heading = section.heading;
-  const remaining = section.items.filter(item => !used.has(item) && item !== heading && item.y >= 55
-    && !(item.x > 450 && /^\d{1,2}$/u.test(item.text.trim())));
+  const remaining = section.items.filter(item => !used.has(item) && item !== heading && item.y >= 55);
   const sameLine = remaining.filter(item => item.page === heading.page && Math.abs(item.y - heading.y) <= 5);
   const headingConditional = conditionalQualifier.test(joinText(sameLine));
-  const below = remaining.filter(item => item.page === heading.page && item.y < heading.y - 5)
-    .sort((a, b) => b.y - a.y || a.x - b.x);
-  const descriptionItems: PositionedItem[] = [];
-  let prior = heading.y;
-  for (const item of below) {
-    if (prior - item.y > 21 || normalize(item.text) === "PERICIA") break;
-    descriptionItems.push(item); prior = item.y;
-  }
-  const description = joinText(descriptionItems);
-  const contextItems = remaining.filter(item => !descriptionItems.includes(item));
+  const descriptionSet = new Set(descriptionItems(heading, remaining));
+  const description = joinText([...descriptionSet]);
+  const contextItems = remaining.filter(item => !descriptionSet.has(item));
   const sectionConditional = headingConditional;
   const information: Array<{ id: string; content: string; approaches: readonly PointOfInterestApproach[] }> = [];
   const conditionalRows: string[] = [];
@@ -197,8 +241,9 @@ export function parsePlaytestAlphaPois(pages: readonly AdventurePdfTextPage[], a
   return result;
 }
 
-export function parsePlaytestAlphaPoiSection(source: AdventurePoiSource, page: AdventurePdfTextPage): AdventurePoiPreset {
-  const positioned = page.items.map(item => ({ ...item, page: page.number }));
+export function parsePlaytestAlphaPoiSection(source: AdventurePoiSource, page: AdventurePdfTextPage,
+  ...continuation: readonly AdventurePdfTextPage[]): AdventurePoiPreset {
+  const positioned = [page, ...continuation].flatMap(positionItems);
   const heading = positioned.find(item => normalize(item.text) === normalize(source.heading));
   if (!heading) throw new Error(`Cabeçalho de POI ausente: ${source.id}.`);
   return sectionContent({ source, heading, items: positioned });

@@ -56,6 +56,18 @@ describe("Point of Interest Item Sheet template", () => {
     expect(template).toContain('data-poi-edit="showDifficultyToPlayers"');
   });
 
+  it("edits one alternative DT per approach through a compact add, edit and remove control", () => {
+    const approach = template.slice(template.indexOf("{{#each approaches}}"), template.indexOf('data-action="addApproach"'));
+    const shown = approach.indexOf("{{#if showDifficultyOverride}}");
+    expect(shown).toBeGreaterThan(-1);
+    const fields = approach.slice(shown, approach.indexOf("{{else if @root.editable}}"));
+    expect(fields).toContain('data-poi-edit="overrideDifficulty"');
+    expect(fields).toContain('data-poi-edit="overrideCondition"');
+    expect(fields).toContain('data-action="removeDifficultyOverride"');
+    expect(approach.slice(approach.indexOf("{{else if @root.editable}}"))).toContain('data-action="addDifficultyOverride"');
+    expect(template).toContain("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.OverrideDifficulty");
+  });
+
   it("edits availability per information and shows the condition field only when situational", () => {
     expect(template).toContain('data-poi-edit="availability"');
     expect(template).toContain("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Availability");

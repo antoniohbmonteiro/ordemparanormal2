@@ -42,6 +42,11 @@
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__approach > .op2-poi-sheet__difficulty { min-width: 4rem; flex: 0 0 4rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__approach > .op2-poi-sheet__visibility { flex: 0 0 auto; flex-direction: row; align-items: center; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__visibility input { width: auto; margin: 0; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-override { display: flex; align-items: end; flex-wrap: wrap; gap: .5rem; flex: 1 1 100%; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-override > label { display: flex; flex-direction: column; gap: .2rem; font-size: .7rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-override > .op2-poi-sheet__difficulty { flex: 0 0 6rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-override > .op2-poi-sheet__override-condition { min-width: 12rem; flex: 1 1 12rem; }
+.ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__difficulty-override > button { width: auto; min-width: 0; margin: 0; padding: .3rem .5rem; flex: 0 0 auto; font-size: .75rem; }
 .ordemparanormal2.point-of-interest-item-sheet .op2-poi-sheet__add-approach { width: auto; min-width: 0; margin-top: .5rem; padding: .35rem .5rem; }
 .op2-poi-approach-dialog { display: flex; flex-direction: column; gap: .75rem; }
 .op2-poi-approach-dialog label { display: flex; flex-direction: column; gap: .25rem; }

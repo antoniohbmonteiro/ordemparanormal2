@@ -70,6 +70,7 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
             difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
             ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
             ...(entry.availability.mode === "situational" ? { condition: entry.availability.condition } : {}),
+            ...(approach.difficultyOverride ? { difficultyOverride: { ...approach.difficultyOverride } } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
     : { ...base, audience: "player", skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
         information: rows.map(({ entry, approach }) => ({

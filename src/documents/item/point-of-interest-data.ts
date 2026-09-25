@@ -2,7 +2,15 @@ import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type Ski
 
 export const POINT_OF_INTEREST_DIFFICULTY_MIN = 1;
 export type OrdinaryPoiSkillKey = Exclude<SkillKey, "aptitude">;
-export type PointOfInterestApproach = {
+/**
+ * One alternative DT for an approach and the GM-facing situation in which it replaces the base DT. The system never
+ * interprets the condition: the GM chooses which DT applies. It is GM-private and never part of a player projection.
+ */
+export interface PointOfInterestDifficultyOverride {
+  readonly difficulty: number;
+  readonly condition: string;
+}
+export type PointOfInterestApproach = ({
   readonly skill: OrdinaryPoiSkillKey;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
@@ -11,7 +19,7 @@ export type PointOfInterestApproach = {
   readonly specialization: AptitudeSpecializationKey;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
-};
+}) & { readonly difficultyOverride?: PointOfInterestDifficultyOverride };
 export const POINT_OF_INTEREST_AVAILABILITY_MODES = ["always", "situational"] as const;
 export type PointOfInterestAvailabilityMode = typeof POINT_OF_INTEREST_AVAILABILITY_MODES[number];
 /**
@@ -43,12 +51,21 @@ const specializationKeys = new Set<string>(
 export function isAptitudeSpecializationKey(value: unknown): value is AptitudeSpecializationKey {
   return typeof value === "string" && specializationKeys.has(value);
 }
+export function isPointOfInterestDifficultyOverride(value: unknown): value is PointOfInterestDifficultyOverride {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const { difficulty, condition } = value as Record<string, unknown>;
+  return Number.isInteger(difficulty) && (difficulty as number) >= POINT_OF_INTEREST_DIFFICULTY_MIN
+    && typeof condition === "string" && !!condition.trim();
+}
 export function isPointOfInterestApproach(value: unknown): value is PointOfInterestApproach {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Record<string, unknown>;
   if (!isSkillKey(candidate.skill) || !Number.isInteger(candidate.difficulty)
     || (candidate.difficulty as number) < POINT_OF_INTEREST_DIFFICULTY_MIN
-    || typeof candidate.showDifficultyToPlayers !== "boolean") return false;
+    || typeof candidate.showDifficultyToPlayers !== "boolean"
+    || (candidate.difficultyOverride !== undefined && !isPointOfInterestDifficultyOverride(candidate.difficultyOverride))) {
+    return false;
+  }
   return candidate.skill === "aptitude"
     ? isAptitudeSpecializationKey(candidate.specialization)
     : candidate.specialization === undefined;
@@ -101,10 +118,16 @@ export function readPointOfInterestInformation(system: unknown): readonly PointO
   const value = (system as { readonly information?: unknown }).information;
   if (!isPointOfInterestInformationList(value)) return [];
   return value.map(entry => ({ id: entry.id, content: entry.content,
-    approaches: entry.approaches.map(approach => approach.skill === "aptitude"
-      ? { ...approach } : { skill: approach.skill, difficulty: approach.difficulty,
-          showDifficultyToPlayers: approach.showDifficultyToPlayers }),
+    approaches: entry.approaches.map(readApproach),
     availability: { ...readPointOfInterestInformationAvailability(entry.availability)! } }));
+}
+function readApproach(approach: PointOfInterestApproach): PointOfInterestApproach {
+  const base = { difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
+    ...(approach.difficultyOverride ? { difficultyOverride: { difficulty: approach.difficultyOverride.difficulty,
+      condition: approach.difficultyOverride.condition } } : {}) };
+  return approach.skill === "aptitude"
+    ? { skill: approach.skill, specialization: approach.specialization, ...base }
+    : { skill: approach.skill, ...base };
 }
 function assertValidInformation(list: readonly PointOfInterestInformation[]): void {
   if (!isPointOfInterestInformationList(list)) throw new Error("Invalid Point of Interest information.");
@@ -159,6 +182,17 @@ export function updatePointOfInterestApproach(
   assertValidInformation(next);
   return next;
 }
+/** Adds, replaces or (with null) removes the alternative DT of one approach; the base DT is unchanged. */
+export function updatePointOfInterestApproachDifficultyOverride(
+  list: readonly PointOfInterestInformation[], id: string, index: number,
+  override: PointOfInterestDifficultyOverride | null,
+): readonly PointOfInterestInformation[] {
+  const approach = list.find(candidate => candidate.id === id)?.approaches[index];
+  if (!approach) throw new Error(`Unknown Point of Interest approach: ${id}/${index}`);
+  const { difficultyOverride: _previous, ...base } = approach;
+  return updatePointOfInterestApproach(list, id, index,
+    override ? { ...base, difficultyOverride: { difficulty: override.difficulty, condition: override.condition } } : base);
+}
 export function removePointOfInterestApproach(
   list: readonly PointOfInterestInformation[], id: string, index: number,
 ): readonly PointOfInterestInformation[] {
@@ -200,6 +234,8 @@ export interface PoiInvestigationGmInformationView {
   readonly specialization?: AptitudeSpecializationKey;
   /** Present only for situational information; GM-private. */
   readonly condition?: string;
+  /** Present only when this approach has an alternative DT; GM-private. */
+  readonly difficultyOverride?: PointOfInterestDifficultyOverride;
 }
 export interface PoiInvestigationGmSkillView {
   readonly key: SkillKey;

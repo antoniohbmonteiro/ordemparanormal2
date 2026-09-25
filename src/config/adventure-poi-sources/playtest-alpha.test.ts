@@ -23,6 +23,6 @@ describe("Playtest Alpha POI technical catalog", () => {
     }
     expect(PLAYTEST_ALPHA_POI_SOURCES.find(source => source.id === "actOne.map.24")?.situationalInformation?.map(binding => binding.row))
       .toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(PLAYTEST_ALPHA_POI_REVISION).toBe(4);
+    expect(PLAYTEST_ALPHA_POI_REVISION).toBe(5);
   });
 });

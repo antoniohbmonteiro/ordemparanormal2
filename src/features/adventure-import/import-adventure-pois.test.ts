@@ -18,7 +18,9 @@ const SYNTHETIC_POI_PRESETS: readonly AdventurePoiPreset[] = PLAYTEST_ALPHA_POI_
       approaches: id === "scarAgeMedicine" ? [
         { skill: "medicine" as const, difficulty: 6, showDifficultyToPlayers: false },
         { skill: "survival" as const, difficulty: 6, showDifficultyToPlayers: false },
-      ] : [{ skill: "perception" as const, difficulty: 6, showDifficultyToPlayers: false }] })),
+      ] : id === "expeditionNotes" ? [{ skill: "research" as const, difficulty: 6, showDifficultyToPlayers: false,
+        difficultyOverride: { difficulty: 10, condition: "Synthetic override condition" } }]
+        : [{ skill: "perception" as const, difficulty: 6, showDifficultyToPlayers: false }] })),
     ...(source.situationalInformation ?? []).map(({ id }) => ({ id, content: `Synthetic ${id}`,
       availability: { mode: "situational" as const, condition: `Synthetic condition ${id}` },
       approaches: [{ skill: "intuition" as const, difficulty: 6, showDifficultyToPlayers: false }] })),
@@ -336,6 +338,27 @@ describe("Adventure Point of Interest import", () => {
       PLAYTEST_ALPHA_POI_SOURCES.find(source => source.id === "actOne.map.24")!.situationalInformation!.map(binding => binding.id));
     expect((freezer.flag as PoiImportFlag).presetRevision).toBe(4);
     expect(await run(world, ["actOne"], decide, undefined, 4)).toMatchObject({ unchanged: 29 });
+  });
+
+  it("keeps an alternative DT stable on reimport and upgrades Items stored without it without false conflicts", async () => {
+    const world = new FakeWorld();
+    const revisionFour = SYNTHETIC_POI_PRESETS.map(preset => ({ ...preset, information: preset.information.map(entry => ({
+      ...entry, approaches: entry.approaches.map(({ difficultyOverride: _override, ...approach }) => approach) })) }));
+    await run(world, ["actOne"], undefined, revisionFour, 4);
+    // Read through the model, an approach stored without an alternative DT carries it as an undefined key.
+    for (const [index, item] of world.items.entries()) {
+      world.items[index] = { ...item, system: { ...item.system, information: item.system.information.map(entry => ({
+        ...entry, approaches: entry.approaches.map(approach => ({ ...approach, difficultyOverride: undefined })) })) } };
+    }
+    const decide = async () => { throw new Error("Não deveria solicitar decisão."); };
+    expect(await run(world, ["actOne"], decide, undefined, 5)).toMatchObject({ updated: 29, preserved: 0 });
+    const cabinet = world.items.find(item => (item.flag as PoiImportFlag).documentId === "actOne.map.08")!;
+    expect(cabinet.system.information.find(entry => entry.id === "expeditionNotes")?.approaches).toEqual([{
+      skill: "research", difficulty: 6, showDifficultyToPlayers: false,
+      difficultyOverride: { difficulty: 10, condition: "Synthetic override condition" } }]);
+    const writes = world.writes;
+    expect(await run(world, ["actOne"], decide, undefined, 5)).toMatchObject({ unchanged: 29, updated: 0 });
+    expect(world.writes).toBe(writes);
   });
 
   it("treats a manual availability change as a divergence to preserve or restore", async () => {

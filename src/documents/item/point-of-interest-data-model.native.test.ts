@@ -22,6 +22,24 @@ describe.skipIf(!commonPath)("installed Foundry v14 Point of Interest model (no 
         availability: { mode: "situational", condition: " " } }] } as never, { strict: true } as never)).toThrow();
   });
 
+  it("keeps a stored approach without an alternative DT serialized exactly as before and validates one when present", async () => {
+    const native = await import(/* @vite-ignore */ pathToFileURL(commonPath!).href);
+    vi.stubGlobal("foundry", native);
+    const { PointOfInterestDataModel } = await import("./point-of-interest-data-model");
+    const approach = { skill: "research", difficulty: 6, showDifficultyToPlayers: false };
+    const source = { publicDescription: "", gmContext: "",
+      information: [{ id: "clue", content: "Pista", approaches: [approach], availability: { mode: "always", condition: "" } }] };
+    const stored = new PointOfInterestDataModel(structuredClone(source) as never);
+    expect(JSON.parse(JSON.stringify(stored.toObject()))).toEqual(source);
+    const override = { difficulty: 10, condition: "Se o armário for arrombado." };
+    const withOverride = { ...source, information: [{ ...source.information[0], approaches: [{ ...approach, difficultyOverride: override }] }] };
+    expect(new PointOfInterestDataModel(structuredClone(withOverride) as never, { strict: true } as never).toObject()
+      .information[0].approaches[0].difficultyOverride).toEqual(override);
+    expect(() => new PointOfInterestDataModel({ ...source, information: [{ ...source.information[0],
+      approaches: [{ ...approach, difficultyOverride: { difficulty: 10, condition: " " } }] }] } as never,
+    { strict: true } as never)).toThrow();
+  });
+
   it("accepts the ItemSheet read, mutate and update flow through native in-place cleaning", async () => {
     const native = await import(/* @vite-ignore */ pathToFileURL(commonPath!).href);
     vi.stubGlobal("foundry", native);

@@ -22,8 +22,9 @@ export interface AdventurePoiSource {
 }
 
 // Structural anchors and legacy identities only. Narrative text comes from the user-supplied PDF.
-// Revision 4 publishes prerequisite rows as situational information instead of GM context.
-export const PLAYTEST_ALPHA_POI_REVISION = 4;
+// Revision 4 publishes prerequisite rows as situational information instead of GM context; revision 5 reads a
+// "6 ou 10" DT cell as a base DT with one alternative DT.
+export const PLAYTEST_ALPHA_POI_REVISION = 5;
 export const PLAYTEST_ALPHA_POI_SOURCES: readonly AdventurePoiSource[] = [
   { id: "actOne.character.alan", act: "actOne", heading: "Alan e seus Pertences", informationIds: ["oversizedClothes", "neckWound", "embroideredInitial"] },
   { id: "actOne.character.victor", act: "actOne", heading: "Victor e seus Pertences", informationIds: ["fadingPapers", "chalkDust", "floorDrawing"],

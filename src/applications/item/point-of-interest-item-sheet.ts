@@ -8,11 +8,12 @@ import {
   addPointOfInterestApproach, addPointOfInterestInformation, isAptitudeSpecializationKey,
   readPointOfInterestInformation,
   removePointOfInterestApproach, removePointOfInterestInformation,
-  updatePointOfInterestApproach, updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
+  updatePointOfInterestApproach, updatePointOfInterestApproachDifficultyOverride,
+  updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
   type PointOfInterestApproach, type PointOfInterestInformation,
 } from "../../documents/item/point-of-interest-data";
-import { APTITUDE_OPTIONS, buildInformationViewModels, readApproachFieldPatch, readSituationalAvailability,
-  type InformationViewModel } from "./point-of-interest-information-editor";
+import { APTITUDE_OPTIONS, buildInformationViewModels, difficultyOverrideDraftKey, readApproachFieldPatch,
+  readDifficultyOverride, readSituationalAvailability, type InformationViewModel } from "./point-of-interest-information-editor";
 import { selectPoiApproach } from "./point-of-interest-approach-dialog";
 
 const POI_SHEET_TEMPLATE = "systems/ordemparanormal2/templates/item/point-of-interest-item-sheet.hbs";
@@ -37,6 +38,8 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
       removeInformation: PointOfInterestItemSheet.#onRemoveInformation,
       addApproach: PointOfInterestItemSheet.#onAddApproach,
       removeApproach: PointOfInterestItemSheet.#onRemoveApproach,
+      addDifficultyOverride: PointOfInterestItemSheet.#onAddDifficultyOverride,
+      removeDifficultyOverride: PointOfInterestItemSheet.#onRemoveDifficultyOverride,
     },
     classes: ["ordemparanormal2", "point-of-interest-item-sheet"],
     form: { closeOnSubmit: false, submitOnChange: true },
@@ -49,6 +52,8 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
   #updateQueue: Promise<void> = Promise.resolve();
   /** Information switched to Situacional here whose condition is not saved yet (never persisted as such). */
   #pendingSituational = new Set<string>();
+  /** Approaches given an alternative DT here whose DT and condition are not both saved yet. */
+  #pendingOverrides = new Set<string>();
   get #canAuthor(): boolean { return game.user.isGM && this.isEditable; }
   #enqueue(operation: () => Promise<void>): void {
     this.#updateQueue = this.#updateQueue.then(operation).catch(async (error: unknown) => {
@@ -80,8 +85,30 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     return { ...context, canViewAuthoring: true, editable: this.#canAuthor, poi: {
       name: item.name, img: item.img ?? "icons/svg/item-bag.svg", uuid: item.uuid,
       publicDescription, enrichedPublicDescription, gmContext, enrichedGmContext,
-      information: buildInformationViewModels(readPointOfInterestInformation(item.system), this.#pendingSituational),
+      information: buildInformationViewModels(readPointOfInterestInformation(item.system), this.#pendingSituational,
+        this.#pendingOverrides),
     } };
+  }
+  #approach(id: string, index: number): PointOfInterestApproach | undefined {
+    return readPointOfInterestInformation((this.document as foundry.documents.Item).system)
+      .find(entry => entry.id === id)?.approaches[index];
+  }
+  // Both fields are read together: a new alternative DT is saved only once its DT and condition are both valid.
+  #onDifficultyOverrideChange(id: string, index: number, control: HTMLElement): void {
+    const approach = this.#approach(id, index);
+    if (!approach) return;
+    const row = control.closest(".op2-poi-sheet__approach");
+    const field = (name: string) => row?.querySelector<HTMLInputElement>(`[data-poi-edit="${name}"]`)?.value ?? "";
+    const override = readDifficultyOverride(field("overrideDifficulty"), field("overrideCondition"));
+    const key = difficultyOverrideDraftKey(id, approach);
+    if (!override) {
+      if (this.#pendingOverrides.has(key) && !approach.difficultyOverride) return;
+      ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Errors.DifficultyOverrideInvalid"));
+      void this.render();
+      return;
+    }
+    this.#pendingOverrides.delete(key);
+    this.#enqueueInformationChange(list => updatePointOfInterestApproachDifficultyOverride(list, id, index, override));
   }
   #onAvailabilityChange(id: string, control: HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement): void {
     const current = readPointOfInterestInformation((this.document as foundry.documents.Item).system)
@@ -130,6 +157,10 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
         }
         const index = Number(control.dataset.approachIndex);
         if (!Number.isInteger(index) || index < 0) return;
+        if (control.dataset.poiEdit === "overrideDifficulty" || control.dataset.poiEdit === "overrideCondition") {
+          this.#onDifficultyOverrideChange(id, index, control);
+          return;
+        }
         const raw = control instanceof HTMLInputElement && control.type === "checkbox"
           ? String(control.checked) : control.value;
         this.#enqueueInformationChange(list => {
@@ -138,16 +169,17 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
           let next: PointOfInterestApproach;
           if (control.dataset.poiEdit === "skill") {
             if (!isSkillKey(raw)) throw new Error("Invalid POI skill.");
+            // The DTs, including an alternative DT, stay with the approach when its skill changes.
+            const difficulties = { difficulty: current.difficulty, showDifficultyToPlayers: current.showDifficultyToPlayers,
+              ...(current.difficultyOverride ? { difficultyOverride: current.difficultyOverride } : {}) };
             if (raw === "aptitude") {
               const used = new Set(list.find(entry => entry.id === id)!.approaches
                 .filter((_, i) => i !== index && _.skill === "aptitude")
                 .map(value => value.skill === "aptitude" ? value.specialization : ""));
               const specialization = APTITUDE_OPTIONS.find(option => !used.has(option.value))?.value;
               if (!specialization) throw new Error("No available POI specialization.");
-              next = { skill: "aptitude", specialization, difficulty: current.difficulty,
-                showDifficultyToPlayers: current.showDifficultyToPlayers };
-            } else next = { skill: raw, difficulty: current.difficulty,
-              showDifficultyToPlayers: current.showDifficultyToPlayers };
+              next = { skill: "aptitude", specialization, ...difficulties };
+            } else next = { skill: raw, ...difficulties };
           } else if (control.dataset.poiEdit === "specialization") {
             if (current.skill !== "aptitude" || !isAptitudeSpecializationKey(raw)) throw new Error("Invalid POI specialization.");
             next = { ...current, specialization: raw };
@@ -197,5 +229,28 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     if (!id || !Number.isInteger(index) || index < 0) return;
     await this.#updateQueue; await this.submit();
     this.#enqueueInformationChange(list => removePointOfInterestApproach(list, id, index));
+  }
+  static async #onAddDifficultyOverride(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    if (!this.#canAuthor) return;
+    const id = target.dataset.informationId;
+    const index = Number(target.dataset.approachIndex);
+    const approach = id ? this.#approach(id, index) : undefined;
+    if (!id || !approach || approach.difficultyOverride) return;
+    // Shown for editing now; saved once both the alternative DT and its condition are filled in.
+    this.#pendingOverrides.add(difficultyOverrideDraftKey(id, approach));
+    await this.render();
+    this.element.querySelector<HTMLInputElement>(`[data-poi-edit="overrideDifficulty"][data-information-id="${
+      CSS.escape(id)}"][data-approach-index="${index}"]`)?.focus();
+  }
+  static async #onRemoveDifficultyOverride(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    if (!this.#canAuthor) return;
+    const id = target.dataset.informationId;
+    const index = Number(target.dataset.approachIndex);
+    const approach = id ? this.#approach(id, index) : undefined;
+    if (!id || !approach) return;
+    this.#pendingOverrides.delete(difficultyOverrideDraftKey(id, approach));
+    if (!approach.difficultyOverride) { await this.render(); return; }
+    await this.#updateQueue;
+    this.#enqueueInformationChange(list => updatePointOfInterestApproachDifficultyOverride(list, id, index, null));
   }
 }

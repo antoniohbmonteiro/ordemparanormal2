@@ -15,6 +15,8 @@ interface TableVariant { readonly label: string; readonly text: string }
 interface TableRow {
   readonly text: string; readonly skillText: string; readonly difficulty: number; readonly conditional: boolean;
   readonly variants?: readonly TableVariant[];
+  /** Second DT of a cell printed "6 ou 10"; `difficulty` holds the first one. */
+  readonly alternativeDifficulty?: number;
 }
 
 const normalize = (value: string): string => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -165,9 +167,16 @@ function tableRows(section: Section): { readonly rows: readonly TableRow[]; read
       const text = joinText(info);
       const qualifier = lastSkill;
       if (!qualifier) throw new Error(`Informação de POI sem perícia: ${section.source.id}.`);
-      for (const item of [...left, difficultyItem, ...info]) used.add(item);
+      // A DT cell printed over two lines, "6 ou" above "10", offers a base DT and one alternative.
+      const alternativeCell = table.find(item => afterPrevious(item) && beforeCurrent(item) && item.page === difficultyItem.page
+        && Math.abs(item.x - header.difficulty.x) <= 20 && /^\d{1,2}\s+ou$/u.test(item.text.trim())
+        && item.y > difficultyItem.y && item.y - difficultyItem.y <= 16);
+      for (const item of [...left, difficultyItem, ...info, ...alternativeCell ? [alternativeCell] : []]) used.add(item);
       const variants = playerCountVariants(info);
-      rows.push({ text, skillText: qualifier, difficulty: Number(difficultyItem.text),
+      rows.push({ text, skillText: qualifier,
+        ...alternativeCell
+          ? { difficulty: Number.parseInt(alternativeCell.text, 10), alternativeDifficulty: Number(difficultyItem.text) }
+          : { difficulty: Number(difficultyItem.text) },
         conditional: conditionalQualifier.test(qualifier) || conditionalInformation.test(text) || variants !== undefined,
         ...(variants ? { variants } : {}) });
     }
@@ -471,6 +480,41 @@ function situationalRows(sourceId: string, row: TableRow, sectionCondition: stri
   });
 }
 const bindingKey = (row: number, variant?: string): string => variant ? `${row}:${variant}` : String(row);
+interface GmParagraph { readonly text: string; readonly before?: GmContextBlock; readonly remove: () => GmContextBlock[] }
+// Removing a paragraph that split a list rejoins the list around it.
+function withoutParagraph<T extends GmContextBlock>(items: readonly T[], index: number): (T | GmContextContent)[] {
+  const [before, after] = [items[index - 1], items[index + 1]];
+  if (before?.type === "entries" && after?.type === "entries") {
+    return [...items.slice(0, index - 1), { type: "entries", entries: [...before.entries, ...after.entries] }, ...items.slice(index + 2)];
+  }
+  return [...items.slice(0, index), ...items.slice(index + 1)];
+}
+function gmParagraphs(blocks: readonly GmContextBlock[]): GmParagraph[] {
+  return blocks.flatMap((block, index): GmParagraph[] => {
+    if (block.type === "paragraph") return [{ text: block.text, before: blocks[index - 1], remove: () => withoutParagraph(blocks, index) }];
+    if (block.type !== "section") return [];
+    return block.content.flatMap((content, position): GmParagraph[] => content.type !== "paragraph" ? [] : [{
+      text: content.text, before: block.content[position - 1],
+      remove: () => blocks.map((value, i) => i === index ? { ...block, content: withoutParagraph(block.content, position) } : value),
+    }]);
+  });
+}
+// A DT cell printed "6 ou 10" is explained by one GM sentence moving that skill's DT "de 6 para 10", written as a
+// consequence of an access action ("ARROMBAR (…) Se escolherem arrombar, …"). The action's condition and the rest of
+// that sentence become the override condition, and the sentence leaves the GM context, which keeps the action.
+function takeDifficultyRule(sourceId: string, blocks: readonly GmContextBlock[], skill: string, base: number,
+  alternative: number): { readonly blocks: GmContextBlock[]; readonly condition: string } {
+  const change = `\\bde\\s+${base}\\s+para\\s+${alternative}\\b`;
+  const rules = gmParagraphs(blocks).filter(paragraph => new RegExp(change, "u").test(paragraph.text)
+    && normalize(paragraph.text).includes(normalize(skill)));
+  if (rules.length !== 1) throw new Error(`Regra de DT alternativa ausente ou ambígua: ${sourceId}; ${skill} · DT ${base} ou ${alternative}.`);
+  const [rule] = rules;
+  const action = rule.before?.type === "entries" ? rule.before.entries.at(-1)?.text ?? "" : "";
+  const trigger = /(?:^|\)\s*)(se\s[^,.]+),/iu.exec(action)?.[1];
+  if (!trigger) throw new Error(`Condição de DT alternativa não reconhecida: ${sourceId}; ${skill} · DT ${base} ou ${alternative}.`);
+  const cause = rule.text.replace(new RegExp(`,?\\s*[^,]*${change}[^,]*$`, "u"), "");
+  return { blocks: rule.remove(), condition: conditionText([trigger, cause]) };
+}
 function sectionContent(input: Section): AdventurePoiPreset {
   const heading = input.heading;
   // When the section's table starts on the heading page, it marks the left edge of the section's column there;
@@ -508,14 +552,25 @@ function sectionContent(input: Section): AdventurePoiPreset {
   const boundKeys = new Set<string>();
   const information: PointOfInterestInformation[] = [];
   let alwaysCount = 0;
+  const gmItems = [...contextItems.filter(item => item.page !== heading.page || item.y < heading.y - 5), ...markers]
+    .sort((a, b) => a.page - b.page || a.order - b.order);
+  let gmBlocks = gmContextBlocks(gmItems, heading);
   // Rows kept out of information[] by the catalog stay as neutral GM context.
   const contextRows: GmContextEntry[] = [];
   for (const [rowIndex, row] of rows.entries()) {
     if (contextIndexes.includes(rowIndex)) {
-      contextRows.push({ label: `${row.skillText} · DT ${row.difficulty}`, text: row.text });
+      const difficulty = row.alternativeDifficulty ? `${row.difficulty} ou ${row.alternativeDifficulty}` : row.difficulty;
+      contextRows.push({ label: `${row.skillText} · DT ${difficulty}`, text: row.text });
       continue;
     }
-    const rowApproaches = approaches(row.skillText, row.difficulty);
+    let rowApproaches = approaches(row.skillText, row.difficulty);
+    if (row.alternativeDifficulty) {
+      if (rowApproaches.length !== 1) throw new Error(`DT alternativa com mais de uma perícia: ${section.source.id}; linha ${rowIndex}.`);
+      const rule = takeDifficultyRule(section.source.id, gmBlocks, row.skillText, row.difficulty, row.alternativeDifficulty);
+      gmBlocks = rule.blocks;
+      rowApproaches = [{ ...rowApproaches[0],
+        difficultyOverride: { difficulty: row.alternativeDifficulty, condition: rule.condition } }];
+    }
     if (!sectionCondition && !row.conditional) {
       const id = section.source.informationIds[alwaysCount++];
       if (!id) throw new Error(`ID de informação ausente: ${section.source.id}; linha ${rowIndex}; ${rowSummary()}.`);
@@ -538,11 +593,9 @@ function sectionContent(input: Section): AdventurePoiPreset {
   if (unbound.length) {
     throw new Error(`Vínculo de informação situacional sem linha correspondente: ${section.source.id} (${unbound.join(", ")}; ${rowSummary()}).`);
   }
-  const gmItems = [...contextItems.filter(item => item.page !== heading.page || item.y < heading.y - 5), ...markers]
-    .sort((a, b) => a.page - b.page || a.order - b.order);
   const gmContext = renderGmContextHtml([
     ...(headingConditional && description ? [{ type: "paragraph" as const, text: description }] : []),
-    ...groupLooseContent([...gmContextBlocks(gmItems, heading),
+    ...groupLooseContent([...gmBlocks,
       ...(contextRows.length ? [{ type: "entries" as const, entries: contextRows }] : [])]),
   ]);
   const result: AdventurePoiPreset = { id: section.source.id, act: section.source.act, name: heading.text.trim(),

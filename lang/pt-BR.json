@@ -664,7 +664,8 @@
         "Skill": "Perícia",
           "Specialization": "Especialização",
           "Availability": "Disponibilidade",
-          "Condition": "Condição"
+          "Condition": "Condição",
+          "OverrideDifficulty": "DT alternativa"
         },
         "Availability": {
           "Always": "Sempre",
@@ -679,14 +680,17 @@
           "AddInformation": "Adicionar informação",
           "AddApproach": "Adicionar forma de descobrir",
           "RemoveApproach": "Remover forma de descobrir",
-          "RemoveInformation": "Remover informação"
+          "RemoveInformation": "Remover informação",
+          "AddDifficultyOverride": "Adicionar variação de DT",
+          "RemoveDifficultyOverride": "Remover variação"
         },
         "Confirm": {
           "RemoveInformation": "Remover esta informação e suas formas de descobrir?"
         },
         "Errors": {
           "UpdateFailed": "Não foi possível atualizar o Ponto de Interesse.",
-          "ConditionRequired": "Informe a condição da informação situacional."
+          "ConditionRequired": "Informe a condição da informação situacional.",
+          "DifficultyOverrideInvalid": "A variação de DT exige uma DT inteira a partir de 1 e uma condição."
       }
     },
     "ProfilePicker": {

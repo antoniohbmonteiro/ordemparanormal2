@@ -137,6 +137,34 @@ it("offers for Examinar only Aptitude specializations with examinable informatio
   expect(knownSkill && examinableAptitudeSpecializations(knownSkill)).toEqual([]);
 });
 
+it("gives the GM an approach's alternative DT and keeps it, its condition and its existence from a player", async () => {
+  const f = fixture();
+  const override = { difficulty: 13, condition: "Se o baú for arrombado." };
+  f.item.system.information.push({ id: "papers", content: "papéis", approaches: [
+    { skill: "research", difficulty: 6, showDifficultyToPlayers: true, difficultyOverride: override },
+    { skill: "occultism", difficulty: 9, showDifficultyToPlayers: false, difficultyOverride: override },
+  ] } as never);
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.b", informationIds: ["papers"] }] };
+  const gm = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", requesterUserId: "gm" });
+  const gmSkills = "view" in gm && gm.view.audience === "gm" ? gm.view.skills : [];
+  expect(gmSkills.find(skill => skill.key === "research")?.information.find(entry => entry.id === "papers"))
+    .toMatchObject({ difficulty: 6, showDifficultyToPlayers: true, difficultyOverride: override });
+  expect(gmSkills.find(skill => skill.key === "research")?.information.find(entry => entry.id === "secret"))
+    .not.toHaveProperty("difficultyOverride");
+  const player = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
+    requesterUserId: "player" });
+  const playerSkills = "view" in player ? player.view.skills : [];
+  // Only the base DT follows showDifficultyToPlayers; the alternative DT is never part of the projection.
+  expect(playerSkills.find(skill => skill.key === "research")?.information).toEqual([
+    { visibility: "public", difficulty: 8 }, { visibility: "public", difficulty: 6, content: "papéis" },
+  ]);
+  expect(playerSkills.find(skill => skill.key === "occultism")?.information).toEqual([{ visibility: "hidden", content: "papéis" }]);
+  const serialized = JSON.stringify(player);
+  for (const secret of ["difficultyOverride", "arrombado", '"difficulty":13', '"difficulty":9', "condition"]) {
+    expect(serialized).not.toContain(secret);
+  }
+});
+
 it("answers a player's query with the sanitized projection even when the payload claims a GM requester", async () => {
   const f = fixture();
   withSituational(f);

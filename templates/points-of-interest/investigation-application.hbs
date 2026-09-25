@@ -76,6 +76,9 @@
                     {{#if isSituational}}
                       <p class="op2-investigation-situational"><span class="op2-investigation-situational__badge">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Situational"}}</span> <span class="op2-investigation-situational__condition">{{condition}}</span></p>
                     {{/if}}
+                    {{#if difficultyOverride}}
+                      <p class="op2-investigation-difficulty-override"><span aria-hidden="true">↳</span> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Difficulty"}} {{difficultyOverride.difficulty}} · {{difficultyOverride.condition}}</p>
+                    {{/if}}
                     <div class="op2-investigation-information__content">{{#if @root.isGm}}{{content}}{{else}}{{#if isRevealed}}{{content}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}{{/if}}{{/if}}</div>
                   </div>
                 </div>

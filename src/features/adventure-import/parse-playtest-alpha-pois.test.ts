@@ -176,6 +176,54 @@ describe("Playtest Alpha POI parser", () => {
     ]))).toThrow("ID de informação situacional ausente");
   });
 
+  // An access action explains that one Pesquisar DT changes, and the table prints that DT as "6 ou" over "10".
+  function alternativeDifficultyTable(rule: readonly FixtureItem[]): AdventurePdfTextPage {
+    return layout(42, [
+      { text: "SALA DE TESTE", x: 99, y: 700, height: 10 }, { text: "Um baú antigo.", x: 99, y: 687, height: 9 },
+      { text: "DESAFIO", x: 84, y: 640, height: 9 }, { text: "DE ACESSO", x: 73.7, y: 628, height: 9 },
+      { text: "CADEADO", x: 79.9, y: 616, height: 9 },
+      { text: "ARROMBAR (DT 7, PA 10)", x: 141, y: 660, height: 9 },
+      { text: "Se escolherem arrombar, o baú se abre.", x: 141, y: 647, height: 9 },
+      ...rule,
+      { text: "DESTRANCAR (senha: 3, 3 tentativas)", x: 141, y: 596, height: 9 },
+      { text: "Perícia", x: 63, y: 560 }, { text: "DT", x: 135, y: 560 }, { text: "Informação", x: 158.6, y: 560 },
+      { text: "Pesquisar", x: 63, y: 520 },
+      { text: "8", x: 138.6, y: 535 }, { text: "Um bolso rasgado.", x: 158.6, y: 535 },
+      { text: "6 ou", x: 133, y: 512 }, { text: "10", x: 137, y: 500 }, { text: "Folhas de uma expedição.", x: 158.6, y: 512 },
+    ]);
+  }
+  const alternativeRule = [
+    { text: "As folhas também se misturam, dificultando a", x: 141, y: 628, height: 9 },
+    { text: "informação de Pesquisar de 6 para 10.", x: 141, y: 615, height: 9 },
+  ];
+
+  it("reads a \"6 ou 10\" DT cell as base DT 6 with alternative DT 10 and moves its rule out of GM context", () => {
+    const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["pocket", "notes"] },
+      alternativeDifficultyTable(alternativeRule));
+    expect(preset.information).toEqual([
+      { id: "pocket", content: "Um bolso rasgado.", availability: always,
+        approaches: [{ skill: "research", difficulty: 8, showDifficultyToPlayers: false }] },
+      { id: "notes", content: "Folhas de uma expedição.", availability: always, approaches: [{
+        skill: "research", difficulty: 6, showDifficultyToPlayers: false,
+        difficultyOverride: { difficulty: 10, condition: "Se escolherem arrombar. As folhas também se misturam." },
+      }] },
+    ]);
+    expect(preset.gmContext).toBe("<h3>DESAFIO DE ACESSO: CADEADO</h3><ul>"
+      + "<li><p>ARROMBAR (DT 7, PA 10) Se escolherem arrombar, o baú se abre.</p></li>"
+      + "<li><p>DESTRANCAR (senha: 3, 3 tentativas)</p></li></ul>");
+    expect(preset.gmContext).not.toMatch(/6 ou|de 6 para 10/u);
+  });
+
+  it("fails on an alternative DT cell without its rule or without the rule's condition", () => {
+    const fixture = { ...source, informationIds: ["pocket", "notes"] };
+    expect(() => parsePlaytestAlphaPoiSection(fixture, alternativeDifficultyTable([])))
+      .toThrow("Regra de DT alternativa ausente ou ambígua");
+    const page = alternativeDifficultyTable(alternativeRule);
+    const withoutCondition = { ...page, items: page.items.map(item => item.text.startsWith("Se escolherem")
+      ? { ...item, text: "O baú se abre." } : item) };
+    expect(() => parsePlaytestAlphaPoiSection(fixture, withoutCondition)).toThrow("Condição de DT alternativa não reconhecida");
+  });
+
   it("keeps catalog context rows as neutral GM context, out of information and apart from situational rows", () => {
     const preset = parsePlaytestAlphaPoiSection({ ...source, informationIds: ["ordinary"], contextRowIndexes: [1],
       situationalInformation: [{ row: 2, id: "anaClue" }] }, page([

@@ -340,6 +340,12 @@
   font-style: italic;
   overflow-wrap: anywhere;
 }
+.op2-poi-investigation .op2-investigation-difficulty-override {
+  margin: 0 0 .3rem;
+  color: var(--op2-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 .op2-poi-investigation .op2-investigation-situational__badge {
   display: inline-block;
   margin-right: 4px;

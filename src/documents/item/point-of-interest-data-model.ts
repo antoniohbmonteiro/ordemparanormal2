@@ -20,11 +20,21 @@ type RequiredIntegerField = foundry.data.fields.NumberField<number, number, true
 type RequiredBooleanField = foundry.data.fields.BooleanField<boolean, boolean, true, false, true>;
 type OptionalSpecializationField = foundry.data.fields.StringField<string, string, false, false, false>;
 
+type DifficultyOverrideSchema = {
+  difficulty: foundry.data.fields.NumberField<number, number, true, false, false>;
+  condition: NonBlankStringField;
+};
 type ApproachSchema = {
   skill: SkillKeyField;
   specialization: OptionalSpecializationField;
   difficulty: RequiredIntegerField;
   showDifficultyToPlayers: RequiredBooleanField;
+  difficultyOverride: foundry.data.fields.SchemaField<
+    DifficultyOverrideSchema,
+    foundry.data.fields.SourceFromSchema<DifficultyOverrideSchema>,
+    foundry.data.fields.ModelPropsFromSchema<DifficultyOverrideSchema>,
+    false, false, false
+  >;
 };
 type ApproachArrayField = foundry.data.fields.ArrayField<
   foundry.data.fields.SchemaField<ApproachSchema>,
@@ -83,6 +93,13 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
               showDifficultyToPlayers: new foundry.data.fields.BooleanField({
                 required: true, nullable: false, initial: false,
               }),
+              // Optional with no initial value: an approach stored without it keeps exactly its previous source.
+              difficultyOverride: new foundry.data.fields.SchemaField({
+                difficulty: new foundry.data.fields.NumberField<number, number, true, false, false>({
+                  required: true, nullable: false, integer: true, min: POINT_OF_INTEREST_DIFFICULTY_MIN,
+                }),
+                condition: new foundry.data.fields.StringField({ required: true, nullable: false, blank: false }),
+              }, { required: false, nullable: false }),
             }),
             { required: true, nullable: false, initial: [], min: 1 },
           ),

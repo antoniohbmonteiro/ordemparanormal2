@@ -6,7 +6,8 @@ import {
   isPointOfInterestInformationList, playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
   readPointOfInterestInformationAvailability,
   removePointOfInterestApproach, removePointOfInterestInformation,
-  updatePointOfInterestApproach, updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
+  updatePointOfInterestApproach, updatePointOfInterestApproachDifficultyOverride,
+  updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
   type PointOfInterestInformation,
 } from "./point-of-interest-data";
 
@@ -59,6 +60,47 @@ describe("Point of Interest information", () => {
     expect(() => updatePointOfInterestApproach(added, "emailBox", 1, research)).toThrow();
     expect(removePointOfInterestApproach(added, "emailBox", 1)).toEqual(one);
     expect(() => removePointOfInterestApproach(one, "emailBox", 0)).toThrow();
+  });
+});
+
+describe("Point of Interest approach difficulty override", () => {
+  const override = { difficulty: 10, condition: "Se o armário for arrombado." };
+  const withApproach = (approach: unknown) => [{ ...information[0], approaches: [approach] }];
+
+  it("keeps approaches stored without an override valid and unchanged", () => {
+    expect(isPointOfInterestInformationList(withApproach(research))).toBe(true);
+    expect(readPointOfInterestInformation({ information: withApproach(research) })[0].approaches).toEqual([research]);
+    expect(readPointOfInterestInformation({ information: withApproach({ ...research, difficultyOverride: undefined }) })[0]
+      .approaches[0]).not.toHaveProperty("difficultyOverride");
+  });
+
+  it("gives manually added approaches no override", () => {
+    const added = addPointOfInterestApproach(addPointOfInterestInformation([], "a", research), "a", technology);
+    expect(added[0].approaches.every(approach => !("difficultyOverride" in approach))).toBe(true);
+  });
+
+  it("accepts one alternative DT with a condition and rejects an invalid DT or a blank condition", () => {
+    expect(isPointOfInterestInformationList(withApproach({ ...research, difficultyOverride: override }))).toBe(true);
+    expect(readPointOfInterestInformation({ information: withApproach({ ...research, difficultyOverride: override }) })[0]
+      .approaches[0]).toEqual({ ...research, difficultyOverride: override });
+    for (const invalid of [
+      { difficulty: 0, condition: "x" }, { difficulty: 1.5, condition: "x" }, { difficulty: "10", condition: "x" },
+      { difficulty: 10, condition: "" }, { difficulty: 10, condition: "   " }, { difficulty: 10 }, null, [override],
+    ]) expect(isPointOfInterestInformationList(withApproach({ ...research, difficultyOverride: invalid }))).toBe(false);
+  });
+
+  it("adds, edits and removes an approach override without touching the base DT", () => {
+    const added = updatePointOfInterestApproachDifficultyOverride(information, "emailBox", 1, override);
+    expect(added[0].approaches).toEqual([research, { ...technology, difficultyOverride: override }]);
+    const harder = updatePointOfInterestApproachDifficultyOverride(added, "emailBox", 1, { ...override, difficulty: 12 });
+    expect(harder[0].approaches[1]).toEqual({ ...technology, difficultyOverride: { ...override, difficulty: 12 } });
+    const reworded = updatePointOfInterestApproachDifficultyOverride(harder, "emailBox", 1,
+      { difficulty: 12, condition: "Se a porta for forçada." });
+    expect(reworded[0].approaches[1].difficultyOverride).toEqual({ difficulty: 12, condition: "Se a porta for forçada." });
+    expect(updatePointOfInterestApproachDifficultyOverride(reworded, "emailBox", 1, null)).toEqual(information);
+    expect(() => updatePointOfInterestApproachDifficultyOverride(information, "emailBox", 1, { difficulty: 0, condition: "x" }))
+      .toThrow();
+    expect(() => updatePointOfInterestApproachDifficultyOverride(information, "emailBox", 5, override)).toThrow();
   });
 });
 

@@ -2,8 +2,10 @@ import { SKILL_DEFINITIONS, type AptitudeSpecializationKey, type SkillKey } from
 import {
   POINT_OF_INTEREST_AVAILABILITY_MODES,
   POINT_OF_INTEREST_DIFFICULTY_MIN,
+  approachIdentity,
   type PointOfInterestApproach,
   type PointOfInterestAvailabilityMode,
+  type PointOfInterestDifficultyOverride,
   type PointOfInterestInformation,
   type PointOfInterestInformationAvailability,
 } from "../../documents/item/point-of-interest-data";
@@ -19,7 +21,14 @@ export type ApproachViewModel = PointOfInterestApproach & {
   readonly skillOptions: readonly (SkillOptionViewModel & { readonly selected: boolean })[];
   readonly specializationOptions: readonly { readonly value: AptitudeSpecializationKey; readonly label: string; readonly selected: boolean }[];
   readonly isAptitude: boolean;
+  readonly showDifficultyOverride: boolean;
+  readonly overrideDifficulty: string;
+  readonly overrideCondition: string;
 };
+/** Local key of an alternative DT added in the sheet but not saved yet; approaches are unique per information. */
+export function difficultyOverrideDraftKey(informationId: string, approach: PointOfInterestApproach): string {
+  return `${informationId}:${approachIdentity(approach)}`;
+}
 const AVAILABILITY_LABELS: Readonly<Record<PointOfInterestAvailabilityMode, string>> = {
   always: "ORDEMPARANORMAL2.PointOfInterestSheet.Availability.Always",
   situational: "ORDEMPARANORMAL2.PointOfInterestSheet.Availability.Situational",
@@ -40,11 +49,13 @@ export interface InformationViewModel {
 
 /**
  * `pendingSituational` holds always-available information the GM switched to Situacional in this sheet but whose
- * condition is not written yet; it is local presentation state until a non-empty condition is saved.
+ * condition is not written yet; `pendingOverrides` holds approaches whose alternative DT was added but not completed.
+ * Both are local presentation state until valid values are saved.
  */
 export function buildInformationViewModels(
   information: readonly PointOfInterestInformation[],
   pendingSituational: ReadonlySet<string> = new Set<string>(),
+  pendingOverrides: ReadonlySet<string> = new Set<string>(),
 ): readonly InformationViewModel[] {
   return information.map((entry, informationIndex) => {
     const mode = pendingSituational.has(entry.id) ? "situational" : entry.availability.mode;
@@ -65,9 +76,21 @@ export function buildInformationViewModels(
         skillOptions: SKILL_OPTION_VIEW_MODELS.map(option => ({ ...option, selected: option.value === approach.skill })),
         specializationOptions: APTITUDE_OPTIONS.map(option => ({ ...option,
           selected: approach.skill === "aptitude" && option.value === approach.specialization })),
+        showDifficultyOverride: !!approach.difficultyOverride
+          || pendingOverrides.has(difficultyOverrideDraftKey(entry.id, approach)),
+        overrideDifficulty: approach.difficultyOverride ? String(approach.difficultyOverride.difficulty) : "",
+        overrideCondition: approach.difficultyOverride?.condition ?? "",
       })),
     };
   });
+}
+
+/** An alternative DT needs an integer DT >= 1 and a non-blank condition; null means it is not complete or valid. */
+export function readDifficultyOverride(difficulty: string, condition: string): PointOfInterestDifficultyOverride | null {
+  const value = Number(difficulty);
+  const text = condition.trim();
+  return difficulty.trim() && Number.isInteger(value) && value >= POINT_OF_INTEREST_DIFFICULTY_MIN && text
+    ? { difficulty: value, condition: text } : null;
 }
 
 /** A situational information requires a non-blank condition; null rejects the edit. */

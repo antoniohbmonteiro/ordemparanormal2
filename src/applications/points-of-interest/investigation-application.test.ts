@@ -68,3 +68,24 @@ it("marks situational information and its condition in the GM view", () => {
   expect(context.isGm && context.skills[0].information.map(row => [row.id, row.isSituational, row.condition, row.revealLabel]))
     .toEqual([["seen", false, "", "Reveal — Percepção"], ["vault", true, "Requer ter aberto o freezer.", "Reveal — Percepção"]]);
 });
+
+it("shows an approach's alternative DT to the GM separately from situational availability", async () => {
+  const override = { difficulty: 10, condition: "Se escolherem arrombar." };
+  const context = buildInvestigationRenderContext("POI", { view: {
+    audience: "gm", name: "POI", description: "", img: "", itemUuid: "Item.poi", gmContext: "", skills: [
+      { key: "research", name: "Pesquisar", information: [
+        { id: "notes", content: "Notas", difficulty: 6, showDifficultyToPlayers: false, knownCount: 0,
+          condition: "Requer ter aberto o armário.", difficultyOverride: override },
+        { id: "plain", content: "Simples", difficulty: 8, showDifficultyToPlayers: false, knownCount: 0 },
+      ] },
+    ],
+  } }, key => key);
+  expect(context.isGm && context.skills[0].information.map(row => [row.difficulty, row.condition, row.difficultyOverride ?? null]))
+    .toEqual([[6, "Requer ter aberto o armário.", override], [8, "", null]]);
+  const template = await readFile(fileURLToPath(new URL(
+    "../../../templates/points-of-interest/investigation-application.hbs", import.meta.url)), "utf8");
+  const overrideLine = template.indexOf("{{#if difficultyOverride}}");
+  expect(overrideLine).toBeGreaterThan(template.indexOf("{{#if isSituational}}"));
+  expect(template.slice(overrideLine, template.indexOf("{{/if}}", overrideLine)))
+    .toContain("{{difficultyOverride.difficulty}} · {{difficultyOverride.condition}}");
+});

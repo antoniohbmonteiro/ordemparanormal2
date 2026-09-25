@@ -93,6 +93,18 @@ describe("PointOfInterestDataModel", () => {
     expect(approaches.element.fields.specialization.options).toMatchObject({ required: false });
   });
 
+  it("models one optional alternative DT per approach, absent by default so stored approaches keep their source", () => {
+    const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
+    const approaches = schema.information.element.fields.approaches as unknown as MockArrayField;
+    const override = approaches.element.fields.difficultyOverride as unknown as MockSchemaField;
+    expect(override.options).toMatchObject({ required: false, nullable: false });
+    expect(override.options).not.toHaveProperty("initial");
+    expect(Object.keys(override.fields)).toEqual(["difficulty", "condition"]);
+    expect(override.fields.difficulty.options).toMatchObject({ required: true, integer: true, min: 1 });
+    expect(override.fields.difficulty.options).not.toHaveProperty("initial");
+    expect(override.fields.condition.options).toMatchObject({ required: true, blank: false });
+  });
+
   it("defaults information availability to always so stored information without it needs no migration", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
     const availability = schema.information.element.fields.availability as unknown as MockSchemaField;

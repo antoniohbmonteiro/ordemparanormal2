@@ -73,6 +73,8 @@ export interface GmInvestigationInformationRow {
   readonly isDifficultyHidden: boolean;
   readonly isSituational: boolean;
   readonly condition: string;
+  /** Alternative DT for this approach; separate from situational availability. */
+  readonly difficultyOverride?: { readonly difficulty: number; readonly condition: string };
   readonly knownCount: number;
   readonly difficulty: number;
   readonly content: string;
@@ -145,6 +147,7 @@ export function buildInvestigationRenderContext(
             isDifficultyHidden: !entry.showDifficultyToPlayers,
             isSituational: entry.condition !== undefined,
             condition: entry.condition ?? "",
+            ...(entry.difficultyOverride ? { difficultyOverride: { ...entry.difficultyOverride } } : {}),
             id: entry.id,
             knownCount: entry.knownCount,
             difficulty: entry.difficulty,

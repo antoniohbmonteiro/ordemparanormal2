@@ -6,13 +6,14 @@ import { parsePlaytestAlphaPoiSection } from "./parse-playtest-alpha-pois";
 const source: AdventurePoiSource = { id: "actOne.test", act: "actOne", heading: "Sala de Teste",
   informationIds: ["ordinary", "alternatives"] };
 
-function page(rows: readonly { skill: string; difficulty: number; information: string }[]): AdventurePdfTextPage {
+function page(rows: readonly { skill: string; difficulty: number; information: string }[],
+  description = "Uma sala & seus objetos."): AdventurePdfTextPage {
   const items: Array<{ text: string; x: number; y: number; height: number; order: number }> = [];
   function add(text: string, x: number, y: number, height = 8) {
     items.push({ text, x, y, height, order: items.length });
   }
   add("SALA DE TESTE", 70, 700, 11);
-  add("Uma sala & seus objetos.", 70, 686);
+  add(description, 70, 686);
   add("Perícia", 70, 650); add("DT", 150, 650); add("Informação", 180, 650);
   rows.forEach((row, index) => {
     const y = 620 - index * 35;
@@ -23,6 +24,19 @@ function page(rows: readonly { skill: string; difficulty: number; information: s
 }
 
 describe("Playtest Alpha POI parser", () => {
+  it("uses Foundry-stable HTML text without encoding quotes and leaves information as plain text", () => {
+    const fixture = { ...source, informationIds: ["ordinary"] };
+    const preset = parsePlaytestAlphaPoiSection(fixture, page([
+      { skill: "Percepção", difficulty: 6, information: `Texto "claro", d'água & <sinal>.` },
+      { skill: "Pesquisar (requer pista anterior)", difficulty: 8,
+        information: `Contexto "restrito", d'água & <sinal>.` },
+    ], `Uma "sala", d'água & <sinal>.`));
+    expect(preset.publicDescription).toBe(`<p>Uma "sala", d'água &amp; &lt;sinal&gt;.</p>`);
+    expect(preset.gmContext).toContain(`<p>Pesquisar (requer pista anterior) · DT 8: Contexto "restrito", d'água &amp; &lt;sinal&gt;.</p>`);
+    expect(preset.information[0].content).toBe(`Texto "claro", d'água & <sinal>.`);
+    expect(`${preset.publicDescription}${preset.gmContext}`).not.toMatch(/&quot;|&#39;/u);
+  });
+
   it("persists ordinary and alternative approaches, but keeps prerequisites only in GM context", () => {
     const preset = parsePlaytestAlphaPoiSection(source, page([
       { skill: "Percepção", difficulty: 6, information: "Informação <pública>." },

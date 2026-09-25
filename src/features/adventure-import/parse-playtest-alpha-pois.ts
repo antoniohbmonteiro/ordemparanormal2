@@ -14,8 +14,9 @@ const normalize = (value: string): string => value.normalize("NFD").replace(/[\u
   .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 const conditionalQualifier = /\b(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|ao desbloquear|ao abrir|ao tocar|caso tenha|se (?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m))\b/iu;
 const conditionalInformation = /^\s*(?:(?:\(?\s*(?:requer|apenas|somente|exclusiv[oa]|depois de|ap[oó]s|caso tenha|ao (?:usar|acessar|abrir|encontrar|hackear|desbloquear)|se (?:tiver|for|houver|estiver|(?:um|uma|os?|as?) (?:personage(?:m|ns)|jogadores?|algu[eé]m)))\b)|(?:[1-9]\d?(?:\s+ou\s+[1-9]\d?)?\s+))/iu;
+// Quotes are safe in HTML text. Foundry's HTML sanitizer decodes quote entities in text nodes.
 const escapeHtml = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  .replace(/>/g, "&gt;");
 function paragraph(value: string): string { return value.trim() ? `<p>${escapeHtml(value.trim())}</p>` : ""; }
 function joinText(items: readonly PositionedItem[]): string {
   return [...items].sort((a, b) => b.y - a.y || a.x - b.x || a.order - b.order)

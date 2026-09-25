@@ -9,8 +9,8 @@ export async function openAdventureImportPoiConflictDialog(pois: readonly Prepar
     window: { title: "ORDEMPARANORMAL2.AdventureImport.PoiConflict.Title" },
     position: { width: 560 }, content, modal: true, rejectClose: false,
     buttons: [
-      { action: "preserve", label: "ORDEMPARANORMAL2.AdventureImport.AgentConflict.Preserve", default: true, callback: () => "preserve" },
-      { action: "restore", label: "ORDEMPARANORMAL2.AdventureImport.AgentConflict.Restore", callback: () => "restore" },
+      { action: "preserve", label: "ORDEMPARANORMAL2.AdventureImport.PoiConflict.Preserve", default: true, callback: () => "preserve" },
+      { action: "restore", label: "ORDEMPARANORMAL2.AdventureImport.PoiConflict.Restore", callback: () => "restore" },
     ],
   });
   return result === "preserve" || result === "restore" ? result : null;

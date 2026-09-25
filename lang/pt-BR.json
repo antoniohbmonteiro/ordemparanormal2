@@ -240,7 +240,9 @@
       },
       "PoiConflict": {
         "Title": "Pontos de interesse modificados ou incompletos",
-        "Explanation": "Estes pontos de interesse tiveram conteúdo gerenciado alterado ou uma importação incompleta. Preservar mantém as alterações; restaurar reaplica apenas as descrições, o contexto e as informações do preset. Nome, imagem, permissões e mudanças de pasta são preservados. Fechar cancela esta etapa."
+        "Preserve": "Preservar alterações atuais",
+        "Restore": "Reaplicar dados do PDF",
+        "Explanation": "Estes Pontos de Interesse possuem dados diferentes da última importação ou uma importação incompleta. Você pode manter o conteúdo atual ou reaplicar os dados obtidos do PDF. Nome, imagem, permissões e mudanças de pasta são preservados. Fechar cancela esta etapa."
       }
     },
     "PointOfInterest": {

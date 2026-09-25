@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
 import { PLAYTEST_ALPHA_POI_SOURCES } from "../../config/adventure-poi-sources/playtest-alpha";
 import { validateAdventurePoiData, validateAdventurePoiReferences, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
+import { managedDigest } from "../../core/adventure-import/adventure-agent-reconciliation";
 import { importAdventurePois, type PoiImportFlag, type PoiItemPort, type PoiItemSnapshot } from "./import-adventure-pois";
 import type { AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
 import type { AdventureAssetResolutionSource } from "./resolve-adventure-asset";
@@ -22,6 +23,15 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
   readonly items: PoiItemSnapshot[] = [];
   readonly folders: AdventureFolderSnapshot[] = [];
   writes = 0;
+  sanitizeHtml = false;
+  persistSystem(system: Parameters<PoiItemPort["updateItem"]>[1]) {
+    const copy = structuredClone(system);
+    if (!this.sanitizeHtml) return copy;
+    return { ...copy,
+      publicDescription: copy.publicDescription.replace(/&quot;/gu, '"').replace(/&#39;/gu, "'"),
+      gmContext: copy.gmContext.replace(/&quot;/gu, '"').replace(/&#39;/gu, "'"),
+    };
+  }
   readonly lookup = { worldId: "test-world",
     findExisting: vi.fn(async (_directory: string, basename: string) => `worlds/test-world/${basename}`) };
   isAuthorized() { return true; }
@@ -44,7 +54,7 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
     flag: PoiImportFlag, placement: Parameters<PoiItemPort["createItem"]>[4]) {
     const id = `item-${this.items.length + 1}`;
     this.items.push({ id, type: "pointOfInterest", folderId, img, flag, folderPlacement: placement,
-      system: structuredClone({ publicDescription: preset.publicDescription, gmContext: preset.gmContext, information: preset.information }) });
+      system: this.persistSystem({ publicDescription: preset.publicDescription, gmContext: preset.gmContext, information: preset.information }) });
     this.writes++;
     return id;
   }
@@ -62,7 +72,7 @@ class FakeWorld implements PoiItemPort, AdventureFolderPort {
   }
   async updateItem(id: string, system: Parameters<PoiItemPort["updateItem"]>[1], flag: PoiImportFlag) {
     const index = this.items.findIndex(item => item.id === id);
-    this.items[index] = { ...this.items[index], system: structuredClone(system), flag };
+    this.items[index] = { ...this.items[index], system: this.persistSystem(system), flag };
     this.writes++;
   }
   async completeItem(id: string, flag: PoiImportFlag) {
@@ -197,6 +207,25 @@ describe("Adventure Point of Interest import", () => {
     expect(await run(two, ["actTwo"])).toMatchObject({ created: 25 });
     expect(two.items.every(item => (item.flag as PoiImportFlag).act === "actTwo")).toBe(true);
     expect(two.items.every(item => (item.flag as Record<string, unknown>).edition === undefined)).toBe(true);
+  });
+
+  it("uses the same canonical HTML for persistence, baseline and an unchanged second import", async () => {
+    const world = new FakeWorld();
+    world.sanitizeHtml = true;
+    const presets = SYNTHETIC_POI_PRESETS.map(preset => preset.id === "actOne.map.09" ? {
+      ...preset,
+      publicDescription: `<p>Um "texto", d'água &amp; &lt;sinal&gt;.</p>`,
+      gmContext: `<p>Outro "texto", d'água &amp; &lt;sinal&gt;.</p>`,
+      information: preset.information.map(entry => ({ ...entry,
+        content: `Texto simples "citado", d'água & <sinal>.` })),
+    } : preset);
+    expect(await run(world, ["actOne"], undefined, presets)).toMatchObject({ created: 29 });
+    const item = world.items.find(candidate => (candidate.flag as PoiImportFlag).documentId === "actOne.map.09")!;
+    expect((item.flag as PoiImportFlag).baseline).toBe(await managedDigest(item.system));
+    expect(item.system.publicDescription).toBe(presets.find(preset => preset.id === "actOne.map.09")!.publicDescription);
+    const writes = world.writes;
+    expect(await run(world, ["actOne"], undefined, presets)).toMatchObject({ unchanged: 29, updated: 0, preserved: 0 });
+    expect(world.writes).toBe(writes);
   });
 
   it("preserves manual content or restores it by one batch decision and retains manual folder moves", async () => {

@@ -28,13 +28,17 @@ export async function createCheckRequestMessage(
   actor: foundry.documents.Actor,
   state: CheckRequestStateV1,
   accentColor: AccentColor,
+  options?: { readonly whisper?: readonly string[]; readonly systemFlags?: Record<string, unknown>;
+    readonly speakerActor?: foundry.documents.Actor },
 ): Promise<ChatMessage> {
   const content = await renderPendingCheckRequestContent(state);
   const message = await ChatMessage.create({
     content,
-    speaker: ChatMessage.getSpeaker({ actor }),
+    speaker: ChatMessage.getSpeaker({ actor: options?.speakerActor ?? actor }),
+    ...(options?.whisper ? { whisper: [...options.whisper] } : {}),
     flags: {
       [SYSTEM_ID]: {
+        ...options?.systemFlags,
         [CHECK_REQUEST_STATE_FLAG]: state,
         [CHECK_PRESENTATION_FLAG]: { accentColor },
       },

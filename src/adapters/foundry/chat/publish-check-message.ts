@@ -29,8 +29,10 @@ export function getCurrentMessageMode(): string {
 export async function sendRollToMessage(
   roll: FoundryRegistryAwareRoll,
   messageData: object,
+  mode?: string,
 ): Promise<unknown> {
-  const messageMode = getCurrentMessageMode();
+  const messageMode = mode ?? getCurrentMessageMode();
+  if (!isRegisteredMessageMode(messageMode)) throw new Error(`Unregistered Foundry chat message mode: ${messageMode}`);
   return roll.toMessage(messageData, { messageMode });
 }
 
@@ -39,7 +41,8 @@ export async function publishCheckMessage(
   execution: FoundryCheckExecution,
   difficultyResolution?: CheckDifficultyResolution,
   appliedAbilityUses: readonly AppliedCheckAbilityUse[] = [],
-): Promise<void> {
+  messageMode?: string,
+): Promise<unknown> {
   const accentColor = readAgentAccentColor(actor);
   const snapshot = createCheckSnapshot(
     execution.result,
@@ -48,7 +51,7 @@ export async function publishCheckMessage(
   );
   const content = await renderCheckCardContent(snapshot);
 
-  await sendRollToMessage(execution.roll as FoundryRegistryAwareRoll, {
+  return sendRollToMessage(execution.roll as FoundryRegistryAwareRoll, {
     content,
     speaker: ChatMessage.getSpeaker({ actor }),
     flags: {
@@ -57,5 +60,5 @@ export async function publishCheckMessage(
         [CHECK_PRESENTATION_FLAG]: { accentColor },
       },
     },
-  });
+  }, messageMode);
 }

@@ -7,9 +7,14 @@ import { countPoiVisibleLocations, hasPoiVisibleLocation, locatePoiInCurrentScen
 import { openPoiPicker } from "./poi-picker";
 import { openPoiUserRevealDialog } from "./poi-user-reveal-dialog";
 import { openInvestigationApplication } from "./investigation-application";
+import { openInvestigationControl } from "./investigation-control";
 import { listenPoiSceneMenuTriggers, poiSceneMenuEntries, showPoiSceneMenu, type PoiSceneMenuAction, type PoiMenuAnchor } from "./poi-scene-panel-menu";
 import { poiSceneRowView } from "./poi-scene-panel-view";
 import { listenPoiScenePanelDrop } from "./poi-scene-panel-drop";
+import { resolveSceneInvestigationAgent } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
+import { requestInvestigationAction } from "../../adapters/foundry/points-of-interest/investigation-requests";
+import { skillLabel, isSkillKey } from "../../config/skills";
+import type { ShareClueReference } from "../../adapters/foundry/points-of-interest/investigation-share";
 
 const ROOT = "ORDEMPARANORMAL2.PointOfInterest.ScenePanel";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -23,6 +28,10 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       open: PoiScenePanel.#onOpen,
       add: PoiScenePanel.#onAdd,
+      control: PoiScenePanel.#onControl,
+      toggle: PoiScenePanel.#onToggle,
+      recap: PoiScenePanel.#onRecap,
+      share: PoiScenePanel.#onShare,
     },
   };
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
@@ -35,6 +44,11 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   #stopDrop: (() => void) | null = null;
   #closeMenu: (() => void) | null = null;
   #revision = 0;
+  #expanded = new Set<string>();
+  #actorUuid: string | null = null;
+  #resultActorUuid: string | null = null;
+  #controlTokenHook: number | null = null;
+  #updateUserHook: number | null = null;
 
   constructor(sceneId: string) {
     const sceneName = game.scenes.get(sceneId)?.name;
@@ -46,13 +60,21 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   protected override async _prepareContext(): Promise<Record<string, unknown>> {
     const scene = game.scenes.get(this.#sceneId);
     const isGM = !!game.user?.isGM;
+    if (!isGM && this.#result && (resolveSceneInvestigationAgent(this.#sceneId)?.uuid ?? null) !== this.#resultActorUuid) {
+      this.#result = null;
+      queueMicrotask(() => { void this.refresh(); });
+    }
     const projected = this.#result && "entries" in this.#result ? this.#result.entries : [];
     const allowed = new Map(projected.map(entry => [entry.itemUuid, entry.name]));
     const entries = projected.map(entry => {
+      let clueIndex = 0;
       const item = isGM ? worldPoi(entry.itemUuid) : null;
       const count = isGM ? (scene ? associatedRegionIds(scene, entry.itemUuid).length : 0)
         : countPoiVisibleLocations(this.#sceneId, entry.itemUuid, allowed);
-      return poiSceneRowView(entry, item ? readPoiVisibility(item) : null, count, key => game.i18n.localize(key), isGM ? "gm" : "player");
+      return { ...poiSceneRowView(entry, item ? readPoiVisibility(item) : null, count, key => game.i18n.localize(key), isGM ? "gm" : "player"),
+        expanded: this.#expanded.has(entry.itemUuid),
+        knownGroups: entry.knownGroups?.map(group => ({ ...group, label: isSkillKey(group.skill) ? skillLabel(group.skill) : group.skill,
+          clues: group.clues.map(clue => ({ ...clue, index: clueIndex++ })) })) ?? [] };
     });
     return {
       sceneName: scene?.name ?? "",
@@ -62,6 +84,10 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
       entries,
       count: entries.length,
       countLabel: game.i18n.localize(`${ROOT}.${entries.length === 1 ? "CountOne" : "CountMany"}`),
+      runActive: !!(this.#result && "entries" in this.#result && this.#result.runId),
+      recapAvailable: !!(this.#result && "entries" in this.#result && this.#result.recapAvailable),
+      shareAvailable: !!(this.#result && "entries" in this.#result && this.#result.shareAvailable),
+      narrativeClues: this.#result && "entries" in this.#result ? this.#result.narrativeClues ?? [] : [],
     };
   }
 
@@ -81,6 +107,12 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
     await super._onFirstRender(context, options as never);
     this.#stop = subscribePoiInvalidation(() => { void this.refresh(); });
+    if (!game.user?.isGM) {
+      this.#controlTokenHook = Hooks.on("controlToken", () => { void this.refresh(); });
+      this.#updateUserHook = Hooks.on("updateUser", (user: unknown) => {
+        if (user && typeof user === "object" && "id" in user && user.id === game.user?.id) void this.refresh();
+      });
+    }
     void this.refresh();
   }
 
@@ -88,9 +120,13 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const revision = ++this.#revision;
     this.#result = null;
     void this.render();
-    const result = await requestPoiScene(this.#sceneId);
+    const actor = resolveSceneInvestigationAgent(this.#sceneId);
+    this.#actorUuid = actor?.uuid ?? null;
+    const requestedActorUuid = this.#actorUuid;
+    const result = await requestPoiScene(this.#sceneId, requestedActorUuid ?? undefined);
     if (revision !== this.#revision) return;
     this.#result = result;
+    this.#resultActorUuid = requestedActorUuid;
     await this.render();
   }
 
@@ -116,6 +152,83 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const selection = await picker.result;
     if (!selection) return;
     await this.#addItem(selection.itemUuid);
+  }
+
+  static #onControl(this: PoiScenePanel): void {
+    if (game.user?.isGM) openInvestigationControl(this.#sceneId);
+  }
+
+  static async #onToggle(this: PoiScenePanel, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    const uuid = PoiScenePanel.#entry.call(this, target);
+    if (!uuid || game.user?.isGM) return;
+    if (this.#expanded.has(uuid)) this.#expanded.delete(uuid);
+    else this.#expanded.add(uuid);
+    await this.render();
+  }
+
+  static async #onRecap(this: PoiScenePanel): Promise<void> {
+    const result = this.#result && "entries" in this.#result ? this.#result : null;
+    if (!result?.runId || !result.recapAvailable || !this.#actorUuid
+      || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== this.#actorUuid) return;
+    const actorUuid = this.#actorUuid;
+    const root = "ORDEMPARANORMAL2.PointOfInterest.Investigation";
+    const text = await foundry.applications.api.DialogV2.input<string | null>({
+      classes: ["ordemparanormal2", "op2-investigation"], modal: true,
+      content: `<label>${game.i18n.localize(`${root}.RecapDescription`)}<textarea name="recap" maxlength="4000" required></textarea></label>`,
+      ok: { action: "send", label: `${root}.SendInteraction`, default: true,
+        callback: (_event, button) => {
+          const field = button.form?.elements.namedItem("recap");
+          return field instanceof HTMLTextAreaElement ? field.value.trim() : null;
+        } },
+      position: { width: 460 }, rejectClose: false,
+      window: { title: game.i18n.localize(`${root}.Recap`) },
+    });
+    if (!text || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== actorUuid) return;
+    const sent = await requestInvestigationAction({ kind: "recap", sceneId: this.#sceneId,
+      runId: result.runId, actorUuid, text });
+    ui.notifications[sent.ok ? "info" : "error"](game.i18n.localize(`${root}.${sent.ok ? "RequestSent" : "RequestFailed"}`));
+  }
+
+  static async #onShare(this: PoiScenePanel, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    const result = this.#result && "entries" in this.#result ? this.#result : null;
+    if (!result?.runId || !result.shareAvailable || !this.#actorUuid
+      || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== this.#actorUuid) return;
+    const actorUuid = this.#actorUuid;
+    const uuid = target.closest<HTMLElement>("[data-item-uuid]")?.dataset.itemUuid;
+    const index = Number(target.dataset.clueIndex);
+    const clues = uuid === "narrative" ? result.narrativeClues
+      : result.entries.find(entry => entry.itemUuid === uuid)?.knownGroups?.flatMap(group => group.clues);
+    const clue = Number.isInteger(index) ? clues?.[index] : null;
+    if (!clue?.shareReference) return;
+    const receivers = (result.participants ?? []).filter(candidate => candidate.uuid !== actorUuid);
+    if (!receivers.length) return;
+    const root = "ORDEMPARANORMAL2.PointOfInterest.Investigation";
+    const preview = document.createElement("p");
+    preview.className = "op2-investigation-share-preview";
+    preview.textContent = clue.text;
+    const options = receivers.map(receiver => {
+      const option = document.createElement("option");
+      option.value = receiver.uuid;
+      option.textContent = receiver.name;
+      return option.outerHTML;
+    }).join("");
+    const receiverUuid = await foundry.applications.api.DialogV2.input<string | null>({
+      classes: ["ordemparanormal2", "op2-investigation"], modal: true,
+      content: `${preview.outerHTML}<label>${game.i18n.localize(`${root}.ShareReceiver`)}<select name="receiver">${options}</select></label>`,
+      ok: { action: "send", label: `${root}.Share`, default: true,
+        callback: (_event, button) => {
+          const field = button.form?.elements.namedItem("receiver");
+          return field instanceof HTMLSelectElement ? field.value : null;
+        } },
+      position: { width: 360 }, rejectClose: false,
+      window: { title: game.i18n.localize(`${root}.Share`) },
+    });
+    if (!receiverUuid || !receivers.some(receiver => receiver.uuid === receiverUuid)
+      || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== actorUuid) return;
+    const sent = await requestInvestigationAction({ kind: "share", sceneId: this.#sceneId, runId: result.runId,
+      actorUuid, receiverActorUuid: receiverUuid, clue: clue.shareReference as ShareClueReference });
+    ui.notifications[sent.ok ? "info" : "error"](game.i18n.localize(`${root}.${sent.ok ? "RequestSent" : "RequestFailed"}`));
+    if (sent.ok) await this.refresh();
   }
 
   async #addItem(itemUuid: string): Promise<void> {
@@ -187,6 +300,8 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   protected override _onClose(options: ApplicationClosingOptions): void {
     this.#revision++;
     this.#stop?.();
+    if (this.#controlTokenHook !== null) Hooks.off("controlToken", this.#controlTokenHook);
+    if (this.#updateUserHook !== null) Hooks.off("updateUser", this.#updateUserHook);
     this.#stopMenuTriggers?.();
     this.#stopDrop?.();
     this.#closeMenu?.();

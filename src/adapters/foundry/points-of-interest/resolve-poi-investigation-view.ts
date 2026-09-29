@@ -4,6 +4,7 @@ import {
   type PointOfInterestApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
+import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
 
 export interface PoiInvestigationRequest {
   readonly sceneId: string;
@@ -39,6 +40,7 @@ function authorized(request: PoiInvestigationRequest):
     if (!/^Actor\.[^.]+$/u.test(request.actorUuid)) return { error: "forbidden" };
     actor = game.actors.get(request.actorUuid.slice(6)) ?? null;
     if (!actor || actor.uuid !== request.actorUuid || actor.type !== "agent"
+      || !investigationParticipants(scene).some(participant => participant.uuid === actor?.uuid)
       || !actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)) return { error: "forbidden" };
   }
   return { item, user, actor };
@@ -47,7 +49,7 @@ function authorized(request: PoiInvestigationRequest):
 export async function resolvePoiInvestigationView(request: PoiInvestigationRequest): Promise<PoiInvestigationResult> {
   const initial = authorized(request);
   if ("error" in initial) return initial;
-  const { item, user, actor } = initial;
+  const { item, user } = initial;
   const system = item.system as { publicDescription?: unknown; gmContext?: unknown };
   const descriptionRaw = typeof system.publicDescription === "string" ? system.publicDescription : "";
   const gmRaw = typeof system.gmContext === "string" ? system.gmContext : "";
@@ -57,11 +59,14 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   ]);
   const latest = authorized(request);
   if ("error" in latest) return latest;
+  const actor = latest.actor;
   const information = readPointOfInterestInformation(latest.item.system);
   const knowledge = readPoiKnowledge(latest.item);
   const known = new Set(knowledge.find(entry => entry.actorUuid === actor?.uuid)?.informationIds ?? []);
-  const base = { name: latest.item.name, description, img: latest.item.img ?? "" };
-  // A player's groups are built only from information they may receive, so a skill with nothing else is absent.
+  const currentScene = game.scenes.get(request.sceneId);
+  const investigationRuntime = currentScene ? sceneInvestigationRuntime(currentScene) : null;
+  const base = { name: latest.item.name, description, img: latest.item.img ?? "",
+    investigationRunId: investigationRuntime?.runId ?? null };
   const groups = groupApproaches(user.isGM ? information : playerVisiblePointOfInterestInformation(information, known));
   const view: PoiInvestigationViewData = user.isGM
     ? { ...base, audience: "gm", itemUuid: latest.item.uuid, gmContext,
@@ -72,11 +77,12 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
             ...(entry.availability.mode === "situational" ? { condition: entry.availability.condition } : {}),
             ...(approach.difficultyOverride ? { difficultyOverride: { ...approach.difficultyOverride } } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
-    : { ...base, audience: "player", skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
-        information: rows.map(({ entry, approach }) => ({
+    : { ...base, audience: "player",
+      skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
+        information: rows.filter(({ entry }) => known.has(entry.id)).map(({ entry, approach }) => ({
           ...(approach.showDifficultyToPlayers ? { visibility: "public" as const, difficulty: approach.difficulty } : { visibility: "hidden" as const }),
           ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
-          ...(known.has(entry.id) ? { content: entry.content } : {}),
+          content: entry.content,
         })) })) };
   return { view };
 }

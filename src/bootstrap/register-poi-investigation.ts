@@ -2,10 +2,27 @@ import { SYSTEM_ID } from "../config/system-config";
 import { registerPoiInvestigationQuery } from "../adapters/foundry/points-of-interest/poi-investigation-query";
 import { mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries } from "../adapters/foundry/points-of-interest/poi-runtime-queries";
 import { readPoiRegionAssociation } from "../adapters/foundry/points-of-interest/poi-region-association";
+import { registerInvestigationRuntimeQueries } from "../adapters/foundry/points-of-interest/investigation-runtime";
+import { registerInvestigatePoiQuery } from "../adapters/foundry/points-of-interest/investigate-poi";
+import { registerExaminePoiQuery } from "../adapters/foundry/points-of-interest/examine-poi";
+import { registerCommitPoiExaminationQuery } from "../adapters/foundry/points-of-interest/commit-poi-examination";
+import { registerInteractPoiQuery } from "../adapters/foundry/points-of-interest/interact-poi";
+import { registerShareCandidatesQuery } from "../adapters/foundry/points-of-interest/investigation-share";
+import { onInvestigationCheckMessageUpdated, registerInvestigationRequestQueries } from "../adapters/foundry/points-of-interest/investigation-requests";
 
 export function registerPoiInvestigation(): void {
   registerPoiInvestigationQuery();
   registerPoiRuntimeQueries();
+  registerInvestigationRuntimeQueries();
+  registerInvestigatePoiQuery();
+  registerExaminePoiQuery();
+  registerCommitPoiExaminationQuery();
+  registerInteractPoiQuery();
+  registerShareCandidatesQuery();
+  registerInvestigationRequestQueries();
+  Hooks.on("updateChatMessage", (message: unknown) => {
+    void onInvestigationCheckMessageUpdated(message as ChatMessage).catch(error => console.error(`${SYSTEM_ID} | Investigation Check update failed`, error));
+  });
   const ensure = (region: unknown) => {
     if (!game.user?.isGM || game.users.activeGM?.id !== game.user.id) return;
     const document = region as foundry.documents.RegionDocument;

@@ -106,6 +106,20 @@
 }
 .op2-poi-scene-panel__row:hover,
 .op2-poi-scene-panel__row:focus-within { background: var(--op2-panel-bg-hover); }
+.op2-poi-scene-panel__row.is-expanded { align-items: start; }
+.op2-poi-scene-panel__clues { grid-column: 1 / -1; padding: 8px 12px 4px; border-top: 1px solid var(--op2-border); }
+.op2-poi-scene-panel__clue-group + .op2-poi-scene-panel__clue-group { margin-top: 12px; }
+.op2-poi-scene-panel__clue-group h3,
+.op2-poi-scene-panel__narrative h3 { margin: 0 0 6px; color: var(--op2-text-muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+.op2-poi-scene-panel__clue-group ul,
+.op2-poi-scene-panel__narrative ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.op2-poi-scene-panel__clue-group li,
+.op2-poi-scene-panel__narrative li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
+.op2-poi-scene-panel__clue-group li button,
+.op2-poi-scene-panel__narrative li button { flex: none; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; background: transparent; color: var(--op2-text-muted); }
+.op2-poi-scene-panel__clue-group li button:hover,
+.op2-poi-scene-panel__narrative li button:hover { color: var(--op2-text); }
+.op2-poi-scene-panel__narrative { min-height: 0; overflow: auto; padding: 10px 14px; border: 1px solid var(--op2-border-strong); border-radius: 8px; background: var(--op2-panel-bg); }
 .op2-poi-scene-panel__image {
   display: grid;
   width: 58px;
@@ -117,6 +131,8 @@
   background: var(--op2-input-bg);
   color: var(--op2-text-muted);
   font-size: 1.35rem;
+  padding: 0;
+  box-shadow: none;
 }
 .op2-poi-scene-panel__image img { width: 100%; height: 100%; object-fit: contain; }
 .op2-poi-scene-panel__identity { min-width: 0; }

@@ -1,6 +1,9 @@
 import { SYSTEM_ID } from "../../../config/system-config";
 import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { publishPoiRevealNotice } from "./publish-poi-reveal-notice";
+import { knownNarrativeClues } from "./investigation-clues";
+import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
+import { shareCandidates, type ShareClueReference } from "./investigation-share";
 import { associatedRegionIds, isGmControlledPoi, isPoiVisibleTo, isWorldPoiUuid, POI_KNOWLEDGE_PATH, POI_SCENE_ITEMS_PATH, POI_VISIBILITY_PATH, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 
 export const POI_SCENE_QUERY = `${SYSTEM_ID}.poiScene`;
@@ -14,8 +17,14 @@ export type PoiMutation =
   | { readonly action: "knowledge"; readonly sceneId: string; readonly itemUuid: string;
       readonly informationId: string; readonly actorUuids: readonly string[] };
 export type PoiMutationResult = { readonly ok: true } | { readonly ok: false; readonly reason: "forbidden" | "unavailable" | "linked" | "invalid" | "no-gm" };
-export interface PoiSceneEntry { readonly itemUuid: string; readonly name: string; readonly img: string; readonly linkedRegionIds: readonly string[] }
-export type PoiSceneResult = { readonly entries: readonly PoiSceneEntry[] } | { readonly error: "unavailable" | "no-gm" };
+export interface PoiSceneKnownClue { readonly text: string; readonly shareReference?: ShareClueReference }
+export interface PoiSceneKnownGroup { readonly skill: string; readonly clues: readonly PoiSceneKnownClue[] }
+export interface PoiSceneEntry { readonly itemUuid: string; readonly name: string; readonly img: string; readonly linkedRegionIds: readonly string[];
+  readonly knownGroups?: readonly PoiSceneKnownGroup[] }
+export type PoiSceneResult = { readonly entries: readonly PoiSceneEntry[]; readonly runId?: string | null;
+  readonly recapAvailable?: boolean; readonly shareAvailable?: boolean;
+  readonly participants?: readonly { readonly uuid: string; readonly name: string }[];
+  readonly narrativeClues?: readonly PoiSceneKnownClue[] } | { readonly error: "unavailable" | "no-gm" };
 
 const listeners = new Set<() => void>();
 function users(): foundry.documents.User[] { return (game.users as unknown as { contents: foundry.documents.User[] }).contents; }
@@ -29,16 +38,25 @@ export function subscribePoiInvalidation(listener: () => void): () => void {
 function invalidateLocal(): void { for (const listener of listeners) listener(); }
 function isActiveGm(): boolean { return !!game.user?.isGM && game.users.activeGM?.id === game.user.id; }
 
-async function broadcast(): Promise<void> {
+export async function broadcastPoiInvalidation(): Promise<void> {
   invalidateLocal();
   await Promise.allSettled(users()
     .filter(user => user.active && user.id !== game.user.id)
     .map(user => user.query(POI_INVALIDATION_QUERY, {}, { timeout: 3000 })));
 }
 
-export function resolvePoiScene(sceneId: string, requester: foundry.documents.User): PoiSceneResult {
+export function resolvePoiScene(sceneId: string, requester: foundry.documents.User, actorUuid?: string): PoiSceneResult {
   const scene = game.scenes.get(sceneId);
   if (!scene) return { error: "unavailable" };
+  const participant = !requester.isGM && actorUuid && investigationParticipants(scene).some(entry => entry.uuid === actorUuid)
+    ? game.actors.get(actorUuid.slice(6)) : null;
+  const actor = participant && participant.uuid === actorUuid && participant.type === "agent"
+    && participant.testUserPermission(requester, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER) ? participant : null;
+  const runtime = sceneInvestigationRuntime(scene);
+  const shareable = actor && runtime ? shareCandidates(scene, runtime.runId, actor.uuid) : [];
+  const shareReference = (itemUuid: string, informationId: string): ShareClueReference | undefined =>
+    shareable.find(candidate => candidate.reference.kind === "poi" && candidate.reference.itemUuid === itemUuid
+      && candidate.reference.informationId === informationId)?.reference;
   const entries: PoiSceneEntry[] = [];
   for (const itemUuid of readScenePoiUuids(scene)) {
     const item = worldPoi(itemUuid);
@@ -47,15 +65,33 @@ export function resolvePoiScene(sceneId: string, requester: foundry.documents.Us
       continue;
     }
     if (!isPoiVisibleTo(readPoiVisibility(item), requester.id, requester.isGM)) continue;
-    entries.push({ itemUuid, name: item.name, img: item.img ?? "", linkedRegionIds: requester.isGM ? associatedRegionIds(scene, itemUuid) : [] });
+    const known = new Set(actor ? readPoiKnowledge(item).find(entry => entry.actorUuid === actor.uuid)?.informationIds ?? [] : []);
+    const groups = new Map<string, PoiSceneKnownClue[]>();
+    if (!requester.isGM) for (const info of readPointOfInterestInformation(item.system)) {
+      if (!known.has(info.id)) continue;
+      const first = info.approaches[0];
+      if (!first) continue;
+      const clues = groups.get(first.skill) ?? [];
+      clues.push({ text: info.content, ...(shareReference(itemUuid, info.id) ? { shareReference: shareReference(itemUuid, info.id) } : {}) });
+      groups.set(first.skill, clues);
+    }
+    entries.push({ itemUuid, name: item.name, img: item.img ?? "", linkedRegionIds: requester.isGM ? associatedRegionIds(scene, itemUuid) : [],
+      ...(!requester.isGM ? { knownGroups: [...groups].map(([skill, clues]) => ({ skill, clues })) } : {}) });
   }
-  return { entries };
+  if (requester.isGM) return { entries };
+  return { entries, runId: runtime?.runId ?? null,
+    recapAvailable: !!actor && !!runtime && !runtime.recapSuccessActorUuid,
+    shareAvailable: !!actor && !!runtime && !runtime.shareSuccessActorUuid,
+    participants: investigationParticipants(scene).map(({ uuid, name }) => ({ uuid, name })),
+    narrativeClues: actor ? knownNarrativeClues(scene, actor.uuid).map(clue => ({ text: clue.text,
+      ...(shareable.find(candidate => candidate.reference.kind === "narrative" && candidate.reference.clueId === clue.id)
+        ? { shareReference: { kind: "narrative" as const, clueId: clue.id } } : {}) })) : [] };
 }
 
-const queues = new Map<string, Promise<PoiMutationResult>>();
-function serialize(key: string, run: () => Promise<PoiMutationResult>): Promise<PoiMutationResult> {
+const queues = new Map<string, Promise<unknown>>();
+export function serializePoiItemMutation<T>(key: string, run: () => Promise<T>): Promise<T> {
   const previous = queues.get(key);
-  const result = (previous ?? Promise.resolve({ ok: true } as PoiMutationResult)).then(run, run);
+  const result = (previous ?? Promise.resolve()).then(run, run);
   queues.set(key, result);
   const cleanup = () => { if (queues.get(key) === result) queues.delete(key); };
   void result.then(cleanup, cleanup);
@@ -111,7 +147,7 @@ async function writeMutation(input: PoiMutation, requester: foundry.documents.Us
     }
     if (changed) await item.update({ [POI_KNOWLEDGE_PATH]: foundry.data.operators.ForcedReplacement.create({ agents: knowledge }) });
   } else return { ok: false, reason: "invalid" };
-  if (changed) await broadcast();
+  if (changed) await broadcastPoiInvalidation();
   return { ok: true };
 }
 
@@ -119,24 +155,25 @@ export function mutatePoi(input: PoiMutation): Promise<PoiMutationResult> {
   const active = game.users.activeGM;
   if (!game.user?.isGM) return Promise.resolve({ ok: false, reason: "forbidden" });
   if (!active) return Promise.resolve({ ok: false, reason: "no-gm" });
-  if (active.id === game.user.id) return serialize(input.action === "add" || input.action === "remove" ? input.sceneId : input.itemUuid, () => writeMutation(input, game.user));
+  if (active.id === game.user.id) return serializePoiItemMutation(input.action === "add" || input.action === "remove" ? input.sceneId : input.itemUuid, () => writeMutation(input, game.user));
   return active.query(POI_MUTATION_QUERY, input, { timeout: 10000 }) as Promise<PoiMutationResult>;
 }
 
-export async function requestPoiScene(sceneId: string): Promise<PoiSceneResult> {
-  if (game.user?.isGM) return resolvePoiScene(sceneId, game.user);
+export async function requestPoiScene(sceneId: string, actorUuid?: string): Promise<PoiSceneResult> {
+  if (game.user?.isGM) return resolvePoiScene(sceneId, game.user, actorUuid);
   const active = game.users.activeGM;
   if (!active) return { error: "no-gm" };
-  try { return await active.query(POI_SCENE_QUERY, { sceneId }, { timeout: 10000 }) as PoiSceneResult; }
+  try { return await active.query(POI_SCENE_QUERY, { sceneId, actorUuid }, { timeout: 10000 }) as PoiSceneResult; }
   catch { return { error: "unavailable" }; }
 }
 
 export function registerPoiRuntimeQueries(): void {
   const queries = (CONFIG as typeof CONFIG & { queries: Record<string, unknown> }).queries;
-  queries[POI_SCENE_QUERY] = (data: { sceneId?: unknown }, context: { user: foundry.documents.User }) =>
-    typeof data?.sceneId === "string" ? resolvePoiScene(data.sceneId, context.user) : { error: "unavailable" };
+  queries[POI_SCENE_QUERY] = (data: { sceneId?: unknown; actorUuid?: unknown }, context: { user: foundry.documents.User }) =>
+    typeof data?.sceneId === "string" ? resolvePoiScene(data.sceneId, context.user,
+      typeof data.actorUuid === "string" ? data.actorUuid : undefined) : { error: "unavailable" };
   queries[POI_MUTATION_QUERY] = (data: PoiMutation, context: { user: foundry.documents.User }) =>
-    serialize(data?.action === "add" || data?.action === "remove" ? String(data?.sceneId) : String(data?.itemUuid), () => writeMutation(data, context.user));
+    serializePoiItemMutation(data?.action === "add" || data?.action === "remove" ? String(data?.sceneId) : String(data?.itemUuid), () => writeMutation(data, context.user));
   queries[POI_INVALIDATION_QUERY] = (_data: unknown, context: { user: foundry.documents.User }) => {
     if (context.user.id !== game.users.activeGM?.id) return false;
     invalidateLocal(); return true;

@@ -8,7 +8,7 @@ function world() {
   const sceneFlags: Record<string, unknown> = {};
   const region = { id: "r1", getFlag: (_scope: string, key: string) => key === "pointOfInterest" ? { itemUuid: "Item.poi" } : undefined };
   const regions = [region];
-  const scene = { id: "scene", regions, getFlag: (_scope: string, key: string) => sceneFlags[key],
+  const scene = { id: "scene", regions, tokens: [], getFlag: (_scope: string, key: string) => sceneFlags[key],
     update: vi.fn(async (data: Record<string, unknown>) => { sceneFlags.pointOfInterestItems = data["flags.ordemparanormal2.pointOfInterestItems"]; }) };
   const item = { id: "poi", uuid: "Item.poi", type: "pointOfInterest", name: "Armário", img: "icon.svg", isEmbedded: false, pack: null,
     ownership: { default: 0 }, system: { information: [{ id: "clue", content: "segredo", approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] }] },
@@ -18,8 +18,8 @@ function world() {
       if (data["flags.ordemparanormal2.pointOfInterestVisibility"]) flags.pointOfInterestVisibility = data["flags.ordemparanormal2.pointOfInterestVisibility"];
       if (data["flags.ordemparanormal2.pointOfInterestKnowledge"]) flags.pointOfInterestKnowledge = data["flags.ordemparanormal2.pointOfInterestKnowledge"];
     }) };
-  const actor = { id: "a1", uuid: "Actor.a1", type: "agent" };
-  const otherActor = { id: "a2", uuid: "Actor.a2", type: "agent" };
+  const actor = { id: "a1", uuid: "Actor.a1", type: "agent", name: "Agente A", img: "", testUserPermission: () => true };
+  const otherActor = { id: "a2", uuid: "Actor.a2", type: "agent", name: "Agente B", img: "", testUserPermission: () => true };
   const gm = { id: "gm", isGM: true, active: false, query: vi.fn() };
   const second = { id: "second", isGM: true, active: false, query: vi.fn() };
   const player = { id: "player", isGM: false, active: false, query: vi.fn() };
@@ -85,8 +85,33 @@ describe("POI runtime ownership", () => {
     expect(f.flags.pointOfInterestVisibility).toEqual({ mode: "users", users: ["player"], notified: ["player"] });
     await mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi", informationId: "clue", actorUuids: ["Actor.a1"] });
     expect(f.flags.pointOfInterestKnowledge).toEqual({ agents: [{ actorUuid: "Actor.a1", informationIds: ["clue"] }] });
-    expect(resolvePoiScene("scene", f.player as unknown as foundry.documents.User)).toEqual({ entries: [{ itemUuid: "Item.poi", name: "Armário", img: "icon.svg", linkedRegionIds: [] }] });
+    expect(resolvePoiScene("scene", f.player as unknown as foundry.documents.User)).toEqual({
+      entries: [{ itemUuid: "Item.poi", name: "Armário", img: "icon.svg", linkedRegionIds: [], knownGroups: [] }],
+      runId: null, recapAvailable: false, shareAvailable: false, participants: [], narrativeClues: [],
+    });
     expect(f.sceneFlags).toEqual({ pointOfInterestItems: ["Item.poi"] });
+  });
+
+  it("projects only known clues and current-run share references to an owned Scene Agent", async () => {
+    const f = world();
+    f.sceneFlags.pointOfInterestItems = ["Item.poi"];
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "run", round: 1, actedAgentUuids: [] };
+    f.flags.pointOfInterestVisibility = { mode: "everyone", users: [], notified: [] };
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a1", informationIds: ["clue"] }] };
+    f.flags.pointOfInterestDiscovery = [{ runId: "run", actorUuid: "Actor.a1", informationId: "clue" }];
+    (f.scene.tokens as unknown[]).push({ actorId: "a1", actorLink: true }, { actorId: "a2", actorLink: true });
+    (f.item.system.information as unknown[]).push({ id: "unknown", content: "outro segredo",
+      approaches: [{ skill: "research", difficulty: 12, showDifficultyToPlayers: true }] });
+    (f.item.system.information[0].approaches as unknown[]).push({ skill: "research", difficulty: 8, showDifficultyToPlayers: false });
+    const result = resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.a1");
+    expect("entries" in result && result.entries[0].knownGroups).toEqual([{ skill: "perception", clues: [{
+      text: "segredo", shareReference: { kind: "poi", itemUuid: "Item.poi", informationId: "clue" },
+    }] }]);
+    expect(JSON.stringify(result)).not.toContain("outro segredo");
+    expect("entries" in result && result.recapAvailable).toBe(true);
+    const noActor = resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.missing");
+    expect("entries" in noActor && noActor.entries[0].knownGroups).toEqual([]);
+    expect("entries" in noActor && noActor.shareAvailable).toBe(false);
   });
 
   it("forwards visibility and knowledge from a second GM to the active GM", async () => {

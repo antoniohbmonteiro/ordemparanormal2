@@ -12,6 +12,8 @@ import { readCheckRequestMessageLifecycle } from "../../adapters/foundry/chat/re
 import { renderPendingCheckRequestContent } from "../../adapters/foundry/chat/create-check-request-message";
 import { renderCheckCardContent } from "../../adapters/foundry/chat/render-check-card-content";
 import { activateCheckRequestChatController } from "../../ui/chat/check-request-chat-controller";
+import { readInvestigationRequest, renderInvestigationShareContent } from "../../adapters/foundry/points-of-interest/investigation-requests";
+import { activateInvestigationRequestChatController } from "../../ui/chat/investigation-request-chat-controller";
 
 const CHAT_MESSAGE_SHELL_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/chat-message-shell.hbs`;
@@ -79,6 +81,7 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
     }
 
     const user = game.user;
+    const investigationRequest = readInvestigationRequest(this);
     const canDelete =
       (options?.canDelete ?? user?.isGM === true) &&
       user != null &&
@@ -91,7 +94,10 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
           name: actor.name?.trim() || speakerName,
           ...(portraitImg ? { img: portraitImg } : {}),
         }
-      : undefined;
+      : investigationRequest?.kind === "share" ? {
+          name: investigationRequest.senderName ?? speakerName,
+          ...(investigationRequest.senderImg ? { img: investigationRequest.senderImg } : {}),
+        } : undefined;
     const authorName = this.author?.name.trim();
     const timestamp = formatChatMessageTime(this.timestamp);
     const metadataHeader: ChatMessageMetadataHeaderViewModel = {
@@ -111,7 +117,9 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
     );
     const checkRequest = readCheckRequestMessageLifecycle(this);
     let content = this.content;
-    if (checkRequest) {
+    if (checkRequest && investigationRequest?.kind === "share") {
+      content = await renderInvestigationShareContent(investigationRequest, checkRequest);
+    } else if (checkRequest) {
       content = "snapshot" in checkRequest
         ? await renderCheckCardContent(checkRequest.snapshot)
         : await renderPendingCheckRequestContent(checkRequest.state);
@@ -162,6 +170,7 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
     if (checkRequest?.state.status === "pending") {
       await activateCheckRequestChatController(this, shell, checkRequest.state);
     }
+    if (investigationRequest?.kind === "recap") activateInvestigationRequestChatController(this, shell, investigationRequest);
     return root;
   }
 

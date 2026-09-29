@@ -7,6 +7,13 @@ const { mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries, regis
 }));
 vi.mock("../adapters/foundry/points-of-interest/poi-runtime-queries", () => ({ mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries }));
 vi.mock("../adapters/foundry/points-of-interest/poi-investigation-query", () => ({ registerPoiInvestigationQuery }));
+vi.mock("../adapters/foundry/points-of-interest/investigation-runtime", () => ({ registerInvestigationRuntimeQueries: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/investigate-poi", () => ({ registerInvestigatePoiQuery: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/examine-poi", () => ({ registerExaminePoiQuery: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/commit-poi-examination", () => ({ registerCommitPoiExaminationQuery: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/interact-poi", () => ({ registerInteractPoiQuery: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/investigation-share", () => ({ registerShareCandidatesQuery: vi.fn() }));
+vi.mock("../adapters/foundry/points-of-interest/investigation-requests", () => ({ registerInvestigationRequestQueries: vi.fn(), onInvestigationCheckMessageUpdated: vi.fn() }));
 import { registerPoiInvestigation } from "./register-poi-investigation";
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 

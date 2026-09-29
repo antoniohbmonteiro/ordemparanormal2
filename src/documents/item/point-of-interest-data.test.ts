@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   POINT_OF_INTEREST_ALWAYS_AVAILABLE,
   addPointOfInterestApproach, addPointOfInterestInformation,
-  examinableAptitudeSpecializations, examinablePlayerInformation,
   isPointOfInterestInformationList, playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
   readPointOfInterestInformationAvailability,
   removePointOfInterestApproach, removePointOfInterestInformation,
@@ -143,17 +142,6 @@ describe("Point of Interest information availability", () => {
     expect(changed[0]).toEqual({ ...information[0], availability: situational });
     expect(updatePointOfInterestInformationAvailability(changed, "emailBox", always)).toEqual(information);
     expect(() => updatePointOfInterestInformationAvailability(information, "unknown", always)).toThrow();
-  });
-
-  it("derives examinable information and Aptitude specializations only from undiscovered projection entries", () => {
-    const skill = { key: "aptitude" as const, name: "Aptidão", information: [
-      { visibility: "hidden" as const, specialization: "currentAffairs" as const },
-      { visibility: "public" as const, difficulty: 8, specialization: "currentAffairs" as const },
-      { visibility: "hidden" as const, specialization: "humanities" as const, content: "Já conhecida" },
-    ] };
-    expect(examinablePlayerInformation(skill)).toHaveLength(2);
-    expect(examinableAptitudeSpecializations(skill)).toEqual(["currentAffairs"]);
-    expect(examinableAptitudeSpecializations({ ...skill, information: [skill.information[2]] })).toEqual([]);
   });
 
   it("keeps situational information from a player until their Agent knows it", () => {

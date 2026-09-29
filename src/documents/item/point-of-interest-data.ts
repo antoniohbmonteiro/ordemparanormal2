@@ -207,23 +207,11 @@ export function removePointOfInterestApproach(
 export type PoiInvestigationPlayerInformationView = (
   | { readonly visibility: "public"; readonly difficulty: number }
   | { readonly visibility: "hidden" }
-) & { readonly content?: string; readonly specialization?: AptitudeSpecializationKey };
+) & { readonly content: string; readonly specialization?: AptitudeSpecializationKey };
 export interface PoiInvestigationPlayerSkillView {
   readonly key: SkillKey;
   readonly name: string;
   readonly information: readonly PoiInvestigationPlayerInformationView[];
-}
-/**
- * Information a player can still examine for. The sanitized projection already omits unknown situational
- * information and carries content only for known information, so an entry without content is undiscovered.
- */
-export function examinablePlayerInformation(
-  skill: PoiInvestigationPlayerSkillView,
-): readonly PoiInvestigationPlayerInformationView[] {
-  return skill.information.filter(entry => !Object.hasOwn(entry, "content"));
-}
-export function examinableAptitudeSpecializations(skill: PoiInvestigationPlayerSkillView): readonly AptitudeSpecializationKey[] {
-  return [...new Set(examinablePlayerInformation(skill).flatMap(entry => entry.specialization ? [entry.specialization] : []))];
 }
 export interface PoiInvestigationGmInformationView {
   readonly id: string;
@@ -246,6 +234,7 @@ interface PoiInvestigationBaseViewData {
   readonly name: string;
   readonly description: string;
   readonly img: string;
+  readonly investigationRunId?: string | null;
 }
 export interface PoiInvestigationPlayerViewData extends PoiInvestigationBaseViewData {
   readonly audience: "player";

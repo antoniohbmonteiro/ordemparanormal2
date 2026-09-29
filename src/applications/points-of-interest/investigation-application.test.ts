@@ -25,34 +25,23 @@ it("renders private content only when supplied by the sanitized player projectio
   const agents = [{ uuid: "Actor.a", name: "Agent", selected: true }];
   const context = buildInvestigationRenderContext("POI", { view: {
     audience: "player", name: "POI", description: "Público", img: "", skills: [{ key: "perception", name: "Percepção", information: [
-      { visibility: "hidden", content: "Conhecida" }, { visibility: "hidden" },
+      { visibility: "hidden", content: "Conhecida" },
     ] }],
   } }, localize, agents);
   expect(context.canExamine).toBe(true);
-  expect(context.isPlayer && context.skills[0].information.map(row => row.content)).toEqual(["Conhecida", ""]);
+  expect(context.isPlayer && context.skills[0].information.map(row => row.content)).toEqual(["Conhecida"]);
 });
 
-it("offers Examinar only for skills that still have undiscovered information", () => {
+it("offers Examinar per skill during a run even when no information is known", () => {
   const context = buildInvestigationRenderContext("POI", { view: {
-    audience: "player", name: "POI", description: "", img: "", skills: [
-      { key: "perception", name: "Percepção", information: [{ visibility: "hidden", content: "Conhecida" }, { visibility: "hidden" }] },
-      // All known, e.g. an always information and a known situational one: nothing is left to examine.
+    audience: "player", name: "POI", description: "", img: "", investigationRunId: "run", skills: [
+      { key: "perception", name: "Percepção", information: [] },
       { key: "occultism", name: "Ocultismo", information: [{ visibility: "hidden", content: "A" }, { visibility: "public", difficulty: 8, content: "B" }] },
     ],
   } }, key => key, [{ uuid: "Actor.a", name: "Agent", selected: true }]);
-  expect(context.isPlayer && context.skills.map(skill => [skill.key, skill.hasUndiscovered])).toEqual([
-    ["perception", true], ["occultism", false],
+  expect(context.isPlayer && context.skills.map(skill => [skill.key, skill.canExamine, skill.informationCount])).toEqual([
+    ["perception", true, 1], ["occultism", true, 2],
   ]);
-});
-
-it("renders Examinar only for examinable skills and the situational mark only from GM rows", async () => {
-  const template = await readFile(fileURLToPath(new URL(
-    "../../../templates/points-of-interest/investigation-application.hbs", import.meta.url)), "utf8");
-  const examine = template.indexOf('data-action="examine"');
-  expect(template.lastIndexOf("{{#if ../hasUndiscovered}}", examine)).toBeGreaterThan(template.lastIndexOf("{{/if}}", examine));
-  const situational = template.indexOf("{{#if isSituational}}");
-  expect(template.indexOf("{{condition}}")).toBeGreaterThan(situational);
-  expect(template.indexOf("{{/if}}", situational)).toBeGreaterThan(template.indexOf("{{condition}}"));
 });
 
 it("marks situational information and its condition in the GM view", () => {

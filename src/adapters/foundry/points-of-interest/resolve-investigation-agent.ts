@@ -1,4 +1,5 @@
 import { canUserRollActor } from "../actors/agent-check-permission";
+import { investigationParticipants } from "./investigation-runtime";
 
 export type InvestigationAgentResolution =
   | { readonly ok: true; readonly actor: foundry.documents.Actor }
@@ -47,4 +48,15 @@ export function resolveInvestigationAgent(
   return isRollableAgent(character, user)
     ? { ok: true, actor: character }
     : { ok: false, reason: "none" };
+}
+
+/** Resolves a Player's owned World Agent represented by a linked Token in the requested Scene. */
+export function resolveSceneInvestigationAgent(sceneId: string): foundry.documents.Actor | null {
+  const scene = game.scenes.get(sceneId);
+  if (!scene || game.user?.isGM) return null;
+  const resolved = resolveInvestigationAgent();
+  if (!resolved.ok || !/^Actor\.[^.]+$/u.test(resolved.actor.uuid)
+    || !investigationParticipants(scene).some(participant => participant.uuid === resolved.actor.uuid)
+    || !resolved.actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)) return null;
+  return resolved.actor;
 }

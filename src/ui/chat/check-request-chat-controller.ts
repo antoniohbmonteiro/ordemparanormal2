@@ -4,6 +4,7 @@ import { resolveAgentCheckParticipant } from "../../adapters/foundry/actors/reso
 import { readCheckRequestMessageLifecycle } from "../../adapters/foundry/chat/read-check-request-message";
 import { SYSTEM_ID } from "../../config/system-config";
 import { rollCheckRequest } from "../../features/checks/roll-check-request";
+import { isShareCheckCurrentlyAuthorized, readInvestigationRequest } from "../../adapters/foundry/points-of-interest/investigation-requests";
 
 function isStillPending(message: ChatMessage): boolean {
   return readCheckRequestMessageLifecycle(message)?.state.status === "pending";
@@ -17,12 +18,12 @@ export async function activateCheckRequestChatController(
   const container = root.querySelector<HTMLElement>("[data-check-request-actions]");
   if (!container) return;
   const actor = await resolveAgentCheckParticipant(state.participant);
-  if (!actor || !canUserRollActor(actor, game.user)) return;
+  if (!actor || !canUserRollActor(actor, game.user) || !isShareCheckCurrentlyAuthorized(message)) return;
   const button = root.ownerDocument.createElement("button");
   button.type = "button";
   button.dataset.action = "roll-check-request";
   const rollLabel = game.i18n.localize("ORDEMPARANORMAL2.CheckRequestCard.Roll");
-  button.textContent = rollLabel;
+  button.textContent = readInvestigationRequest(message)?.kind === "share" ? "Pesquisar · DT 10" : rollLabel;
   button.addEventListener("click", async () => {
     let submitted = false;
     button.disabled = true;

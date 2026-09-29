@@ -1,0 +1,9 @@
+<article class="op2-investigation-share-card">
+  {{> chatCardHeader title=title subtitle=senderName}}
+  <p class="op2-investigation-share-card__agents">{{senderName}} <span aria-hidden="true">→</span> {{receiverName}}</p>
+  <p class="op2-investigation-share-card__label">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.ShareClue"}}</p>
+  <blockquote>{{clueText}}</blockquote>
+  <p>{{receiverName}} {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.ShareTransferred"}}</p>
+  {{#if resolved}}<p class="op2-investigation-share-card__result" role="status">{{resultLabel}} · {{total}}</p>{{/if}}
+  {{#if pending}}<div class="op2-check-request-card__actions" data-check-request-actions></div>{{/if}}
+</article>

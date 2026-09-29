@@ -5,22 +5,23 @@ import type {
 import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 
 import {
-  examinableAptitudeSpecializations,
-  examinablePlayerInformation,
   type PoiInvestigationGmSkillView,
   type PoiInvestigationPlayerSkillView,
 } from "../../documents/item/point-of-interest-data";
 import type { AgentCheckSelection } from "../../application/checks/build-agent-check";
-import { aptitudeSpecializationLabel, type SkillKey } from "../../config/skills";
+import { aptitudeSpecializationLabel, SKILL_DEFINITIONS, type SkillKey } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
 import { mutatePoi, subscribePoiInvalidation } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
 import {
   requestPoiInvestigationView,
 } from "../../adapters/foundry/points-of-interest/poi-investigation-query";
 import type { PoiInvestigationResult } from "../../adapters/foundry/points-of-interest/resolve-poi-investigation-view";
-import { performAgentCheck } from "../../features/checks/perform-agent-check";
+import { performAgentCheckWithResult } from "../../features/checks/perform-agent-check";
 import { selectInvestigationAptitudeSpecialization } from "./investigation-aptitude-selection";
 import { openPoiAgentRevealDialog } from "./poi-agent-reveal-dialog";
+import { resolveSceneInvestigationAgent } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
+import { commitPoiExamination } from "../../adapters/foundry/points-of-interest/commit-poi-examination";
+import type { ExaminePoiInput } from "../../adapters/foundry/points-of-interest/examine-poi";
 
 const INVESTIGATION_TEMPLATE =
   "systems/ordemparanormal2/templates/points-of-interest/investigation-application.hbs";
@@ -44,14 +45,13 @@ interface InvestigationRenderContextBase extends ApplicationRenderContext {
   readonly description: string;
   readonly img: string;
   readonly message: string;
-  readonly agents: readonly { readonly uuid: string; readonly name: string; readonly selected: boolean }[];
   readonly canExamine: boolean;
+  readonly investigationActive: boolean;
+  readonly feedback: string;
 }
 
 export interface PlayerInvestigationInformationRow {
-  readonly isFirst: boolean;
   readonly isHidden: boolean;
-  readonly isRevealed: boolean;
   readonly difficulty?: number;
   readonly content: string;
   readonly specializationLabel?: string;
@@ -61,8 +61,7 @@ export interface PlayerInvestigationSkillViewModel {
   readonly key: PoiInvestigationPlayerSkillView["key"];
   readonly name: string;
   readonly examineLabel: string;
-  /** Examinar is offered only while the skill still has information the Agent has not discovered. */
-  readonly hasUndiscovered: boolean;
+  readonly canExamine: boolean;
   readonly informationCount: number;
   readonly information: readonly PlayerInvestigationInformationRow[];
 }
@@ -118,9 +117,10 @@ export function buildInvestigationRenderContext(
   result: PoiInvestigationResult | null,
   localize: (key: string) => string,
   agents: readonly { readonly uuid: string; readonly name: string; readonly selected: boolean }[] = [],
+  feedback = "",
 ): InvestigationRenderContext {
   if (!result) {
-    return { isReady: false, isPlayer: false, isGm: false, name, description: "", img: "", skills: [], message: localize("Loading"), agents, canExamine: false };
+    return { isReady: false, isPlayer: false, isGm: false, name, description: "", img: "", skills: [], message: localize("Loading"), canExamine: false, investigationActive: false, feedback };
   }
   if ("view" in result) {
     const base = {
@@ -129,8 +129,9 @@ export function buildInvestigationRenderContext(
       description: result.view.description,
       img: result.view.img,
       message: "",
-      agents,
       canExamine: agents.some(agent => agent.selected),
+      investigationActive: !!result.view.investigationRunId,
+      feedback,
     };
     if (result.view.audience === "gm") {
       return {
@@ -166,13 +167,11 @@ export function buildInvestigationRenderContext(
         key: skill.key,
         name: skill.name,
         examineLabel: `${localize("ExamineWith")} ${skill.name}`,
-        hasUndiscovered: examinablePlayerInformation(skill).length > 0,
-        informationCount: skill.information.length,
-        information: skill.information.map((entry, index) => ({
-          isFirst: index === 0,
+        canExamine: !!result.view.investigationRunId && agents.some(agent => agent.selected),
+        informationCount: Math.max(1, skill.information.length),
+        information: skill.information.map(entry => ({
           isHidden: entry.visibility === "hidden",
-          isRevealed: Object.hasOwn(entry, "content"),
-          content: entry.content ?? "",
+          content: entry.content,
           ...(entry.specialization ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
           ...(entry.visibility === "public" ? { difficulty: entry.difficulty } : {}),
         })),
@@ -188,8 +187,9 @@ export function buildInvestigationRenderContext(
     img: "",
     skills: [],
     message: localize(result.error === "no-gm" ? "NoGm" : "Error"),
-    agents,
     canExamine: false,
+    investigationActive: false,
+    feedback,
   };
 }
 
@@ -213,7 +213,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       examine: InvestigationApplication.#onExamine,
       revealInformation: InvestigationApplication.#onRevealInformation,
     },
-    classes: ["ordemparanormal2", "op2-poi-investigation"],
+    classes: ["ordemparanormal2", "op2-investigation", "op2-poi-investigation"],
     window: { title: `${LOCALIZATION_ROOT}.Title`, resizable: true, contentClasses: ["op2-investigation-content"] },
     position: { width: 820, height: "auto" as const },
   };
@@ -224,45 +224,62 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 
   #params: InvestigationApplicationParams;
   #result: PoiInvestigationResult | null = null;
+  #resultActorUuid: string | null = null;
   #loadRevision = 0;
   #closed = false;
   #pendingExaminations = new Set<SkillKey>();
+  #uncommittedExaminations = new Map<string, ExaminePoiInput>();
   #actorUuid: string | null = null;
+  #feedback = "";
   #stopInvalidation: (() => void) | null = null;
+  #controlTokenHook: number | null = null;
+  #updateUserHook: number | null = null;
 
   constructor(params: InvestigationApplicationParams) {
     super({
       id: `op2-poi-investigation-${params.itemUuid.replaceAll(".", "-")}`,
+      position: { width: 820, height: game.user?.isGM ? 960 : 650 },
     });
     this.#params = params;
   }
 
   protected override async _prepareContext(): Promise<InvestigationRenderContext> {
     const agents = this.#agents().map(actor => ({ uuid: actor.uuid, name: actor.name, selected: actor.uuid === this.#actorUuid }));
+    if (!game.user?.isGM && this.#result && this.#resultActorUuid !== this.#actorUuid) {
+      this.#result = null;
+      queueMicrotask(() => { void this.refresh(); });
+    }
     return buildInvestigationRenderContext(this.#params.name, this.#result, key =>
       game.i18n.localize(`${LOCALIZATION_ROOT}.${key}`),
       agents,
+      this.#feedback,
     );
   }
 
   #agents(): foundry.documents.Actor[] {
-    if (game.user?.isGM) return [];
-    const agents = (game.actors.contents as foundry.documents.Actor[]).filter(actor => actor.type === "agent"
-      && actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER));
-    if (agents.length === 1 && !this.#actorUuid) this.#actorUuid = agents[0].uuid;
-    if (this.#actorUuid && !agents.some(actor => actor.uuid === this.#actorUuid)) this.#actorUuid = null;
-    return agents;
+    const actor = resolveSceneInvestigationAgent(this.#params.sceneId);
+    this.#actorUuid = actor?.uuid ?? null;
+    return actor ? [actor] : [];
   }
 
   updateContext(params: InvestigationApplicationParams): void {
     this.#params = params;
     this.#result = null;
+    this.#resultActorUuid = null;
+    this.#feedback = "";
+    this.#uncommittedExaminations.clear();
     void this.refresh();
   }
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
     await super._onFirstRender(context, options as never);
     this.#stopInvalidation = subscribePoiInvalidation(() => { void this.refresh(); });
+    if (!game.user?.isGM) {
+      this.#controlTokenHook = Hooks.on("controlToken", () => { void this.refresh(); });
+      this.#updateUserHook = Hooks.on("updateUser", (user: unknown) => {
+        if (user && typeof user === "object" && "id" in user && user.id === game.user?.id) void this.refresh();
+      });
+    }
     // Not awaited: _onFirstRender runs inside the render semaphore, and #load
     // triggers its own render() when the projection arrives.
     void this.#load();
@@ -270,11 +287,6 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 
   protected override _attachPartListeners(partId: string, element: HTMLElement, options: HandlebarsRenderOptions): void {
     super._attachPartListeners(partId, element, options);
-    element.querySelector<HTMLSelectElement>("[data-poi-agent]")?.addEventListener("change", event => {
-      this.#actorUuid = (event.currentTarget as HTMLSelectElement).value || null;
-      this.#result = null;
-      void this.refresh();
-    });
     const image = element.querySelector<HTMLImageElement>("[data-poi-image]");
     if (!image) return;
     const fallback = () => { image.hidden = true; };
@@ -284,6 +296,8 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 
   async #load(): Promise<void> {
     const revision = ++this.#loadRevision;
+    this.#agents();
+    const requestedActorUuid = this.#actorUuid;
     this.#result = null;
     void this.render();
     let result: PoiInvestigationResult;
@@ -291,7 +305,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       result = await requestPoiInvestigationView({
         sceneId: this.#params.sceneId,
         itemUuid: this.#params.itemUuid,
-        ...(this.#actorUuid ? { actorUuid: this.#actorUuid } : {}),
+        ...(requestedActorUuid ? { actorUuid: requestedActorUuid } : {}),
       });
     } catch (error) {
       console.error(`${SYSTEM_ID} | Failed to load POI investigation`, error);
@@ -299,6 +313,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     }
     if (this.#closed || revision !== this.#loadRevision) return;
     this.#result = result;
+    this.#resultActorUuid = requestedActorUuid;
     await this.render();
   }
 
@@ -323,9 +338,11 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     target: HTMLElement,
   ): Promise<void> {
     const view = this.#result && "view" in this.#result ? this.#result.view : null;
-    if (view?.audience !== "player") return;
+    if (view?.audience !== "player" || !view.investigationRunId
+      || resolveSceneInvestigationAgent(this.#params.sceneId)?.uuid !== this.#resultActorUuid) return;
     const skill = view.skills.find(({ key }) => key === target.dataset.skill);
     if (!skill || this.#pendingExaminations.has(skill.key)) return;
+    const { sceneId, itemUuid } = this.#params;
 
     const actor = this.#agents().find(candidate => candidate.uuid === this.#actorUuid);
     if (!actor) {
@@ -342,16 +359,39 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     }
 
     try {
-      let selection: AgentCheckSelection | null;
-      if (skill.key === "aptitude") {
-        const specialization = await selectInvestigationAptitudeSpecialization(examinableAptitudeSpecializations(skill));
-        selection = specialization
-          ? { kind: "aptitude", key: specialization }
-          : null;
-      } else {
-        selection = { kind: "skill", key: skill.key };
+      const commitKey = `${actor.uuid}:${skill.key}`;
+      let pending = this.#uncommittedExaminations.get(commitKey);
+      if (pending && pending.runId !== view.investigationRunId) {
+        this.#uncommittedExaminations.delete(commitKey);
+        pending = undefined;
       }
-      if (selection) await performAgentCheck(actor, selection);
+      if (!pending) {
+        let selection: AgentCheckSelection | null;
+        if (skill.key === "aptitude") {
+          const definition = SKILL_DEFINITIONS.find(candidate => candidate.key === "aptitude");
+          const specialization = definition && "specializations" in definition
+            ? await selectInvestigationAptitudeSpecialization(definition.specializations.map(candidate => candidate.key)) : null;
+          selection = specialization ? { kind: "aptitude", key: specialization } : null;
+        } else selection = { kind: "skill", key: skill.key };
+        if (!selection) return;
+        const check = await performAgentCheckWithResult(actor, selection);
+        if (!check) return;
+        pending = { sceneId, runId: view.investigationRunId,
+          itemUuid, actorUuid: actor.uuid, skill: skill.key,
+          ...(skill.key === "aptitude" ? { specialization: selection.key } : {}), messageId: check.messageId };
+        this.#uncommittedExaminations.set(commitKey, pending);
+      }
+      if (this.#params.sceneId !== sceneId || this.#params.itemUuid !== itemUuid
+        || resolveSceneInvestigationAgent(sceneId)?.uuid !== actor.uuid) return;
+      const outcome = await commitPoiExamination(pending);
+      if (!outcome.ok) throw new Error(`Examinar failed: ${outcome.reason}`);
+      this.#uncommittedExaminations.delete(commitKey);
+      const totalNew = outcome.passiveCount + outcome.newCount;
+      this.#feedback = totalNew > 0
+        ? `${totalNew} ${game.i18n.localize(`${LOCALIZATION_ROOT}.NewInformation`)}`
+          + (outcome.lostPd ? ` · ${game.i18n.localize(`${LOCALIZATION_ROOT}.LostPd`)}` : "")
+        : game.i18n.localize(`${LOCALIZATION_ROOT}.${outcome.lostPd ? "NoNewLostPd" : "NoNew"}`);
+      await this.refresh();
     } catch (error) {
       console.error(`${SYSTEM_ID} | Failed to examine POI`, error);
       ui.notifications.error(game.i18n.localize(`${LOCALIZATION_ROOT}.CheckFailed`));
@@ -411,6 +451,8 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   protected override _onClose(options: ApplicationClosingOptions): void {
     this.#closed = true;
     this.#stopInvalidation?.();
+    if (this.#controlTokenHook !== null) Hooks.off("controlToken", this.#controlTokenHook);
+    if (this.#updateUserHook !== null) Hooks.off("updateUser", this.#updateUserHook);
     super._onClose(options);
     releaseInvestigationApplication(this.#params.itemUuid);
   }

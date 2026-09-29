@@ -34,7 +34,7 @@ describe("Check Request chat controller", () => {
       ownerDocument: { createElement: vi.fn(() => button) },
       querySelector: vi.fn(() => container),
     } as unknown as HTMLElement;
-    await activateCheckRequestChatController({ id: "message" } as ChatMessage, root, state);
+    await activateCheckRequestChatController({ id: "message", getFlag: () => undefined } as unknown as ChatMessage, root, state);
     expect(container.replaceChildren).toHaveBeenCalledExactlyOnceWith(button);
 
     mocks.canRoll.mockReturnValue(false);

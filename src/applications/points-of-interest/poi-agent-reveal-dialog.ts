@@ -20,11 +20,13 @@ export function openPoiAgentRevealDialog(sceneId: string): Promise<readonly stri
       return { box, actor };
     });
     all.addEventListener("click", () => { for (const { box, actor } of boxes) box.checked = !!actor.id && sceneIds.has(actor.id); });
+    const dialogContent = document.createElement("div");
     const mount = document.createElement("div");
     mount.className = "op2-poi-agent-dialog-mount";
+    dialogContent.append(mount);
     const dialog = new foundry.applications.api.DialogV2({
       window: { title: game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.Investigation.SelectRecipients") },
-      position: { width: 440 }, content: mount,
+      position: { width: 440 }, content: dialogContent,
       buttons: [
         { action: "confirm", label: game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"),
           default: true, callback: () => resolve(boxes.filter(({ box }) => box.checked).map(({ actor }) => actor.uuid)) },

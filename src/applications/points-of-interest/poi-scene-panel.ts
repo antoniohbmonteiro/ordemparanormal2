@@ -172,20 +172,16 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
       || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== this.#actorUuid) return;
     const actorUuid = this.#actorUuid;
     const root = "ORDEMPARANORMAL2.PointOfInterest.Investigation";
-    const text = await foundry.applications.api.DialogV2.input<string | null>({
+    const confirmed = await foundry.applications.api.DialogV2.input<boolean>({
       classes: ["ordemparanormal2", "op2-investigation"], modal: true,
-      content: `<label>${game.i18n.localize(`${root}.RecapDescription`)}<textarea name="recap" maxlength="4000" required></textarea></label>`,
-      ok: { action: "send", label: `${root}.SendInteraction`, default: true,
-        callback: (_event, button) => {
-          const field = button.form?.elements.namedItem("recap");
-          return field instanceof HTMLTextAreaElement ? field.value.trim() : null;
-        } },
+      content: `<div class="op2-investigation-recap-prompt"><p>${game.i18n.localize(`${root}.RecapPrompt`)}</p><p>${game.i18n.localize(`${root}.RecapExplanation`)}</p></div>`,
+      ok: { action: "send", label: `${root}.RequestRecap`, default: true, callback: () => true },
       position: { width: 460 }, rejectClose: false,
       window: { title: game.i18n.localize(`${root}.Recap`) },
     });
-    if (!text || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== actorUuid) return;
+    if (!confirmed || resolveSceneInvestigationAgent(this.#sceneId)?.uuid !== actorUuid) return;
     const sent = await requestInvestigationAction({ kind: "recap", sceneId: this.#sceneId,
-      runId: result.runId, actorUuid, text });
+      runId: result.runId, actorUuid });
     ui.notifications[sent.ok ? "info" : "error"](game.i18n.localize(`${root}.${sent.ok ? "RequestSent" : "RequestFailed"}`));
   }
 
@@ -238,7 +234,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   async #showUsers(uuid: string): Promise<void> {
     const current = worldPoi(uuid);
     const visibility = current ? readPoiVisibility(current) : null;
-    const users = await openPoiUserRevealDialog(visibility?.mode === "users" ? visibility.users : []);
+    const users = await openPoiUserRevealDialog(visibility?.mode === "users" ? visibility.users : [], this.#sceneId);
     if (users) await this.#visibility(uuid, "users", users);
   }
 

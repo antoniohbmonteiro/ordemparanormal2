@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   importAdventureScenes: vi.fn(),
   importAdventureAgents: vi.fn(),
   importAdventurePois: vi.fn(),
+  registerImportedPoisInScenes: vi.fn(),
   createAdventurePoiItemPort: vi.fn(),
   analyzeAdventureSources: vi.fn(),
   analyzePdfSource: vi.fn(),
@@ -68,6 +69,7 @@ vi.mock("../../features/adventure-import/import-adventure-pois", async (importOr
   return { ...original, importAdventurePois: mocks.importAdventurePois };
 });
 vi.mock("../../adapters/foundry/adventure-poi-items", () => ({ createAdventurePoiItemPort: mocks.createAdventurePoiItemPort }));
+vi.mock("../../adapters/foundry/register-imported-pois-in-scenes", () => ({ registerImportedPoisInScenes: mocks.registerImportedPoisInScenes }));
 vi.mock("./adventure-import-poi-conflict-dialog", () => ({ openAdventureImportPoiConflictDialog: vi.fn() }));
 
 vi.mock("../../features/adventure-import/import-adventure-agents", async (importOriginal) => {
@@ -267,6 +269,7 @@ beforeEach(() => {
   mocks.createAdventurePoiItemPort.mockReset().mockReturnValue({ isAuthorized: () => true });
   mocks.importAdventureAgents.mockReset().mockResolvedValue({ created: 10, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
   mocks.importAdventureScenes.mockReset().mockResolvedValue({ created: 1, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
+  mocks.registerImportedPoisInScenes.mockReset().mockResolvedValue([]);
   vi.stubGlobal("game", {
     user: { isGM: true, id: "gm" },
     users: { activeGM: { id: "gm" } },

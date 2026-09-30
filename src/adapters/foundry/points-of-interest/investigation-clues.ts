@@ -62,7 +62,7 @@ async function ensureJournal(scene: foundry.documents.Scene): Promise<foundry.do
 }
 
 export async function createNarrativeClue(
-  scene: foundry.documents.Scene, runId: string, text: string, actorUuids: readonly string[],
+  scene: foundry.documents.Scene, runId: string, text: string, actorUuids: readonly string[], clueId: string = crypto.randomUUID(),
 ): Promise<NarrativeClue> {
   return serializePoiItemMutation(`investigation-journal:${scene.id}`, async () => {
     if (!game.user?.isGM || game.users.activeGM?.id !== game.user.id) throw new Error("Only the active GM can create clues.");
@@ -72,7 +72,14 @@ export async function createNarrativeClue(
     if (actorUuids.some(uuid => !participants.has(uuid))) throw new Error("Invalid clue recipient.");
     const journal = await ensureJournal(scene);
     if (sceneInvestigationRuntime(scene)?.runId !== runId) throw new Error("Investigation is no longer active.");
-    const clue: NarrativeClue = { id: crypto.randomUUID(), runId, text: text.trim(),
+    const existing = readJournalClues(journal).find(clue => clue.id === clueId);
+    if (existing) {
+      if (existing.runId !== runId || existing.text !== text.trim()
+        || JSON.stringify(existing.knownAgentUuids) !== JSON.stringify([...new Set(actorUuids)]))
+        throw new Error("Narrative clue ID already belongs to another grant.");
+      return existing;
+    }
+    const clue: NarrativeClue = { id: clueId, runId, text: text.trim(),
       knownAgentUuids: [...new Set(actorUuids)] };
     await journal.update({ [JOURNAL_STATE_PATH]: foundry.data.operators.ForcedReplacement.create({
       schemaVersion: 1, sceneId: scene.id, clues: [...readJournalClues(journal), clue],

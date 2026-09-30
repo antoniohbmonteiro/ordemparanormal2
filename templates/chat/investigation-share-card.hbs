@@ -5,5 +5,14 @@
   <blockquote>{{clueText}}</blockquote>
   <p>{{receiverName}} {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.ShareTransferred"}}</p>
   {{#if resolved}}<p class="op2-investigation-share-card__result" role="status">{{resultLabel}} · {{total}}</p>{{/if}}
+  {{#if success}}
+    <p class="op2-investigation-share-card__deduction">{{receiverName}} {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.ShareDeduction"}}</p>
+    {{#if grantPending}}
+      <p>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.ShareGrantPrompt"}}</p>
+      {{#if canGrant}}<div class="op2-check-request-card__actions op2-investigation-share-card__grant-actions"><button type="button" data-investigation-share-grant>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.GrantClue"}}</button></div>{{/if}}
+    {{else}}
+      {{#if grantResolved}}<p>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.ShareGrantResolved"}}</p>{{/if}}
+    {{/if}}
+  {{/if}}
   {{#if pending}}<div class="op2-check-request-card__actions" data-check-request-actions></div>{{/if}}
 </article>

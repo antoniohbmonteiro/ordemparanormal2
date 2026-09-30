@@ -35,6 +35,7 @@ import { createAdventureAgentActorPort } from "../../adapters/foundry/adventure-
 import { openAdventureImportAgentConflictDialog } from "./adventure-import-agent-conflict-dialog";
 import { PLAYTEST_ALPHA_SCENE_PRESETS } from "../../config/adventure-scene-presets/playtest-alpha";
 import { createAdventureScenePort } from "../../adapters/foundry/adventure-scenes";
+import { registerImportedPoisInScenes } from "../../adapters/foundry/register-imported-pois-in-scenes";
 import { importAdventureScenes, SceneImportError } from "../../features/adventure-import/import-adventure-scenes";
 import { materializeAdventureDerivedAssets } from "../../features/adventure-import/materialize-adventure-derived-assets";
 import { createAdventureFolderPort } from "../../adapters/foundry/adventure-folders";
@@ -544,6 +545,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       });
       if (agents.cancelled) { ui.notifications.warn(localize("Actions.AgentsCancelled")); return; }
       if (agents.preserved) summaries.push(format("Actions.AgentsSummary", { created: String(agents.created), updated: String(agents.updated), unchanged: String(agents.unchanged), preserved: String(agents.preserved) }));
+      const catalogWarnings: string[] = [];
       if (PLAYTEST_ALPHA_SCENE_PRESETS.some(p => this.#result!.materializedActs.includes(p.act))) {
         stage = "scenes";
         this.#progress = localize("Actions.ScenesPreparing");
@@ -571,8 +573,10 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           return;
         }
         summaries.push(format("Actions.ScenesSummary", { created: String(scenes.created), updated: String(scenes.updated), unchanged: String(scenes.unchanged), preserved: String(scenes.preserved) }));
+        catalogWarnings.push(...await registerImportedPoisInScenes(PLAYTEST_ALPHA_ADVENTURE.id,
+          poiPreparation.presets, PLAYTEST_ALPHA_SCENE_PRESETS, this.#result.materializedActs));
       }
-      this.#completionWarnings = (this.#result.warnings ?? []).map((warning) => warning.path);
+      this.#completionWarnings = [...(this.#result.warnings ?? []).map((warning) => warning.path), ...catalogWarnings];
       ui.notifications.info([localize("Actions.ImportSuccess"),
         ...(this.#completionWarnings.length ? [format("Actions.ImportSuccessWithWarnings", {
           count: String(this.#completionWarnings.length),

@@ -211,6 +211,9 @@ export type PoiInvestigationPlayerInformationView = (
 export interface PoiInvestigationPlayerSkillView {
   readonly key: SkillKey;
   readonly name: string;
+  readonly specialization?: AptitudeSpecializationKey;
+  /** Distinct public base DTs; carries no information IDs or hidden row counts. */
+  readonly publicDifficulties: readonly number[];
   readonly information: readonly PoiInvestigationPlayerInformationView[];
 }
 export interface PoiInvestigationGmInformationView {

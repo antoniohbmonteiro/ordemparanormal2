@@ -1,5 +1,6 @@
 import { SYSTEM_ID } from "../../config/system-config";
 import { listPlayerUsers } from "../../adapters/foundry/users/list-player-users";
+import { resolveSceneInvestigationAgentForUser } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
 
 const localize = (key: string) => game.i18n.localize(`ORDEMPARANORMAL2.PointOfInterest.Reveal.Dialog.${key}`);
 
@@ -9,6 +10,7 @@ const localize = (key: string) => game.i18n.localize(`ORDEMPARANORMAL2.PointOfIn
  */
 export function openPoiUserRevealDialog(
   preselected: readonly string[],
+  sceneId?: string,
 ): Promise<readonly string[] | null> {
   return new Promise(resolve => {
     let settled = false;
@@ -19,6 +21,7 @@ export function openPoiUserRevealDialog(
     };
 
     const players = listPlayerUsers();
+    const scene = sceneId ? game.scenes.get(sceneId) : null;
     const chosen = new Set(preselected);
 
     const content = document.createElement("div");
@@ -35,9 +38,16 @@ export function openPoiUserRevealDialog(
       checkbox.type = "checkbox";
       checkbox.value = player.id;
       checkbox.checked = chosen.has(player.id);
-      const name = document.createElement("span");
-      name.textContent = player.name;
-      row.append(checkbox, name);
+      const identity = document.createElement("span");
+      identity.className = "op2-poi-reveal-dialog__identity";
+      const user = (game.users as unknown as { get(id: string): foundry.documents.User | undefined } | undefined)?.get(player.id);
+      const agent = scene && user ? resolveSceneInvestigationAgentForUser(scene, user) : null;
+      const name = document.createElement("strong");
+      name.textContent = agent?.name ?? player.name;
+      const detail = document.createElement("small");
+      detail.textContent = agent ? `Jogador: ${player.name}` : "Sem personagem na cena";
+      identity.append(name, detail);
+      row.append(checkbox, identity);
       content.append(row);
       checkboxes.push(checkbox);
     }

@@ -18,4 +18,17 @@ describe("investigation runtime", () => {
     expect(readInvestigationRuntime({ schemaVersion: 1, runId: "run-1", round: 0,
       actedAgentUuids: [] })).toBeNull();
   });
+
+  it("preserves the Share lock, pending award, and claimed clue across rounds", () => {
+    const runtime = readInvestigationRuntime({ schemaVersion: 1, runId: "run-1", round: 2,
+      actedAgentUuids: ["Actor.a"], shareSuccessActorUuid: "Actor.a", shareSuccessMessageId: "check-1",
+      shareCluePending: true, shareClueGrant: { kind: "new", clueId: "award-id", text: "Pista",
+        recipientActorUuids: ["Actor.b"] } });
+    expect(runtime?.shareCluePending).toBe(true);
+    expect(advanceInvestigationRound(runtime!)).toMatchObject({ round: 3, actedAgentUuids: [],
+      shareSuccessActorUuid: "Actor.a", shareSuccessMessageId: "check-1", shareCluePending: true,
+      shareClueGrant: { clueId: "award-id" } });
+    expect(readInvestigationRuntime({ schemaVersion: 1, runId: "run-1", round: 1,
+      actedAgentUuids: [], shareCluePending: true })).toBeNull();
+  });
 });

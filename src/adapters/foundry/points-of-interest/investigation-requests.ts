@@ -4,6 +4,7 @@ import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-
 import { investigationParticipants, recordInvestigationActionSuccess, sceneInvestigationRuntime } from "./investigation-runtime";
 import { requestShareCandidates, transferShareClue, type ShareClueReference } from "./investigation-share";
 import { openCreateInvestigationClueDialog } from "../../../applications/points-of-interest/investigation-clue-dialog";
+import { refreshInvestigationShareCard } from "./refresh-investigation-share-card";
 import type { CheckRequestMessageLifecycle } from "../chat/read-check-request-message";
 import { serializePoiItemMutation } from "./poi-runtime-queries";
 
@@ -30,7 +31,7 @@ export interface InvestigationRequestState {
   readonly checkMessageId?: string;
 }
 export type InvestigationRequestInput =
-  | { readonly kind: "recap"; readonly sceneId: string; readonly runId: string; readonly actorUuid: string; readonly text: string }
+  | { readonly kind: "recap"; readonly sceneId: string; readonly runId: string; readonly actorUuid: string }
   | { readonly kind: "share"; readonly sceneId: string; readonly runId: string; readonly actorUuid: string;
       readonly receiverActorUuid: string; readonly clue: ShareClueReference };
 export type InvestigationRequestResult = { readonly ok: true } |
@@ -69,15 +70,23 @@ async function renderRequest(state: InvestigationRequestState, actorName: string
 }
 
 export async function renderInvestigationShareContent(
-  state: InvestigationRequestState, lifecycle: CheckRequestMessageLifecycle,
+  state: InvestigationRequestState, lifecycle: CheckRequestMessageLifecycle, messageId?: string,
 ): Promise<string> {
   await ensureSharedPartialsLoaded();
   const snapshot = "snapshot" in lifecycle ? lifecycle.snapshot : null;
+  const scene = game.scenes?.get(state.sceneId);
+  const runtime = scene ? sceneInvestigationRuntime(scene) : null;
+  const matchingSuccess = !!snapshot && snapshot.outcome === "success" && runtime?.runId === state.runId
+    && runtime.shareSuccessMessageId === messageId;
+  const grantPending = matchingSuccess && runtime.shareCluePending === true;
+  const grantResolved = matchingSuccess && runtime.shareCluePending === false;
+  const canGrant = grantPending && !!game.user?.isGM && game.users.activeGM?.id === game.user.id;
   return foundry.applications.handlebars.renderTemplate(
     `systems/${SYSTEM_ID}/templates/chat/investigation-share-card.hbs`,
     { title: game.i18n.localize(`${ROOT}.Share`), senderName: state.senderName ?? "",
       receiverName: state.receiverName ?? "", clueText: state.clueText ?? "",
       pending: !snapshot, resolved: !!snapshot, success: snapshot?.outcome === "success",
+      grantPending, grantResolved, canGrant, sceneId: state.sceneId, runId: state.runId,
       total: snapshot?.total, resultLabel: snapshot
         ? game.i18n.localize(`${ROOT}.${snapshot.outcome === "success" ? "Success" : "Failure"}`) : "" },
   );
@@ -122,10 +131,8 @@ export async function resolveInvestigationRequest(
   let state: InvestigationRequestState;
   let receiverName = "";
   if (input.kind === "recap") {
-    if (typeof input.text !== "string" || !input.text.trim() || input.text.length > 4000)
-      return { ok: false, reason: "invalid" };
     state = { schemaVersion: 1, kind: "recap", status: "pending", sceneId: scene.id!, runId: runtime.runId,
-      actorUuid: actor.uuid, text: input.text.trim() };
+      actorUuid: actor.uuid };
   } else {
     const receiver = /^Actor\.[^.]+$/u.test(input.receiverActorUuid) ? game.actors.get(input.receiverActorUuid.slice(6)) : null;
     if (!receiver || receiver.uuid === actor.uuid || !investigationParticipants(scene).some(agent => agent.uuid === receiver.uuid))
@@ -213,11 +220,10 @@ export async function onInvestigationCheckMessageUpdated(message: ChatMessage): 
     if (!lifecycle || !("snapshot" in lifecycle) || lifecycle.snapshot.difficulty !== 10
       || lifecycle.snapshot.outcome !== "success" || lifecycle.state.participant.kind !== "actor"
       || lifecycle.state.participant.uuid !== direct.receiverActorUuid || lifecycle.state.selection.key !== "research") return;
-    const recorded = await recordInvestigationActionSuccess(direct.sceneId, direct.runId, direct.actorUuid, "share");
+    const recorded = await recordInvestigationActionSuccess(direct.sceneId, direct.runId, direct.actorUuid, "share", message.id);
     if (recorded) {
-      ui.notifications.info(game.i18n.localize(`${ROOT}.ChooseClue`));
-      try { await openCreateInvestigationClueDialog(direct.sceneId, direct.runId); }
-      catch (error) { console.error(`${SYSTEM_ID} | Failed to open clue dialog`, error); }
+      await refreshInvestigationShareCard(message.id!).catch(error =>
+        console.error(`${SYSTEM_ID} | Failed to refresh Share card`, error));
     }
     return;
   }
@@ -238,11 +244,17 @@ export async function onInvestigationCheckMessageUpdated(message: ChatMessage): 
     || lifecycle.snapshot.outcome !== "success"
     || lifecycle.state.participant.kind !== "actor" || lifecycle.state.participant.uuid !== state.checkActorUuid
     || lifecycle.state.selection.key !== (state.kind === "recap" ? "intuition" : "research")) return;
-  const recorded = await recordInvestigationActionSuccess(state.sceneId, state.runId, state.actorUuid, state.kind);
+  const recorded = state.kind === "share"
+    ? await recordInvestigationActionSuccess(state.sceneId, state.runId, state.actorUuid, "share", message.id)
+    : await recordInvestigationActionSuccess(state.sceneId, state.runId, state.actorUuid, "recap");
   if (recorded) {
-    ui.notifications.info(game.i18n.localize(`${ROOT}.ChooseClue`));
-    try { await openCreateInvestigationClueDialog(state.sceneId, state.runId); }
-    catch (error) { console.error(`${SYSTEM_ID} | Failed to open clue dialog`, error); }
+    if (state.kind === "share") await refreshInvestigationShareCard(message.id!).catch(error =>
+      console.error(`${SYSTEM_ID} | Failed to refresh Share card`, error));
+    else {
+      ui.notifications.info(game.i18n.localize(`${ROOT}.ChooseClue`));
+      try { await openCreateInvestigationClueDialog(state.sceneId, state.runId); }
+      catch (error) { console.error(`${SYSTEM_ID} | Failed to open clue dialog`, error); }
+    }
   }
 }
 

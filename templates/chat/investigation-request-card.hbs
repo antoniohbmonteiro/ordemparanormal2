@@ -1,7 +1,9 @@
-<article class="op2-investigation-request-card">
+<article class="op2-investigation-request-card op2-check-request-card">
   {{> chatCardHeader title=title subtitle=actorName}}
-  {{#if receiverName}}<p>{{receiverName}}</p>{{/if}}
-  {{#if text}}<p>{{text}}</p>{{/if}}
-  <p role="status">{{status}}</p>
-  {{#if pending}}<div data-investigation-request-actions></div>{{/if}}
+  <section class="op2-check-request-card__body">
+    {{#if receiverName}}<p class="op2-check-request-card__context">{{receiverName}}</p>{{/if}}
+    {{#if text}}<p class="op2-check-request-card__context">{{text}}</p>{{/if}}
+    <p class="op2-check-request-card__status" role="status">{{status}}</p>
+    {{#if pending}}<div class="op2-check-request-card__actions op2-investigation-request-card__actions" data-investigation-request-actions></div>{{/if}}
+  </section>
 </article>

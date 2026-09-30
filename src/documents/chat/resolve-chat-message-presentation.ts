@@ -101,7 +101,8 @@ export function resolveChatMessageShellEligibility(
   message: ChatMessage,
 ): ChatMessageShellEligibility | null {
   if (message.getFlag(SYSTEM_ID, "investigationInteraction")
-    || message.getFlag(SYSTEM_ID, "investigationRequest")) return { kind: "card", accentColor: null };
+    || message.getFlag(SYSTEM_ID, "investigationRequest")
+    || message.getFlag(SYSTEM_ID, "poiExaminationResult")) return { kind: "card", accentColor: null };
   const checkSnapshot = message.getFlag(SYSTEM_ID, "check");
   if (isSupportedCheckSnapshot(checkSnapshot)) {
     return {

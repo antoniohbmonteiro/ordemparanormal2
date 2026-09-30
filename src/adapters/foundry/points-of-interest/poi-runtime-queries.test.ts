@@ -17,6 +17,7 @@ function world() {
     update: vi.fn(async (data: Record<string, unknown>) => {
       if (data["flags.ordemparanormal2.pointOfInterestVisibility"]) flags.pointOfInterestVisibility = data["flags.ordemparanormal2.pointOfInterestVisibility"];
       if (data["flags.ordemparanormal2.pointOfInterestKnowledge"]) flags.pointOfInterestKnowledge = data["flags.ordemparanormal2.pointOfInterestKnowledge"];
+      if (data["flags.ordemparanormal2.pointOfInterestDiscovery"]) flags.pointOfInterestDiscovery = data["flags.ordemparanormal2.pointOfInterestDiscovery"];
     }) };
   const actor = { id: "a1", uuid: "Actor.a1", type: "agent", name: "Agente A", img: "", testUserPermission: () => true };
   const otherActor = { id: "a2", uuid: "Actor.a2", type: "agent", name: "Agente B", img: "", testUserPermission: () => true };
@@ -112,6 +113,43 @@ describe("POI runtime ownership", () => {
     const noActor = resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.missing");
     expect("entries" in noActor && noActor.entries[0].knownGroups).toEqual([]);
     expect("entries" in noActor && noActor.shareAvailable).toBe(false);
+  });
+
+  it("offers Compartilhar only for knowledge discovered in the current run before the global lock", () => {
+    const f = world();
+    f.sceneFlags.pointOfInterestItems = ["Item.poi"];
+    f.sceneFlags.pointOfInterestVisibility = { mode: "everyone", users: [], notified: [] };
+    f.flags.pointOfInterestVisibility = { mode: "everyone", users: [], notified: [] };
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a1", informationIds: ["clue"] }] };
+    (f.scene.tokens as unknown[]).push({ actorId: "a1", actorLink: true });
+    const project = () => resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.a1");
+    const reference = () => {
+      const result = project();
+      return "entries" in result ? result.entries[0].knownGroups?.[0]?.clues[0]?.shareReference : undefined;
+    };
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "current", round: 1, actedAgentUuids: [] };
+    f.flags.pointOfInterestDiscovery = [{ runId: "old", actorUuid: "Actor.a1", informationId: "clue" }];
+    expect(reference()).toBeUndefined();
+    f.flags.pointOfInterestDiscovery = [{ runId: "current", actorUuid: "Actor.a1", informationId: "clue" }];
+    expect(reference()).toEqual({ kind: "poi", itemUuid: "Item.poi", informationId: "clue" });
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "current", round: 1,
+      actedAgentUuids: [], shareSuccessActorUuid: "Actor.a1" };
+    expect(reference()).toBeUndefined();
+    const locked = project();
+    expect("entries" in locked && locked.shareAvailable).toBe(false);
+  });
+
+  it("records manual Reveal provenance only for newly known participants in an active run", async () => {
+    const f = world();
+    f.sceneFlags.pointOfInterestItems = ["Item.poi"];
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "current", round: 1, actedAgentUuids: [] };
+    (f.scene.tokens as unknown[]).push({ actorId: "a1", actorLink: true });
+    const reveal = () => mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi",
+      informationId: "clue", actorUuids: ["Actor.a1"] });
+    expect(await reveal()).toEqual({ ok: true });
+    expect(f.flags.pointOfInterestDiscovery).toEqual([{ runId: "current", actorUuid: "Actor.a1", informationId: "clue" }]);
+    expect(await reveal()).toEqual({ ok: true });
+    expect(f.item.update).toHaveBeenCalledOnce();
   });
 
   it("forwards visibility and knowledge from a second GM to the active GM", async () => {

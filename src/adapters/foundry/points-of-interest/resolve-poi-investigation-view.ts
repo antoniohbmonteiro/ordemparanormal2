@@ -1,6 +1,6 @@
 import { skillLabel, type SkillKey } from "../../../config/skills";
 import {
-  playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
+  approachIdentity, playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
   type PointOfInterestApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
@@ -67,7 +67,14 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   const investigationRuntime = currentScene ? sceneInvestigationRuntime(currentScene) : null;
   const base = { name: latest.item.name, description, img: latest.item.img ?? "",
     investigationRunId: investigationRuntime?.runId ?? null };
-  const groups = groupApproaches(user.isGM ? information : playerVisiblePointOfInterestInformation(information, known));
+  const groups = groupApproaches(information);
+  const playerGroups = new Map<string, DerivedRow[]>();
+  for (const entry of playerVisiblePointOfInterestInformation(information, known)) for (const approach of entry.approaches) {
+    const key = approachIdentity(approach);
+    const rows = playerGroups.get(key) ?? [];
+    rows.push({ entry, approach });
+    playerGroups.set(key, rows);
+  }
   const view: PoiInvestigationViewData = user.isGM
     ? { ...base, audience: "gm", itemUuid: latest.item.uuid, gmContext,
         skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
@@ -78,7 +85,11 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
             ...(approach.difficultyOverride ? { difficultyOverride: { ...approach.difficultyOverride } } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
     : { ...base, audience: "player",
-      skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
+      skills: [...playerGroups.values()].map(rows => ({ key: rows[0].approach.skill, name: skillLabel(rows[0].approach.skill),
+        ...(rows[0].approach.skill === "aptitude" ? { specialization: rows[0].approach.specialization } : {}),
+        publicDifficulties: [...new Set(rows.filter(({ entry, approach }) =>
+          approach.showDifficultyToPlayers && (entry.availability.mode === "always" || known.has(entry.id)))
+          .map(({ approach }) => approach.difficulty))],
         information: rows.filter(({ entry }) => known.has(entry.id)).map(({ entry, approach }) => ({
           ...(approach.showDifficultyToPlayers ? { visibility: "public" as const, difficulty: approach.difficulty } : { visibility: "hidden" as const }),
           ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),

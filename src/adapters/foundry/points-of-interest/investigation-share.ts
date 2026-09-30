@@ -2,9 +2,26 @@ import { SYSTEM_ID } from "../../../config/system-config";
 import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { narrativeCluesForScene, transferNarrativeClue } from "./investigation-clues";
 import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
-import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
+import { readPoiDiscoveries } from "./poi-discovery";
 import { broadcastPoiInvalidation, serializePoiItemMutation } from "./poi-runtime-queries";
-import { POI_KNOWLEDGE_PATH, readPoiKnowledge, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
+import { POI_KNOWLEDGE_PATH, POI_VISIBILITY_PATH, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
+
+const POI_SHARES_FLAG = "pointOfInterestShares";
+const POI_SHARES_PATH = `flags.${SYSTEM_ID}.${POI_SHARES_FLAG}`;
+
+function shares(item: foundry.documents.Item): Array<{ runId: string; fromActorUuid: string; toActorUuid: string; informationId: string }> {
+  const raw = item.getFlag(SYSTEM_ID, POI_SHARES_FLAG);
+  return Array.isArray(raw) ? raw.filter(value => value && typeof value === "object"
+    && typeof value.runId === "string" && typeof value.fromActorUuid === "string"
+    && typeof value.toActorUuid === "string" && typeof value.informationId === "string") : [];
+}
+
+/** Visibility remains user-based even when the share targets an Agent. */
+export function receiverPlayerIds(actor: foundry.documents.Actor): readonly string[] {
+  return (game.users as unknown as { contents: foundry.documents.User[] }).contents
+    .filter(user => !user.isGM && actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))
+    .map(user => user.id);
+}
 
 export type ShareClueReference =
   | { readonly kind: "poi"; readonly itemUuid: string; readonly informationId: string }
@@ -51,17 +68,32 @@ export async function transferShareClue(
     const item = worldPoi(reference.itemUuid);
     if (!item || !shareCandidates(scene, runId, fromActorUuid).some(candidate => JSON.stringify(candidate.reference) === JSON.stringify(reference)))
       return false;
+    const receiver = game.actors.get(toActorUuid.slice(6));
+    if (!receiver || receiver.uuid !== toActorUuid) return false;
+    const receiverIds = receiverPlayerIds(receiver);
+    if (!receiverIds.length) return false;
     const knowledge = readPoiKnowledge(item).map(entry => ({ actorUuid: entry.actorUuid, informationIds: [...entry.informationIds] }));
     const entry = knowledge.find(candidate => candidate.actorUuid === toActorUuid);
-    if (entry?.informationIds.includes(reference.informationId)) return true;
-    if (entry) entry.informationIds.push(reference.informationId);
-    else knowledge.push({ actorUuid: toActorUuid, informationIds: [reference.informationId] });
-    await item.update({
-      [POI_KNOWLEDGE_PATH]: foundry.data.operators.ForcedReplacement.create({ agents: knowledge }),
-      [POI_DISCOVERY_PATH]: foundry.data.operators.ForcedReplacement.create([
-        ...readPoiDiscoveries(item), { runId, actorUuid: toActorUuid, informationId: reference.informationId },
-      ]),
-    });
+    const existingShares = shares(item);
+    const shared = existingShares.some(value => value.runId === runId && value.fromActorUuid === fromActorUuid
+      && value.toActorUuid === toActorUuid && value.informationId === reference.informationId);
+    if (!entry?.informationIds.includes(reference.informationId) || !shared) {
+      if (entry && !entry.informationIds.includes(reference.informationId)) entry.informationIds.push(reference.informationId);
+      else if (!entry) knowledge.push({ actorUuid: toActorUuid, informationIds: [reference.informationId] });
+      await item.update({
+        [POI_KNOWLEDGE_PATH]: foundry.data.operators.ForcedReplacement.create({ agents: knowledge }),
+        [POI_SHARES_PATH]: foundry.data.operators.ForcedReplacement.create(shared ? existingShares : [
+          ...existingShares, { runId, fromActorUuid, toActorUuid, informationId: reference.informationId },
+        ]),
+      });
+    }
+    const visibility = readPoiVisibility(item);
+    if (receiverIds.some(id => !isPoiVisibleTo(visibility, id, false))) {
+      const users = [...new Set([...(visibility.mode === "users" ? visibility.users : []), ...receiverIds])];
+      await item.update({ [POI_VISIBILITY_PATH]: foundry.data.operators.ForcedReplacement.create({
+        mode: "users", users, notified: visibility.notified,
+      }) });
+    }
     await broadcastPoiInvalidation();
     return true;
   });

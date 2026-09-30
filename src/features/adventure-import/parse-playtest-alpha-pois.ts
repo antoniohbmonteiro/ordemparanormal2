@@ -85,8 +85,8 @@ function approaches(label: string, difficulty: number): readonly PointOfInterest
     if (!match) throw new Error(`Perícia de POI não reconhecida: ${label}.`);
     const [skill, specialization] = match[1].split(":") as [SkillKey, AptitudeSpecializationKey | undefined];
     result.push(skill === "aptitude"
-      ? { skill, specialization: specialization!, difficulty, showDifficultyToPlayers: false }
-      : { skill, difficulty, showDifficultyToPlayers: false });
+      ? { skill, specialization: specialization!, difficulty, showDifficultyToPlayers: true }
+      : { skill, difficulty, showDifficultyToPlayers: true });
   }
   return result;
 }

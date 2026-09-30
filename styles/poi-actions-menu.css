@@ -38,3 +38,6 @@
   align-items: center;
   gap: 0.5rem;
 }
+
+.op2-poi-reveal-dialog__identity { display: grid; gap: 0.1rem; }
+.op2-poi-reveal-dialog__identity small { opacity: 0.7; }

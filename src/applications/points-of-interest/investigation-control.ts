@@ -4,8 +4,7 @@ import {
   mutateInvestigationRuntime, requestInvestigationControl, type InvestigationControlView,
 } from "../../adapters/foundry/points-of-interest/investigation-runtime";
 import { subscribePoiInvalidation } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
-import { openCreateInvestigationClueDialog } from "./investigation-clue-dialog";
-import { openInvestigationControlAction } from "./investigation-control-actions";
+import { openCreateInvestigationClueDialog, openPendingShareClueGrant } from "./investigation-clue-dialog";
 
 const ROOT = "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -22,8 +21,7 @@ export class InvestigationControl extends HandlebarsApplicationMixin(Application
       advance: InvestigationControl.#advance,
       acted: InvestigationControl.#acted,
       createClue: InvestigationControl.#createClue,
-      recap: InvestigationControl.#recap,
-      share: InvestigationControl.#share,
+      grantShareClue: InvestigationControl.#grantShareClue,
     },
   };
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
@@ -58,6 +56,10 @@ export class InvestigationControl extends HandlebarsApplicationMixin(Application
       participants,
       recapUsed: !!runtime?.recapSuccessActorUuid,
       shareUsed: !!runtime?.shareSuccessActorUuid,
+      recapUsedBy: participants.find(agent => agent.uuid === runtime?.recapSuccessActorUuid)?.name ?? "",
+      shareUsedBy: participants.find(agent => agent.uuid === runtime?.shareSuccessActorUuid)?.name ?? "",
+      shareCluePending: !!runtime?.shareCluePending,
+      canGrantShareClue: !!runtime?.shareCluePending && !!game.user?.isGM && game.users.activeGM?.id === game.user.id,
       busy: this.#busy,
     };
   }
@@ -118,16 +120,20 @@ export class InvestigationControl extends HandlebarsApplicationMixin(Application
     if (runId) await openCreateInvestigationClueDialog(this.#sceneId, runId);
   }
 
-  static async #recap(this: InvestigationControl): Promise<void> {
-    const view = this.#view;
-    if (view?.runtime && !view.runtime.recapSuccessActorUuid)
-      await openInvestigationControlAction(this.#sceneId, view.runtime.runId, "recap", view.participants);
-  }
-
-  static async #share(this: InvestigationControl): Promise<void> {
-    const view = this.#view;
-    if (view?.runtime && !view.runtime.shareSuccessActorUuid)
-      await openInvestigationControlAction(this.#sceneId, view.runtime.runId, "share", view.participants);
+  static async #grantShareClue(this: InvestigationControl): Promise<void> {
+    const runId = this.#view?.runtime?.runId;
+    if (!runId || !this.#view?.runtime?.shareCluePending || this.#busy) return;
+    this.#busy = true;
+    try {
+      await openPendingShareClueGrant(this.#sceneId, runId);
+      await this.refresh();
+    } catch (error) {
+      console.error("ordemparanormal2 | Failed to grant Share clue", error);
+      ui.notifications.error(game.i18n.localize(`${ROOT}.Failed`));
+    } finally {
+      this.#busy = false;
+      if (!this.#closed) await this.render();
+    }
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {

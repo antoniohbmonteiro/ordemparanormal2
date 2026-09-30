@@ -26,20 +26,20 @@
         </div>
         <div class="op2-investigation-table__body">
           {{#each skills}}
-            <section class="op2-investigation-skill" role="row" data-skill="{{key}}" style="--op2-information-count: 1">
-              <div class="op2-investigation-skill-cell" role="rowheader"><strong>{{name}}</strong></div>
+            <section class="op2-investigation-skill" role="rowgroup" data-skill="{{key}}" style="--op2-information-count: {{informationCount}}">
+              <div class="op2-investigation-skill-cell" role="rowheader"><strong>{{name}}</strong>{{#if specializationLabel}}<span>{{specializationLabel}}</span>{{/if}}</div>
               <div class="op2-investigation-action" role="cell">
-                <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="examine" data-skill="{{key}}" {{#unless canExamine}}disabled{{/unless}}>
+                <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="examine" data-skill="{{key}}"{{#if specialization}} data-specialization="{{specialization}}"{{/if}} {{#unless canExamine}}disabled{{/unless}}>
                   <img src="systems/ordemparanormal2/assets/icons/investigation-d6.svg" alt="" aria-hidden="true" />
                   {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Examine"}}
                 </button>
               </div>
-              <div class="op2-investigation-difficulty" role="cell">
-                {{#each information}}<span>{{#if isHidden}}—{{else}}{{difficulty}}{{/if}}</span>{{else}}<span>—</span>{{/each}}
-              </div>
-              <div class="op2-investigation-information" role="cell">
-                {{#each information}}<p>{{#if specializationLabel}}<strong>{{specializationLabel}}:</strong> {{/if}}{{content}}</p>{{else}}<span>—</span>{{/each}}
-              </div>
+              {{#each rows}}
+                <div class="op2-investigation-row" role="row">
+                  <div class="op2-investigation-difficulty" role="cell">{{#if difficulty}}{{difficulty}}{{else}}—{{/if}}</div>
+                  <div class="op2-investigation-information" role="cell"><span>{{#if content}}{{#if specializationLabel}}<strong>{{specializationLabel}}:</strong> {{/if}}{{content}}{{else}}—{{/if}}</span></div>
+                </div>
+              {{/each}}
             </section>
           {{else}}
             <p class="op2-investigation-empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoSkills"}}</p>

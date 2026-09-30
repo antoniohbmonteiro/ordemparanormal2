@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
-const { picker, mutate, requestScene, showMenu } = vi.hoisted(() => ({
+const { picker, mutate, requestScene, showMenu, resolveAgent, requestAction } = vi.hoisted(() => ({
   picker: vi.fn(), mutate: vi.fn(), requestScene: vi.fn(), showMenu: vi.fn(),
+  resolveAgent: vi.fn(), requestAction: vi.fn(),
 }));
 vi.mock("./poi-picker", () => ({ openPoiPicker: picker }));
 vi.mock("../../adapters/foundry/points-of-interest/poi-runtime-queries", () => ({
@@ -16,6 +19,8 @@ vi.mock("../../adapters/foundry/points-of-interest/poi-runtime-state", () => ({
 }));
 vi.mock("./poi-user-reveal-dialog", () => ({ openPoiUserRevealDialog: vi.fn() }));
 vi.mock("./investigation-application", () => ({ openInvestigationApplication: vi.fn() }));
+vi.mock("../../adapters/foundry/points-of-interest/resolve-investigation-agent", () => ({ resolveSceneInvestigationAgent: resolveAgent }));
+vi.mock("../../adapters/foundry/points-of-interest/investigation-requests", () => ({ requestInvestigationAction: requestAction }));
 vi.mock("./poi-scene-panel-menu", async importOriginal => ({
   ...(await importOriginal<typeof import("./poi-scene-panel-menu")>()), showPoiSceneMenu: showMenu,
 }));
@@ -33,6 +38,8 @@ beforeEach(() => {
   picker.mockReset(); mutate.mockReset().mockResolvedValue({ ok: true });
   requestScene.mockReset().mockResolvedValue({ entries: [] });
   showMenu.mockReset().mockReturnValue(() => undefined);
+  resolveAgent.mockReset().mockReturnValue(null);
+  requestAction.mockReset().mockResolvedValue({ ok: true });
   vi.stubGlobal("foundry", { applications: { api: { ApplicationV2: ApplicationStub, HandlebarsApplicationMixin: (base: unknown) => base },
     ux: { TextEditor: { implementation: { getDragEventData: (event: Event & { payload?: Record<string, unknown> }) => event.payload ?? {} } } } } });
   vi.stubGlobal("game", { user: { isGM: true }, scenes: { get: () => ({ name: "Porão" }) },
@@ -110,5 +117,54 @@ describe("POI Scene panel add entry points", () => {
     root.dispatchEvent(click);
     expect((showMenu.mock.calls.at(-1)?.[1] as Array<{ action: string; disabled?: boolean }>)[1]?.disabled).toBe(false);
     (panel as unknown as { _onClose(options: object): void })._onClose({});
+  });
+
+  it("requests Recapitular for the resolved Agent without text or a selector, and respects cancellation", async () => {
+    const { PoiScenePanel } = await import("./poi-scene-panel");
+    (game.user as { isGM: boolean }).isGM = false;
+    resolveAgent.mockReturnValue({ uuid: "Actor.a" });
+    requestScene.mockResolvedValue({ entries: [], runId: "run", recapAvailable: true });
+    const input = vi.fn().mockResolvedValue(false);
+    (foundry.applications.api as typeof foundry.applications.api & { DialogV2: unknown }).DialogV2 = { input } as never;
+    const panel = new PoiScenePanel("scene");
+    await panel.refresh();
+    await PoiScenePanel.DEFAULT_OPTIONS.actions.recap.call(panel);
+    expect(requestAction).not.toHaveBeenCalled();
+    const dialog = input.mock.calls[0][0] as { content: string; ok: { callback: () => boolean } };
+    expect(dialog.content).toContain("RecapPrompt");
+    expect(dialog.content).toContain("RecapExplanation");
+    expect(dialog.content).not.toMatch(/textarea|select|name="recap"/u);
+    input.mockResolvedValueOnce(true);
+    await PoiScenePanel.DEFAULT_OPTIONS.actions.recap.call(panel);
+    expect(requestAction).toHaveBeenCalledExactlyOnceWith({ kind: "recap", sceneId: "scene",
+      runId: "run", actorUuid: "Actor.a" });
+  });
+
+  it("keeps five expanded POIs and long clues as independent content rows", async () => {
+    const { PoiScenePanel } = await import("./poi-scene-panel");
+    (game.user as { isGM: boolean }).isGM = false;
+    requestScene.mockResolvedValue({ entries: Array.from({ length: 6 }, (_, index) => ({
+      itemUuid: `Item.${index}`, name: `POI ${index}`, img: "", linkedRegionIds: [],
+      knownGroups: index % 2 ? [{ skill: "research", clues: [{ text: "Pista longa ".repeat(30) }] }] : [],
+    })) });
+    const panel = new PoiScenePanel("scene");
+    await panel.refresh();
+    for (let index = 0; index < 6; index++) {
+      const row = { dataset: { itemUuid: `Item.${index}` } };
+      const target = { closest: () => row } as unknown as HTMLElement;
+      await PoiScenePanel.DEFAULT_OPTIONS.actions.toggle.call(panel, {} as PointerEvent, target);
+    }
+    const context = await (panel as unknown as { _prepareContext(): Promise<{
+      entries: Array<{ itemUuid: string; expanded: boolean; knownGroups: Array<{ clues: Array<{ text: string }> }> }> }> })._prepareContext();
+    expect(context.entries).toHaveLength(6);
+    expect(context.entries.every(entry => entry.expanded)).toBe(true);
+    expect(context.entries[1].knownGroups[0].clues[0].text.length).toBeGreaterThan(200);
+    expect(context.entries[0].knownGroups).toEqual([]);
+    const css = await readFile(fileURLToPath(new URL("../../../styles/poi-scene-panel.css", import.meta.url)), "utf8");
+    expect(css).toMatch(/\.op2-poi-scene-panel__list\s*\{[^}]*display: flex;[^}]*flex-direction: column;/su);
+    expect(css).not.toMatch(/\.op2-poi-scene-panel__clues\s*\{[^}]*height:/su);
+    const template = await readFile(fileURLToPath(new URL("../../../templates/points-of-interest/poi-scene-panel.hbs", import.meta.url)), "utf8");
+    expect(template.match(/fa-chevron-/gu)).toHaveLength(1);
+    expect(template).toContain('data-action="share"');
   });
 });

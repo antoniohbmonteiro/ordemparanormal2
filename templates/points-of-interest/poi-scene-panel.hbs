@@ -50,7 +50,7 @@
                 {{#each knownGroups}}
                   <section class="op2-poi-scene-panel__clue-group">
                     <h3>{{label}}</h3>
-                    <ul>{{#each clues}}<li><span>{{text}}</span>{{#if shareReference}}{{#if @root.shareAvailable}}<button type="button" data-action="share" data-clue-index="{{index}}" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.Share'}}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i></button>{{/if}}{{/if}}</li>{{/each}}</ul>
+                    <ul>{{#each clues}}<li><span>{{text}}</span>{{#if shareReference}}{{#if @root.shareAvailable}}<button type="button" data-action="share" data-clue-index="{{index}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Share"}}</button>{{/if}}{{/if}}</li>{{/each}}</ul>
                   </section>
                 {{else}}
                   <p class="op2-poi-scene-panel__empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}</p>
@@ -66,7 +66,7 @@
     {{#unless isGM}}{{#if narrativeClues}}
       <section class="op2-poi-scene-panel__narrative" data-item-uuid="narrative">
         <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NarrativeClues"}}</h3>
-        <ul>{{#each narrativeClues}}<li><span>{{text}}</span>{{#if shareReference}}{{#if @root.shareAvailable}}<button type="button" data-action="share" data-clue-index="{{@index}}" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.Share'}}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i></button>{{/if}}{{/if}}</li>{{/each}}</ul>
+        <ul>{{#each narrativeClues}}<li><span>{{text}}</span>{{#if shareReference}}{{#if @root.shareAvailable}}<button type="button" data-action="share" data-clue-index="{{@index}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Share"}}</button>{{/if}}{{/if}}</li>{{/each}}</ul>
       </section>
     {{/if}}{{/unless}}
     <footer class="op2-poi-scene-panel__footer">{{count}} {{countLabel}}</footer>

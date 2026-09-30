@@ -24,24 +24,54 @@ it("renders private content only when supplied by the sanitized player projectio
   const localize = (key: string) => key;
   const agents = [{ uuid: "Actor.a", name: "Agent", selected: true }];
   const context = buildInvestigationRenderContext("POI", { view: {
-    audience: "player", name: "POI", description: "Público", img: "", skills: [{ key: "perception", name: "Percepção", information: [
+    audience: "player", name: "POI", description: "Público", img: "", skills: [{ key: "perception", name: "Percepção", publicDifficulties: [], information: [
       { visibility: "hidden", content: "Conhecida" },
     ] }],
   } }, localize, agents);
   expect(context.canExamine).toBe(true);
-  expect(context.isPlayer && context.skills[0].information.map(row => row.content)).toEqual(["Conhecida"]);
+  expect(context.isPlayer && context.skills[0].rows.map(row => row.content)).toEqual(["Conhecida"]);
 });
 
 it("offers Examinar per skill during a run even when no information is known", () => {
   const context = buildInvestigationRenderContext("POI", { view: {
     audience: "player", name: "POI", description: "", img: "", investigationRunId: "run", skills: [
-      { key: "perception", name: "Percepção", information: [] },
-      { key: "occultism", name: "Ocultismo", information: [{ visibility: "hidden", content: "A" }, { visibility: "public", difficulty: 8, content: "B" }] },
+      { key: "perception", name: "Percepção", publicDifficulties: [], information: [] },
+      { key: "occultism", name: "Ocultismo", publicDifficulties: [8], information: [{ visibility: "hidden", content: "A" }, { visibility: "public", difficulty: 8, content: "B" }] },
     ],
   } }, key => key, [{ uuid: "Actor.a", name: "Agent", selected: true }]);
   expect(context.isPlayer && context.skills.map(skill => [skill.key, skill.canExamine, skill.informationCount])).toEqual([
     ["perception", true, 1], ["occultism", true, 2],
   ]);
+  expect(context.isPlayer && context.skills[1].rows.map(row => [row.difficulty ?? null, row.content ?? null]))
+    .toEqual([[null, "A"], [8, "B"]]);
+});
+
+it("keeps each known information paired with its own public DT in a visual row", async () => {
+  const context = buildInvestigationRenderContext("POI", { view: {
+    audience: "player", name: "POI", description: "", img: "", skills: [
+      { key: "research", name: "Pesquisar", publicDifficulties: [6, 8, 10], information: [
+        { visibility: "public", difficulty: 6, content: "Primeira" },
+        { visibility: "public", difficulty: 8, content: "Segunda" },
+      ] },
+    ],
+  } }, key => key);
+  expect(context.isPlayer && context.skills[0].rows.map(row => [row.difficulty, row.content ?? "—"]))
+    .toEqual([[6, "Primeira"], [8, "Segunda"], [10, "—"]]);
+  const template = await readFile(fileURLToPath(new URL(
+    "../../../templates/points-of-interest/investigation-application.hbs", import.meta.url)), "utf8");
+  expect(template).toContain("{{#each rows}}");
+  expect(template).not.toContain("{{#each publicDifficulties}}");
+});
+
+it("keeps two Aptitude actions and their public DTs distinct in the Player view model", () => {
+  const context = buildInvestigationRenderContext("POI", { view: {
+    audience: "player", name: "POI", description: "", img: "", investigationRunId: "run", skills: [
+      { key: "aptitude", name: "Aptidão", specialization: "currentAffairs", publicDifficulties: [8], information: [] },
+      { key: "aptitude", name: "Aptidão", specialization: "humanities", publicDifficulties: [], information: [] },
+    ],
+  } }, key => key, [{ uuid: "Actor.a", name: "Agent", selected: true }]);
+  expect(context.isPlayer && context.skills.map(skill => [skill.specialization, skill.publicDifficulties, skill.canExamine]))
+    .toEqual([["currentAffairs", [8], true], ["humanities", [], true]]);
 });
 
 it("marks situational information and its condition in the GM view", () => {

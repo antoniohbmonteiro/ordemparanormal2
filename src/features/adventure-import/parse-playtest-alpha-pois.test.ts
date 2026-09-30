@@ -87,17 +87,17 @@ describe("Playtest Alpha POI parser", () => {
     ]));
     expect(preset.information).toEqual([
       { id: "ordinary", content: "Informação <pública>.", availability: always,
-        approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] },
+        approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: true }] },
       { id: "alternatives", content: "Vestígio comum.", availability: always, approaches: [
-        { skill: "medicine", difficulty: 8, showDifficultyToPlayers: false },
-        { skill: "survival", difficulty: 8, showDifficultyToPlayers: false },
+        { skill: "medicine", difficulty: 8, showDifficultyToPlayers: true },
+        { skill: "survival", difficulty: 8, showDifficultyToPlayers: true },
       ] },
       { id: "lockedSecret", content: "Segredo bloqueado.", availability: situational("Requer pista anterior."),
-        approaches: [{ skill: "research", difficulty: 6, showDifficultyToPlayers: false }] },
+        approaches: [{ skill: "research", difficulty: 6, showDifficultyToPlayers: true }] },
       { id: "personalMemory", content: "Memória pessoal.", availability: situational("Apenas Victor e Alan."),
-        approaches: [{ skill: "intuition", difficulty: 8, showDifficultyToPlayers: false }] },
+        approaches: [{ skill: "intuition", difficulty: 8, showDifficultyToPlayers: true }] },
       { id: "closedFile", content: "Arquivo fechado.", availability: situational("Requer acesso prévio."),
-        approaches: [{ skill: "technology", difficulty: 10, showDifficultyToPlayers: false }] },
+        approaches: [{ skill: "technology", difficulty: 10, showDifficultyToPlayers: true }] },
     ]);
     expect(preset.publicDescription).toContain("&amp;");
     expect(preset.gmContext).toBe("");
@@ -110,8 +110,8 @@ describe("Playtest Alpha POI parser", () => {
     ]));
     expect(preset.information).toEqual([{ id: "unlockedFiles", content: "Arquivos abertos.",
       availability: situational("Requer a senha."), approaches: [
-        { skill: "research", difficulty: 6, showDifficultyToPlayers: false },
-        { skill: "technology", difficulty: 6, showDifficultyToPlayers: false },
+        { skill: "research", difficulty: 6, showDifficultyToPlayers: true },
+        { skill: "technology", difficulty: 6, showDifficultyToPlayers: true },
       ] }]);
   });
 
@@ -202,9 +202,9 @@ describe("Playtest Alpha POI parser", () => {
       alternativeDifficultyTable(alternativeRule));
     expect(preset.information).toEqual([
       { id: "pocket", content: "Um bolso rasgado.", availability: always,
-        approaches: [{ skill: "research", difficulty: 8, showDifficultyToPlayers: false }] },
+        approaches: [{ skill: "research", difficulty: 8, showDifficultyToPlayers: true }] },
       { id: "notes", content: "Folhas de uma expedição.", availability: always, approaches: [{
-        skill: "research", difficulty: 6, showDifficultyToPlayers: false,
+        skill: "research", difficulty: 6, showDifficultyToPlayers: true,
         difficultyOverride: { difficulty: 10, condition: "Se escolherem arrombar. As folhas também se misturam." },
       }] },
     ]);
@@ -263,7 +263,7 @@ describe("Playtest Alpha POI parser", () => {
       { skill: "Aptidão (Humanas)", difficulty: 8, information: "Referência histórica." },
     ]));
     expect(preset.information[0].approaches).toEqual([{
-      skill: "aptitude", specialization: "humanities", difficulty: 8, showDifficultyToPlayers: false,
+      skill: "aptitude", specialization: "humanities", difficulty: 8, showDifficultyToPlayers: true,
     }]);
     expect(() => parsePlaytestAlphaPoiSection(specialized, page([
       { skill: "Aptidão (Inventada)", difficulty: 8, information: "Inválida." },
@@ -406,9 +406,9 @@ describe("Playtest Alpha POI parser", () => {
       expect(preset.publicDescription).toBe("<p>Um depósito trancado.</p>");
       expect(preset.information).toEqual([
         { id: "keys", content: "Chaves & <cadeados>.", availability: always,
-          approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] },
+          approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: true }] },
         { id: "shiver", content: "Um arrepio.", availability: situational("Apenas Ana."),
-          approaches: [{ skill: "intuition", difficulty: 6, showDifficultyToPlayers: false }] },
+          approaches: [{ skill: "intuition", difficulty: 6, showDifficultyToPlayers: true }] },
       ]);
     });
 

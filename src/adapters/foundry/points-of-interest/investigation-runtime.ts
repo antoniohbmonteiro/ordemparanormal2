@@ -1,9 +1,10 @@
 import { SYSTEM_ID } from "../../../config/system-config";
 import {
   advanceInvestigationRound, readInvestigationRuntime, setAgentActed, startInvestigation,
-  type InvestigationRuntime,
+  type InvestigationRuntime, type InvestigationShareClueGrant,
 } from "../../../core/investigation/investigation-runtime";
 import { broadcastPoiInvalidation } from "./poi-runtime-queries";
+import { createNarrativeClue, grantNarrativeClue, narrativeCluesForScene } from "./investigation-clues";
 
 export const INVESTIGATION_RUNTIME_FLAG = "investigationRuntime";
 const INVESTIGATION_RUNTIME_PATH = `flags.${SYSTEM_ID}.${INVESTIGATION_RUNTIME_FLAG}`;
@@ -112,7 +113,7 @@ export function registerInvestigationRuntimeQueries(): void {
 }
 
 export async function recordInvestigationActionSuccess(
-  sceneId: string, runId: string, actorUuid: string, action: "recap" | "share",
+  sceneId: string, runId: string, actorUuid: string, action: "recap" | "share", checkMessageId?: string,
 ): Promise<boolean> {
   if (!game.user?.isGM || game.users.activeGM?.id !== game.user.id) return false;
   return serialize(sceneId, async () => {
@@ -122,9 +123,55 @@ export async function recordInvestigationActionSuccess(
       return { ok: false, reason: "stale" } as InvestigationRuntimeMutationResult;
     const key = action === "recap" ? "recapSuccessActorUuid" : "shareSuccessActorUuid";
     if (runtime[key]) return { ok: false, reason: "stale" } as InvestigationRuntimeMutationResult;
-    await scene.update({ [INVESTIGATION_RUNTIME_PATH]: { ...runtime, [key]: actorUuid } });
+    await scene.update({ [INVESTIGATION_RUNTIME_PATH]: { ...runtime, [key]: actorUuid,
+      ...(action === "share" ? { shareCluePending: true,
+        ...(checkMessageId ? { shareSuccessMessageId: checkMessageId } : {}) } : {}) } });
     await broadcastPoiInvalidation();
     return { ok: true } as InvestigationRuntimeMutationResult;
+  }).then(result => result.ok);
+}
+
+export type InvestigationShareClueChoice =
+  | { readonly kind: "existing"; readonly clueId: string; readonly recipientActorUuids: readonly string[] }
+  | { readonly kind: "new"; readonly text: string; readonly recipientActorUuids: readonly string[] };
+
+/** Claims a single GM-selected clue in Scene runtime before writing the Journal, so retries resume the same grant. */
+export async function grantPendingShareClue(
+  sceneId: string, runId: string, choice?: InvestigationShareClueChoice,
+): Promise<boolean> {
+  if (!game.user?.isGM || game.users.activeGM?.id !== game.user.id) return false;
+  return serialize(sceneId, async () => {
+    const scene = game.scenes.get(sceneId);
+    let runtime = scene ? sceneInvestigationRuntime(scene) : null;
+    if (!scene || !runtime || runtime.runId !== runId || !runtime.shareSuccessActorUuid || !runtime.shareCluePending)
+      return { ok: false, reason: "stale" } as const;
+    let grant = runtime.shareClueGrant;
+    if (!grant) {
+      const participants = new Set(investigationParticipants(scene).map(actor => actor.uuid));
+      if (!choice || !choice.recipientActorUuids.length
+        || choice.recipientActorUuids.some(uuid => !participants.has(uuid)))
+        return { ok: false, reason: "invalid" } as const;
+      const existing = choice.kind === "existing"
+        ? narrativeCluesForScene(scene).find(clue => clue.id === choice.clueId && clue.runId === runId) : null;
+      if (choice.kind === "existing" && (!existing
+        || choice.recipientActorUuids.every(uuid => existing.knownAgentUuids.includes(uuid)))
+        || choice.kind === "new" && (!choice.text.trim() || choice.text.length > 4000))
+        return { ok: false, reason: "invalid" } as const;
+      grant = { kind: choice.kind, clueId: choice.kind === "existing" ? choice.clueId : crypto.randomUUID(),
+        recipientActorUuids: [...new Set(choice.recipientActorUuids)],
+        ...(choice.kind === "new" ? { text: choice.text.trim() } : {}) } as InvestigationShareClueGrant;
+      await scene.update({ [INVESTIGATION_RUNTIME_PATH]: { ...runtime, shareClueGrant: grant } });
+      runtime = sceneInvestigationRuntime(scene);
+      if (!runtime || runtime.runId !== runId) return { ok: false, reason: "stale" } as const;
+    }
+    if (grant.kind === "new") {
+      await createNarrativeClue(scene, runId, grant.text!, grant.recipientActorUuids, grant.clueId);
+    } else if (!await grantNarrativeClue(scene, runId, grant.clueId, grant.recipientActorUuids)) {
+      return { ok: false, reason: "unavailable" } as const;
+    }
+    await scene.update({ [INVESTIGATION_RUNTIME_PATH]: { ...runtime, shareCluePending: false } });
+    await broadcastPoiInvalidation();
+    return { ok: true } as const;
   }).then(result => result.ok);
 }
 

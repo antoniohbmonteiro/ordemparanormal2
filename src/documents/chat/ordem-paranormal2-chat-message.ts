@@ -13,7 +13,7 @@ import { renderPendingCheckRequestContent } from "../../adapters/foundry/chat/cr
 import { renderCheckCardContent } from "../../adapters/foundry/chat/render-check-card-content";
 import { activateCheckRequestChatController } from "../../ui/chat/check-request-chat-controller";
 import { readInvestigationRequest, renderInvestigationShareContent } from "../../adapters/foundry/points-of-interest/investigation-requests";
-import { activateInvestigationRequestChatController } from "../../ui/chat/investigation-request-chat-controller";
+import { activateInvestigationRequestChatController, activateInvestigationShareGrantController } from "../../ui/chat/investigation-request-chat-controller";
 
 const CHAT_MESSAGE_SHELL_TEMPLATE =
   `systems/${SYSTEM_ID}/templates/chat/chat-message-shell.hbs`;
@@ -118,7 +118,7 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
     const checkRequest = readCheckRequestMessageLifecycle(this);
     let content = this.content;
     if (checkRequest && investigationRequest?.kind === "share") {
-      content = await renderInvestigationShareContent(investigationRequest, checkRequest);
+      content = await renderInvestigationShareContent(investigationRequest, checkRequest, this.id ?? undefined);
     } else if (checkRequest) {
       content = "snapshot" in checkRequest
         ? await renderCheckCardContent(checkRequest.snapshot)
@@ -171,6 +171,8 @@ export class OrdemParanormal2ChatMessage extends ChatMessage {
       await activateCheckRequestChatController(this, shell, checkRequest.state);
     }
     if (investigationRequest?.kind === "recap") activateInvestigationRequestChatController(this, shell, investigationRequest);
+    if (investigationRequest?.kind === "share" && checkRequest && "snapshot" in checkRequest)
+      activateInvestigationShareGrantController(shell, investigationRequest);
     return root;
   }
 

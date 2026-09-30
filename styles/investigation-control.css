@@ -12,8 +12,15 @@
 .op2-investigation-control__agents li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; }
 .op2-investigation-control__agents li + li { border-top: 1px solid rgba(160, 190, 210, .14); }
 .op2-investigation-control__agent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.op2-investigation-control__uses { display: flex; flex-wrap: wrap; gap: 6px; }
-.op2-investigation-control__uses .op2-investigation-button { flex: 1; }
+.op2-investigation-control__uses { display: grid; gap: 0; margin: 0; }
+.op2-investigation-control__uses > div { display: grid; gap: 3px; padding: 8px 0; }
+.op2-investigation-control__uses > div + div { border-top: 1px solid rgba(160, 190, 210, .14); }
+.op2-investigation-control__uses dt { color: #f1f2f4; font-size: 12px; font-weight: 700; }
+.op2-investigation-control__uses dd { margin: 0; color: #a7acb5; font-size: 11px; }
+.op2-investigation-control__status-section,
+.op2-investigation-control__master-section { display: grid; gap: 8px; min-width: 0; }
+.op2-investigation-control__master-section { padding-top: 12px; border-top: 1px solid rgba(160, 190, 210, .18); }
+.op2-investigation-control__pending { margin: 0; color: #e3b332; font-size: 11px; font-weight: 700; }
 .ordemparanormal2.op2-investigation-control { min-width: 340px; }
 .ordemparanormal2.op2-investigation-control .window-content { padding: 0; }
 .op2-investigation-control__body { min-height: 540px; gap: 14px; padding: 20px; align-content: start; }

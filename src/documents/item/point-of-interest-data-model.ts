@@ -91,7 +91,7 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
                 min: POINT_OF_INTEREST_DIFFICULTY_MIN, initial: POINT_OF_INTEREST_DIFFICULTY_MIN,
               }),
               showDifficultyToPlayers: new foundry.data.fields.BooleanField({
-                required: true, nullable: false, initial: false,
+                required: true, nullable: false, initial: true,
               }),
               // Optional with no initial value: an approach stored without it keeps exactly its previous source.
               difficultyOverride: new foundry.data.fields.SchemaField({

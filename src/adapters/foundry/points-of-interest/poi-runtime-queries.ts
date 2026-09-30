@@ -2,6 +2,7 @@ import { SYSTEM_ID } from "../../../config/system-config";
 import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { publishPoiRevealNotice } from "./publish-poi-reveal-notice";
 import { knownNarrativeClues } from "./investigation-clues";
+import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
 import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
 import { shareCandidates, type ShareClueReference } from "./investigation-share";
 import { associatedRegionIds, isGmControlledPoi, isPoiVisibleTo, isWorldPoiUuid, POI_KNOWLEDGE_PATH, POI_SCENE_ITEMS_PATH, POI_VISIBILITY_PATH, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
@@ -53,7 +54,7 @@ export function resolvePoiScene(sceneId: string, requester: foundry.documents.Us
   const actor = participant && participant.uuid === actorUuid && participant.type === "agent"
     && participant.testUserPermission(requester, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER) ? participant : null;
   const runtime = sceneInvestigationRuntime(scene);
-  const shareable = actor && runtime ? shareCandidates(scene, runtime.runId, actor.uuid) : [];
+  const shareable = actor && runtime && !runtime.shareSuccessActorUuid ? shareCandidates(scene, runtime.runId, actor.uuid) : [];
   const shareReference = (itemUuid: string, informationId: string): ShareClueReference | undefined =>
     shareable.find(candidate => candidate.reference.kind === "poi" && candidate.reference.itemUuid === itemUuid
       && candidate.reference.informationId === informationId)?.reference;
@@ -139,13 +140,28 @@ async function writeMutation(input: PoiMutation, requester: foundry.documents.Us
     const actors = [...new Set(input.actorUuids)].map(uuid => game.actors.get(uuid.slice(6)));
     if (actors.length !== input.actorUuids.length || actors.some(actor => !actor || actor.type !== "agent")) return { ok: false, reason: "invalid" };
     const knowledge = readPoiKnowledge(item).map(entry => ({ actorUuid: entry.actorUuid, informationIds: [...entry.informationIds] }));
+    const newlyKnown: string[] = [];
     for (const actor of actors) {
       const entry = knowledge.find(value => value.actorUuid === actor!.uuid);
       if (entry) {
-        if (!entry.informationIds.includes(input.informationId)) { entry.informationIds.push(input.informationId); changed = true; }
-      } else { knowledge.push({ actorUuid: actor!.uuid, informationIds: [input.informationId] }); changed = true; }
+        if (!entry.informationIds.includes(input.informationId)) { entry.informationIds.push(input.informationId); newlyKnown.push(actor!.uuid); changed = true; }
+      } else { knowledge.push({ actorUuid: actor!.uuid, informationIds: [input.informationId] }); newlyKnown.push(actor!.uuid); changed = true; }
     }
-    if (changed) await item.update({ [POI_KNOWLEDGE_PATH]: foundry.data.operators.ForcedReplacement.create({ agents: knowledge }) });
+    if (changed) {
+      const update: Record<string, unknown> = {
+        [POI_KNOWLEDGE_PATH]: foundry.data.operators.ForcedReplacement.create({ agents: knowledge }),
+      };
+      const runtime = sceneInvestigationRuntime(scene);
+      if (runtime) {
+        const participants = new Set(investigationParticipants(scene).map(actor => actor.uuid));
+        const additions = newlyKnown.filter(uuid => participants.has(uuid))
+          .map(actorUuid => ({ runId: runtime.runId, actorUuid, informationId: input.informationId }));
+        if (additions.length) update[POI_DISCOVERY_PATH] = foundry.data.operators.ForcedReplacement.create([
+          ...readPoiDiscoveries(item), ...additions,
+        ]);
+      }
+      await item.update(update);
+    }
   } else return { ok: false, reason: "invalid" };
   if (changed) await broadcastPoiInvalidation();
   return { ok: true };

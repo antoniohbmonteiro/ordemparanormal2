@@ -27,13 +27,22 @@
         <div class="op2-investigation-control__progress-track"><span style="width: {{progressPercent}}%"></span></div>
       </div>
       <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="advance" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.NextRound"}}</button>
-      <h3 class="op2-investigation-control__actions-title">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.SceneActions"}}</h3>
-      <div class="op2-investigation-control__uses">
-        <button type="button" class="op2-investigation-button" data-action="recap" {{#if recapUsed}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Recap"}}</button>
-        <button type="button" class="op2-investigation-button" data-action="share" {{#if shareUsed}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Share"}}</button>
-      </div>
-      <button type="button" class="op2-investigation-button" data-action="createClue">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.CreateClue"}}</button>
-      <button type="button" class="op2-investigation-control__end" data-action="end" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.End"}}</button>
+      <section class="op2-investigation-control__status-section" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.InvestigationActions'}}">
+        <h3 class="op2-investigation-control__actions-title">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.InvestigationActions"}}</h3>
+        <dl class="op2-investigation-control__uses">
+          <div><dt>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Recap"}}</dt><dd>{{#if recapUsed}}✓ {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Used"}}{{#if recapUsedBy}} {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.By"}} {{recapUsedBy}}{{/if}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Available"}}{{/if}}</dd></div>
+          <div><dt>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Share"}}</dt><dd>{{#if shareUsed}}✓ {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Used"}}{{#if shareUsedBy}} {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.By"}} {{shareUsedBy}}{{/if}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Available"}}{{/if}}</dd></div>
+        </dl>
+        {{#if shareCluePending}}
+          <p class="op2-investigation-control__pending">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.NewCluePending"}}</p>
+          {{#if canGrantShareClue}}<button type="button" class="op2-investigation-button" data-action="grantShareClue" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.GrantClue"}}</button>{{/if}}
+        {{/if}}
+      </section>
+      <section class="op2-investigation-control__master-section" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.MasterControls'}}">
+        <h3 class="op2-investigation-control__actions-title">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.MasterControls"}}</h3>
+        <button type="button" class="op2-investigation-button" data-action="createClue">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.CreateClue"}}</button>
+        <button type="button" class="op2-investigation-control__end" data-action="end" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.End"}}</button>
+      </section>
     {{else}}
       <p>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Inactive"}}</p>
       <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="start" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Start"}}</button>

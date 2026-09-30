@@ -41,7 +41,7 @@ export function validateAdventurePoiData(value: unknown): asserts value is Adven
           ...(approach.skill === "aptitude" ? ["specialization"] : []),
           ...(approach.difficultyOverride === undefined ? [] : ["difficultyOverride"])])
           || (approach.difficultyOverride !== undefined && (!override || !keysAre(override, ["difficulty", "condition"])))
-          || approach.showDifficultyToPlayers !== false;
+          || typeof approach.showDifficultyToPlayers !== "boolean";
       })) throw new Error(`Informação inválida no POI ${preset.id}.`);
   }
 }

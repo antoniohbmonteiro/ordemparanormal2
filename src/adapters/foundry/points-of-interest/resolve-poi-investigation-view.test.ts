@@ -50,6 +50,8 @@ it("delivers only information known by the selected OWNER Agent", async () => {
   expect("view" in first && first.view.skills[1].information).toEqual([
     { visibility: "public", difficulty: 8, content: "senha" },
   ]);
+  expect("view" in second && second.view.skills.map(skill => [skill.key, "publicDifficulties" in skill ? skill.publicDifficulties : []]))
+    .toEqual([["technology", [6]], ["research", [8]]]);
   const serialized = JSON.stringify(second);
   expect(serialized).not.toContain("privado");
   expect(serialized).not.toContain("senha");
@@ -103,13 +105,16 @@ it("delivers known situational information as ordinary known content without its
   expect("view" in result && result.view.skills.find(skill => skill.key === "technology")?.information).toEqual([
     { visibility: "public", difficulty: 12, content: "cofre secreto" },
   ]);
+  expect("view" in result && result.view.skills.find(skill => skill.key === "technology")
+    && "publicDifficulties" in result.view.skills[0] ? result.view.skills[0].publicDifficulties : null)
+    .toEqual([6, 12]);
   const serialized = JSON.stringify(result);
   for (const secret of ["chave dourada", "situational", "condition", "availability", "diário", "médica"]) {
     expect(serialized).not.toContain(secret);
   }
 });
 
-it("does not send unknown Aptitude information or specializations in the player projection", async () => {
+it("keeps Aptitude actions distinct without sending unknown content or situational approaches", async () => {
   const f = fixture();
   const aptitude = (specialization: string, difficulty: number) =>
     [{ skill: "aptitude", specialization, difficulty, showDifficultyToPlayers: false }];
@@ -123,15 +128,16 @@ it("does not send unknown Aptitude information or specializations in the player 
   const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
     requesterUserId: "player" });
   const skill = "view" in result && result.view.audience === "player"
-    ? result.view.skills.find(entry => entry.key === "aptitude") : undefined;
+    ? result.view.skills.find(entry => entry.key === "aptitude" && entry.specialization === "humanities") : undefined;
   expect(skill?.information).toEqual([{ visibility: "hidden", specialization: "humanities", content: "história" }]);
   expect(JSON.stringify(result)).not.toMatch(/tactics|plano secreto|Requer o mapa/u);
   f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.b", informationIds: ["news", "history"] }] };
   const known = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b",
     requesterUserId: "player" });
   const knownSkill = "view" in known && known.view.audience === "player"
-    ? known.view.skills.find(entry => entry.key === "aptitude") : undefined;
-  expect(knownSkill?.information).toHaveLength(2);
+    ? known.view.skills.filter(entry => entry.key === "aptitude") : [];
+  expect(knownSkill).toHaveLength(2);
+  expect(knownSkill.map(entry => entry.specialization)).toEqual(["currentAffairs", "humanities"]);
 });
 
 it("gives the GM an approach's alternative DT and keeps it, its condition and its existence from a player", async () => {

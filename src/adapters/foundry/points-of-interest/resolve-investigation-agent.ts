@@ -60,3 +60,17 @@ export function resolveSceneInvestigationAgent(sceneId: string): foundry.documen
     || !resolved.actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)) return null;
   return resolved.actor;
 }
+
+/** Resolves a remote player's scene character for GM-facing labels and user-based visibility. */
+export function resolveSceneInvestigationAgentForUser(
+  scene: foundry.documents.Scene, user: foundry.documents.User,
+): foundry.documents.Actor | null {
+  if (user.isGM) return null;
+  const candidates = investigationParticipants(scene).map(participant =>
+    game.actors.get(participant.uuid.slice(6))).filter((actor): actor is foundry.documents.Actor =>
+    !!actor && actor.uuid.startsWith("Actor.")
+      && actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER));
+  const assigned = user.character as foundry.documents.Actor | null;
+  if (assigned && candidates.some(actor => actor.uuid === assigned.uuid)) return assigned;
+  return candidates.length === 1 ? candidates[0] : null;
+}

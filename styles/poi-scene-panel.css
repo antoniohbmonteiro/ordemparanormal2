@@ -22,7 +22,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .ordemparanormal2.op2-poi-scene-panel .op2-poi-scene-panel.is-drag-over {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--op2-accent) 75%, white);
@@ -82,18 +83,20 @@
 .op2-poi-scene-panel__status,
 .op2-poi-scene-panel__empty { margin: 0; padding: 14px; color: var(--op2-text-muted); text-align: center; }
 .op2-poi-scene-panel__list {
-  display: grid;
-  min-height: 0;
+  display: flex;
+  flex-direction: column;
   margin: 0;
   padding: 0 2px;
   gap: 8px;
-  overflow: auto;
+  overflow: visible;
   list-style: none;
   scrollbar-width: thin;
   scrollbar-color: var(--op2-accent) transparent;
 }
 .op2-poi-scene-panel__row {
   display: grid;
+  flex: none;
+  min-width: 0;
   min-height: 74px;
   grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
@@ -107,19 +110,22 @@
 .op2-poi-scene-panel__row:hover,
 .op2-poi-scene-panel__row:focus-within { background: var(--op2-panel-bg-hover); }
 .op2-poi-scene-panel__row.is-expanded { align-items: start; }
-.op2-poi-scene-panel__clues { grid-column: 1 / -1; padding: 8px 12px 4px; border-top: 1px solid var(--op2-border); }
+.op2-poi-scene-panel__clues { grid-column: 1 / -1; min-width: 0; padding: 8px 12px 4px; border-top: 1px solid var(--op2-border); }
+.op2-poi-scene-panel__clue-group { min-width: 0; }
 .op2-poi-scene-panel__clue-group + .op2-poi-scene-panel__clue-group { margin-top: 12px; }
 .op2-poi-scene-panel__clue-group h3,
 .op2-poi-scene-panel__narrative h3 { margin: 0 0 6px; color: var(--op2-text-muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
 .op2-poi-scene-panel__clue-group ul,
 .op2-poi-scene-panel__narrative ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .op2-poi-scene-panel__clue-group li,
-.op2-poi-scene-panel__narrative li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
+.op2-poi-scene-panel__narrative li { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--op2-border); }
+.op2-poi-scene-panel__clue-group li span,
+.op2-poi-scene-panel__narrative li span { min-width: 0; overflow-wrap: anywhere; }
 .op2-poi-scene-panel__clue-group li button,
-.op2-poi-scene-panel__narrative li button { flex: none; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; background: transparent; color: var(--op2-text-muted); }
+.op2-poi-scene-panel__narrative li button { flex: none; width: auto; min-height: 28px; margin: 0; padding: 4px 8px; border: 1px solid var(--op2-border-strong); border-radius: 4px; background: var(--op2-input-bg); color: var(--op2-text); font-size: .76rem; }
 .op2-poi-scene-panel__clue-group li button:hover,
 .op2-poi-scene-panel__narrative li button:hover { color: var(--op2-text); }
-.op2-poi-scene-panel__narrative { min-height: 0; overflow: auto; padding: 10px 14px; border: 1px solid var(--op2-border-strong); border-radius: 8px; background: var(--op2-panel-bg); }
+.op2-poi-scene-panel__narrative { min-width: 0; padding: 10px 14px; border: 1px solid var(--op2-border-strong); border-radius: 8px; background: var(--op2-panel-bg); }
 .op2-poi-scene-panel__image {
   display: grid;
   width: 58px;

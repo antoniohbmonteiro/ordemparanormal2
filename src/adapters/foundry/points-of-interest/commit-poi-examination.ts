@@ -1,15 +1,63 @@
 import { isSupportedCheckSnapshot } from "../../../application/checks/check-snapshot";
 import { SYSTEM_ID } from "../../../config/system-config";
-import { isSkillKey } from "../../../config/skills";
+import { aptitudeSpecializationLabel, isSkillKey, skillLabel } from "../../../config/skills";
+import { reachableInformationIds } from "../../../core/investigation/resolve-information";
+import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { resolveExamination } from "../../../features/points-of-interest/resolve-examination";
+import { readAgentCheckSource } from "../actors/read-agent-check-source";
+import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
 import { resolveExaminePoi, type ExaminePoiInput } from "./examine-poi";
 import { resolveInvestigatePoi } from "./investigate-poi";
 import { recordInvestigationAgentActed } from "./investigation-runtime";
 import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
 import { serializePoiItemMutation } from "./poi-runtime-queries";
-import { isGmControlledPoi, isPoiVisibleTo, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
+import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 
 export const COMMIT_POI_EXAMINATION_QUERY = `${SYSTEM_ID}.commitPoiExamination`;
 const BINDING_FLAG = "poiExaminationBinding";
+const RESULTS_FLAG = "poiExaminationResults";
+const RESULT_CARD_FLAG = "poiExaminationResult";
+
+interface ExaminationPlan {
+  readonly messageId: string;
+  readonly runId: string;
+  readonly actorUuid: string;
+  readonly passiveIds: readonly string[];
+  readonly examinationIds: readonly string[];
+  readonly lostPd: number;
+}
+
+function readPlans(item: foundry.documents.Item): ExaminationPlan[] {
+  const value = item.getFlag(SYSTEM_ID, RESULTS_FLAG);
+  return Array.isArray(value) ? value as ExaminationPlan[] : [];
+}
+
+async function publishExaminationResult(plan: ExaminationPlan, input: ExaminePoiInput,
+  item: foundry.documents.Item, actor: foundry.documents.Actor): Promise<void> {
+  const existing = (game as typeof game & { messages?: { contents: ChatMessage[] } }).messages?.contents
+    .some(message => message.getFlag(SYSTEM_ID, RESULT_CARD_FLAG) === input.messageId);
+  if (existing) return;
+  const information = readPointOfInterestInformation(item.system);
+  const contentFor = (ids: readonly string[]) => ids.map(id => information.find(entry => entry.id === id)?.content)
+    .filter((content): content is string => typeof content === "string");
+  await ensureSharedPartialsLoaded();
+  const content = await foundry.applications.handlebars.renderTemplate(
+    `systems/${SYSTEM_ID}/templates/chat/investigation-examination-card.hbs`, {
+      title: "Examinar", actorName: actor.name, poiName: item.name,
+      passive: contentFor(plan.passiveIds), examined: contentFor(plan.examinationIds),
+      passiveCount: plan.passiveIds.length, examinedCount: plan.examinationIds.length,
+      passivePlural: plan.passiveIds.length !== 1, examinedPlural: plan.examinationIds.length !== 1,
+      skillName: input.skill === "aptitude" && input.specialization
+        ? aptitudeSpecializationLabel(input.specialization as Parameters<typeof aptitudeSpecializationLabel>[0])
+        : skillLabel(input.skill as Parameters<typeof skillLabel>[0]), lostPd: plan.lostPd,
+      noExaminationFindings: plan.examinationIds.length === 0,
+    });
+  const whisper = (game.users as unknown as { contents: foundry.documents.User[] }).contents
+    .filter(user => user.isGM || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))
+    .map(user => user.id);
+  await ChatMessage.create({ content, whisper, speaker: ChatMessage.getSpeaker({ actor }),
+    flags: { [SYSTEM_ID]: { [RESULT_CARD_FLAG]: input.messageId } } });
+}
 
 export type CommitPoiExaminationResult =
   | { readonly ok: true; readonly passiveCount: number; readonly newCount: number; readonly lostPd: number }
@@ -51,13 +99,37 @@ export async function resolveCommitPoiExamination(
     return { ok: false, reason: "invalid" };
   if (!existing) await message.update({ [`flags.${SYSTEM_ID}.${BINDING_FLAG}`]: binding });
 
+  const plans = readPlans(item);
+  let plan = plans.find(value => value.messageId === input.messageId);
+  if (plan && (plan.runId !== input.runId || plan.actorUuid !== input.actorUuid))
+    return { ok: false, reason: "invalid" };
+  if (!plan) {
+    const information = readPointOfInterestInformation(item.system);
+    const known = new Set(readPoiKnowledge(item).find(entry => entry.actorUuid === actor.uuid)?.informationIds ?? []);
+    const source = readAgentCheckSource(actor);
+    const value = input.skill === "aptitude"
+      ? source.skills.aptitude[input.specialization as keyof typeof source.skills.aptitude]
+      : source.skills[input.skill];
+    if (typeof value !== "number") return { ok: false, reason: "invalid" };
+    const passiveIds = reachableInformationIds(information, known, input.skill, input.specialization, value);
+    const examinationIds = resolveExamination(information, new Set([...known, ...passiveIds]),
+      input.skill, input.specialization, snapshot.total).newInformationIds;
+    const pd = (actor.system as { resources?: { determination?: { value?: number } } }).resources?.determination?.value;
+    plan = { messageId: input.messageId, runId: input.runId, actorUuid: actor.uuid,
+      passiveIds, examinationIds, lostPd: examinationIds.length ? 0 : typeof pd === "number" && pd > 0 ? 1 : 0 };
+    await item.update({ [`flags.${SYSTEM_ID}.${RESULTS_FLAG}`]:
+      foundry.data.operators.ForcedReplacement.create([...plans, plan]) });
+  }
+
   const passive = await resolveInvestigatePoi(input, requester);
   if (!passive.ok) return passive;
   const examined = await resolveExaminePoi(input, requester);
   if (!examined.ok) return examined;
+  await publishExaminationResult(plan, input, item, actor);
   if (!await recordInvestigationAgentActed(input.sceneId, input.runId, input.actorUuid))
     return { ok: false, reason: "stale" };
-  return { ok: true, passiveCount: passive.newCount, newCount: examined.newCount, lostPd: examined.lostPd };
+  return { ok: true, passiveCount: plan.passiveIds.length,
+    newCount: plan.examinationIds.length, lostPd: plan.lostPd };
 }
 
 export async function commitPoiExamination(input: ExaminePoiInput): Promise<CommitPoiExaminationResult> {

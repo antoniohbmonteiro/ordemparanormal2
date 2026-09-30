@@ -387,13 +387,18 @@
   --op2-investigation-action-column: 122px;
   --op2-investigation-difficulty-column: 55px;
 }
-.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-skill { grid-auto-rows: minmax(64px, auto); }
+.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-skill { grid-auto-rows: minmax(44px, auto); }
 .op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-difficulty,
-.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-information { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
-.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-information p { margin: 0; color: var(--op2-text); }
+.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-information { min-width: 0; padding: 8px; }
+.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-information { display: flex; align-items: center; color: var(--op2-text); overflow-wrap: anywhere; }
+.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-information > span { min-width: 0; }
+.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-row + .op2-investigation-row > .op2-investigation-difficulty,
+.op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-row + .op2-investigation-row > .op2-investigation-information { border-top: 1px solid var(--op2-border); }
 .op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: 100%; }
 .op2-poi-investigation .op2-investigation-table.is-player .op2-investigation-button img { width: 12px; height: 12px; }
 .ordemparanormal2.op2-investigation .op2-investigation-share-preview { padding: 12px; border: 1px solid rgba(160, 190, 210, .34); border-radius: 4px; font-style: italic; }
+.ordemparanormal2.op2-investigation .op2-investigation-recap-prompt { display: grid; gap: 10px; padding: 8px 4px; color: #f1f2f4; }
+.ordemparanormal2.op2-investigation .op2-investigation-recap-prompt p { margin: 0; line-height: 1.45; }
 .ordemparanormal2.op2-investigation .op2-investigation-section-header {
   color: #bfc7d1;
   font-size: 11px;

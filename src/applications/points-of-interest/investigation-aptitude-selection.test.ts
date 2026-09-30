@@ -1,11 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SKILL_DEFINITIONS } from "../../config/skills";
-import { selectInvestigationAptitudeSpecialization } from "./investigation-aptitude-selection";
+import { selectInvestigationApproachCheck, selectInvestigationAptitudeSpecialization } from "./investigation-aptitude-selection";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Investigation Aptitude selection", () => {
+  it("uses each canonical Aptitude specialization directly without a second selector", async () => {
+    const select = vi.fn();
+    expect(await selectInvestigationApproachCheck({ key: "aptitude", specialization: "currentAffairs" }, select))
+      .toEqual({ kind: "aptitude", key: "currentAffairs" });
+    expect(await selectInvestigationApproachCheck({ key: "aptitude", specialization: "humanities" }, select))
+      .toEqual({ kind: "aptitude", key: "humanities" });
+    expect(select).not.toHaveBeenCalled();
+  });
+
   it("offers only the POI specializations and returns the selected key", async () => {
     const input = vi.fn().mockResolvedValue("humanities");
     vi.stubGlobal("foundry", { applications: { api: { DialogV2: { input } } } });

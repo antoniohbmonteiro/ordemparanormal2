@@ -16,7 +16,7 @@ export function approachFromDraft(
   draft: ApproachDraft, used: ReadonlySet<string>, availableSkills: ReadonlySet<SkillKey>,
 ): PointOfInterestApproach | null {
   if (!availableSkills.has(draft.skill)) return null;
-  const base = { difficulty: POINT_OF_INTEREST_DIFFICULTY_MIN, showDifficultyToPlayers: false };
+  const base = { difficulty: POINT_OF_INTEREST_DIFFICULTY_MIN, showDifficultyToPlayers: true };
   if (draft.skill === "aptitude") {
     if (!isAptitudeSpecializationKey(draft.specialization)
       || used.has(`aptitude:${draft.specialization}`)) return null;

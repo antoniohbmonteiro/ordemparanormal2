@@ -38,7 +38,7 @@ describe("Point of Interest approach dialog", () => {
     expect(approachFromDraft({ skill: "aptitude", specialization: "arts" }, new Set<string>(), available))
       .toMatchObject({ skill: "aptitude", specialization: "arts" });
     expect(approachFromDraft({ skill: "acrobatics", specialization: "arts" }, new Set<string>(), available))
-      .toEqual({ skill: "acrobatics", difficulty: 1, showDifficultyToPlayers: false });
+      .toEqual({ skill: "acrobatics", difficulty: 1, showDifficultyToPlayers: true });
   });
 
   it("updates the rendered fields and confirmation immediately as the skill changes", async () => {
@@ -104,7 +104,7 @@ describe("Point of Interest approach dialog", () => {
     expect(content.specialization).toBeNull();
     expect(content.specializationMarkup).toBe("");
     expect(add.disabled).toBe(false);
-    expect(options.ok.callback()).toEqual({ skill: "acrobatics", difficulty: 1, showDifficultyToPlayers: false });
+    expect(options.ok.callback()).toEqual({ skill: "acrobatics", difficulty: 1, showDifficultyToPlayers: true });
   });
 
   it("uses the requested pt-BR wording in the title, button and field", async () => {

@@ -704,6 +704,10 @@
       }
     },
     "EquipmentSheet": {
+      "UseForms": "Formas de Uso",
+      "NewUseForm": "Nova forma de uso",
+      "EmptyUseForms": "Este Equipamento ainda não tem formas de uso.",
+      "ConfirmRemoveUseForm": "Deseja remover esta forma de uso?",
       "Uses": "Usos",
       "EmptyUses": "Este Equipamento não possui usos próprios.",
       "RemoveUsesTitle": "Remover usos",
@@ -713,10 +717,13 @@
         "Image": "Imagem do Equipamento",
         "Description": "Descrição",
         "Category": "Categoria",
+        "ConsumesUse": "Consome um uso",
         "Value": "Valor atual",
         "Maximum": "Máximo"
       },
       "Actions": {
+        "AddUseForm": "Adicionar forma de uso",
+        "RemoveUseForm": "Remover forma de uso",
         "AddUses": "Adicionar usos",
         "RemoveUses": "Remover usos"
       },

@@ -18,3 +18,11 @@
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__uses { display: grid; grid-template-columns: 82px 82px 36px; align-items: end; gap: .5rem; margin-top: .5rem; padding: .65rem; border: 1px solid var(--op2-equipment-border); border-radius: 8px; background: var(--op2-equipment-panel); }
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__remove { min-width: 0; margin: 0; padding: .4rem; }
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__empty { color: var(--color-text-subtle,#aaa); text-align: center; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-forms-section { margin-bottom: 1rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form { display: flex; flex-direction: column; gap: .65rem; min-width: 0; margin: .65rem 0; padding: .75rem; border: 1px solid var(--op2-equipment-border); border-radius: 8px; background: var(--op2-equipment-panel); }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-field { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form textarea { min-height: 4rem; resize: vertical; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-description { overflow-wrap: anywhere; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-footer label { display: flex; align-items: center; gap: .35rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-footer button { width: auto; }

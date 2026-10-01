@@ -17,6 +17,14 @@ import {
   readEquipmentUses,
   type EquipmentUsesData,
 } from "../../core/equipment/equipment-uses";
+import {
+  appendEquipmentUse,
+  patchEquipmentUse,
+  readEquipmentUseForms,
+  removeEquipmentUse,
+  type EquipmentUseData,
+  type EquipmentUsePatch,
+} from "../../core/equipment/equipment-use";
 
 const EQUIPMENT_SHEET_TEMPLATE =
   "systems/ordemparanormal2/templates/item/equipment-item-sheet.hbs";
@@ -38,6 +46,7 @@ interface EquipmentItemSheetContext
       }[];
     };
     readonly uses: EquipmentUsesData | null;
+    readonly useForms: readonly (EquipmentUseData & { readonly enrichedDescription: string })[];
   };
 }
 
@@ -46,6 +55,7 @@ function readEquipmentSystem(item: foundry.documents.Item) {
     readonly category?: unknown;
     readonly description?: unknown;
     readonly uses?: unknown;
+    readonly useForms?: unknown;
   };
   const category = isEquipmentCategory(system.category)
     ? system.category
@@ -56,6 +66,7 @@ function readEquipmentSystem(item: foundry.documents.Item) {
     description:
       typeof system.description === "string" ? system.description : "",
     uses: readEquipmentUses(system.uses),
+    useForms: readEquipmentUseForms(system.useForms === undefined ? [] : system.useForms),
   };
 }
 
@@ -69,6 +80,8 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
     actions: {
       addUses: EquipmentItemSheet.#onAddUses,
       removeUses: EquipmentItemSheet.#onRemoveUses,
+      addUseForm: EquipmentItemSheet.#onAddUseForm,
+      removeUseForm: EquipmentItemSheet.#onRemoveUseForm,
     },
     classes: ["ordemparanormal2", "equipment-item-sheet"],
     form: { closeOnSubmit: false, submitOnChange: true },
@@ -88,7 +101,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
 
   #updateQueue: Promise<void> = Promise.resolve();
 
-  #enqueueUpdate(operation: () => Promise<void>): void {
+  #enqueueUpdate(operation: () => Promise<void>): Promise<void> {
     this.#updateQueue = this.#updateQueue
       .then(operation)
       .catch(async (error: unknown) => {
@@ -98,6 +111,21 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
         );
         await this.render({ force: true });
       });
+    return this.#updateQueue;
+  }
+
+  #enqueueUseFormsChange(
+    mutate: (uses: readonly EquipmentUseData[]) => readonly EquipmentUseData[] | null,
+  ): Promise<void> {
+    return this.#enqueueUpdate(async () => {
+      if (!this.isEditable) return;
+      const item = this.document as foundry.documents.Item;
+      const current = readEquipmentSystem(item).useForms;
+      if (!current) throw new Error("Invalid Equipment use forms.");
+      const next = mutate(current);
+      if (!next) throw new Error("Invalid or stale Equipment use form change.");
+      await item.update({ "system.useForms": next });
+    });
   }
 
   protected override async _prepareContext(
@@ -133,6 +161,12 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
           })),
         },
         uses: system.uses,
+        useForms: await Promise.all((system.useForms ?? []).map(async use => ({
+          ...use,
+          enrichedDescription: await TextEditor.implementation.enrichHTML(use.description, {
+            relativeTo: item, secrets: item.isOwner,
+          }),
+        }))),
       },
     };
   }
@@ -144,6 +178,25 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
   ): void {
     super._attachPartListeners(partId, htmlElement, options);
     if (partId !== "main") return;
+
+    for (const input of htmlElement.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      "[data-use-form-edit]",
+    )) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+        const id = input.dataset.useFormId;
+        const field = input.dataset.useFormEdit;
+        if (!id) return;
+        let patch: EquipmentUsePatch;
+        if (field === "consumesUse" && input instanceof HTMLInputElement) {
+          patch = { consumesUse: input.checked };
+        } else if (field === "name" || field === "description") {
+          patch = { [field]: input.value };
+        } else return;
+        void this.#enqueueUseFormsChange(uses => patchEquipmentUse(uses, id, patch));
+      });
+    }
 
     for (const input of htmlElement.querySelectorAll<HTMLSelectElement>(
       "[data-category-edit]",
@@ -164,6 +217,35 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
         this.#enqueueUpdate(() => this.#updateUses(input));
       });
     }
+  }
+
+  static async #onAddUseForm(this: EquipmentItemSheet): Promise<void> {
+    if (!this.isEditable) return;
+    await this.submit();
+    await this.#enqueueUseFormsChange(uses => appendEquipmentUse(uses, {
+      id: foundry.utils.randomID(),
+      name: game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.NewUseForm"),
+      description: "",
+      consumesUse: false,
+    }));
+  }
+
+  static async #onRemoveUseForm(
+    this: EquipmentItemSheet, _event: PointerEvent, target: HTMLElement,
+  ): Promise<void> {
+    if (!this.isEditable) return;
+    const id = target.dataset.useFormId;
+    if (!id) return;
+    await this.submit();
+    const confirmed = await DialogV2.confirm({
+      classes: ["ordemparanormal2"],
+      content: `<p>${game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.ConfirmRemoveUseForm")}</p>`,
+      modal: true,
+      rejectClose: false,
+      window: { title: game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveUseForm") },
+    });
+    if (!confirmed) return;
+    await this.#enqueueUseFormsChange(uses => removeEquipmentUse(uses, id));
   }
 
   async #updateCategory(input: HTMLSelectElement): Promise<void> {

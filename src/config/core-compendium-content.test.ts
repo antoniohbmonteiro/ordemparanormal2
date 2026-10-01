@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { readAbilityUses } from "../core/abilities/ability-use";
+import { readEquipmentUseForms } from "../core/equipment/equipment-use";
 
 interface PackEntry {
   readonly _id: string;
@@ -124,6 +125,31 @@ const EQUIPMENT_DEFINITIONS = [
 const EQUIPMENT_FOLDER_DEFINITIONS = [
   ["equipmentfldar01", "Armas", 100000],
   ["equipmentfldfe01", "Ferramentas", 200000],
+] as const;
+
+const EQUIPMENT_USE_DEFINITIONS = [
+  [],
+  [["photograph", "Fotografar", false]],
+  [["analyze", "Analisar", false]],
+  [["illuminate", "Iluminar", false], ["ultraviolet-burst", "Estouro Ultravioleta", true]],
+  [["scan", "Varredura", false]],
+  [["measure", "Medir", false]],
+  [["measure", "Medir", false]],
+  [["reveal", "Revelar", true]],
+  [["tune", "Sintonizar", false]],
+  [["measure", "Medir", false]],
+] as const;
+
+const TOOL_DESCRIPTIONS = [
+  "Registra vestígios paranormais que podem revelar acontecimentos passados.",
+  "Reúne instrumentos para analisar amostras e substâncias coletadas em campo.",
+  "Ilumina o ambiente e destaca vestígios paranormais com luz ultravioleta.",
+  "Varre o ambiente para localizar pontos com potencial de reação paranormal.",
+  "Detecta alterações e rastros térmicos associados a manifestações paranormais.",
+  "Mede resíduos eletromagnéticos deixados por fenômenos paranormais.",
+  "Destaca sinais de elementos paranormais quando aplicado sobre superfícies.",
+  "Capta registros sonoros associados a alterações na Membrana.",
+  "Compara a temperatura de um alvo com a do ambiente para identificar alterações anormais.",
 ] as const;
 
 function isItemSource(entry: PackEntry): entry is PackItemSource {
@@ -343,6 +369,7 @@ describe("core compendium sources", () => {
 
     expect(entries).toHaveLength(12);
     expect(equipment).toHaveLength(EQUIPMENT_DEFINITIONS.length);
+    expect(new Set(equipment.map(item => item._id)).size).toBe(equipment.length);
 
     for (const [index, item] of equipment.entries()) {
       const [name, category, folder, uses] = EQUIPMENT_DEFINITIONS[index];
@@ -352,6 +379,7 @@ describe("core compendium sources", () => {
         _key: `!items!${id}`,
         name,
         type: "equipment",
+        img: "icons/svg/item-bag.svg",
         folder,
         system: { category, uses },
         effects: [],
@@ -360,6 +388,16 @@ describe("core compendium sources", () => {
       const description = item.system.description;
       expect(description).toEqual(expect.any(String));
       expect(description).toMatch(/^<p>.+<\/p>$/);
+
+      if (category === "tool") {
+        expect(description).toBe(`<p>${TOOL_DESCRIPTIONS[index - 1]}</p>`);
+        expect(item.system.useForms).toEqual(EQUIPMENT_USE_DEFINITIONS[index].map(
+          ([id, name, consumesUse]) => ({ id, name, description: "", consumesUse }),
+        ));
+        const forms = readEquipmentUseForms(item.system.useForms);
+        expect(forms, `${item.name} has invalid use forms`).not.toBeNull();
+        expect(new Set(forms!.map(form => form.id)).size).toBe(forms!.length);
+      }
     }
   });
 

@@ -1,4 +1,5 @@
 import { EQUIPMENT_CATEGORIES } from "../../core/equipment/equipment-category";
+import { readEquipmentUseForms } from "../../core/equipment/equipment-use";
 
 type RequiredStringField = foundry.data.fields.StringField<
   string,
@@ -20,6 +21,13 @@ type EquipmentUsesSchema = {
   max: RequiredIntegerField;
 };
 
+type EquipmentUseSchema = {
+  id: RequiredStringField;
+  name: RequiredStringField;
+  description: RequiredStringField;
+  consumesUse: foundry.data.fields.BooleanField<boolean, boolean, true, false, true>;
+};
+
 type EquipmentSchema = {
   category: RequiredStringField;
   description: RequiredStringField;
@@ -29,6 +37,14 @@ type EquipmentSchema = {
     foundry.data.fields.ModelPropsFromSchema<EquipmentUsesSchema>,
     true,
     true,
+    true
+  >;
+  useForms: foundry.data.fields.ArrayField<
+    foundry.data.fields.SchemaField<EquipmentUseSchema>,
+    foundry.data.fields.SourceFromSchema<EquipmentUseSchema>[],
+    foundry.data.fields.ModelPropsFromSchema<EquipmentUseSchema>[],
+    true,
+    false,
     true
   >;
 };
@@ -69,7 +85,30 @@ export class EquipmentDataModel extends foundry.abstract.TypeDataModel<
         },
         { required: true, nullable: true, initial: null },
       ),
+      useForms: new foundry.data.fields.ArrayField(
+        new foundry.data.fields.SchemaField({
+          id: new foundry.data.fields.StringField({ required: true, nullable: false, blank: false }),
+          name: new foundry.data.fields.StringField({ required: true, nullable: false, blank: false }),
+          description: new foundry.data.fields.StringField({
+            required: true, nullable: false, blank: true, initial: "",
+          }),
+          consumesUse: new foundry.data.fields.BooleanField({
+            required: true, nullable: false, initial: false,
+          }),
+        }),
+        {
+          required: true, nullable: false, initial: [],
+          validate: (value: unknown) => readEquipmentUseForms(value) !== null,
+        },
+      ),
     };
+  }
+
+  static override validateJoint(data: foundry.data.fields.SourceFromSchema<EquipmentSchema>): void {
+    super.validateJoint(data);
+    if (readEquipmentUseForms(data.useForms) === null) {
+      throw new Error("Equipment use forms are invalid.");
+    }
   }
 }
 

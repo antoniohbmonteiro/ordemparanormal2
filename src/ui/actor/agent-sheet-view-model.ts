@@ -131,6 +131,17 @@ export interface AbilityResourceViewModel {
 export interface AbilityCardViewModel
   extends Omit<OwnedAbilityView, "resource"> {
   readonly resource: AbilityResourceViewModel | null;
+  readonly descriptionHTML: string;
+  readonly useForms: readonly AbilityUseFormViewModel[];
+  readonly isExpanded: boolean;
+  readonly detailsId: string;
+}
+
+export interface AbilityUseFormViewModel {
+  readonly id: string;
+  readonly name: string;
+  readonly descriptionHTML: string;
+  readonly isCheckIntegrated: boolean;
 }
 
 export interface EquipmentUsesViewModel {
@@ -201,8 +212,14 @@ function createSkillDieStepControl(
 function createAbilityCardViewModel(
   ability: OwnedAbilityView,
 ): AbilityCardViewModel {
+  const content = {
+    descriptionHTML: "",
+    useForms: [],
+    isExpanded: false,
+    detailsId: `op2-ability-details-${ability.id}`,
+  };
   const resource = ability.resource;
-  if (!resource) return { ...ability, resource: null };
+  if (!resource) return { ...ability, ...content, resource: null };
 
   const unclampedPercentage =
     resource.max > 0 ? (resource.value / resource.max) * 100 : 0;
@@ -212,6 +229,7 @@ function createAbilityCardViewModel(
 
   return {
     ...ability,
+    ...content,
     resource: {
       ...resource,
       fillPercentage,

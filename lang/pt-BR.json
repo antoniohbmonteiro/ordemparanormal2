@@ -566,6 +566,10 @@
         "RollCheck": "Rolar check"
       },
       "Abilities": {
+        "Subtitle": "Habilidade",
+        "Use": "Usar",
+        "UseForms": "Formas de Uso",
+        "ToggleDescription": "Expandir ou recolher descrição da Habilidade",
         "NoCost": "Sem custo",
         "NoUses": "Sem formas de uso",
         "CheckOnly": "Disponível nos checks",

@@ -1,3 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import Handlebars from "handlebars";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SKILL_DEFINITIONS } from "../../config/skills";
 import type { AbilityUseData } from "../../core/abilities/ability-use";
@@ -15,58 +19,128 @@ vi.mock("../occupations/occupation-picker", () => ({ confirmOccupationReplacemen
 vi.mock("./agent-sheet-settings", () => ({ AgentSheetSettings: class {} }));
 
 interface TestEvent {
+  type: string;
   target: TestElement;
   button: number;
+  detail: number;
+  clientX: number;
+  clientY: number;
   stopped: boolean;
-  stopPropagation: ReturnType<typeof vi.fn>;
-  preventDefault: ReturnType<typeof vi.fn>;
+  stopPropagation: ReturnType<typeof vi.fn<() => void>>;
+  stopImmediatePropagation: ReturnType<typeof vi.fn<() => void>>;
+  preventDefault: ReturnType<typeof vi.fn<() => void>>;
 }
 type Action = (this: TestSheet, event: TestEvent, target: TestElement) => Promise<void>;
 type Listener = (event: TestEvent) => void;
 
-// Only the sheet's scoped selectors and capture/bubble boundary are modeled here.
+// This boundary shim models scoped selectors and bubbling, not browser layout.
 class TestElement {
-  readonly listeners: Array<{ type: string; listener: Listener; capture: boolean; signal?: AbortSignal }> = [];
+  readonly listeners: Array<{ type: string; listener: Listener }> = [];
+  readonly children: TestElement[] = [];
   dataset: Record<string, string> = {};
-  constructor(readonly classes = "", readonly parent: TestElement | null = null, readonly tag = "div") {}
+  constructor(readonly classes = "", readonly parent: TestElement | null = null, readonly tag = "div") {
+    parent?.children.push(this);
+  }
   closest(selector: string): TestElement | null {
     const matches = selector.split(",").some((part) => {
       const trimmed = part.trim();
-      if (trimmed === "button:not(.op2-ability-card__use)") return this.tag === "button" && !this.classes.split(" ").includes("op2-ability-card__use");
       return this.classes.split(" ").includes(trimmed.slice(1));
     });
     return matches ? this : this.parent?.closest(selector) ?? null;
   }
-  querySelector(): null { return null; }
-  addEventListener(type: string, listener: Listener, options: { capture?: boolean; signal?: AbortSignal } = {}): void {
-    this.listeners.push({ type, listener, capture: options.capture ?? false, signal: options.signal });
+  querySelector(selector: string): TestElement | null {
+    for (const child of this.children) {
+      if (child.classes.split(" ").includes(selector.slice(1))) return child;
+      const nested = child.querySelector(selector);
+      if (nested) return nested;
+    }
+    return null;
+  }
+  addEventListener(type: string, listener: Listener): void {
+    this.listeners.push({ type, listener });
+  }
+  dispatchEvent(event: TestEvent): boolean {
+    event.target = this;
+    for (let node: TestElement | null = this; node && !event.stopped; node = node.parent) {
+      for (const entry of node.listeners) {
+        if (entry.type === event.type) entry.listener(event);
+        if (event.stopped) break;
+      }
+    }
+    return !event.preventDefault.mock.calls.length;
   }
   emit(type: string, target: TestElement, button = 0): TestEvent {
     const event = pointer(target, button);
-    for (const entry of [...this.listeners].sort((a, b) => Number(b.capture) - Number(a.capture))) {
-      if (entry.type !== type || entry.signal?.aborted) continue;
-      entry.listener(event);
-      if (event.stopped) break;
-    }
+    event.type = type;
+    target.dispatchEvent(event);
     return event;
   }
 }
+class TestMouseEvent implements TestEvent {
+  target!: TestElement;
+  stopped = false;
+  readonly button: number;
+  readonly detail: number;
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly preventDefault = vi.fn();
+  readonly stopPropagation = vi.fn(() => { this.stopped = true; });
+  readonly stopImmediatePropagation = vi.fn(() => { this.stopped = true; });
+  constructor(readonly type: string, options: MouseEventInit = {}) {
+    this.button = options.button ?? 0;
+    this.detail = options.detail ?? 0;
+    this.clientX = options.clientX ?? 0;
+    this.clientY = options.clientY ?? 0;
+  }
+}
 function pointer(target: TestElement, button = 0): TestEvent {
-  const event: TestEvent = { target, button, stopped: false, preventDefault: vi.fn(), stopPropagation: vi.fn() };
-  event.stopPropagation.mockImplementation(() => { event.stopped = true; });
+  const event = new TestMouseEvent("click", { button, detail: 1, clientX: 35, clientY: 60 });
+  event.target = target;
   return event;
 }
 interface MenuEntry {
   label: string;
+  icon?: string;
+  visible?: () => boolean;
   onClick(event: TestEvent, target: TestElement): unknown;
 }
 interface TestMenu {
   entries: MenuEntry[];
-  render: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
+  render: ReturnType<typeof vi.fn<(target: TestElement, options: { event: TestEvent }) => Promise<void>>>;
+  close: ReturnType<typeof vi.fn<(options?: object) => Promise<void>>>;
   selector: string;
+  element?: { isConnected: boolean };
+  target: TestElement | null;
 }
 const menus: TestMenu[] = [];
+class MockContextMenu implements TestMenu {
+  static get implementation(): typeof MockContextMenu { return MockContextMenu; }
+  element?: { isConnected: boolean };
+  target: TestElement | null = null;
+  readonly render = vi.fn(async (_target: TestElement, _options: { event: TestEvent }) => {
+    this.element = { isConnected: this.entries.some((entry) => !entry.visible || entry.visible()) };
+  });
+  readonly close = vi.fn(async (_options?: object) => {
+    if (!this.element) throw new Error("Cannot close a menu which has never rendered");
+    this.element.isConnected = false;
+  });
+  constructor(container: TestElement, readonly selector: string, readonly entries: MenuEntry[], readonly options: { eventName: string; fixed: boolean; jQuery: boolean }) {
+    menus.push(this);
+    container.addEventListener(options.eventName, (event) => {
+      const target = event.target.closest(selector);
+      if (!target) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const prior = this.target;
+      this.target = target;
+      if (this.element?.isConnected && prior === target) void this.close();
+      else {
+        if (this.element?.isConnected) void this.close();
+        void this.render(target, { event });
+      }
+    });
+  }
+}
 interface TestItem {
   id: string;
   type: string;
@@ -85,13 +159,16 @@ interface TestSheet {
   document: TestActor;
   isEditable: boolean;
   editMode: boolean;
-  render: ReturnType<typeof vi.fn>;
+  render: ReturnType<typeof vi.fn<(options?: object) => Promise<TestSheet>>>;
   submit: ReturnType<typeof vi.fn>;
   close(): Promise<void>;
-  _prepareContext(options: object): Promise<{ agent: AgentSheetViewModel; canEditStructure: boolean }>;
+  _prepareContext(options: object): Promise<TestContext>;
+  _preRender(context: object, options: object): Promise<void>;
   _attachPartListeners(partId: string, element: TestElement, options: object): void;
 }
+interface TestContext { agent: AgentSheetViewModel; editable: boolean; editMode: boolean; canEditStructure: boolean }
 let Sheet: { new(options: { document: object }): TestSheet; DEFAULT_OPTIONS: { actions: Record<string, Action> } };
+let renderView: Handlebars.TemplateDelegate;
 
 beforeAll(async () => {
   class MockActorSheetV2 {
@@ -105,26 +182,22 @@ beforeAll(async () => {
     render = vi.fn(async () => this);
     submit = vi.fn(async () => undefined);
     constructor(options: { document: object }) { this.document = options.document; }
-    async _prepareContext(): Promise<object> { return { editable: this.isEditable }; }
+    async _prepareContext(): Promise<object> { return { editable: this.isEditable, source: this.document }; }
+    async _preRender(): Promise<void> {}
     _attachPartListeners(): void {}
     _createContextMenu(provider: () => MenuEntry[], selector: string, options: { container: TestElement; eventName: string }): TestMenu {
-      const menu = { entries: provider(), selector, render: vi.fn(async (_target?: TestElement, _options?: unknown) => undefined), close: vi.fn(async () => undefined) };
-      menus.push(menu);
-      options.container.addEventListener(options.eventName, (event) => {
-        const target = event.target.closest(selector);
-        if (target) void menu.render(target);
-      });
-      return menu;
+      return new MockContextMenu(options.container, selector, provider(), { ...options, fixed: true, jQuery: false });
     }
     async _preClose(): Promise<void> {}
     _onClose(): void {}
     async close(): Promise<void> { await this._preClose(); this._onClose(); }
   }
   vi.stubGlobal("Element", TestElement);
-  vi.stubGlobal("foundry", { applications: {
+  vi.stubGlobal("MouseEvent", TestMouseEvent);
+  vi.stubGlobal("foundry", { utils: { getType: () => "HTMLElement" }, applications: {
     api: { DialogV2: { confirm: flow.confirm }, HandlebarsApplicationMixin: <T>(base: T) => base },
     sheets: { ActorSheetV2: MockActorSheetV2 },
-    ux: { TextEditor: { implementation: { enrichHTML: vi.fn(async (html: string) => html) } } },
+    ux: { ContextMenu: MockContextMenu, TextEditor: { implementation: { enrichHTML: vi.fn(async (html: string) => html) } } },
   } });
   vi.stubGlobal("document", { createElement: () => {
     const element = { innerHTML: "", textContent: "", get outerHTML() { return `<p>${element.textContent}</p>`; }, get content() { return { textContent: element.innerHTML.replace(/<[^>]*>/g, ""), querySelector: () => null }; } };
@@ -134,6 +207,13 @@ beforeAll(async () => {
   vi.stubGlobal("ui", { notifications: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } });
   const module = await import("./agent-sheet");
   Sheet = module.AgentSheet as unknown as typeof Sheet;
+  const handlebars = Handlebars.create();
+  handlebars.registerHelper("localize", (key: string) => key);
+  handlebars.registerPartial("systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs",
+    await readFile(new URL("../../../templates/actor/partials/die-step-select.hbs", import.meta.url), "utf8"));
+  const templates = await Promise.all(["identity", "abilities"].map((part) =>
+    readFile(new URL(`../../../templates/actor/agent-sheet-${part}.hbs`, import.meta.url), "utf8")));
+  renderView = handlebars.compile(templates.join("\n"));
 });
 beforeEach(() => {
   vi.clearAllMocks();
@@ -162,7 +242,7 @@ function setup(uses: AbilityUseData[] = []) {
   const main = new TestElement("op2-ability-card__use", row, "button");
   main.dataset = { itemId: ability.id, action: "useAbility" };
   const trigger = new TestElement("op2-ability-card__menu-trigger", row, "button");
-  trigger.dataset.itemId = ability.id;
+  trigger.dataset = { itemId: ability.id, action: "openAbilityMenu" };
   const resource = new TestElement("op2-ability-card__resource", row);
   const decrease = new TestElement("op2-ability-card__resource-adjust", resource, "button");
   decrease.dataset = { itemId: ability.id, action: "decreaseAbilityResource", resourceAdjustment: "decrease" };
@@ -185,6 +265,80 @@ function action(name: string): Action {
   if (!handler) throw new Error(`Missing action ${name}`);
   return handler;
 }
+
+function renderCycle(sheet: TestSheet) {
+  const view = { html: "", context: null as TestContext | null, container: new TestElement() };
+  sheet.render.mockImplementation(async () => {
+    const context = await sheet._prepareContext({});
+    await sheet._preRender(context, {});
+    view.context = context;
+    view.html = renderView(context);
+    view.container = new TestElement();
+    for (const ability of context.agent.abilities) {
+      const row = new TestElement("op2-ability-card", view.container);
+      const surface = new TestElement("op2-ability-card__use", row, "button");
+      surface.dataset.itemId = ability.id;
+    }
+    sheet._attachPartListeners("main", view.container, {});
+    return sheet;
+  });
+  return view;
+}
+
+describe("Agent Sheet Edit Mode render regression", () => {
+  it("updates the real prepared context and templates on the first pencil action in both directions", async () => {
+    const { sheet, trigger } = setup();
+    const view = renderCycle(sheet);
+    await sheet.render({ force: true });
+    const unopened = menus[0]!;
+    expect(unopened.element).toBeUndefined();
+    expect(view.context).toMatchObject({ editMode: false, canEditStructure: false });
+    expect(view.html).toMatch(/data-action="toggleEditMode" aria-pressed="false"/);
+    expect(view.html).not.toContain('data-action="openProfilePicker"');
+
+    await action("toggleEditMode").call(sheet, pointer(trigger), trigger);
+    expect(unopened.close).not.toHaveBeenCalled();
+    expect(view.context).toMatchObject({ editMode: true, canEditStructure: true });
+    expect(view.html).toContain('class="op2-edit-mode-toggle is-active"');
+    expect(view.html).toMatch(/data-action="toggleEditMode" aria-pressed="true"/);
+    expect(view.html).toContain('data-action="openProfilePicker"');
+    expect(view.html).toContain('data-action="openOccupationPicker"');
+    expect(view.html).toContain('data-action="openAbilityMenu"');
+
+    await action("toggleEditMode").call(sheet, pointer(trigger), trigger);
+    expect(view.context).toMatchObject({ editMode: false, canEditStructure: false });
+    expect(view.html).not.toContain("op2-edit-mode-toggle is-active");
+    expect(view.html).toMatch(/data-action="toggleEditMode" aria-pressed="false"/);
+    expect(view.html).not.toContain('data-action="openOccupationPicker"');
+    expect(view.html).not.toContain('data-action="openAbilityMenu"');
+    expect(sheet.render).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe.skipIf(!process.env.FOUNDRY_V14_COMMON_PATH)("installed Foundry v14 unopened menu regression", () => {
+  it("runs the pencil render cycle without closing a never-rendered native ContextMenu", async () => {
+    const commonPath = process.env.FOUNDRY_V14_COMMON_PATH!;
+    const nativePath = resolve(dirname(commonPath), "../client/applications/ux/context-menu.mjs");
+    const { default: NativeMenu } = await import(/* @vite-ignore */ pathToFileURL(nativePath).href);
+    const implementation = vi.spyOn(MockContextMenu, "implementation", "get").mockReturnValue(NativeMenu);
+    const close = vi.spyOn(NativeMenu.prototype, "close");
+    try {
+      const { sheet, trigger } = setup();
+      const view = renderCycle(sheet);
+      await sheet.render({ force: true });
+      await action("toggleEditMode").call(sheet, pointer(trigger), trigger);
+      expect(view.context).toMatchObject({ editMode: true, canEditStructure: true });
+      expect(view.html).toMatch(/data-action="toggleEditMode" aria-pressed="true"/);
+      await action("toggleEditMode").call(sheet, pointer(trigger), trigger);
+      expect(view.context).toMatchObject({ editMode: false, canEditStructure: false });
+      await sheet.close();
+      expect(close).not.toHaveBeenCalled();
+    } finally {
+      close.mockRestore();
+      implementation.mockRestore();
+    }
+  });
+});
 
 
 describe("Agent Sheet Ability presentation state", () => {
@@ -232,21 +386,26 @@ describe("Agent Sheet Ability presentation state", () => {
 
 describe("shared Ability context menu", () => {
   it("uses one instance and the same ordered entries for right-click and the dots", async () => {
-    const { sheet, attach, container, main, row, trigger, click } = setup();
+    const { sheet, attach, container, main, trigger, click } = setup();
     sheet.editMode = true;
     attach();
     const abilityMenus = menus.filter(({ selector }) => selector.includes("ability"));
     expect(abilityMenus).toHaveLength(1);
     const menu = abilityMenus[0]!;
     const entries = menu.entries;
+    expect((menu as MockContextMenu).options).toEqual({ eventName: "contextmenu", fixed: true, jQuery: false });
     expect(entries.map(({ label }) => label)).toEqual(["ORDEMPARANORMAL2.AgentSheet.Abilities.Edit", "ORDEMPARANORMAL2.AgentSheet.Abilities.Delete"]);
-    const event = container.emit("contextmenu", main, 2);
-    expect(event.preventDefault).toHaveBeenCalledOnce();
-    expect(menu.render).toHaveBeenCalledWith(row, { event });
     await click(trigger);
+    expect(menu.target).toBe(main);
+    expect(menu.render).toHaveBeenCalledWith(main, { event: expect.objectContaining({ type: "contextmenu", button: 2, clientX: 35, clientY: 60 }) });
+    await menu.close();
+    const name = new TestElement("op2-ability-card__name", main);
+    const event = container.emit("contextmenu", name, 2);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(menu.render).toHaveBeenCalledWith(main, { event });
     expect(menu.render).toHaveBeenCalledTimes(2);
     expect(menu.entries).toBe(entries);
-    expect(menu.render.mock.calls[1]?.[0]).toBe(row);
+    expect(menu.render.mock.calls[1]?.[0]).toBe(main);
     expect(flow.useAbility).not.toHaveBeenCalled();
     expect(flow.publish).not.toHaveBeenCalled();
   });
@@ -280,7 +439,8 @@ describe("shared Ability context menu", () => {
     editable.container.emit("contextmenu", editable.main, 2);
     await editable.click(editable.trigger);
     for (const entry of menu.entries) await entry.onClick(pointer(editable.row), editable.row);
-    expect(menu.render).not.toHaveBeenCalled();
+    expect(menu.element?.isConnected).toBe(false);
+    expect(menu.entries.every((entry) => entry.visible?.() === false)).toBe(true);
     expect(editable.ability.sheet.render).not.toHaveBeenCalled();
     expect(editable.actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
     expect(flow.confirm).not.toHaveBeenCalled();
@@ -297,37 +457,90 @@ describe("shared Ability context menu", () => {
     expect(actor.deleteEmbeddedDocuments).not.toHaveBeenCalled();
   });
 
-  it("suppresses right-click on every internal control without opening or using anything", () => {
+  it("ignores right-click on every internal control without opening or using anything", () => {
     const fixture = setup();
     fixture.attach();
     for (const target of [fixture.resource, fixture.decrease, fixture.increase, fixture.chevron, fixture.trigger, fixture.details, fixture.link]) {
       const event = fixture.container.emit("contextmenu", target, 2);
-      expect(event.preventDefault).toHaveBeenCalledOnce();
-      expect(event.stopPropagation).toHaveBeenCalledOnce();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.stopPropagation).not.toHaveBeenCalled();
     }
     expect(menus[0]!.render).not.toHaveBeenCalled();
     expect(flow.useAbility).not.toHaveBeenCalled();
     expect(flow.adjust).not.toHaveBeenCalled();
   });
 
-  it("closes the old menu and aborts its listeners on replacement and close", async () => {
-    const { sheet, attach, container, main, trigger, click } = setup();
-    attach();
+  it("closes an open menu before replacing its part and when closing the sheet", async () => {
+    const { sheet } = setup();
+    const view = renderCycle(sheet);
+    await sheet.render({ force: true });
     const old = menus[0]!;
-    await sheet._prepareContext({});
+    view.container.emit("contextmenu", view.container.querySelector(".op2-ability-card__use")!, 2);
+    await sheet.render({ force: true });
     expect(old.close).toHaveBeenCalledOnce();
-    attach();
+    expect(old.close).toHaveBeenCalledWith({ animate: false });
     const current = menus[1]!;
-    container.emit("contextmenu", main, 2);
-    expect(old.render).not.toHaveBeenCalled();
+    expect(old.render).toHaveBeenCalledOnce();
+    view.container.emit("contextmenu", view.container.querySelector(".op2-ability-card__use")!, 2);
     expect(current.render).toHaveBeenCalledOnce();
     await sheet.close();
     expect(current.close).toHaveBeenCalledOnce();
+    expect(current.element?.isConnected).toBe(false);
+    expect(old.element?.isConnected).toBe(false);
+  });
+
+  it("does not close a previously closed menu again during replacement or sheet close", async () => {
+    const { sheet } = setup();
+    const view = renderCycle(sheet);
+    await sheet.render({ force: true });
+    const old = menus[0]!;
+    view.container.emit("contextmenu", view.container.querySelector(".op2-ability-card__use")!, 2);
+    await old.close();
+    await sheet.render({ force: true });
+    await sheet.close();
+    expect(old.close).toHaveBeenCalledOnce();
+    expect(menus[1]!.close).not.toHaveBeenCalled();
+  });
+
+  it("targets a different Ability when alternating native right-click and keyboard dots", async () => {
+    const { sheet, ability, actor, attach, container, main, trigger, click } = setup();
+    sheet.editMode = true;
+    const second = { ...ability, id: "ability-2", sheet: { render: vi.fn() } };
+    actor.items.push(second);
+    const row = new TestElement("op2-ability-card", container);
+    const surface = new TestElement("op2-ability-card__use", row, "button");
+    surface.dataset.itemId = second.id;
+    const dots = new TestElement("op2-ability-card__menu-trigger", row, "button");
+    dots.dataset.action = "openAbilityMenu";
+    attach();
     container.emit("contextmenu", main, 2);
-    expect(current.render).toHaveBeenCalledOnce();
+    const menu = menus[0]!;
+    await menu.entries[0]!.onClick(pointer(main), menu.target!);
+    const keyboard = pointer(dots);
+    keyboard.detail = 0;
+    await action("openAbilityMenu").call(sheet, keyboard, dots);
+    expect(menu.target).toBe(surface);
+    expect(menu.render.mock.calls.at(-1)?.[1]).toMatchObject({ event: { clientX: 0, clientY: 0 } });
+    await menu.entries[0]!.onClick(pointer(surface), menu.target!);
+    expect(ability.sheet.render).toHaveBeenCalledOnce();
+    expect(second.sheet.render).toHaveBeenCalledOnce();
+    await click(trigger, 2);
+    expect(menu.target).toBe(surface);
+    expect(flow.useAbility).not.toHaveBeenCalled();
+  });
+
+  it("rejects dots outside Edit Mode, without a live instance or for a removed Ability", async () => {
+    const { sheet, attach, actor, trigger, click } = setup();
+    attach();
     await click(trigger);
-    expect(current.render).toHaveBeenCalledOnce();
-    expect(old.render).not.toHaveBeenCalled();
+    expect(menus[0]!.render).not.toHaveBeenCalled();
+    sheet.editMode = true;
+    actor.items = [];
+    await click(trigger);
+    expect(menus[0]!.render).not.toHaveBeenCalled();
+    await sheet.close();
+    await click(trigger);
+    expect(menus[0]!.render).not.toHaveBeenCalled();
   });
 });
 
@@ -350,6 +563,106 @@ describe("Ability row functional routing", () => {
     await click(main);
     expect(flow.dialog).toHaveBeenCalledWith(ability, forms.slice(0, 2), 3, { value: 2, max: 3 }, expect.any(Function));
     expect(flow.useAbility).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 2])("opens both independent Ímpeto forms in order with resource %i/3 before paying", async (value) => {
+    const forms: AbilityUseData[] = [
+      { ...use("impetus-add-d4"), name: "Adicionar d4", cost: { source: "resource", amount: 1 } },
+      { ...use("impetus-raise-attribute"), name: "Elevar atributo", cost: { source: "resource", amount: 3 } },
+    ];
+    const { ability, main, click } = setup(forms);
+    ability.name = "Ímpeto";
+    ability.system.resource = { value, max: 3 };
+    await click(main);
+    expect(flow.dialog).toHaveBeenCalledExactlyOnceWith(ability, forms, 3, { value, max: 3 }, expect.any(Function));
+    expect(flow.useAbility).not.toHaveBeenCalled();
+    expect(flow.publish).not.toHaveBeenCalled();
+    expect(ability.system.resource.value).toBe(value);
+  });
+
+  it.each(["impetus-add-d4", "impetus-raise-attribute", null])("routes selection %s through the real dialog and existing use callback", async (selectedId) => {
+    const forms: AbilityUseData[] = [
+      { ...use("impetus-add-d4"), name: "Adicionar d4", cost: { source: "resource", amount: 1 } },
+      { ...use("impetus-raise-attribute"), name: "Elevar atributo", cost: { source: "resource", amount: 3 } },
+    ];
+    const { sheet, ability, actor, main, click } = setup(forms);
+    ability.name = "Ímpeto";
+    const selected = forms.find(({ id }) => id === selectedId);
+    const affordable = selected?.cost.amount === 1;
+    if (selected) flow.useAbility.mockResolvedValue(affordable
+      ? { status: "success", use: selected, source: "resource", amount: 1, remaining: 1 }
+      : { status: "insufficient", source: "resource", required: 3, available: 2 });
+    const realDialog = await vi.importActual<typeof import("../abilities/ability-use-dialog")>("../abilities/ability-use-dialog");
+    flow.dialog.mockImplementationOnce(realDialog.openAbilityUseDialog);
+    const application = foundry.applications;
+    const wait = vi.fn(async (config: {
+      render: (event: Event, dialog: unknown) => void;
+      close: () => boolean;
+    }) => {
+      const buttons = forms.map(({ id }) => ({ dataset: { useId: id }, disabled: false,
+        click: undefined as (() => Promise<void>) | undefined,
+        addEventListener(_type: string, listener: () => Promise<void>) { this.click = listener; },
+      }));
+      const close = vi.fn(async () => undefined);
+      config.render(new Event("render"), { element: { querySelectorAll: () => buttons }, close });
+      expect(flow.useAbility).not.toHaveBeenCalled();
+      await buttons.find(({ dataset }) => dataset.useId === selectedId)?.click?.();
+      expect(close).toHaveBeenCalledTimes(affordable ? 1 : 0);
+      if (!affordable) expect(buttons.every(({ disabled }) => !disabled)).toBe(true);
+      return config.close();
+    });
+    const renderTemplate = vi.fn(async (_path: string, view: object) => {
+      const template = await readFile(new URL("../../../templates/abilities/ability-use-dialog.hbs", import.meta.url), "utf8");
+      const handlebars = Handlebars.create();
+      handlebars.registerHelper("localize", (key: string) => key);
+      return handlebars.compile(template)(view);
+    });
+    const globals = foundry as unknown as { applications: unknown };
+    globals.applications = { ...application, api: { ...application.api, DialogV2: { ...application.api.DialogV2, wait } }, handlebars: { renderTemplate } };
+    try {
+      await click(main);
+      expect(wait).toHaveBeenCalledOnce();
+      expect(renderTemplate).toHaveBeenCalledWith("systems/ordemparanormal2/templates/abilities/ability-use-dialog.hbs", expect.objectContaining({ resource: { value: 2, max: 3 }, uses: [expect.objectContaining({ id: forms[0]!.id, locked: false }), expect.objectContaining({ id: forms[1]!.id, locked: false })] }));
+      if (selected) {
+        expect(flow.useAbility).toHaveBeenCalledExactlyOnceWith(actor, ability, selected.id);
+        if (affordable) {
+          expect(flow.publish).toHaveBeenCalledExactlyOnceWith(actor, ability, expect.objectContaining({ use: selected }));
+          expect(sheet.render).toHaveBeenCalledWith({ force: true });
+        } else {
+          expect(flow.publish).not.toHaveBeenCalled();
+          expect(sheet.render).not.toHaveBeenCalled();
+          expect(ability.system.resource).toEqual({ value: 2, max: 3 });
+        }
+      } else {
+        expect(flow.useAbility).not.toHaveBeenCalled();
+        expect(flow.publish).not.toHaveBeenCalled();
+        expect(sheet.render).not.toHaveBeenCalled();
+        expect(ability.system.resource).toEqual({ value: 2, max: 3 });
+      }
+    } finally {
+      globals.applications = application;
+    }
+  });
+
+  it("keeps canonical Ímpeto's integrated d4 in checks and executes only its standalone form", async () => {
+    const source = JSON.parse(await readFile(new URL("../../../packs-src/abilities/impeto.json", import.meta.url), "utf8"));
+    const { ability, actor, main, click } = setup(source.system.uses);
+    ability.name = source.name;
+    flow.useAbility.mockResolvedValue({ status: "insufficient", source: "resource", required: 3, available: 2 });
+    await click(main);
+    expect(flow.dialog).not.toHaveBeenCalled();
+    expect(flow.useAbility).toHaveBeenCalledExactlyOnceWith(actor, ability, "impetus-raise-attribute");
+    expect(flow.publish).not.toHaveBeenCalled();
+    expect(ability.system.resource).toEqual({ value: 2, max: 3 });
+  });
+
+  it.each([false, true])("preserves publication without payment with check-only forms: %s", async (checkOnly) => {
+    const check = { ...use("check"), checkIntegration: { modification: { type: "extraDie" as const, applicability: { type: "any" as const }, die: 4 as const } } };
+    const { ability, actor, main, click } = setup(checkOnly ? [check] : []);
+    await click(main);
+    expect(flow.dialog).not.toHaveBeenCalled();
+    expect(flow.useAbility).not.toHaveBeenCalled();
+    expect(flow.publish).toHaveBeenCalledExactlyOnceWith(actor, ability);
   });
 
   it("uses neither a non-primary click nor any internal control to execute an Ability", async () => {

@@ -1,6 +1,8 @@
 <section class="op2-abilities" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tabs.Abilities'}}">
-  <h2 class="op2-abilities__title">{{localize "ORDEMPARANORMAL2.AgentSheet.Tabs.Abilities"}}</h2>
-  <div class="op2-abilities__heading">{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Subtitle"}}</div>
+  <div class="op2-abilities__columns">
+    <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Subtitle"}}</span>
+    <span class="op2-abilities__resource-heading">{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource"}}</span>
+  </div>
   <div class="op2-abilities__list">
     {{#each agent.abilities}}
       <article class="op2-ability-card" data-item-id="{{id}}">
@@ -34,7 +36,7 @@
             </div>
           {{/if}}
           {{#if @root.canEditStructure}}
-            <button class="op2-ability-card__menu-trigger" type="button" data-item-id="{{id}}" aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>
+            <button class="op2-ability-card__menu-trigger" type="button" data-action="openAbilityMenu" data-item-id="{{id}}" aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>
           {{else}}
             <button class="op2-ability-card__expand" type="button" data-action="toggleAbilityDescription" data-item-id="{{id}}" aria-expanded="{{isExpanded}}" aria-controls="{{detailsId}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.ToggleDescription'}}"><span aria-hidden="true">{{#if isExpanded}}▾{{else}}▸{{/if}}</span></button>
           {{/if}}

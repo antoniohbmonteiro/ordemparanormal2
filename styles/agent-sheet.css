@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/inter/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 .ordemparanormal2.agent-sheet {
   --op2-sheet-bg: rgba(18, 20, 24, 0.96);
   --op2-panel-bg: rgba(27, 30, 36, 0.92);
@@ -500,37 +508,56 @@
 }
 
 .ordemparanormal2.agent-sheet .op2-abilities {
+  --op2-panel-bg-hover: #20232a;
+  --op2-ability-separator: rgba(255, 255, 255, 0.051);
+  box-sizing: border-box;
   display: grid;
+  width: 100%;
   min-width: 0;
-  gap: 24px;
-  padding: 20px;
+  align-content: start;
+  gap: 6px;
+  padding: var(--op2-space-3);
+  overflow: visible;
 }
-.ordemparanormal2.agent-sheet .op2-abilities__title {
-  margin: 0;
+.ordemparanormal2.agent-sheet .op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="abilities"].active) {
+  background: #14161b;
+}
+.ordemparanormal2.agent-sheet .op2-abilities__columns {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px 25px;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 13px 8px;
+  border-bottom: 1px solid var(--op2-ability-separator);
   color: var(--op2-text-muted);
+  font-family: "Inter", sans-serif;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
+  line-height: 13px;
   text-transform: uppercase;
 }
-.ordemparanormal2.agent-sheet .op2-abilities__heading {
-  height: 32px;
-  padding: 5px 12px 8px;
-  border-bottom: 1px solid var(--op2-border);
-  color: var(--op2-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
+.ordemparanormal2.agent-sheet .op2-abilities__resource-heading {
+  text-align: center;
 }
 .ordemparanormal2.agent-sheet .op2-abilities__list {
   display: grid;
+  width: 100%;
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 6px;
-  padding-top: 6px;
-  border-top: 2px solid var(--op2-accent-bright);
+  overflow: visible;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card {
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   min-height: 56px;
+  margin: 0;
+  overflow: visible;
   border: 1px solid var(--op2-border);
   border-radius: var(--op2-radius);
   background: var(--op2-panel-bg);
@@ -666,17 +693,20 @@
   opacity: 0;
   pointer-events: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card:hover .op2-ability-card__use:not(:disabled) .op2-ability-card__use-label,
+.ordemparanormal2.agent-sheet .op2-ability-card__use:hover:not(:disabled) .op2-ability-card__use-label,
 .ordemparanormal2.agent-sheet .op2-ability-card__use:focus-visible .op2-ability-card__use-label {
   opacity: 1;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__body {
   display: grid;
+  flex: 1 1 0;
   min-width: 0;
   gap: 2px;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__name {
   overflow: hidden;
+  color: var(--op2-text);
+  font-family: "Inter", sans-serif;
   font-size: 13px;
   font-weight: 600;
   line-height: 16px;
@@ -684,7 +714,8 @@
   white-space: nowrap;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__subtitle {
-  color: var(--op2-accent-bright);
+  color: var(--op2-accent);
+  font-family: "Inter", sans-serif;
   font-size: 11px;
   font-weight: 500;
   line-height: 13px;
@@ -700,10 +731,11 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border-left: 1px solid var(--op2-border);
+  border-left: 1px solid var(--op2-ability-separator);
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource-value {
   color: var(--op2-text);
+  font-family: "Inter", sans-serif;
   font-size: 13px;
   font-weight: 600;
   line-height: 16px;
@@ -734,8 +766,8 @@
   height: 32px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 4px 5px;
+  gap: 4px;
+  padding: 2px 5px;
   border: 1px solid var(--op2-border-strong);
   border-radius: 6px;
   background: var(--op2-panel-bg);
@@ -755,17 +787,16 @@
   min-width: 0;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-}
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-current .op2-ability-card__resource-track {
-  width: 60px;
-  height: 4px;
+  gap: 4px;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource-adjust {
+  box-sizing: border-box;
   display: grid;
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   margin: 0;
   padding: 0;
   place-items: center;
@@ -788,7 +819,7 @@
   padding: 0;
   place-items: center;
   border: 0;
-  border-left: 1px solid var(--op2-border);
+  border-left: 1px solid var(--op2-ability-separator);
   border-radius: 0;
   background: transparent;
   color: var(--op2-text-muted);

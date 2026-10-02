@@ -1,6 +1,10 @@
 # Third-Party Licenses
 
-The original source code in this repository is made available under the PolyForm Strict License 1.0.0. See [LICENSE](LICENSE). The third-party icon glyphs listed below remain subject to their respective licenses and are not covered by the project's code license.
+The original source code in this repository is made available under the PolyForm Strict License 1.0.0. See [LICENSE](LICENSE). The third-party assets and libraries listed below remain subject to their respective licenses and are not covered by the project's code license.
+
+## Inter font
+
+Ability row titles, subtitles, and resource values use the unmodified variable webfont from [The Inter Project](https://github.com/rsms/inter), Copyright (c) 2016 The Inter Project Authors, under the SIL Open Font License 1.1. The font is bundled locally at `assets/fonts/inter/InterVariable.woff2`, with the complete license at [assets/fonts/inter/LICENSE.txt](assets/fonts/inter/LICENSE.txt).
 
 ## Game-icons.net glyphs
 

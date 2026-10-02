@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import translations from "../../../lang/pt-BR.json";
 
 let render: Handlebars.TemplateDelegate;
+let renderSheet: Handlebars.TemplateDelegate;
 let styles = "";
 const card = {
   id: "ability-1", name: "Olhar Clínico", img: "icons/ability.webp",
@@ -17,6 +18,11 @@ beforeAll(async () => {
   const handlebars = Handlebars.create();
   handlebars.registerHelper("localize", (key: string) => key.split(".").reduce<unknown>((value, part) => (value as Record<string, unknown>)[part], translations));
   render = handlebars.compile(template);
+  handlebars.registerPartial("systems/ordemparanormal2/templates/actor/agent-sheet-abilities.hbs", template);
+  for (const part of ["identity", "skills", "inventory"]) {
+    handlebars.registerPartial(`systems/ordemparanormal2/templates/actor/agent-sheet-${part}.hbs`, "");
+  }
+  renderSheet = handlebars.compile(await readFile(new URL("../../../templates/actor/agent-sheet.hbs", import.meta.url), "utf8"));
 });
 
 function html(overrides: object = {}, permissions = { editable: true, canEditStructure: false }): string {
@@ -24,6 +30,26 @@ function html(overrides: object = {}, permissions = { editable: true, canEditStr
 }
 
 describe("Agent Sheet Ability rows", () => {
+  it("renders column labels below the parent tabs without repeating section titles", () => {
+    const output = html();
+    expect(output).not.toContain("op2-abilities__title");
+    expect(output).not.toContain("op2-abilities__heading");
+    expect(output).not.toContain("<h2");
+    expect(output).toMatch(/op2-abilities__columns[\s\S]*?<span>Habilidade<\/span>[\s\S]*?op2-abilities__resource-heading">Recurso<\/span>/);
+    expect(output).toContain('op2-ability-card__subtitle">Habilidade</span>');
+    expect(styles).not.toContain(".op2-abilities__title");
+    expect(styles).not.toContain(".op2-abilities__heading");
+    const parent = renderSheet({
+      editable: true, canEditStructure: false, agent: { abilities: [card] },
+      tabs: Object.fromEntries(["abilities", "inventory", "notes"].map((id) => [id, {
+        id, group: "content", label: `ORDEMPARANORMAL2.AgentSheet.Tabs.${id[0].toUpperCase()}${id.slice(1)}`,
+        active: id === "abilities", cssClass: id === "abilities" ? "active" : "",
+      }])),
+    });
+    expect(parent).toMatch(/<nav[^>]*op2-content-tabs[\s\S]*>Habilidades<\/button>[\s\S]*>Inventário<\/button>[\s\S]*>Notas<\/button>/);
+    expect(parent.match(/>Habilidades<\/button>/g)).toHaveLength(1);
+    expect(parent).toContain('data-action="useAbility"');
+  });
   it("renders the real image, fixed subtitle and accessible use surface without a resource or quantity", () => {
     const output = html();
     expect(output).toContain('src="icons/ability.webp"');
@@ -88,6 +114,7 @@ describe("Agent Sheet Ability rows", () => {
     const output = html({}, { editable: true, canEditStructure: true });
     expect(output).toContain("op2-ability-card__menu-trigger");
     expect(output).toContain('aria-haspopup="menu"');
+    expect(output).toContain('data-action="openAbilityMenu"');
     expect(output).not.toContain('data-action="toggleAbilityDescription"');
     expect(html()).not.toContain("menu-trigger");
   });
@@ -96,10 +123,35 @@ describe("Agent Sheet Ability rows", () => {
     const controls = styles.match(/\.op2-ability-card__resource-controls \{([^}]+)\}/)?.[1];
     expect(controls).toContain("position: absolute");
     expect(controls).toContain("width: 130px");
+    expect(controls).toContain("height: 32px");
     expect(controls).toContain("opacity: 0");
     expect(styles).toContain(".op2-ability-card__resource:focus-within");
     expect(styles).toContain(".op2-ability-card__use:focus-visible");
+    expect(styles).toContain(".op2-ability-card__use:hover:not(:disabled) .op2-ability-card__use-label");
+    expect(styles).not.toContain(".op2-ability-card:hover .op2-ability-card__use");
     expect(styles).toContain(".op2-ability-card__details[hidden]");
     expect(styles).toContain("overflow-wrap: anywhere");
+  });
+
+  it("groups full-width rows at the top without stretching them or clipping their overlays", () => {
+    const section = styles.match(/\.op2-abilities \{([^}]+)\}/)?.[1];
+    const list = styles.match(/\.op2-abilities__list \{([^}]+)\}/)?.[1];
+    const row = styles.match(/\.op2-ability-card \{([^}]+)\}/)?.[1];
+    expect(section).toContain("align-content: start");
+    expect(list).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(list).toContain("grid-auto-rows: max-content");
+    expect(list).toContain("align-content: start");
+    expect(list).toContain("gap: 6px");
+    expect(row).toContain("width: 100%");
+    expect(row).toContain("min-height: 56px");
+    expect(row).toContain("border-radius: var(--op2-radius)");
+    expect(styles).toContain("--op2-radius: 8px");
+    for (const rule of [section, list, row]) {
+      expect(rule).toContain("overflow: visible");
+      expect(rule).not.toContain("overflow: hidden");
+    }
+    expect(styles).toContain('.op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="abilities"].active)');
+    expect(styles.match(/\.op2-ability-card__subtitle \{([^}]+)\}/)?.[1]).toContain("color: var(--op2-accent)");
+    expect(html()).not.toContain('class="op2-ability-card__resource"');
   });
 });

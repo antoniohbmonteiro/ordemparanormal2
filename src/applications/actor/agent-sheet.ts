@@ -118,6 +118,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       openOccupationPicker: AgentSheet.#onOpenOccupationPicker,
       openProfilePicker: AgentSheet.#onOpenProfilePicker,
       openSheetSettings: AgentSheet.#onOpenSheetSettings,
+      openAbilityMenu: AgentSheet.#onOpenAbilityMenu,
       rollCheck: AgentSheet.#onRollCheck,
       selectAgentTab: AgentSheet.#onSelectAgentTab,
       toggleEditMode: AgentSheet.#onToggleEditMode,
@@ -172,7 +173,6 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   readonly #equipmentInFlight = new Set<string>();
   readonly #expandedAbilityIds = new Set<string>();
   #abilityContextMenu: ContextMenu | null = null;
-  #abilityListeners: AbortController | null = null;
 
   get #canEditStructure(): boolean {
     return this.isEditable && this.editMode;
@@ -193,7 +193,6 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   protected override async _prepareContext(
     options: DocumentSheetRenderOptions & HandlebarsRenderOptions,
   ): Promise<AgentSheetRenderContext> {
-    await this.#clearAbilityMenu();
     const context = (await super._prepareContext(
       options,
     )) as DocumentSheetRenderContext<foundry.documents.Actor>;
@@ -282,6 +281,14 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     };
   }
 
+  protected override async _preRender(
+    context: object,
+    options: DocumentSheetRenderOptions & HandlebarsRenderOptions,
+  ): Promise<void> {
+    await super._preRender(context, options);
+    await this.#clearAbilityMenu();
+  }
+
   protected override async _onRender(
     context: object,
     options: DocumentSheetRenderOptions & HandlebarsRenderOptions,
@@ -314,11 +321,32 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   async #clearAbilityMenu(): Promise<void> {
-    this.#abilityListeners?.abort();
-    this.#abilityListeners = null;
     const menu = this.#abilityContextMenu;
     this.#abilityContextMenu = null;
-    await menu?.close({ animate: false });
+    if (menu?.element?.isConnected) await menu.close({ animate: false });
+  }
+
+  static #onOpenAbilityMenu(
+    this: AgentSheet,
+    event: PointerEvent,
+    target: HTMLElement,
+  ): void {
+    event.stopPropagation();
+    if (event.button !== 0 || !this.#canEditStructure || !this.#abilityContextMenu) return;
+    const surface = target.closest(".op2-ability-card")
+      ?.querySelector<HTMLElement>(".op2-ability-card__use");
+    const id = surface?.dataset.itemId;
+    if (!surface || !id) return;
+    const ability = this.document.getEmbeddedDocument("Item", id) as foundry.documents.Item | null;
+    if (ability?.type !== ABILITY_ITEM_TYPE) return;
+
+    surface.dispatchEvent(new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+      clientX: event.detail === 0 ? 0 : event.clientX,
+      clientY: event.detail === 0 ? 0 : event.clientY,
+    }));
   }
 
   static async #onSelectAgentTab(
@@ -558,6 +586,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           "ORDEMPARANORMAL2.AgentSheet.Abilities.Edit",
         ),
         icon: '<i class="fa-solid fa-pen"></i>',
+        visible: () => this.isEditable,
         onClick: (event, target) => {
           event.stopPropagation();
           AgentSheet.#onEditAbility.call(this, event, target);
@@ -569,6 +598,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         ),
         icon: '<i class="fa-solid fa-trash"></i>',
         classes: "op2-ability-action--delete",
+        visible: () => this.isEditable,
         onClick: async (event, target) => {
           event.stopPropagation();
           await AgentSheet.#onDeleteAbility.call(this, event, target);
@@ -1006,40 +1036,16 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     super._attachPartListeners(partId, htmlElement, options);
     if (partId !== "main") return;
 
-    void this.#clearAbilityMenu();
-    const listeners = new AbortController();
-    this.#abilityListeners = listeners;
-    const menu = this.isEditable ? this._createContextMenu(
-        () => this.#getAbilityContextOptions(),
-        ".op2-ability-card__menu-trigger",
-        {
-          container: htmlElement,
-          // Both entry points delegate opening below and check current permission.
-          eventName: "op2AbilityContextMenu",
-          fixed: true,
-        },
-      ) : null;
-    this.#abilityContextMenu = menu;
-    htmlElement.addEventListener("click", (event) => {
-      if (!(event.target instanceof Element)) return;
-      const trigger = event.target.closest(".op2-ability-card__menu-trigger");
-      if (!trigger) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const row = trigger.closest<HTMLElement>(".op2-ability-card");
-      if (this.isEditable && this.#canEditStructure && event.button === 0 && row) {
-        void menu?.render(row, { event });
-      }
-    }, { capture: true, signal: listeners.signal });
-    htmlElement.addEventListener("contextmenu", (event) => {
-      if (!(event.target instanceof Element)) return;
-      const row = event.target.closest<HTMLElement>(".op2-ability-card");
-      if (!row) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.target.closest(".op2-ability-card__resource, .op2-ability-card__details, button:not(.op2-ability-card__use)")) return;
-      if (this.isEditable) void menu?.render(row, { event });
-    }, { capture: true, signal: listeners.signal });
+    if (this.isEditable) {
+      const Menu = foundry.applications.ux.ContextMenu.implementation;
+      const entries = this.#getAbilityContextOptions();
+      this.#abilityContextMenu = new Menu(
+        htmlElement,
+        ".op2-ability-card__use",
+        entries,
+        { eventName: "contextmenu", fixed: true, jQuery: false },
+      );
+    }
 
     if (this.#canEditStructure) {
       this._createContextMenu(

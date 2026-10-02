@@ -25,6 +25,7 @@ import {
   type EquipmentUseData,
   type EquipmentUsePatch,
 } from "../../core/equipment/equipment-use";
+import { isEquipmentQuantity, readEquipmentQuantity } from "../../core/equipment/equipment-quantity";
 
 const EQUIPMENT_SHEET_TEMPLATE =
   "systems/ordemparanormal2/templates/item/equipment-item-sheet.hbs";
@@ -46,6 +47,7 @@ interface EquipmentItemSheetContext
       }[];
     };
     readonly uses: EquipmentUsesData | null;
+    readonly quantity: { readonly value: number; readonly limit: number } | null;
     readonly useForms: readonly (EquipmentUseData & { readonly enrichedDescription: string })[];
   };
 }
@@ -55,6 +57,7 @@ function readEquipmentSystem(item: foundry.documents.Item) {
     readonly category?: unknown;
     readonly description?: unknown;
     readonly uses?: unknown;
+    readonly quantity?: unknown;
     readonly useForms?: unknown;
   };
   const category = isEquipmentCategory(system.category)
@@ -66,6 +69,7 @@ function readEquipmentSystem(item: foundry.documents.Item) {
     description:
       typeof system.description === "string" ? system.description : "",
     uses: readEquipmentUses(system.uses),
+    quantity: readEquipmentQuantity(system.quantity),
     useForms: readEquipmentUseForms(system.useForms === undefined ? [] : system.useForms),
   };
 }
@@ -78,6 +82,8 @@ const { ItemSheetV2 } = foundry.applications.sheets as unknown as
 export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   static override DEFAULT_OPTIONS = {
     actions: {
+      addQuantity: EquipmentItemSheet.#onAddQuantity,
+      removeQuantity: EquipmentItemSheet.#onRemoveQuantity,
       addUses: EquipmentItemSheet.#onAddUses,
       removeUses: EquipmentItemSheet.#onRemoveUses,
       addUseForm: EquipmentItemSheet.#onAddUseForm,
@@ -161,6 +167,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
           })),
         },
         uses: system.uses,
+        quantity: system.quantity === null ? null : { value: system.quantity, limit: Number.MAX_SAFE_INTEGER },
         useForms: await Promise.all((system.useForms ?? []).map(async use => ({
           ...use,
           enrichedDescription: await TextEditor.implementation.enrichHTML(use.description, {
@@ -178,6 +185,25 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
   ): void {
     super._attachPartListeners(partId, htmlElement, options);
     if (partId !== "main") return;
+
+    for (const input of htmlElement.querySelectorAll<HTMLInputElement>("[data-quantity-edit]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+        const value = input.valueAsNumber;
+        void this.#enqueueUpdate(async () => {
+          if (!this.isEditable) return;
+          if (!isEquipmentQuantity(value)) {
+            ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.Errors.InvalidQuantity"));
+            await this.render({ force: true });
+            return;
+          }
+          const item = this.document as foundry.documents.Item;
+          if (readEquipmentSystem(item).quantity === null) return;
+          await item.update({ "system.quantity": value });
+        });
+      });
+    }
 
     for (const input of htmlElement.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
       "[data-use-form-edit]",
@@ -228,6 +254,38 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
       description: "",
       consumesUse: false,
     }));
+  }
+
+  static async #onAddQuantity(this: EquipmentItemSheet): Promise<void> {
+    if (!this.isEditable) return;
+    await this.submit();
+    await this.#enqueueUpdate(async () => {
+      if (!this.isEditable) return;
+      const item = this.document as foundry.documents.Item;
+      if (readEquipmentSystem(item).quantity !== null) return;
+      await item.update({ "system.quantity": 1 });
+    });
+  }
+
+  static async #onRemoveQuantity(this: EquipmentItemSheet): Promise<void> {
+    if (!this.isEditable) return;
+    await this.submit();
+    await this.#enqueueUpdate(async () => {
+      if (!this.isEditable) return;
+      const item = this.document as foundry.documents.Item;
+      const quantity = readEquipmentSystem(item).quantity;
+      if (quantity === null) return;
+      if (quantity > 0) {
+        const confirmed = await DialogV2.confirm({
+          classes: ["ordemparanormal2"], modal: true, rejectClose: false,
+          content: `<p>${game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.ConfirmRemoveQuantity")}</p>`,
+          window: { title: game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveQuantity") },
+        });
+        if (confirmed !== true) return;
+      }
+      if (!this.isEditable) return;
+      await item.update({ "system.quantity": null });
+    });
   }
 
   static async #onRemoveUseForm(

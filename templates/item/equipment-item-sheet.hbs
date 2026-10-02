@@ -26,6 +26,23 @@
       </label>
     </fieldset>
 
+    <section class="op2-equipment-sheet__quantity-section">
+      <header class="op2-equipment-sheet__toolbar">
+        <h2>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Quantity"}}</h2>
+        {{#if editable}}{{#unless equipment.quantity}}
+          <button type="button" data-action="addQuantity"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.AddQuantity"}}</button>
+        {{/unless}}{{/if}}
+      </header>
+      {{#if equipment.quantity}}
+        <div class="op2-equipment-sheet__quantity">
+          <label><span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Quantity"}}</span><input type="number" value="{{equipment.quantity.value}}" min="0" max="{{equipment.quantity.limit}}" step="1" data-quantity-edit{{#unless editable}} disabled{{/unless}} /></label>
+          {{#if editable}}<button type="button" data-action="removeQuantity">{{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveQuantity"}}</button>{{/if}}
+        </div>
+      {{else}}
+        <p class="op2-equipment-sheet__empty">{{localize "ORDEMPARANORMAL2.EquipmentSheet.EmptyQuantity"}}</p>
+      {{/if}}
+    </section>
+
     <section class="op2-equipment-sheet__use-forms-section">
       <header class="op2-equipment-sheet__toolbar">
         <h2>{{localize "ORDEMPARANORMAL2.EquipmentSheet.UseForms"}}</h2>

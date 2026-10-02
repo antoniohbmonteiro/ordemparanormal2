@@ -36,7 +36,7 @@ describe("EquipmentDataModel", () => {
       description: MockField;
       uses: MockSchemaField;
     };
-    expect(Object.keys(schema)).toEqual(["category", "description", "uses", "useForms"]);
+    expect(Object.keys(schema)).toEqual(["category", "description", "quantity", "uses", "useForms"]);
     expect(schema.category.options).toMatchObject({
       choices: ["general", "weapon", "tool"],
       initial: "general",
@@ -69,9 +69,17 @@ describe("EquipmentDataModel", () => {
     expect(validate([{ ...use, name: " " }])).toBe(false);
     expect(validate([{ ...use, consumesUse: "false" }])).toBe(false);
     expect(validate(null)).toBe(false);
-    const source = { category: "tool", description: "", uses: { value: 3, max: 3 }, useForms: [use] };
+    const source = { category: "tool", description: "", quantity: null, uses: { value: 3, max: 3 }, useForms: [use] };
     expect(() => EquipmentDataModel.validateJoint(source)).not.toThrow();
     expect(source.uses).toEqual({ value: 3, max: 3 });
     expect(() => EquipmentDataModel.validateJoint({ ...source, useForms: [use, use] })).toThrow();
+  });
+
+  it("defines opt-in quantity with a null default and safe integer validation", () => {
+    const { quantity } = EquipmentDataModel.defineSchema() as unknown as { quantity: MockField };
+    expect(quantity.options).toMatchObject({ required: true, nullable: true, integer: true, initial: null, min: 0, max: Number.MAX_SAFE_INTEGER });
+    const validate = quantity.options.validate as (value: unknown) => boolean;
+    for (const value of [null, 0, 1, Number.MAX_SAFE_INTEGER]) expect(validate(value)).toBe(true);
+    for (const value of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) expect(validate(value)).toBe(false);
   });
 });

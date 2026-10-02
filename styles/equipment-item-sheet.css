@@ -26,3 +26,8 @@
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-footer label { display: flex; align-items: center; gap: .35rem; }
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__use-form-footer button { width: auto; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity-section { margin-bottom: 1rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity { display: flex; align-items: end; gap: .5rem; margin-top: .5rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity label { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity input { width: 8rem; }
+.ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity button { width: auto; }

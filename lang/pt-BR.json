@@ -598,6 +598,16 @@
         "Failed": "Não foi possível usar a Habilidade."
       },
       "Inventory": {
+        "Columns": { "Item": "Item", "Quantity": "Qtd", "Uses": "Usos" },
+        "Sections": { "general": "Equipamentos", "weapon": "Armas", "tool": "Ferramentas" },
+        "Use": "Usar",
+        "Quantity": "Quantidade",
+        "Uses": "Usos do Equipamento",
+        "NoQuantity": "Quantidade não controlada",
+        "NoUses": "Este Equipamento não possui usos próprios",
+        "DecreaseQuantity": "Reduzir quantidade do Equipamento",
+        "IncreaseQuantity": "Aumentar quantidade do Equipamento",
+        "ToggleDescription": "Expandir ou recolher descrição do Equipamento",
         "DecreaseUses": "Reduzir usos do Equipamento",
         "IncreaseUses": "Aumentar usos do Equipamento",
         "Actions": "Ações do Equipamento",
@@ -623,6 +633,7 @@
         "UnsupportedFolderDrop": "Pastas de Items não podem ser soltas nesta ficha.",
         "AbilityResourceUpdateFailed": "Não foi possível atualizar o recurso da Habilidade.",
         "EquipmentUsesUpdateFailed": "Não foi possível atualizar os usos do Equipamento.",
+        "EquipmentQuantityUpdateFailed": "Não foi possível atualizar a quantidade do Equipamento.",
         "MultipleProfiles": "Dados inválidos: este Agente possui mais de um Perfil. Remova o excesso pelo diretório de Items embutidos ou recrie o Agente.",
         "MultipleOccupations": "Dados inválidos: este Agente possui mais de uma Ocupação. Remova o excesso pelo diretório de Items embutidos ou recrie o Agente."
       },
@@ -708,6 +719,9 @@
       }
     },
     "EquipmentSheet": {
+      "Quantity": "Quantidade",
+      "EmptyQuantity": "Este Equipamento não controla quantidade.",
+      "ConfirmRemoveQuantity": "Deseja remover o controle de quantidade e descartar seu valor atual? O Item será mantido.",
       "UseForms": "Formas de Uso",
       "NewUseForm": "Nova forma de uso",
       "EmptyUseForms": "Este Equipamento ainda não tem formas de uso.",
@@ -729,10 +743,13 @@
         "AddUseForm": "Adicionar forma de uso",
         "RemoveUseForm": "Remover forma de uso",
         "AddUses": "Adicionar usos",
-        "RemoveUses": "Remover usos"
+        "RemoveUses": "Remover usos",
+        "AddQuantity": "Controlar quantidade",
+        "RemoveQuantity": "Remover controle de quantidade"
       },
       "Errors": {
         "InvalidUses": "Os valores de usos devem ser números inteiros não negativos.",
+        "InvalidQuantity": "A quantidade deve ser um número inteiro não negativo dentro do limite permitido.",
         "UpdateFailed": "Não foi possível atualizar o Equipamento."
       }
     },

@@ -13,6 +13,7 @@ const enrichHTML = vi.fn(async (text: string) => `<div>${text}</div>`);
 class Control extends EventTarget {
   value = "";
   checked = false;
+  get valueAsNumber() { return this.value.trim() ? Number(this.value) : NaN; }
   dataset: Record<string, string>;
   constructor(id: string, field: string) {
     super();
@@ -26,7 +27,7 @@ class Control extends EventTarget {
 }
 
 interface TestItem {
-  system: { uses: { value: number; max: number } | null; useForms: unknown };
+  system: { uses: { value: number; max: number } | null; useForms: unknown; quantity: number | null };
   update: ReturnType<typeof vi.fn>;
 }
 interface TestSheet {
@@ -36,6 +37,7 @@ interface TestSheet {
   render: ReturnType<typeof vi.fn>;
   _prepareContext(options: object): Promise<{ editable: boolean; equipment: {
     useForms: (EquipmentUseData & { enrichedDescription: string })[];
+    quantity: { value: number; limit: number } | null;
   } }>;
   _attachPartListeners(part: string, element: object, options: object): void;
 }
@@ -46,9 +48,10 @@ let template: Handlebars.TemplateDelegate;
 function item(forms: unknown = [structuredClone(use)]): TestItem {
   const result = {
     name: "Ferramenta", uuid: "Item.tool", img: "icons/svg/item-bag.svg", isOwner: true,
-    system: { category: "tool", description: "", uses: { value: 3, max: 3 }, useForms: forms },
+    system: { category: "tool", description: "", uses: { value: 3, max: 3 }, useForms: forms, quantity: null as number | null },
     update: vi.fn(async (change: Record<string, unknown>) => {
       if (Object.hasOwn(change, "system.useForms")) result.system.useForms = structuredClone(change["system.useForms"]);
+      if (Object.hasOwn(change, "system.quantity")) result.system.quantity = change["system.quantity"] as number | null;
     }),
   };
   return result;
@@ -56,7 +59,9 @@ function item(forms: unknown = [structuredClone(use)]): TestItem {
 
 function attach(sheet: TestSheet, ...controls: Control[]) {
   sheet._attachPartListeners("main", {
-    querySelectorAll: (selector: string) => selector === "[data-use-form-edit]" ? controls : [],
+    querySelectorAll: (selector: string) => selector === "[data-use-form-edit]"
+      ? controls.filter(control => control.dataset.useFormEdit !== undefined)
+      : selector === "[data-quantity-edit]" ? controls.filter(control => control.dataset.quantityEdit !== undefined) : [],
   }, {});
 }
 
@@ -217,5 +222,96 @@ describe("Equipment Item Sheet use forms", () => {
     expect(readonly).toContain('data-use-form-edit="name"');
     expect(readonly).toContain('disabled');
     expect(enrichHTML).toHaveBeenCalledWith("<p>Texto</p>", { relativeTo: sheet.document, secrets: true });
+  });
+});
+
+describe("Equipment Item Sheet optional quantity", () => {
+  it("opts into a single quantity without changing uses or forms, and renders zero as controlled", async () => {
+    const equipment = item();
+    const sheet = new Sheet(equipment);
+    await Sheet.DEFAULT_OPTIONS.actions.addQuantity.call(sheet);
+    await Sheet.DEFAULT_OPTIONS.actions.addQuantity.call(sheet);
+    expect(equipment.update.mock.calls).toEqual([[{ "system.quantity": 1 }]]);
+    expect(equipment.system.uses).toEqual({ value: 3, max: 3 });
+    expect(equipment.system.useForms).toEqual([use]);
+    equipment.system.quantity = 0;
+    const context = await sheet._prepareContext({});
+    expect(context.equipment.quantity).toEqual({ value: 0, limit: Number.MAX_SAFE_INTEGER });
+    const output = template(context);
+    expect(output).toContain('value="0" min="0"');
+    expect(output).toContain('data-action="removeQuantity"');
+    expect(output).not.toContain('data-action="addQuantity"');
+  });
+
+  it("captures numeric changes before rerenders and serializes them", async () => {
+    const equipment = item();
+    equipment.system.quantity = 1;
+    const sheet = new Sheet(equipment);
+    const control = new Control("", "");
+    control.dataset = { quantityEdit: "" };
+    attach(sheet, control);
+    control.change("2");
+    control.change("0");
+    control.value = "100";
+    await vi.waitFor(() => expect(equipment.update).toHaveBeenCalledTimes(2));
+    expect(equipment.update.mock.calls).toEqual([[{ "system.quantity": 2 }], [{ "system.quantity": 0 }]]);
+    expect(equipment.system.quantity).toBe(0);
+  });
+
+  it.each(["-1", "0.5", "Infinity", "9007199254740992", ""])("rejects invalid quantity %s without writing", async value => {
+    const equipment = item();
+    equipment.system.quantity = 1;
+    const sheet = new Sheet(equipment);
+    const control = new Control("", "");
+    control.dataset = { quantityEdit: "" };
+    attach(sheet, control);
+    control.change(value);
+    await vi.waitFor(() => expect(notifyError).toHaveBeenCalledTimes(1));
+    expect(equipment.update).not.toHaveBeenCalled();
+    expect(equipment.system.quantity).toBe(1);
+  });
+
+  it("confirms removal of a positive quantity, preserves it on cancel and removes zero without a dialog", async () => {
+    const equipment = item();
+    equipment.system.quantity = 2;
+    const sheet = new Sheet(equipment);
+    confirmRemove.mockResolvedValueOnce(false);
+    await Sheet.DEFAULT_OPTIONS.actions.removeQuantity.call(sheet);
+    expect(equipment.system.quantity).toBe(2);
+    await Sheet.DEFAULT_OPTIONS.actions.removeQuantity.call(sheet);
+    expect(equipment.system.quantity).toBeNull();
+    equipment.system.quantity = 0;
+    confirmRemove.mockClear();
+    await Sheet.DEFAULT_OPTIONS.actions.removeQuantity.call(sheet);
+    expect(confirmRemove).not.toHaveBeenCalled();
+    expect(equipment.system.quantity).toBeNull();
+    expect(equipment.system.uses).toEqual({ value: 3, max: 3 });
+    expect(equipment.system.useForms).toEqual([use]);
+  });
+
+  it("blocks configuration without permission and rechecks queued edits and confirmation", async () => {
+    const equipment = item();
+    const sheet = new Sheet(equipment);
+    sheet.isEditable = false;
+    await Sheet.DEFAULT_OPTIONS.actions.addQuantity.call(sheet);
+    await Sheet.DEFAULT_OPTIONS.actions.removeQuantity.call(sheet);
+    expect(equipment.update).not.toHaveBeenCalled();
+    equipment.system.quantity = 1;
+    sheet.isEditable = true;
+    const control = new Control("", "");
+    control.dataset = { quantityEdit: "" };
+    attach(sheet, control);
+    control.change("2");
+    sheet.isEditable = false;
+    await vi.waitFor(() => expect(sheet.render).not.toHaveBeenCalled());
+    await Sheet.DEFAULT_OPTIONS.actions.addQuantity.call(sheet);
+    expect(equipment.update).not.toHaveBeenCalled();
+    sheet.isEditable = true;
+    confirmRemove.mockImplementationOnce(async () => { sheet.isEditable = false; return true; });
+    await Sheet.DEFAULT_OPTIONS.actions.removeQuantity.call(sheet);
+    expect(equipment.update).not.toHaveBeenCalled();
+    const output = template(await sheet._prepareContext({}));
+    expect(output).not.toContain('data-action="removeQuantity"');
+    expect(output).toMatch(/data-quantity-edit disabled/);
   });
 });

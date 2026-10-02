@@ -1,5 +1,6 @@
 import { EQUIPMENT_CATEGORIES } from "../../core/equipment/equipment-category";
 import { readEquipmentUseForms } from "../../core/equipment/equipment-use";
+import { isEquipmentQuantity } from "../../core/equipment/equipment-quantity";
 
 type RequiredStringField = foundry.data.fields.StringField<
   string,
@@ -28,9 +29,21 @@ type EquipmentUseSchema = {
   consumesUse: foundry.data.fields.BooleanField<boolean, boolean, true, false, true>;
 };
 
+class EquipmentQuantityField extends foundry.data.fields.NumberField<number, number, true, true, true> {
+  override clean(...args: Parameters<foundry.data.fields.NumberField<number, number, true, true, true>["clean"]>): number | null {
+    const [value] = args;
+    // Reject invalid input before NumberField rounds and clamps it.
+    if (value !== undefined && value !== null && !isEquipmentQuantity(value)) {
+      throw new Error("Equipment quantity must be a nonnegative safe integer or null.");
+    }
+    return super.clean(...args);
+  }
+}
+
 type EquipmentSchema = {
   category: RequiredStringField;
   description: RequiredStringField;
+  quantity: foundry.data.fields.NumberField<number, number, true, true, true>;
   uses: foundry.data.fields.SchemaField<
     EquipmentUsesSchema,
     foundry.data.fields.SourceFromSchema<EquipmentUsesSchema>,
@@ -77,6 +90,11 @@ export class EquipmentDataModel extends foundry.abstract.TypeDataModel<
         nullable: false,
         blank: true,
         initial: "",
+      }),
+      quantity: new EquipmentQuantityField({
+        required: true, nullable: true, integer: true, initial: null,
+        min: 0, max: Number.MAX_SAFE_INTEGER,
+        validate: (value: unknown) => value === null || isEquipmentQuantity(value),
       }),
       uses: new foundry.data.fields.SchemaField(
         {

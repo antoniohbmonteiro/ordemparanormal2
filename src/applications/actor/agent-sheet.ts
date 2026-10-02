@@ -20,6 +20,8 @@ import { adjustOwnedAbilityResource } from "../../adapters/foundry/abilities/adj
 import { createAbilitySnapshot } from "../../adapters/foundry/abilities/ability-sources";
 import { collectOwnedEquipment } from "../../adapters/foundry/equipment/owned-equipment";
 import { adjustOwnedEquipmentUses } from "../../adapters/foundry/equipment/adjust-owned-equipment-uses";
+import { adjustOwnedEquipmentQuantity } from "../../adapters/foundry/equipment/adjust-owned-equipment-quantity";
+import { enrichEquipmentDescription } from "../../adapters/foundry/equipment/enrich-equipment-description";
 import { canUserRollActor } from "../../adapters/foundry/actors/agent-check-permission";
 import { publishAbilityMessage } from "../../adapters/foundry/chat/publish-ability-message";
 import { publishEquipmentMessage } from "../../adapters/foundry/chat/publish-equipment-message";
@@ -56,6 +58,7 @@ import { readAbilityUses } from "../../core/abilities/ability-use";
 import { openAbilityUseDialog } from "../abilities/ability-use-dialog";
 import {
   buildAgentSheetViewModel,
+  buildEquipmentSections,
   type AgentSheetSystemData,
   type AgentSheetViewModel,
 } from "../../ui/actor/agent-sheet-view-model";
@@ -76,6 +79,7 @@ const DIE_STEP_PARTIAL = `${TEMPLATE_ROOT}/partials/die-step-select.hbs`;
 interface AgentSheetRenderContext
   extends DocumentSheetRenderContext<foundry.documents.Actor> {
   agent: AgentSheetViewModel;
+  applicationId: string;
   accentColor: string;
   aptitudeExpanded: boolean;
   canEditStructure: boolean;
@@ -115,6 +119,10 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       increaseAbilityResource: AgentSheet.#onAdjustAbilityResource,
       decreaseEquipmentUses: AgentSheet.#onAdjustEquipmentUses,
       increaseEquipmentUses: AgentSheet.#onAdjustEquipmentUses,
+      decreaseEquipmentQuantity: AgentSheet.#onAdjustEquipmentQuantity,
+      increaseEquipmentQuantity: AgentSheet.#onAdjustEquipmentQuantity,
+      openEquipmentMenu: AgentSheet.#onOpenEquipmentMenu,
+      toggleEquipmentDescription: AgentSheet.#onToggleEquipmentDescription,
       openOccupationPicker: AgentSheet.#onOpenOccupationPicker,
       openProfilePicker: AgentSheet.#onOpenProfilePicker,
       openSheetSettings: AgentSheet.#onOpenSheetSettings,
@@ -173,6 +181,8 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   readonly #equipmentInFlight = new Set<string>();
   readonly #expandedAbilityIds = new Set<string>();
   #abilityContextMenu: ContextMenu | null = null;
+  readonly #expandedEquipmentIds = new Set<string>();
+  #equipmentContextMenu: ContextMenu | null = null;
 
   get #canEditStructure(): boolean {
     return this.isEditable && this.editMode;
@@ -259,11 +269,24 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       abilities: abilities.map(({ view }) => view),
       equipment: collectOwnedEquipment(items),
     });
+    const equipmentItems = new Map(items.filter(item => item.type === EQUIPMENT_ITEM_TYPE).map(item => [item.id, item]));
+    for (const id of this.#expandedEquipmentIds) {
+      if (!equipmentItems.has(id)) this.#expandedEquipmentIds.delete(id);
+    }
+    const equipment = await Promise.all(agent.equipment.map(async card => ({
+      ...card,
+      descriptionHTML: await enrichEquipmentDescription(equipmentItems.get(card.id)!, card.description),
+      isExpanded: this.#expandedEquipmentIds.has(card.id),
+      detailsId: `${this.id}-equipment-details-${card.id}`,
+    })));
     return {
       ...context,
+      applicationId: this.id,
       accentColor: readAgentAccentColor(actor),
       agent: {
         ...agent,
+        equipment,
+        equipmentSections: buildEquipmentSections(equipment),
         abilities: agent.abilities.map((card, index) => ({
           ...card,
           ...abilities[index]!.content,
@@ -287,6 +310,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   ): Promise<void> {
     await super._preRender(context, options);
     await this.#clearAbilityMenu();
+    await this.#clearEquipmentMenu();
   }
 
   protected override async _onRender(
@@ -795,12 +819,78 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     );
   }
 
+  async #clearEquipmentMenu(): Promise<void> {
+    const menu = this.#equipmentContextMenu;
+    this.#equipmentContextMenu = null;
+    if (menu?.element?.isConnected) await menu.close({ animate: false });
+  }
+
+  static #onOpenEquipmentMenu(
+    this: AgentSheet, event: PointerEvent, target: HTMLElement,
+  ): void {
+    event.stopPropagation();
+    if (event.button !== 0 || !this.isEditable || !this.#canEditStructure || !this.#equipmentContextMenu) return;
+    const surface = target.closest(".op2-equipment-card")?.querySelector<HTMLElement>(".op2-equipment-card__use");
+    const id = surface?.dataset.itemId;
+    if (!surface || !id) return;
+    const equipment = this.document.getEmbeddedDocument("Item", id) as foundry.documents.Item | null;
+    if (equipment?.type !== EQUIPMENT_ITEM_TYPE) return;
+    surface.dispatchEvent(new MouseEvent("contextmenu", {
+      bubbles: true, cancelable: true, button: 2,
+      clientX: event.detail === 0 ? 0 : event.clientX,
+      clientY: event.detail === 0 ? 0 : event.clientY,
+    }));
+  }
+
+  static async #onToggleEquipmentDescription(
+    this: AgentSheet, event: PointerEvent, target: HTMLElement,
+  ): Promise<void> {
+    event.stopPropagation();
+    if (event.button !== undefined && event.button !== 0) return;
+    const id = target.dataset.itemId;
+    if (!id || this.#canEditStructure) return;
+    const equipment = this.document.getEmbeddedDocument("Item", id) as foundry.documents.Item | null;
+    if (equipment?.type !== EQUIPMENT_ITEM_TYPE) return;
+    if (this.#expandedEquipmentIds.has(id)) this.#expandedEquipmentIds.delete(id);
+    else this.#expandedEquipmentIds.add(id);
+    await this.#submitPendingChanges();
+    await this.render({ force: true });
+  }
+
+  static async #onAdjustEquipmentQuantity(
+    this: AgentSheet, event: PointerEvent, target: HTMLElement,
+  ): Promise<void> {
+    event.stopPropagation();
+    if (event.button !== undefined && event.button !== 0) return;
+    const id = target.dataset.itemId;
+    const direction = target.dataset.quantityAdjustment;
+    if (!this.isEditable || !id || (direction !== "decrease" && direction !== "increase")) return;
+    const operation = this.#documentUpdateQueue.then(async () => {
+      if (!this.isEditable) return;
+      await this.submit();
+      if (!this.isEditable) return;
+      const result = await adjustOwnedEquipmentQuantity(
+        this.document as foundry.documents.Actor, id, direction === "decrease" ? -1 : 1,
+      );
+      if (result.status === "invalid") throw new Error("Equipment quantity is unavailable.");
+      if (result.status === "updated") await this.render({ force: true });
+    });
+    this.#documentUpdateQueue = operation.catch(() => undefined);
+    try {
+      await operation;
+    } catch (error) {
+      console.error("ordemparanormal2 | Failed to adjust Equipment quantity", error);
+      ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.AgentSheet.Errors.EquipmentQuantityUpdateFailed"));
+      await this.render({ force: true });
+    }
+  }
+
   static #onEditEquipment(
     this: AgentSheet,
     _event: PointerEvent,
     target: HTMLElement,
   ): void {
-    if (!this.#canEditStructure || !target.dataset.itemId) return;
+    if (!this.isEditable || !target.dataset.itemId) return;
     const equipment = (this.document as foundry.documents.Actor).getEmbeddedDocument(
       "Item",
       target.dataset.itemId,
@@ -813,7 +903,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     _event: PointerEvent,
     target: HTMLElement,
   ): Promise<void> {
-    if (!this.#canEditStructure || !target.dataset.itemId) return;
+    if (!this.isEditable || !target.dataset.itemId) return;
 
     const actor = this.document as foundry.documents.Actor;
     const equipmentId = target.dataset.itemId;
@@ -838,6 +928,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       if (confirmed !== true) return;
 
       await this.#submitPendingChanges();
+      if (!this.isEditable) return;
       const current = actor.getEmbeddedDocument(
         "Item",
         equipmentId,
@@ -862,6 +953,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           "ORDEMPARANORMAL2.AgentSheet.Inventory.Edit",
         ),
         icon: '<i class="fa-solid fa-pen"></i>',
+        visible: () => this.isEditable,
         onClick: (event, target) => {
           event.stopPropagation();
           AgentSheet.#onEditEquipment.call(this, event, target);
@@ -873,6 +965,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         ),
         icon: '<i class="fa-solid fa-trash"></i>',
         classes: "op2-equipment-action--delete",
+        visible: () => this.isEditable,
         onClick: async (event, target) => {
           event.stopPropagation();
           await AgentSheet.#onDeleteEquipment.call(this, event, target);
@@ -883,10 +976,11 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static async #onUseEquipment(
     this: AgentSheet,
-    _event: PointerEvent,
+    event: PointerEvent,
     target: HTMLElement,
   ): Promise<void> {
     const equipmentId = target.dataset.itemId;
+    if (event.button !== undefined && event.button !== 0) return;
     if (
       !this.isEditable ||
       !equipmentId ||
@@ -898,7 +992,9 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     this.#equipmentInFlight.add(equipmentId);
     const pendingUpdates = this.#documentUpdateQueue;
     const operation = pendingUpdates.then(async () => {
-      if (this.isEditable) await this.submit();
+      if (!this.isEditable) return;
+      await this.submit();
+      if (!this.isEditable) return;
       const actor = this.document as foundry.documents.Actor;
       const equipment = actor.getEmbeddedDocument(
         "Item",
@@ -937,6 +1033,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     target: HTMLElement,
   ): Promise<void> {
     event.stopPropagation();
+    if (event.button !== undefined && event.button !== 0) return;
     const equipmentId = target.dataset.itemId;
     const adjustment = target.dataset.resourceAdjustment;
     if (
@@ -948,7 +1045,9 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     const operation = this.#documentUpdateQueue.then(async () => {
-      if (this.isEditable) await this.submit();
+      if (!this.isEditable) return;
+      await this.submit();
+      if (!this.isEditable) return;
       const result = await adjustOwnedEquipmentUses(
         this.document as foundry.documents.Actor,
         equipmentId,
@@ -1047,15 +1146,12 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       );
     }
 
-    if (this.#canEditStructure) {
-      this._createContextMenu(
-        () => this.#getEquipmentContextOptions(),
-        ".op2-equipment-card__menu-trigger",
-        {
-          container: htmlElement,
-          eventName: "click",
-          fixed: true,
-        },
+    if (this.isEditable && htmlElement.querySelector(".op2-equipment-card__use")) {
+      const Menu = foundry.applications.ux.ContextMenu.implementation;
+      const entries = this.#getEquipmentContextOptions();
+      this.#equipmentContextMenu = new Menu(
+        htmlElement, ".op2-equipment-card__use", entries,
+        { eventName: "contextmenu", fixed: true, jQuery: false },
       );
     }
 
@@ -1079,6 +1175,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     await super._preClose(options);
     await this.#clearAbilityMenu();
     await this.#documentUpdateQueue;
+    await this.#clearEquipmentMenu();
     await this.#closeStructuralPickers();
     await this.#settingsApplication?.close();
   }
@@ -1089,6 +1186,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     this.aptitudeExpanded = false;
     this.editMode = false;
     this.#expandedAbilityIds.clear();
+    this.#expandedEquipmentIds.clear();
     this.#profilePicker = null;
     this.#occupationPicker = null;
     this.#settingsApplication = null;

@@ -29,6 +29,7 @@
 - [ ] Na Investigation, cancelar escolha de Forma de Uso: nenhum efeito. Escolher Rádio e cancelar o diálogo normal de Tecnologia: nenhum consumo, card, Check, Knowledge ou feedback de sucesso.
 - [ ] Confirmar o diálogo: um uso consumível desconta exatamente 1 e publica um Equipment card e um Check normal. Forma gratuita funciona com zero usos. Quantidade, PV e PD permanecem iguais, exceto custos normais de Habilidades explicitamente escolhidas; não marcar rodada.
 - [ ] Assim que o puzzle abrir, antes de mover qualquer peça, conferir a faixa de Tecnologia acima da mensagem: `Nenhum conjunto falso foi removido`, `1 conjunto falso removido` ou `N conjuntos falsos removidos`. Repetir usando a ferramenta como GM e como jogador; rerender/retomada conserva uma única faixa com a mesma quantidade, inclusive em blind, sem total ou identificação das peças falsas.
+- [ ] Antes de começar o puzzle, conferir também um único aviso curto no chat para GM + OWNERs do Agent, com a quantidade eliminada pela sintonia. Blind roll permite ler esse aviso sem revelar total/dados/snapshot ou quais peças foram removidas. Outro jogador não o recebe; retry/retomada não publica novamente. A faixa da janela e a conclusão privada final continuam presentes.
 - [ ] Confirmar Tecnologia fixada e DT ausente; escolher outro atributo, ajustes transitórios e extras/Habilidades permitidos. Conferir total normal com quatro dados, contando somente os três maiores. Não aplicar efeito adicional por crítico, RA ou RB.
 - [ ] Com pelo menos cinco falsos, obter/repetir novas tentativas explícitas até conferir os limites: total 6 remove 0; 7 e 9 removem exatamente 2; 10 e 12 removem exatamente 3; 13 remove todos. Registrar o total no card do Check e a quantidade na janela.
 - [ ] Repetir com 0, 1 e 2 falsos: faixas 7–9 e 10–12 removem `min(2, n)` e `min(3, n)`; 13+ remove todos. Em remoções parciais, só falsos devem ser retirados e não deve haver reposição.
@@ -39,7 +40,7 @@
 
 - [ ] Repetir em público, GM, blind e self, e em modo adicional registrado quando disponível. O Check deve seguir o mesmo comportamento dos Checks normais; self deve chegar ao solicitante, não apenas ao GM executor.
 - [ ] Em blind roll, o jogador não vê o resultado pelo card normal. A janela informa apenas Tecnologia e quantidade realmente removida, sem total/dados/snapshot. Consultar/retomar não pode expor esse resultado.
-- [ ] Conferir que somente a conclusão do puzzle é privada para GM/OWNERS. Um jogador estranho não deve recebê-la. O Equipment card mantém seu comportamento normal.
+- [ ] Conferir que o aviso da sintonia e a conclusão do puzzle são privados para GM/OWNERS. Um jogador estranho não deve recebê-los. O Equipment card e o Check mantêm seus comportamentos normais.
 - [ ] Inspecionar DTOs recebidos/flags da conclusão: sem solução, classificação verdadeiro/falso, índices de authoring, fonte configurada, textos removidos automaticamente, contagem de falsos restantes, IDs de Information ou Check total/dados/snapshot.
 
 ## Puzzle e estados A–D

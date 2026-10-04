@@ -4,14 +4,14 @@ import type { PoiToolIntent } from "../points-of-interest/use-poi-tool";
 import { readPoiKnowledge } from "../points-of-interest/poi-runtime-state";
 import { readPoiDiscoveries } from "../points-of-interest/poi-discovery";
 const choices = { stepAdjustments: { mind: 0, technology: 0 }, extraDice: [], abilityUses: [] };
-const mocks = vi.hoisted(() => ({ roll: vi.fn(), prepare: vi.fn(), confirm: vi.fn(), equipment: vi.fn(), check: vi.fn(), result: vi.fn() }));
+const mocks = vi.hoisted(() => ({ roll: vi.fn(), prepare: vi.fn(), confirm: vi.fn(), equipment: vi.fn(), check: vi.fn(), removal: vi.fn(), result: vi.fn() }));
 vi.mock("../../../features/checks/resolve-agent-check-interaction", async importOriginal => ({
   ...await importOriginal<typeof import("../../../features/checks/resolve-agent-check-interaction")>(), prepareAgentCheckExecution: mocks.prepare,
 }));
 vi.mock("../../../features/checks/check-ability-uses", () => ({ confirmCheckAbilityUses: mocks.confirm, prepareCheckAbilityUses: vi.fn() }));
 vi.mock("../dice/execute-foundry-check", () => ({ executeFoundryCheck: mocks.roll }));
 vi.mock("../chat/publish-equipment-message", () => ({ publishEquipmentMessage: mocks.equipment }));
-vi.mock("../chat/publish-radio-result", () => ({ publishRadioCheck: mocks.check, publishRadioResult: mocks.result }));
+vi.mock("../chat/publish-radio-result", () => ({ publishRadioCheck: mocks.check, publishRadioRemoval: mocks.removal, publishRadioResult: mocks.result }));
 let adapter: typeof import("./radio-session");
 let executor: typeof import("./execute-equipment-use");
 let serial = 0;
@@ -76,7 +76,7 @@ beforeEach(async () => {
   for (const mock of Object.values(mocks)) mock.mockReset();
   mocks.prepare.mockReturnValue({ effectiveInput: { check: { kind: "skill", key: "technology" } }, selectedInput: {}, preparedAbilityUses: {} });
   mocks.confirm.mockResolvedValue([]); mocks.roll.mockResolvedValue({ result: { total: 13 }, roll: {} });
-  mocks.equipment.mockResolvedValue(undefined); mocks.check.mockResolvedValue(undefined); mocks.result.mockResolvedValue(undefined);
+  mocks.equipment.mockResolvedValue(undefined); mocks.check.mockResolvedValue(undefined); mocks.removal.mockResolvedValue(undefined); mocks.result.mockResolvedValue(undefined);
   adapter = await import("./radio-session"); executor = await import("./execute-equipment-use");
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -100,12 +100,16 @@ describe("authoritative radio sessions", () => {
   it("prepares without effects and never returns Check totals or private configuration", async () => {
     const f = fixture(); const prepared = await adapter.prepareRadio(f.intent, f.requester);
     expect(f.equipment.update).not.toHaveBeenCalled(); expect(mocks.roll).not.toHaveBeenCalled(); expect(mocks.equipment).not.toHaveBeenCalled();
+    expect(mocks.removal).not.toHaveBeenCalled();
     const view = asView(await adapter.resolveRadioCommand(f.command(asView(prepared), "start"), f.requester));
     expect(view.removedCount).toBe(5); expect(view.active).toHaveLength(3);
     expect(JSON.stringify(view)).not.toMatch(/total|result|trueFragments|falseFragments|Item.source|informationIds|Pista privada|Condição privada/);
     const resumed = await adapter.resumeRadio({ ...f.intent, operationId: "reconnected" }, f.requester);
     expect(asView(resumed)).toEqual(view); expect(mocks.roll).toHaveBeenCalledOnce();
     expect(mocks.check.mock.calls[0][4]).toBe("blind");
+    expect(mocks.removal).toHaveBeenCalledExactlyOnceWith(f.actors[0], `owner:${f.intent.operationId}`, 5);
+    expect(mocks.check.mock.invocationCallOrder[0]).toBeLessThan(mocks.removal.mock.invocationCallOrder[0]);
+    expect(mocks.result).not.toHaveBeenCalled();
   });
   it("concurrently starts the last use only once and binds command parameters", async () => {
     const f = fixture(); executor.registerEquipmentSessionGuard(adapter.radioSessionGuard); f.equipment.system.uses.value = 1;
@@ -123,6 +127,7 @@ describe("authoritative radio sessions", () => {
     const view = afterStart ? asView(await adapter.resolveRadioCommand(f.command(prepared, "start"), f.requester)) : prepared;
     expect(await adapter.resolveRadioCommand(f.command(view, "cancel"), f.requester)).toMatchObject({ terminal: { status: "cancelled" } });
     expect(f.equipment.update).toHaveBeenCalledTimes(afterStart ? 1 : 0); expect(mocks.result).toHaveBeenCalledTimes(afterStart ? 1 : 0);
+    expect(mocks.removal).toHaveBeenCalledTimes(afterStart ? 1 : 0);
     expect(readPoiKnowledge(f.item)).toEqual([]);
   });
   it.each([true, false])("success writes isolated Knowledge and existing Discovery with active run %s", async run => {
@@ -280,5 +285,26 @@ describe("authoritative radio sessions", () => {
     expect(asView(await adapter.resumeRadio({ ...f.intent, operationId: "reconnected" }, f.requester)).pendingCommand).toEqual(cancel);
     expect(await adapter.resolveRadioCommand(cancel, f.requester)).toMatchObject({ terminal: { status: "cancelled" } });
     expect(f.equipment.update).toHaveBeenCalledOnce(); expect(mocks.roll).toHaveBeenCalledOnce();
+  });
+  it.each([[6, 0], [7, 2], [10, 3], [13, 5]])("publishes only authoritative removal count %i → %i", async (total, count) => {
+    const f = fixture(); mocks.roll.mockResolvedValueOnce({ result: { total }, roll: {} });
+    const view = await started(f);
+    expect(mocks.removal).toHaveBeenCalledExactlyOnceWith(f.actors[0], `owner:${f.intent.operationId}`, count);
+    expect(view.removedCount).toBe(count);
+    expect(mocks.check.mock.calls[0][4]).toBe("blind"); expect(mocks.result).not.toHaveBeenCalled();
+  });
+  it("retries only a failed removal notice and keeps the same puzzle during resume", async () => {
+    const f = fixture(); const prepared = asView(await adapter.prepareRadio(f.intent, f.requester)); const start = f.command(prepared, "start");
+    mocks.removal.mockRejectedValueOnce(new Error("lost removal notice"));
+    expect(await adapter.resolveRadioCommand(start, f.requester)).toEqual({ status: "partial", stage: "publication" });
+    const pending = asView(await adapter.resumeRadio({ ...f.intent, operationId: "reconnected" }, f.requester));
+    expect(pending.pendingCommand).toEqual(start);
+    const view = asView(await adapter.resolveRadioCommand(start, f.requester));
+    expect(view.active).toEqual(pending.active); expect(view.removedCount).toBe(pending.removedCount);
+    await adapter.resolveRadioCommand(start, f.requester);
+    await adapter.resumeRadio({ ...f.intent, operationId: "reconnected" }, f.requester);
+    expect(mocks.removal).toHaveBeenCalledTimes(2); expect(mocks.removal.mock.calls[0]).toEqual(mocks.removal.mock.calls[1]);
+    expect(mocks.roll).toHaveBeenCalledOnce(); expect(mocks.check).toHaveBeenCalledOnce(); expect(mocks.equipment).toHaveBeenCalledOnce();
+    expect(f.equipment.update).toHaveBeenCalledOnce(); expect(mocks.result).not.toHaveBeenCalled();
   });
 });

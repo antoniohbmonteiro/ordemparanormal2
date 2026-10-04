@@ -10,6 +10,20 @@ function published(operation: string, flag: string): boolean {
   return !!(game as typeof game & { messages?: { contents: ChatMessage[] } }).messages?.contents
     .some(message => message.getFlag(SYSTEM_ID, flag) === operation);
 }
+function privateRecipients(actor: foundry.documents.Actor): string[] {
+  return (game.users as unknown as { contents: foundry.documents.User[] }).contents
+    .filter(user => user.isGM || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)).map(user => user.id);
+}
+export async function publishRadioRemoval(actor: foundry.documents.Actor, operation: string, removedCount: number): Promise<void> {
+  if (!Number.isSafeInteger(removedCount) || removedCount < 0) throw new Error("Invalid radio removal count.");
+  if (published(operation, "radioRemovalOperation")) return;
+  const key = removedCount === 0 ? "TuningNoneRemoved" : removedCount === 1 ? "TuningOneRemoved" : "TuningRemoved";
+  const text = `${game.i18n.localize("ORDEMPARANORMAL2.Radio.Title")}: ${game.i18n.format(`ORDEMPARANORMAL2.Radio.${key}`, { count: removedCount })}`;
+  const message = await ChatMessage.create({ content: `<p>${foundry.utils.escapeHTML(text)}</p>`,
+    whisper: privateRecipients(actor), blind: false, speaker: ChatMessage.getSpeaker({ actor }),
+    flags: { [SYSTEM_ID]: { radioRemovalOperation: operation } } });
+  if (!message) throw new Error("Radio removal message was not created.");
+}
 export async function publishRadioCheck(actor: foundry.documents.Actor, requester: foundry.documents.User,
   operation: string, resolved: ResolvedAgentCheckInteraction, messageMode: string): Promise<void> {
   if (published(operation, "radioCheckOperation")) return;
@@ -30,9 +44,7 @@ export async function publishRadioResult(actor: foundry.documents.Actor, operati
     ...snapshot, outcomeLabel: game.i18n.localize(`ORDEMPARANORMAL2.Radio.${snapshot.outcome}`),
     composition: snapshot.active.map(piece => piece.text).join(" "),
   });
-  const whisper = (game.users as unknown as { contents: foundry.documents.User[] }).contents
-    .filter(user => user.isGM || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)).map(user => user.id);
-  const message = await ChatMessage.create({ content, whisper, speaker: ChatMessage.getSpeaker({ actor }),
+  const message = await ChatMessage.create({ content, whisper: privateRecipients(actor), speaker: ChatMessage.getSpeaker({ actor }),
     flags: { [SYSTEM_ID]: { radioOperation: operation, radio: structuredClone(snapshot) } } });
   if (!message) throw new Error("Radio result message was not created.");
 }

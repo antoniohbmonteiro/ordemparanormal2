@@ -9,7 +9,7 @@ import { isAgentCheckChoices, prepareAgentCheckExecution } from "../../../featur
 import { confirmCheckAbilityUses } from "../../../features/checks/check-ability-uses";
 import { executeFoundryCheck, type FoundryCheckExecution } from "../dice/execute-foundry-check";
 import { isRegisteredMessageMode } from "../chat/publish-check-message";
-import { publishRadioCheck, publishRadioResult } from "../chat/publish-radio-result";
+import { publishRadioCheck, publishRadioRemoval, publishRadioResult } from "../chat/publish-radio-result";
 import { grantToolKnowledge, isPoiToolContext, radioInteraction, recoverToolKnowledgeCount,
   type ToolKnowledgeReceipt } from "../points-of-interest/poi-tool-context";
 import { activeEquipmentAuthority, equipmentSessionGuardResult, executeEquipmentUse, isEquipmentUseIntent,
@@ -44,6 +44,7 @@ interface Session {
   execution?: FoundryCheckExecution;
   appliedAbilityUses?: readonly AppliedCheckAbilityUse[];
   checkPublished: boolean;
+  removalPublished: boolean;
   uncertain: boolean;
   published: boolean;
   snapshot?: RadioSnapshot;
@@ -122,7 +123,7 @@ export async function prepareRadio(input: RadioResumeIntent, requester: foundry.
       input: structuredClone(input), binding: bindingOf(input), config: interaction.config,
       informationIds: [...interaction.informationIds], sourceUuid: owned.sourceUuid, consumesUse: use.consumesUse,
       resolved, commands: new Map(), knowledge: {}, revision: 0, state: "prepared", started: false,
-      initial: [], active: [], discarded: [], removedCount: 0, checkPublished: false, uncertain: false, published: false,
+      initial: [], active: [], discarded: [], removedCount: 0, checkPublished: false, removalPublished: false, uncertain: false, published: false,
       equipmentName: owned.equipment.name, formName: use.name, actorName: owned.actor.name };
     sessions.set(session.id, session); operations.set(operationKey(input, requester.id), session.id);
     active.set(equipmentKey(input), session.id);
@@ -209,6 +210,11 @@ async function start(session: Session, input: RadioCommand, requester: foundry.d
       const puzzle = prepareRadioPuzzle(session.config, session.execution.result.total, Math.random, () => crypto.randomUUID());
       session.initial = structuredClone(puzzle.active); session.active = puzzle.active; session.discarded = puzzle.discarded;
       session.removedCount = puzzle.removedCount; session.state = "active"; session.revision++;
+    }
+    if (!session.removalPublished) {
+      try { await publishRadioRemoval(session.resolved.actor, operationKey(session.input, session.requesterId), session.removedCount); }
+      catch { publicationFailed = true; throw new Error("Radio removal publication was not confirmed."); }
+      session.removalPublished = true;
     }
     return { newCount: 0, manual: false };
   }, { expectedMechanic: "radio", postUseFailureStage: "analysis",

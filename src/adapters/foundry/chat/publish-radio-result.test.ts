@@ -1,23 +1,28 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { publishRadioCheck, publishRadioResult } from "./publish-radio-result";
+import { publishRadioCheck, publishRadioRemoval, publishRadioResult } from "./publish-radio-result";
+import translations from "../../../../lang/pt-BR.json";
 import type { RadioSnapshot } from "../../../application/equipment/radio-snapshot";
 import type { ResolvedAgentCheckInteraction } from "../../../features/checks/resolve-agent-check-interaction";
 vi.mock("../actors/read-agent-accent-color", () => ({ readAgentAccentColor: () => "#7F252B" }));
 vi.mock("./render-check-card-content", () => ({ renderCheckCardContent: () => "normal Check card" }));
 vi.mock("../../../application/checks/check-snapshot", () => ({ createCheckSnapshot: () => ({ schemaVersion: 4, total: 18 }) }));
 afterEach(() => vi.unstubAllGlobals());
-function fixture() {
+function fixture(secondOwner = false) {
   const users = [{ id: "gm", isGM: true }, { id: "owner", isGM: false }, { id: "stranger", isGM: false }];
+  if (secondOwner) users.push({ id: "owner2", isGM: false });
   const messages: { getFlag(scope: string, key: string): unknown }[] = [];
   const create = vi.fn(async (source: { flags: Record<string, Record<string, unknown>> }) => {
     messages.push({ getFlag: (scope, key) => source.flags[scope][key] }); return {};
   });
   vi.stubGlobal("ChatMessage", { create, getSpeaker: () => ({ actor: "a" }) });
-  vi.stubGlobal("game", { user: users[0], messages: { contents: messages }, users: { contents: users }, i18n: { localize: (key: string) => key } });
-  vi.stubGlobal("foundry", { applications: { handlebars: { renderTemplate: vi.fn(async () => "Historical card") } } });
+  const localize = (key: string) => translations.ORDEMPARANORMAL2.Radio[key.split(".").at(-1)! as keyof typeof translations.ORDEMPARANORMAL2.Radio] ?? key;
+  vi.stubGlobal("game", { user: users[0], messages: { contents: messages }, users: { contents: users }, i18n: {
+    localize, format: (key: string, data: { count: number }) => localize(key).replace("{count}", String(data.count)) } });
+  vi.stubGlobal("foundry", { utils: { escapeHTML: (value: string) => value.replaceAll("<", "&lt;").replaceAll(">", "&gt;") },
+    applications: { handlebars: { renderTemplate: vi.fn(async () => "Historical card") } } });
   vi.stubGlobal("CONST", { DOCUMENT_OWNERSHIP_LEVELS: { OWNER: 3 } });
   vi.stubGlobal("CONFIG", { ChatMessage: { modes: { public: {}, gm: {}, blind: {}, self: {}, "custom-mode": {} } } });
-  const actor = { testUserPermission: (user: { id: string }) => user.id === "owner" } as unknown as foundry.documents.Actor;
+  const actor = { testUserPermission: (user: { id: string }) => user.id === "owner" || user.id === "owner2" } as unknown as foundry.documents.Actor;
   return { create, actor, requester: users[1] as foundry.documents.User };
 }
 it.each(["public", "gm", "blind", "self", "custom-mode"])("keeps normal Check mode %s and deduplicates publication", async mode => {
@@ -43,4 +48,23 @@ it("keeps only the conclusion private and its immutable snapshot free of Check r
   expect(JSON.stringify(source)).not.toMatch(/total|rolls|trueFragments|falseFragments|equipmentUuid|informationIds|mechanicConfig/);
   (snapshot.active as { id: string; text: string }[])[0]!.text = "Changed later";
   expect(source.flags.ordemparanormal2.radio).toMatchObject({ active: [{ text: "Peça" }] });
+});
+it.each([0, 1, 2, 3])("publishes a private immediate notice for %i removals without Check details", async count => {
+  const f = fixture(true);
+  await publishRadioRemoval(f.actor, "operation", count);
+  await publishRadioRemoval(f.actor, "operation", count);
+  expect(f.create).toHaveBeenCalledOnce();
+  const content = count === 0 ? "A sintonia não eliminou conjuntos falsos da transmissão." : count === 1
+    ? "A sintonia eliminou 1 conjunto falso da transmissão." : `A sintonia eliminou ${count} conjuntos falsos da transmissão.`;
+  expect(f.create.mock.calls[0][0]).toEqual({ content: `<p>Rádio Modificado: ${content}</p>`,
+    whisper: ["gm", "owner", "owner2"], blind: false, speaker: { actor: "a" },
+    flags: { ordemparanormal2: { radioRemovalOperation: "operation" } } });
+  expect(JSON.stringify(f.create.mock.calls[0][0])).not.toMatch(/total|rolls|snapshot|trueFragments|falseFragments|informationIds|mechanicConfig/);
+});
+it.each([false, true])("deduplicates a lost publication response when already committed %s", async committed => {
+  const f = fixture(); const write = f.create.getMockImplementation()!;
+  f.create.mockImplementationOnce(async source => { if (committed) await write(source); throw new Error("lost publication response"); });
+  await expect(publishRadioRemoval(f.actor, "operation", 2)).rejects.toThrow();
+  await publishRadioRemoval(f.actor, "operation", 2);
+  expect(f.create).toHaveBeenCalledTimes(committed ? 1 : 2);
 });

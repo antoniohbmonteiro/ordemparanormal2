@@ -393,7 +393,7 @@ describe("core compendium sources", () => {
         expect(description).toBe(`<p>${TOOL_DESCRIPTIONS[index - 1]}</p>`);
         expect(item.system.useForms).toEqual(EQUIPMENT_USE_DEFINITIONS[index].map(
           ([id, name, consumesUse]) => ({ id, name, description: "", consumesUse,
-            ...(index === 2 ? { mechanic: "laboratory" } : {}) }),
+            ...(index === 2 ? { mechanic: "laboratory" } : index === 8 ? { mechanic: "radio" } : {}) }),
         ));
         const forms = readEquipmentUseForms(item.system.useForms);
         expect(forms, `${item.name} has invalid use forms`).not.toBeNull();

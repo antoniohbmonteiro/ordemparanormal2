@@ -1,4 +1,4 @@
-export type EquipmentMechanic = "standard" | "laboratory";
+export type EquipmentMechanic = "standard" | "laboratory" | "radio";
 export interface EquipmentUseData {
   readonly id: string;
   readonly name: string;
@@ -19,7 +19,7 @@ export function readEquipmentUse(value: unknown): EquipmentUseData | null {
   if (!id || !name || typeof use.description !== "string" ||
     typeof use.consumesUse !== "boolean") return null;
   const mechanic = use.mechanic === undefined ? "standard" : use.mechanic;
-  if (mechanic !== "standard" && mechanic !== "laboratory") return null;
+  if (mechanic !== "standard" && mechanic !== "laboratory" && mechanic !== "radio") return null;
   return { id, name, description: use.description, consumesUse: use.consumesUse, mechanic };
 }
 

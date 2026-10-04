@@ -181,7 +181,8 @@
     "styles/equipment-chat-card.css",
     "styles/license-notice.css",
     "styles/narrative-scene.css",
-    "styles/tile-interaction.css"
+    "styles/tile-interaction.css",
+    "styles/radio-application.css"
   ],
   "languages": [
     {

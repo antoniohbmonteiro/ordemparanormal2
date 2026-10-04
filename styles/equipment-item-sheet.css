@@ -31,3 +31,9 @@
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity label { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity input { width: 8rem; }
 .ordemparanormal2.equipment-item-sheet .op2-equipment-sheet__quantity button { width: auto; }
+
+.op2-radio-config { display: flex; flex-direction: column; gap: 12px; }
+.op2-radio-config-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.op2-radio-config-row input { flex: 1; min-width: 0; }
+.op2-radio-config-row button { width: auto; }
+.op2-radio-config [data-radio-error] { color: #ff8080; }

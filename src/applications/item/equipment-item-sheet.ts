@@ -172,6 +172,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
         useForms: await Promise.all((system.useForms ?? []).map(async use => ({
           ...use,
           isLaboratory: use.mechanic === "laboratory",
+          isRadio: use.mechanic === "radio",
           enrichedDescription: await TextEditor.implementation.enrichHTML(use.description, {
             relativeTo: item, secrets: item.isOwner,
           }),
@@ -221,7 +222,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
           patch = { consumesUse: input.checked };
         } else if (field === "name" || field === "description") {
           patch = { [field]: input.value };
-        } else if (field === "mechanic" && (input.value === "standard" || input.value === "laboratory")) {
+        } else if (field === "mechanic" && (input.value === "standard" || input.value === "laboratory" || input.value === "radio")) {
           patch = { mechanic: input.value };
         } else return;
         void this.#enqueueUseFormsChange(uses => patchEquipmentUse(uses, id, patch));

@@ -1,20 +1,21 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ run: vi.fn(), select: vi.fn() }));
+const mocks = vi.hoisted(() => ({ run: vi.fn(), radio: vi.fn(), select: vi.fn() }));
 vi.mock("../equipment/laboratory-session", () => ({ runLaboratorySession: mocks.run }));
+vi.mock("../equipment/radio-session", () => ({ runRadioSession: mocks.radio }));
 vi.mock("../../applications/equipment/equipment-use-dialog", () => ({ selectEquipmentUse: mocks.select }));
 import { useInvestigationTool } from "./use-investigation-tool";
 import { isEquipmentUseInFlight } from "../equipment/use-equipment";
-beforeEach(() => { mocks.run.mockReset(); mocks.select.mockReset(); });
+beforeEach(() => { mocks.run.mockReset(); mocks.radio.mockReset(); mocks.select.mockReset(); });
 afterEach(() => vi.unstubAllGlobals());
 let sequence = 0;
 function fixture() {
   const equipment = { type: "equipment", system: { useForms: [
-    { id: "analyze", name: "Analisar", description: "", consumesUse: false, mechanic: "laboratory" },
+      { id: "analyze", name: "Analisar", description: "", consumesUse: false, mechanic: "laboratory" as string },
   ] } };
   const actor = { uuid: `Actor.labclient${++sequence}`, isOwner: true, getEmbeddedDocument: () => equipment } as unknown as foundry.documents.Actor;
   const view = { sessionId: "opaque", revision: 0, equipmentName: "Laboratório", formName: "Analisar", state: "prepared",
     dice: [], results: [], remaining: 0, ceiling: null };
-  const query = vi.fn(async () => ({ status: "laboratory", view }));
+  const query = vi.fn(async (_name: string, _input: unknown, _options: unknown) => ({ status: "laboratory", view }));
   const gm = { id: "gm", query };
   const runtime = { user: { id: "owner", isGM: false }, users: { activeGM: gm as typeof gm | null } };
   vi.stubGlobal("game", runtime);
@@ -49,4 +50,26 @@ it("form cancellation never prepares a session; no-GM laboratory has no local fa
   f.runtime.users.activeGM = null;
   expect(await useInvestigationTool(f.actor, "e", f.context)).toEqual({ status: "gmRequired" });
   expect(mocks.run).not.toHaveBeenCalled();
+});
+it.each([0, 1, 3])("Radio returns only %i terminal discoveries and resumes before preparing", async newCount => {
+  const f = fixture(); f.equipment.system.useForms[0].mechanic = "radio";
+  const view = { sessionId: "opaque-radio", revision: 1, equipmentName: "Rádio", formName: "Sintonizar", state: "active",
+    active: [], discarded: [], removedCount: 2 };
+  f.query.mockResolvedValueOnce({ status: "radio", view } as never);
+  mocks.radio.mockResolvedValueOnce({ status: "success", newCount, manual: false });
+  expect(await useInvestigationTool(f.actor, "e", f.context)).toEqual({ status: "success", newCount, manual: false });
+  expect(f.query).toHaveBeenCalledOnce();
+  expect(f.query).toHaveBeenCalledWith("ordemparanormal2.resumeRadio", expect.objectContaining({ context: f.context }), { timeout: 10000 });
+  expect(mocks.radio.mock.calls[0][1]).toEqual(view); expect(mocks.run).not.toHaveBeenCalled();
+});
+it("Radio prepares only when there is no resumable session, and never falls back without GM", async () => {
+  const f = fixture(); f.equipment.system.useForms[0].mechanic = "radio";
+  f.query.mockResolvedValueOnce(null as never).mockResolvedValueOnce({ status: "radio", view: f.view } as never);
+  mocks.radio.mockResolvedValueOnce({ status: "cancelled" });
+  expect(await useInvestigationTool(f.actor, "e", f.context)).toEqual({ status: "cancelled" });
+  expect(f.query.mock.calls).toHaveLength(2);
+  expect(f.query.mock.calls[1][0]).toBe("ordemparanormal2.usePoiTool");
+  f.runtime.users.activeGM = null;
+  expect(await useInvestigationTool(f.actor, "e", f.context)).toEqual({ status: "gmRequired" });
+  expect(mocks.radio).toHaveBeenCalledOnce();
 });

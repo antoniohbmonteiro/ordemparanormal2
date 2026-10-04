@@ -4,6 +4,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const commonPath = process.env.FOUNDRY_V14_COMMON_PATH;
 afterEach(() => vi.unstubAllGlobals());
 describe.skipIf(!commonPath)("installed Foundry v14 Point of Interest model (no persistence)", () => {
+  it("round trips radio config, normalizes borders, and rejects mixed/conflicting branches", async () => {
+    vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
+    const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");
+    const config = { type: "radio", trueFragments: [" O sinal ", "vem do porão"], falseFragments: ["na torre"] };
+    const tool = { type: "tool", equipmentUuid: "Item.radio", useFormId: "tune", mechanicConfig: config };
+    const info = (id: string, mechanicConfig: unknown = config) => ({ id, content: "", approaches: [{ ...tool, mechanicConfig }],
+      availability: { mode: "always", condition: "" } });
+    const model = new Model({ information: [info("a"), info("b")] } as never, { strict: true } as never);
+    const expected = { type: "radio", trueFragments: ["O sinal", "vem do porão"], falseFragments: ["na torre"] };
+    expect(model.toObject().information[0].approaches[0].mechanicConfig).toEqual(expected);
+    expect(model.updateSource({ information: [info("a", { ...expected, falseFragments: [] }),
+      info("b", { ...expected, falseFragments: [] })] } as never)).not.toEqual({});
+    for (const invalid of [{ ...expected, trueFragments: [] }, { ...expected, falseFragments: ["O sinal"] },
+      { ...expected, sequenceLength: 4 }, { ...expected, type: "unknown" }, { ...expected, trueFragments: [" "] }]) {
+      expect(() => new Model({ information: [info("a", invalid)] } as never, { strict: true } as never)).toThrow();
+      const before = model.toObject();
+      try { model.updateSource({ information: [info("a", invalid)] } as never); } catch { /* Native cleaning can reject before validation. */ }
+      expect(model.toObject()).toEqual(before);
+    }
+    expect(() => new Model({ information: [info("a", expected), info("b", { ...expected, falseFragments: [] })] } as never,
+      { strict: true } as never)).toThrow();
+  });
   it("round trips laboratory config without introducing it on other branches and rejects conflicts", async () => {
     vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
     const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");

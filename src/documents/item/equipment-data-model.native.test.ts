@@ -78,5 +78,8 @@ describe.skipIf(!commonPath)("installed Foundry v14 Equipment model (no persiste
     expect(() => new Model({ useForms: [{ ...use, mechanic: "unknown" }] } as never, { strict: true } as never)).toThrow();
     expect(model.updateSource({ useForms: [{ ...use, mechanic: "unknown" }] } as never)).toEqual({});
     expect(model.toObject().useForms[0].mechanic).toBe("laboratory");
+    model.updateSource({ useForms: [{ ...use, mechanic: "radio" }] } as never);
+    expect(model.toObject().useForms[0]).toEqual({ ...use, mechanic: "radio" });
+    expect(model.toObject().uses).toBeNull();
   });
 });

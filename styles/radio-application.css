@@ -1,0 +1,36 @@
+.op2-radio { --radio-muted: #a7acb5; --radio-border: rgba(255,255,255,.1); min-width: 400px; }
+.op2-radio .window-content { padding: 0; background: #121418; color: #f1f2f4; }
+.op2-radio-body { display: flex; flex-direction: column; gap: 12px; padding: 16px; overflow-y: auto; }
+.op2-radio-body p { margin: 0; }
+.op2-radio-technology-feedback { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid #333840; border-left: 3px solid #8c3b40; border-radius: 6px; background: #1b1e24; line-height: 1.4; }
+.op2-radio-technology-feedback span { color: var(--radio-muted); font-size: 11px; }
+.op2-radio-technology-feedback strong { color: #f1f2f4; font-size: 12px; font-weight: 600; }
+.op2-radio-instructions { font-size: 12px; line-height: 1.4; }
+.op2-radio-list { display: flex; flex-direction: column; gap: 8px; }
+.op2-radio-list h3 { margin: 0; border: 0; color: var(--radio-muted); font-size: 10px; font-weight: 600; text-transform: uppercase; }
+.op2-radio-piece { display: flex; gap: 8px; align-items: center; padding: 8px; min-height: 52px; border: 1px solid var(--radio-border); border-radius: 8px; background: #0b0d10; }
+.op2-radio-piece:focus-within { border-color: #8c3b40; box-shadow: inset 0 0 0 1px #8c3b40; }
+.op2-radio-piece-text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; font-size: 13px; overflow-wrap: anywhere; }
+.op2-radio-piece-text small { font-size: 10px; color: var(--radio-muted); }
+.op2-radio-piece.is-discarded .op2-radio-piece-text { color: var(--radio-muted); }
+.op2-radio-piece.is-discarded .op2-radio-piece-text span { text-decoration: line-through; }
+.op2-radio-body button { height: 28px; min-height: 28px; flex: 0 0 28px; border: 1px solid #333840; border-radius: 4px; background: #1b1e24; color: #f1f2f4; font-size: 13px; font-weight: 600; padding: 4px; box-shadow: none; }
+.op2-radio-body button.op2-radio-discard { flex-basis: 94px; font-size: 11px; }
+.op2-radio-body button:disabled { background: #1a1c21; color: #59616b; border-color: transparent; opacity: 1; cursor: default; }
+.op2-radio-body button:focus-visible { outline: 2px solid #8c3b40; outline-offset: 2px; }
+.op2-radio-body button:not(:disabled):hover { border-color: #8c3b40; }
+.op2-radio-help { font-size: 10px; line-height: 1.4; color: var(--radio-muted); }
+.op2-radio-outcome { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 8px; }
+.op2-radio-outcome p { display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 600; }
+.op2-radio-outcome strong { padding: 3px 8px; border-radius: 3px; font-size: 10px; letter-spacing: .5px; }
+.op2-radio-outcome small { color: var(--radio-muted); font-size: 11px; line-height: 1.4; }
+.op2-radio-outcome.is-success { background: #132c1c; border: 1px solid rgba(34,197,94,.3); }
+.op2-radio-outcome.is-success strong { background: #1a4d26; color: #66d980; }
+.op2-radio-outcome.is-failure { background: rgba(127,37,43,.3); border: 1px solid #7f252b; }
+.op2-radio-outcome.is-failure strong { background: #661a1a; color: #ff8080; }
+.op2-radio-error { color: #ff8080; font-size: 12px; }
+.op2-radio-body footer { display: flex; justify-content: flex-end; gap: 8px; }
+.op2-radio-body footer button { height: 38px; min-height: 38px; flex-basis: auto; padding: 10px 16px; }
+.op2-radio-body footer .op2-radio-finish { width: 190px; border-color: #7f252b; background: #7f252b; }
+
+.op2-radio-icon { display: inline-block; width: 20px; height: 20px; background: url("../assets/icons/tools/radio.svg") center / 20px 20px no-repeat; }

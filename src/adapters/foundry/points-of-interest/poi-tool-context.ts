@@ -1,5 +1,6 @@
-import { toolInformationIds } from "../../../core/investigation/resolve-information";
-import { isToolApproach, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import type { RadioPuzzleConfig } from "../../../core/equipment/radio-puzzle";
+import { radioInformationIds, toolInformationIds } from "../../../core/investigation/resolve-information";
+import { isToolApproach, readPointOfInterestInformation, copyToolMechanicConfig, toolMechanicSignature } from "../../../documents/item/point-of-interest-data";
 import type { LaboratoryLength } from "../../../core/equipment/laboratory-challenge";
 import { activeEquipmentAuthority, type ResolvedEquipmentUse } from "../equipment/execute-equipment-use";
 import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
@@ -47,6 +48,17 @@ export function laboratoryInteraction(context: PoiToolContext, resolved: Resolve
     || approach.mechanicConfig.sequenceLength !== length)) return null;
   return { length, informationIds: toolInformationIds(information, new Set<string>(), resolved.sourceUuid, resolved.use.id, length) };
 }
+export function radioInteraction(context: PoiToolContext, resolved: ResolvedEquipmentUse, requester: foundry.documents.User) {
+  const authorized = authorizedPoiToolContext(context, resolved, requester);
+  if (!authorized || !resolved.isTool || !resolved.sourceUuid || resolved.use?.mechanic !== "radio") return null;
+  const information = readPointOfInterestInformation(authorized.item.system);
+  const approaches = information.flatMap(entry => entry.approaches.filter(isToolApproach))
+    .filter(approach => approach.equipmentUuid === resolved.sourceUuid && approach.useFormId === resolved.use!.id);
+  const config = approaches[0]?.mechanicConfig;
+  if (config?.type !== "radio" || approaches.some(approach => toolMechanicSignature(approach.mechanicConfig) !== toolMechanicSignature(config))) return null;
+  return { config: copyToolMechanicConfig(config) as RadioPuzzleConfig,
+    informationIds: radioInformationIds(information, new Set<string>(), resolved.sourceUuid, resolved.use.id, config) };
+}
 export interface ToolKnowledgeReceipt { ids?: readonly string[]; newCount?: number }
 export function recoverToolKnowledgeCount(context: PoiToolContext, resolved: ResolvedEquipmentUse,
   receipt: ToolKnowledgeReceipt): number | undefined {
@@ -57,19 +69,21 @@ export function recoverToolKnowledgeCount(context: PoiToolContext, resolved: Res
   return receipt.newCount;
 }
 export async function grantToolKnowledge(context: PoiToolContext, resolved: ResolvedEquipmentUse,
-  requester: foundry.documents.User, laboratory?: { length: LaboratoryLength; informationIds: readonly string[] },
+  requester: foundry.documents.User, challenge?: { length: LaboratoryLength; informationIds: readonly string[] } | { radioConfig: RadioPuzzleConfig; informationIds: readonly string[] },
   receipt?: ToolKnowledgeReceipt): Promise<{ newCount: number; manual: boolean }> {
   return serializePoiItemMutation(context.itemUuid, async () => {
     const authorized = authorizedPoiToolContext(context, resolved, requester);
     if (!authorized) {
-      if (laboratory) throw new Error("Laboratory context changed.");
+      if (challenge) throw new Error("Laboratory context changed.");
       return { newCount: 0, manual: true };
     }
     const { item, runtime } = authorized;
     const { actor, use, sourceUuid, isTool } = resolved;
-    if (!sourceUuid || !use || !isTool || !laboratory && use.mechanic !== "standard") return { newCount: 0, manual: true };
-    if (laboratory && laboratoryInteraction(context, resolved, requester)?.length !== laboratory.length)
-      throw new Error("Laboratory configuration changed.");
+    if (!sourceUuid || !use || !isTool || !challenge && use.mechanic !== "standard") return { newCount: 0, manual: true };
+    if (challenge && ("length" in challenge
+      ? laboratoryInteraction(context, resolved, requester)?.length !== challenge.length
+      : toolMechanicSignature(radioInteraction(context, resolved, requester)?.config) !== toolMechanicSignature(challenge.radioConfig)))
+      throw new Error("Tool challenge configuration changed.");
     if (receipt?.newCount !== undefined) {
       await broadcastPoiInvalidation();
       return { newCount: receipt.newCount, manual: false };
@@ -83,8 +97,11 @@ export async function grantToolKnowledge(context: PoiToolContext, resolved: Reso
       await broadcastPoiInvalidation();
       return { newCount: receipt.newCount, manual: false };
     }
-    const ids = toolInformationIds(readPointOfInterestInformation(item.system), known, sourceUuid, use.id, laboratory?.length)
-      .filter(id => !laboratory || laboratory.informationIds.includes(id));
+    const currentInformation = readPointOfInterestInformation(item.system);
+    const ids = (challenge && "radioConfig" in challenge
+      ? radioInformationIds(currentInformation, known, sourceUuid, use.id, challenge.radioConfig)
+      : toolInformationIds(currentInformation, known, sourceUuid, use.id, challenge && "length" in challenge ? challenge.length : undefined))
+      .filter(id => !challenge || challenge.informationIds.includes(id));
     if (!ids.length) {
       if (receipt) receipt.newCount = 0;
       return { newCount: 0, manual: true };

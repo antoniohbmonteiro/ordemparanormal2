@@ -1,6 +1,8 @@
+import { editRadioPuzzle } from "./radio-puzzle-config-dialog";
+import type { RadioPuzzleConfig } from "../../core/equipment/radio-puzzle";
 import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
 import { approachIdentity, isSkillApproach, isAptitudeSpecializationKey, POINT_OF_INTEREST_DIFFICULTY_MIN,
-  isToolApproach, type PointOfInterestInformation,
+  isToolApproach, copyToolMechanicConfig, toolMechanicSignature, type PointOfInterestInformation,
   type PointOfInterestApproach, type PointOfInterestSkillApproach } from "../../documents/item/point-of-interest-data";
 import { loadToolSources, describeToolApproach } from "../../adapters/foundry/equipment/equipment-source";
 import { APTITUDE_OPTIONS } from "./point-of-interest-information-editor";
@@ -52,11 +54,16 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
   let equipmentUuid = initial?.equipmentUuid ?? "";
   let useFormId = initial?.useFormId ?? "";
   let length: 4 | 5 | 6 | null = initial?.mechanicConfig?.sequenceLength ?? null;
+  let radioConfig: RadioPuzzleConfig | null = initial?.mechanicConfig?.type === "radio"
+    ? copyToolMechanicConfig(initial.mechanicConfig) as RadioPuzzleConfig : null;
   const currentForm = () => sources.find(source => source.uuid === equipmentUuid)?.forms.find(form => form.id === useFormId);
   const sharedApproaches = () => information.flatMap(entry => entry.approaches.filter(isToolApproach))
     .filter(approach => approach.equipmentUuid === equipmentUuid && approach.useFormId === useFormId);
   const reuseLength = () => {
     const shared = sharedApproaches();
+    radioConfig = shared[0]?.mechanicConfig?.type === "radio" && shared.every(approach =>
+      toolMechanicSignature(approach.mechanicConfig) === toolMechanicSignature(shared[0]!.mechanicConfig))
+      ? copyToolMechanicConfig(shared[0].mechanicConfig) as RadioPuzzleConfig : null;
     length = shared.length && shared.every(approach => approach.mechanicConfig?.sequenceLength === shared[0]?.mechanicConfig?.sequenceLength)
       ? shared[0]?.mechanicConfig?.sequenceLength ?? null : null;
   };
@@ -67,9 +74,11 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
     if (kind === "tool") {
       if (!sources.some(source => source.uuid === equipmentUuid && source.forms.some(form => form.id === useFormId))) return null;
       if (currentForm()?.mechanic === "laboratory" && length === null) return null;
+      if (currentForm()?.mechanic === "radio" && !radioConfig) return null;
       const approach = { type: "tool" as const, equipmentUuid, useFormId,
         ...(currentForm()?.mechanic === "laboratory" && length !== null
-          ? { mechanicConfig: { type: "laboratory" as const, sequenceLength: length } } : {}) };
+          ? { mechanicConfig: { type: "laboratory" as const, sequenceLength: length } }
+          : currentForm()?.mechanic === "radio" && radioConfig ? { mechanicConfig: copyToolMechanicConfig(radioConfig) } : {}) };
       return used.has(approachIdentity(approach)) ? null : approach;
     }
     const approach = approachFromDraft(draft, used, availableSkills);
@@ -90,6 +99,8 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
         const lengthSelect = lengthField?.querySelector<HTMLSelectElement>("select");
         if (lengthField) lengthField.hidden = kind !== "tool" || currentForm()?.mechanic !== "laboratory";
         if (lengthSelect) lengthSelect.value = length === null ? "" : String(length);
+        const radioField = content.querySelector<HTMLElement>("[data-radio-config]");
+        if (radioField) radioField.hidden = kind !== "tool" || currentForm()?.mechanic !== "radio";
         add.disabled = resolve() === null;
         const skillFields = content.querySelector<HTMLElement>("[data-skill-fields]");
         const toolFields = content.querySelector<HTMLElement>("[data-tool-fields]");
@@ -98,6 +109,14 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
       };
       content.querySelector("[data-tool-fields]")?.insertAdjacentHTML("beforeend",
         `<label data-laboratory-length>${localize("ORDEMPARANORMAL2.Laboratory.Length")}<select name="sequenceLength"><option value="" disabled selected>—</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label>`);
+      content.querySelector("[data-tool-fields]")?.insertAdjacentHTML("beforeend",
+        `<button type="button" data-radio-config>${localize("ORDEMPARANORMAL2.Radio.PuzzleConfiguration")}</button>`);
+      content.querySelector("[data-radio-config]")?.addEventListener("click", async () => {
+        const selected = `${equipmentUuid}:${useFormId}`;
+        const configured = await editRadioPuzzle(radioConfig ?? undefined);
+        if (configured && selected === `${equipmentUuid}:${useFormId}`) radioConfig = configured;
+        sync();
+      });
       const formSelect = content.querySelector<HTMLSelectElement>('select[name="useFormId"]');
       const refreshForms = () => {
         if (!formSelect) return;
@@ -125,7 +144,7 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
         const target = event.target;
         if (!(target instanceof HTMLSelectElement)) return;
         if (target.name === "approachType") { kind = target.value === "tool" ? "tool" : "skill"; sync(); return; }
-        if (target.name === "equipmentUuid") { equipmentUuid = target.value; useFormId = ""; length = null; refreshForms(); sync(); return; }
+        if (target.name === "equipmentUuid") { equipmentUuid = target.value; useFormId = ""; length = null; radioConfig = null; refreshForms(); sync(); return; }
         if (target.name === "useFormId") { useFormId = target.value; reuseLength(); sync(); return; }
         if (target.name === "sequenceLength") { const value = Number(target.value); length = value === 4 || value === 5 || value === 6 ? value : null; sync(); return; }
         if (target.name !== "specialization") return;
@@ -142,10 +161,10 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
         if (approach.type === "tool" && !(await describeToolApproach(approach.equipmentUuid, approach.useFormId, approach.mechanicConfig)).valid)
           throw new Error("The selected tool source or use form is no longer available.");
         if (isToolApproach(approach) && sharedApproaches().some(existing =>
-          JSON.stringify(existing.mechanicConfig ?? null) !== JSON.stringify(approach.mechanicConfig ?? null))) {
+          toolMechanicSignature(existing.mechanicConfig) !== toolMechanicSignature(approach.mechanicConfig))) {
           const confirmed = await foundry.applications.api.DialogV2.confirm({ modal: true, rejectClose: false,
-            window: { title: localize("ORDEMPARANORMAL2.Laboratory.Length") },
-            content: `<p>${localize("ORDEMPARANORMAL2.Laboratory.ConfirmSharedLength")}</p>` });
+            window: { title: localize(approach.mechanicConfig?.type === "radio" ? "ORDEMPARANORMAL2.Radio.PuzzleConfiguration" : "ORDEMPARANORMAL2.Laboratory.Length") },
+            content: `<p>${localize(approach.mechanicConfig?.type === "radio" ? "ORDEMPARANORMAL2.Radio.ConfirmSharedPuzzle" : "ORDEMPARANORMAL2.Laboratory.ConfirmSharedLength")}</p>` });
           if (!confirmed) return null;
         }
         return approach;

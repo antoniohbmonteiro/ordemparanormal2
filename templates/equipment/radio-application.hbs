@@ -1,0 +1,34 @@
+<section class="op2-radio-body" aria-busy="{{busy}}">
+  {{#if error}}<p class="op2-radio-error" role="status">{{error}}</p>{{/if}}
+  {{#if loading}}<p role="status">{{localize "ORDEMPARANORMAL2.Radio.Loading"}}</p>{{else}}
+  {{#if showRemovalFeedback}}<div class="op2-radio-technology-feedback" role="status" aria-atomic="true">
+    <span>{{localize "ORDEMPARANORMAL2.Radio.Technology"}}</span>
+    <strong>{{#if noFalseRemoved}}{{localize "ORDEMPARANORMAL2.Radio.NoneRemoved"}}{{else}}{{#if oneFalseRemoved}}{{localize "ORDEMPARANORMAL2.Radio.OneRemoved"}}{{else}}{{removedCount}} {{localize "ORDEMPARANORMAL2.Radio.Removed"}}{{/if}}{{/if}}</strong>
+  </div>{{/if}}
+  <p class="op2-radio-instructions">{{localize "ORDEMPARANORMAL2.Radio.Instructions"}}</p>
+  <div class="op2-radio-list">
+    <h3>{{localize "ORDEMPARANORMAL2.Radio.Message"}} · {{active.length}} {{localize "ORDEMPARANORMAL2.Radio.Pieces"}}</h3>
+    {{#each active}}<div class="op2-radio-piece">
+      <div class="op2-radio-piece-text"><span>{{text}}</span><small>{{localize "ORDEMPARANORMAL2.Radio.Position"}} {{position}}</small></div>
+      <button type="button" data-action="moveUp" data-piece-id="{{id}}" {{#if upDisabled}}disabled{{/if}} aria-label="{{localize 'ORDEMPARANORMAL2.Radio.MoveUp'}}: {{text}}">↑</button>
+      <button type="button" data-action="moveDown" data-piece-id="{{id}}" {{#if downDisabled}}disabled{{/if}} aria-label="{{localize 'ORDEMPARANORMAL2.Radio.MoveDown'}}: {{text}}">↓</button>
+      <button class="op2-radio-discard" type="button" data-action="discard" data-piece-id="{{id}}" {{#if disabled}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.Radio.Discard"}}</button>
+    </div>{{/each}}
+  </div>
+  {{#if discarded.length}}<div class="op2-radio-list"><h3>{{localize "ORDEMPARANORMAL2.Radio.Discarded"}} · {{discarded.length}} {{localize "ORDEMPARANORMAL2.Radio.Pieces"}}</h3>
+    {{#each discarded}}<div class="op2-radio-piece is-discarded">
+      <div class="op2-radio-piece-text"><span>{{text}}</span><small>{{localize "ORDEMPARANORMAL2.Radio.DiscardedPiece"}}</small></div>
+      <button type="button" disabled aria-label="{{localize 'ORDEMPARANORMAL2.Radio.MoveUp'}}">↑</button>
+      <button type="button" disabled aria-label="{{localize 'ORDEMPARANORMAL2.Radio.MoveDown'}}">↓</button>
+      <button class="op2-radio-discard" type="button" data-action="restore" data-piece-id="{{id}}" {{#if disabled}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.Radio.Restore"}}</button>
+    </div>{{/each}}
+  </div>{{/if}}
+  {{#if success}}<div class="op2-radio-outcome is-success" role="status"><p><strong>{{localize "ORDEMPARANORMAL2.Radio.SuccessBadge"}}</strong> {{localize "ORDEMPARANORMAL2.Radio.success"}}</p><small>“{{composition}}”</small></div>{{/if}}
+  {{#if failure}}<div class="op2-radio-outcome is-failure" role="status"><p><strong>{{localize "ORDEMPARANORMAL2.Radio.FailureBadge"}}</strong> {{localize "ORDEMPARANORMAL2.Radio.failure"}}</p><small>{{localize "ORDEMPARANORMAL2.Radio.FailureDescription"}}</small></div>{{/if}}
+  <p class="op2-radio-help">{{#if terminal}}{{localize "ORDEMPARANORMAL2.Radio.ClosedHelp"}}{{else}}{{localize "ORDEMPARANORMAL2.Radio.KeyboardHelp"}}{{/if}}</p>
+  {{/if}}
+  <footer><button type="button" data-action="close">{{localize "ORDEMPARANORMAL2.Radio.Close"}}</button>
+    {{#if retry}}<button type="button" data-action="retry" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.Radio.Retry"}}</button>
+    {{else}}{{#unless terminal}}<button class="op2-radio-finish" type="button" data-action="finish" {{#unless canFinish}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.Radio.Finish"}}</button>{{/unless}}{{/if}}
+  </footer>
+</section>

@@ -1,3 +1,6 @@
+import { runRadioSession } from "../equipment/radio-session";
+import { resumeRadio, RADIO_RESUME_QUERY } from "../../adapters/foundry/equipment/radio-session";
+import type { RadioResponse } from "../../application/equipment/radio-session";
 import { executeEquipmentUse, type EquipmentUseIntent, type EquipmentUseResult } from "../../adapters/foundry/equipment/execute-equipment-use";
 import { POI_TOOL_USE_QUERY, resolvePoiToolUse, type PoiToolContext } from "../../adapters/foundry/points-of-interest/use-poi-tool";
 import { useEquipment } from "../equipment/use-equipment";
@@ -13,12 +16,21 @@ export async function useInvestigationTool(actor: foundry.documents.Actor, equip
     if (!gm) {
       const equipment = actor.getEmbeddedDocument("Item", intent.equipmentId) as foundry.documents.Item | null;
       if (readEquipmentUseForms((equipment?.system as { useForms?: unknown } | undefined)?.useForms)
-        ?.find(form => form.id === intent.useFormId)?.mechanic === "laboratory") return { status: "gmRequired" };
+        ?.find(form => form.id === intent.useFormId)?.mechanic === "laboratory"
+        || readEquipmentUseForms((equipment?.system as { useForms?: unknown } | undefined)?.useForms)
+          ?.find(form => form.id === intent.useFormId)?.mechanic === "radio") return { status: "gmRequired" };
       const result = await executeEquipmentUse(intent, game.user, JSON.stringify(context));
       return result.status === "success" ? { ...result, manual: true } : result;
     }
-    const result: LaboratoryResponse = gm.id === game.user.id ? await resolvePoiToolUse({ ...intent, context }, game.user)
-      : await gm.query(POI_TOOL_USE_QUERY, { ...intent, context }, { timeout: 10000 }) as LaboratoryResponse;
+    const equipment = actor.getEmbeddedDocument("Item", intent.equipmentId) as foundry.documents.Item | null;
+    const mechanic = readEquipmentUseForms((equipment?.system as { useForms?: unknown } | undefined)?.useForms)
+      ?.find(form => form.id === intent.useFormId)?.mechanic;
+    const resumed: RadioResponse | null = mechanic === "radio" ? (gm.id === game.user.id
+      ? await resumeRadio({ ...intent, context }, game.user)
+      : await gm.query(RADIO_RESUME_QUERY, { ...intent, context }, { timeout: 10000 }) as RadioResponse | null) : null;
+    const result: LaboratoryResponse | RadioResponse = resumed ?? (gm.id === game.user.id ? await resolvePoiToolUse({ ...intent, context }, game.user)
+      : await gm.query(POI_TOOL_USE_QUERY, { ...intent, context }, { timeout: 10000 }) as LaboratoryResponse | RadioResponse);
+    if (result.status === "radio") return result.terminal ?? await runRadioSession(actor, result.view, gm.id, stillSelected, signal);
     if (result.status !== "laboratory") return result;
     if (result.terminal) return result.terminal;
     return runLaboratorySession(result.view, gm.id, stillSelected, signal);

@@ -1,3 +1,5 @@
+import { prepareRadio } from "../equipment/radio-session";
+import type { RadioResponse } from "../../../application/equipment/radio-session";
 import { SYSTEM_ID } from "../../../config/system-config";
 import { readEquipmentUseForms } from "../../../core/equipment/equipment-use";
 import type { LaboratoryResponse } from "../../../application/equipment/laboratory-session";
@@ -13,13 +15,14 @@ const receipts = new Map<string, ToolKnowledgeReceipt>();
 export const revealToolInformation = (context: PoiToolContext, resolved: ResolvedEquipmentUse,
   requester: foundry.documents.User) => grantToolKnowledge(context, resolved, requester);
 
-export function resolvePoiToolUse(input: PoiToolIntent, requester: foundry.documents.User): Promise<LaboratoryResponse> {
+export function resolvePoiToolUse(input: PoiToolIntent, requester: foundry.documents.User): Promise<LaboratoryResponse | RadioResponse> {
   if (!activeEquipmentAuthority(requester)) return Promise.resolve({ status: "forbidden" });
   if (!isEquipmentUseIntent(input) || !isPoiToolContext(input.context)) return Promise.resolve({ status: "invalid" });
   const context = { sceneId: input.context.sceneId, itemUuid: input.context.itemUuid, runId: input.context.runId };
   const owned = ownedEquipmentForUser(input, requester);
   const form = owned && readEquipmentUseForms((owned.equipment.system as { useForms?: unknown }).useForms)
     ?.find(use => use.id === input.useFormId);
+  if (form?.mechanic === "radio") return prepareRadio({ ...input, context }, requester);
   if (form?.mechanic === "laboratory") return prepareLaboratory({ ...input, context }, requester);
   const key = JSON.stringify([requester.id, input.operationId, input.actorUuid, input.equipmentId, input.useFormId, context]);
   const receipt = receipts.get(key) ?? {};

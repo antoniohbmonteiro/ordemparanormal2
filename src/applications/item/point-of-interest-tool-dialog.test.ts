@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 const catalog = vi.hoisted(() => ({ load: vi.fn(), describe: vi.fn() }));
+const radio = vi.hoisted(() => ({ edit: vi.fn() }));
+vi.mock("./radio-puzzle-config-dialog", () => ({ editRadioPuzzle: radio.edit }));
 vi.mock("../../adapters/foundry/equipment/equipment-source", () => ({
   loadToolSources: catalog.load, describeToolApproach: catalog.describe,
 }));
@@ -100,5 +102,46 @@ it("requires a length, reuses a shared pair and confirms explicit reconfiguratio
   expect(confirm).toHaveBeenCalledOnce();
   confirm.mockResolvedValueOnce(true);
   expect(await options.ok.callback()).toMatchObject({ mechanicConfig: { sequenceLength: 6 } });
+  expect(information[0].approaches[0]).toEqual(selected);
+});
+it("requires a Radio puzzle, reuses it deeply and confirms changes to every shared binding", async () => {
+  const config = { type: "radio" as const, trueFragments: ["Sinal", "no porão"], falseFragments: ["na torre"] };
+  catalog.load.mockResolvedValue([{ uuid: "Item.radio", name: "Rádio", origin: "Mundo",
+    forms: [{ id: "tune", name: "Sintonizar", mechanic: "radio" }] }]);
+  catalog.describe.mockResolvedValue({ valid: true });
+  const confirm = vi.fn(async () => false);
+  class Select { value = ""; innerHTML = ""; constructor(readonly name: string) {} addEventListener() {} }
+  const fields = Object.fromEntries(["skill", "approachType", "equipmentUuid", "useFormId"].map(name => [name, new Select(name)]));
+  let configure!: () => Promise<void>, changed!: (event: { target: Select }) => void;
+  const radioButton = { hidden: false, addEventListener: (_name: string, listener: typeof configure) => { configure = listener; } };
+  const content = { querySelector: (selector: string) => selector === "[data-radio-config]" ? radioButton
+    : selector === "[data-tool-fields]" ? { hidden: false, insertAdjacentHTML: vi.fn() }
+      : selector === "[data-skill-fields]" ? { hidden: false } : fields[selector.match(/name="([^"]+)"/)?.[1] ?? ""] ?? null,
+    addEventListener: (_name: string, listener: typeof changed) => { changed = listener; } };
+  const save = { disabled: true };
+  let options!: { render(event: unknown, dialog: unknown): void; ok: { callback(): Promise<PointOfInterestApproach | null> } };
+  vi.stubGlobal("HTMLSelectElement", Select);
+  vi.stubGlobal("game", { user: { isGM: true }, i18n: { localize: (key: string) => key } });
+  vi.stubGlobal("foundry", { utils: { escapeHTML: (text: string) => text }, applications: { api: { DialogV2: {
+    input: vi.fn(async value => { options = value; return null; }), confirm } } } });
+  const open = async (information: readonly PointOfInterestInformation[] = []) => {
+    await selectPoiApproach([], undefined, information);
+    options.render({}, { element: { querySelector: (selector: string) => selector === ".op2-poi-approach-dialog" ? content : save } });
+    for (const [name, value] of [["approachType", "tool"], ["equipmentUuid", "Item.radio"], ["useFormId", "tune"]]) {
+      fields[name].value = value; changed({ target: fields[name] });
+    }
+  };
+  await open(); expect(save.disabled).toBe(true); expect(radioButton.hidden).toBe(false);
+  radio.edit.mockResolvedValueOnce(null); await configure(); expect(save.disabled).toBe(true);
+  radio.edit.mockResolvedValueOnce(config); await configure(); expect(save.disabled).toBe(false);
+  const selected = await options.ok.callback(); expect(selected).toMatchObject({ mechanicConfig: config });
+  const information: readonly PointOfInterestInformation[] = [{ id: "a", content: "", availability: { mode: "always", condition: "" }, approaches: [selected!] }];
+  await open(information); expect(save.disabled).toBe(false);
+  const reused = await options.ok.callback(); expect(reused).toEqual(selected);
+  expect(reused!.mechanicConfig).not.toBe(selected!.mechanicConfig);
+  radio.edit.mockResolvedValueOnce({ ...config, trueFragments: ["Nova mensagem"] }); await configure();
+  expect(await options.ok.callback()).toBeNull(); expect(confirm).toHaveBeenCalledOnce();
+  confirm.mockResolvedValueOnce(true);
+  expect(await options.ok.callback()).toMatchObject({ mechanicConfig: { trueFragments: ["Nova mensagem"] } });
   expect(information[0].approaches[0]).toEqual(selected);
 });

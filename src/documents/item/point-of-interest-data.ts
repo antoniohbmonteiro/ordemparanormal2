@@ -1,3 +1,4 @@
+import { isRadioPuzzleConfig, type RadioPuzzleConfig } from "../../core/equipment/radio-puzzle";
 import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
 
 export const POINT_OF_INTEREST_DIFFICULTY_MIN = 1;
@@ -25,28 +26,40 @@ export interface PointOfInterestToolApproach {
   readonly type: "tool";
   readonly equipmentUuid: string;
   readonly useFormId: string;
-  readonly mechanicConfig?: LaboratoryMechanicConfig;
+  readonly mechanicConfig?: ToolMechanicConfig;
   readonly skill?: never;
   readonly specialization?: never;
   readonly difficulty?: never;
   readonly showDifficultyToPlayers?: never;
   readonly difficultyOverride?: never;
 }
+export type RadioMechanicConfig = RadioPuzzleConfig;
+export type ToolMechanicConfig = LaboratoryMechanicConfig | RadioMechanicConfig;
+export function copyToolMechanicConfig(config: ToolMechanicConfig): ToolMechanicConfig {
+  return config.type === "laboratory" ? { ...config } : { type: "radio",
+    trueFragments: config.trueFragments.map(text => text.trim()), falseFragments: config.falseFragments.map(text => text.trim()) };
+}
+export function toolMechanicSignature(config: ToolMechanicConfig | undefined): string {
+  return config ? JSON.stringify(copyToolMechanicConfig(config)) : "standard";
+}
 export interface LaboratoryMechanicConfig {
   readonly type: "laboratory";
   readonly sequenceLength: 4 | 5 | 6;
+  readonly trueFragments?: never;
+  readonly falseFragments?: never;
 }
 export function isLaboratoryMechanicConfig(value: unknown): value is LaboratoryMechanicConfig {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const config = value as Record<string, unknown>;
-  return config.type === "laboratory" && [4, 5, 6].includes(config.sequenceLength as number);
+  return config.type === "laboratory" && [4, 5, 6].includes(config.sequenceLength as number)
+    && config.trueFragments === undefined && config.falseFragments === undefined;
 }
 export function uniformToolMechanicConfigurations(information: readonly PointOfInterestInformation[]): boolean {
   const configurations = new Map<string, string>();
   for (const entry of information) for (const approach of entry.approaches) {
     if (!isToolApproach(approach)) continue;
     const key = approachIdentity(approach);
-    const value = approach.mechanicConfig ? `laboratory:${approach.mechanicConfig.sequenceLength}` : "standard";
+    const value = toolMechanicSignature(approach.mechanicConfig);
     if (configurations.has(key) && configurations.get(key) !== value) return false;
     configurations.set(key, value);
   }
@@ -63,7 +76,7 @@ export function configureToolInteraction(information: readonly PointOfInterestIn
   return information.map(entry => ({ ...entry, approaches: entry.approaches.map(existing => {
     if (!isToolApproach(existing) || approachIdentity(existing) !== approachIdentity(approach)) return existing;
     const { mechanicConfig: _previous, ...base } = existing;
-    return { ...base, ...(approach.mechanicConfig ? { mechanicConfig: { ...approach.mechanicConfig } } : {}) };
+    return { ...base, ...(approach.mechanicConfig ? { mechanicConfig: copyToolMechanicConfig(approach.mechanicConfig) } : {}) };
   }) }));
 }
 export function toolConfigurationSignature(information: readonly PointOfInterestInformation[],
@@ -124,7 +137,7 @@ export function isPointOfInterestApproach(value: unknown): value is PointOfInter
   const candidate = value as Record<string, unknown>;
   if (candidate.type === "tool") return isEquipmentSourceUuid(candidate.equipmentUuid)
     && typeof candidate.useFormId === "string" && !!candidate.useFormId.trim()
-    && (candidate.mechanicConfig === undefined || isLaboratoryMechanicConfig(candidate.mechanicConfig))
+    && (candidate.mechanicConfig === undefined || isLaboratoryMechanicConfig(candidate.mechanicConfig) || isRadioPuzzleConfig(candidate.mechanicConfig))
     && ["skill", "specialization", "difficulty", "showDifficultyToPlayers", "difficultyOverride"]
       .every(key => candidate[key] === undefined);
   if (candidate.type !== undefined || candidate.equipmentUuid !== undefined || candidate.useFormId !== undefined
@@ -193,7 +206,7 @@ export function readPointOfInterestInformation(system: unknown): readonly PointO
 }
 function readApproach(approach: PointOfInterestApproach): PointOfInterestApproach {
   if (isToolApproach(approach)) return { type: "tool", equipmentUuid: approach.equipmentUuid, useFormId: approach.useFormId,
-    ...(approach.mechanicConfig ? { mechanicConfig: { ...approach.mechanicConfig } } : {}) };
+    ...(approach.mechanicConfig ? { mechanicConfig: copyToolMechanicConfig(approach.mechanicConfig) } : {}) };
   const base = { difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
     ...(approach.difficultyOverride ? { difficultyOverride: { difficulty: approach.difficultyOverride.difficulty,
       condition: approach.difficultyOverride.condition } } : {}) };
@@ -332,7 +345,7 @@ export interface PoiInvestigationGmToolInformationView {
   readonly condition?: string;
   readonly approaches: readonly { readonly equipmentUuid: string; readonly useFormId: string;
     readonly equipmentName: string; readonly useFormName: string; readonly valid: boolean;
-    readonly mechanicConfig?: LaboratoryMechanicConfig }[];
+    readonly mechanicConfig?: ToolMechanicConfig }[];
 }
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";

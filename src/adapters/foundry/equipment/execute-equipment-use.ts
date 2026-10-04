@@ -37,6 +37,9 @@ export interface EquipmentExecutionOptions {
   readonly onExecuted?: (resolved: ResolvedEquipmentUse) => void;
 }
 let sessionGuard: ((input: EquipmentUseIntent, requester: foundry.documents.User) => EquipmentUseResult | null) | undefined;
+export function equipmentSessionGuardResult(input: EquipmentUseIntent, requester: foundry.documents.User): EquipmentUseResult | null {
+  return sessionGuard?.(input, requester) ?? null;
+}
 export function registerEquipmentSessionGuard(guard: NonNullable<typeof sessionGuard>): void { sessionGuard = guard; }
 
 export function ownedEquipmentForUser(input: Pick<EquipmentUseIntent, "actorUuid" | "equipmentId">,
@@ -65,7 +68,7 @@ export async function executeEquipmentUse(input: EquipmentUseIntent, requester: 
   return enqueueEquipmentOperation(input.actorUuid, input.equipmentId, async () => {
     const owned = ownedEquipmentForUser(input, requester);
     if (!owned) return { status: "forbidden" };
-    const guarded = sessionGuard?.(input, requester);
+    const guarded = equipmentSessionGuardResult(input, requester);
     if (guarded) return guarded;
     const key = `${requester.id}:${input.operationId}`;
     const fingerprint = JSON.stringify([input.actorUuid, input.equipmentId, input.useFormId, binding]);

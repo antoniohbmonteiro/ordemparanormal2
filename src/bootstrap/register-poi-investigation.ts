@@ -1,3 +1,4 @@
+import { registerRadioQueries, radioSessionGuard } from "../adapters/foundry/equipment/radio-session";
 import { SYSTEM_ID } from "../config/system-config";
 import { registerPoiInvestigationQuery } from "../adapters/foundry/points-of-interest/poi-investigation-query";
 import { mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries } from "../adapters/foundry/points-of-interest/poi-runtime-queries";
@@ -9,11 +10,11 @@ import { registerCommitPoiExaminationQuery } from "../adapters/foundry/points-of
 import { registerInteractPoiQuery } from "../adapters/foundry/points-of-interest/interact-poi";
 import { registerShareCandidatesQuery } from "../adapters/foundry/points-of-interest/investigation-share";
 import { onInvestigationCheckMessageUpdated, registerInvestigationRequestQueries } from "../adapters/foundry/points-of-interest/investigation-requests";
-import { registerEquipmentUseQuery } from "../adapters/foundry/equipment/execute-equipment-use";
+import { registerEquipmentUseQuery, registerEquipmentSessionGuard } from "../adapters/foundry/equipment/execute-equipment-use";
 import { registerEquipmentUsesAdjustmentQuery } from "../adapters/foundry/equipment/adjust-owned-equipment-uses";
 import { registerEquipmentUsesMutationQuery } from "../adapters/foundry/equipment/mutate-owned-equipment-uses";
 import { registerPoiToolUseQuery } from "../adapters/foundry/points-of-interest/use-poi-tool";
-import { registerLaboratoryQueries } from "../adapters/foundry/equipment/laboratory-session";
+import { registerLaboratoryQueries, laboratorySessionGuard } from "../adapters/foundry/equipment/laboratory-session";
 
 export function registerPoiInvestigation(): void {
   registerEquipmentUseQuery();
@@ -21,6 +22,8 @@ export function registerPoiInvestigation(): void {
   registerEquipmentUsesMutationQuery();
   registerPoiToolUseQuery();
   registerLaboratoryQueries();
+  registerRadioQueries();
+  registerEquipmentSessionGuard((input, requester) => laboratorySessionGuard(input, requester) ?? radioSessionGuard(input, requester));
   registerPoiInvestigationQuery();
   registerPoiRuntimeQueries();
   registerInvestigationRuntimeQueries();

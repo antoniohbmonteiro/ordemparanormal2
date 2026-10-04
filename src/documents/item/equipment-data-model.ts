@@ -115,7 +115,7 @@ export class EquipmentDataModel extends foundry.abstract.TypeDataModel<
             required: true, nullable: false, initial: false,
           }),
           mechanic: new foundry.data.fields.StringField({
-            required: true, nullable: false, blank: false, choices: ["standard", "laboratory"], initial: "standard",
+            required: true, nullable: false, blank: false, choices: ["standard", "laboratory", "radio"], initial: "standard",
           }),
         }),
         {

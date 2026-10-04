@@ -31,8 +31,10 @@ type ApproachSchema = {
   useFormId: OptionalSpecializationField;
   mechanicConfig: foundry.data.fields.SchemaField<{
     type: NonBlankStringField;
-    sequenceLength: foundry.data.fields.NumberField<number, number, true, false, false>;
-  }, { type: string; sequenceLength: number }, { type: string; sequenceLength: number }, false, false, false>;
+    sequenceLength: foundry.data.fields.NumberField<number, number, false, false, false>;
+    trueFragments: foundry.data.fields.ArrayField<NonBlankStringField, string[], string[], false, false, false>;
+    falseFragments: foundry.data.fields.ArrayField<NonBlankStringField, string[], string[], false, false, false>;
+  }, { type: string; sequenceLength: number | undefined; trueFragments: string[] | undefined; falseFragments: string[] | undefined }, { type: string; sequenceLength: number | undefined; trueFragments: string[] | undefined; falseFragments: string[] | undefined }, false, false, false>;
   skill: SkillKeyField;
   specialization: OptionalSpecializationField;
   difficulty: RequiredIntegerField;
@@ -77,9 +79,9 @@ function richText(): RequiredStringField {
   return new foundry.data.fields.StringField({ required: true, nullable: false, blank: true, initial: "" });
 }
 
-class LaboratoryLengthField extends foundry.data.fields.NumberField<number, number, true, false, false> {
-  override clean(...args: Parameters<foundry.data.fields.NumberField<number, number, true, false, false>["clean"]>) {
-    if (![4, 5, 6].includes(args[0] as number)) throw new Error("Laboratory length must be 4, 5 or 6.");
+class LaboratoryLengthField extends foundry.data.fields.NumberField<number, number, false, false, false> {
+  override clean(...args: Parameters<foundry.data.fields.NumberField<number, number, false, false, false>["clean"]>) {
+    if (args[0] !== undefined && ![4, 5, 6].includes(args[0] as number)) throw new Error("Laboratory length must be 4, 5 or 6.");
     return super.clean(...args);
   }
 }
@@ -116,8 +118,10 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
               equipmentUuid: new foundry.data.fields.StringField({ required: false, nullable: false, blank: false }),
               useFormId: new foundry.data.fields.StringField({ required: false, nullable: false, blank: false }),
               mechanicConfig: new foundry.data.fields.SchemaField({
-                type: new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, choices: ["laboratory"] }),
-                sequenceLength: new LaboratoryLengthField({ required: true, nullable: false, integer: true }),
+                type: new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, choices: ["laboratory", "radio"] }),
+                sequenceLength: new LaboratoryLengthField({ required: false, nullable: false, integer: true, initial: undefined }),
+                trueFragments: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, trim: true }), { required: false, nullable: false, initial: undefined }),
+                falseFragments: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, trim: true }), { required: false, nullable: false, initial: undefined }),
               }, { required: false, nullable: false }),
               skill: new foundry.data.fields.StringField<SkillKey, SkillKey, false, false, false>({
                 required: false, nullable: false, blank: false, choices: [...SKILL_KEYS],

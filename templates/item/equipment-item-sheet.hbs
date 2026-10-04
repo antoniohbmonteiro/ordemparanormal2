@@ -68,7 +68,7 @@
             <label>{{localize "ORDEMPARANORMAL2.Laboratory.Mechanic"}}
               <select data-use-form-edit="mechanic" data-use-form-id="{{id}}"{{#unless ../editable}} disabled{{/unless}}>
                 <option value="standard"{{#unless isLaboratory}} selected{{/unless}}>{{localize "ORDEMPARANORMAL2.Laboratory.Standard"}}</option>
-                <option value="laboratory"{{#if isLaboratory}} selected{{/if}}>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}}</option>
+                <option value="laboratory"{{#if isLaboratory}} selected{{/if}}>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}}</option><option value="radio" {{#if isRadio}}selected{{/if}}>{{localize "ORDEMPARANORMAL2.Radio.MechanicLabel"}}</option>
               </select>
             </label>
             <label><input type="checkbox" data-use-form-edit="consumesUse" data-use-form-id="{{id}}"{{#if consumesUse}} checked{{/if}}{{#unless ../editable}} disabled{{/unless}} /> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.ConsumesUse"}}</label>

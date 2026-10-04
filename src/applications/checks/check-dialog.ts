@@ -1,3 +1,4 @@
+import type { AgentCheckChoices } from "../../application/checks/build-agent-check";
 import type {
   CheckExtraDieInput,
   CheckInput,
@@ -26,13 +27,7 @@ const CHECK_DIALOG_TEMPLATE =
 const CHECK_ABILITY_USE_PICKER_TEMPLATE =
   "systems/ordemparanormal2/templates/checks/check-ability-use-picker.hbs";
 
-export interface CheckDialogResult {
-  readonly difficulty?: number;
-  readonly selectedAttribute?: AttributeKey;
-  readonly stepAdjustments: CheckStepAdjustments;
-  readonly extraDice: readonly CheckExtraDieInput[];
-  readonly abilityUses: readonly CheckAbilityUseReference[];
-}
+export type CheckDialogResult = AgentCheckChoices;
 
 export interface CheckDialogAttributeChoice {
   readonly key: AttributeKey;
@@ -41,6 +36,7 @@ export interface CheckDialogAttributeChoice {
 }
 
 export interface CheckDialogOptions {
+  readonly signal?: AbortSignal;
   readonly attributeChoices?: readonly CheckDialogAttributeChoice[];
   readonly allowDifficulty?: boolean;
   readonly lockedDifficulty?: number;
@@ -698,6 +694,9 @@ export async function openCheckDialog(
   );
   const { DialogV2 } = foundry.applications.api;
 
+  if (options?.signal?.aborted) return null;
+  let detachAbort = (): void => undefined;
+  try {
   const result = await DialogV2.input<CheckDialogResult | "cancel">({
     buttons: [
       {
@@ -728,6 +727,11 @@ export async function openCheckDialog(
       width: 520,
     },
     render: (_event, dialog) => {
+      detachAbort();
+      const abort = () => { void dialog.close(); };
+      options?.signal?.addEventListener("abort", abort, { once: true });
+      detachAbort = () => options?.signal?.removeEventListener("abort", abort);
+      if (options?.signal?.aborted) abort();
       const controllers = attachStepAdjustmentControls(dialog.element);
       const initialAttribute = input.components.find(({ kind }) => kind === "attribute")?.key;
       if (!initialAttribute) throw new Error("A Check requires an attribute component.");
@@ -798,5 +802,6 @@ export async function openCheckDialog(
     },
   });
 
-  return result === "cancel" ? null : result;
+  return options?.signal?.aborted || result === "cancel" ? null : result;
+  } finally { detachAbort(); }
 }

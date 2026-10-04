@@ -9,7 +9,7 @@ import { publishLaboratoryResult } from "../chat/publish-laboratory-result";
 import { grantToolKnowledge, isPoiToolContext, laboratoryInteraction, recoverToolKnowledgeCount,
   type PoiToolContext, type ToolKnowledgeReceipt } from "../points-of-interest/poi-tool-context";
 import { activeEquipmentAuthority, executeEquipmentUse, isEquipmentUseIntent, ownedEquipmentForUser,
-  registerEquipmentSessionGuard, type EquipmentUseIntent, type EquipmentUseResult,
+  registerEquipmentSessionGuard, equipmentSessionGuardResult, type EquipmentUseIntent, type EquipmentUseResult,
   type ResolvedEquipmentUse } from "./execute-equipment-use";
 import { enqueueEquipmentOperation } from "./equipment-operation-queue";
 
@@ -107,6 +107,8 @@ export async function prepareLaboratory(input: EquipmentUseIntent & { readonly c
       }
       if (active.has(equipmentKey(input))) return { status: "busy" };
     }
+    const guarded = equipmentSessionGuardResult(input, requester);
+    if (guarded) return guarded;
     const owned = ownedEquipmentForUser(input, requester);
     const use = owned && readEquipmentUseForms((owned.equipment.system as { useForms?: unknown }).useForms)
       ?.find(form => form.id === input.useFormId);
@@ -317,12 +319,13 @@ export async function resolveLaboratoryCommand(input: LaboratoryCommand, request
     return completeCommand(session, input, receipt, result);
   });
 }
+export function laboratorySessionGuard(input: EquipmentUseIntent, requester: foundry.documents.User): EquipmentUseResult | null {
+  const session = sessions.get(active.get(equipmentKey(input)) ?? "");
+  return session && operationKey(session.intent, session.requesterId) !== operationKey(input, requester.id)
+    ? { status: "busy" } : null;
+}
 export function registerLaboratoryQueries(): void {
-  registerEquipmentSessionGuard((input, requester) => {
-    const session = sessions.get(active.get(equipmentKey(input)) ?? "");
-    return session && operationKey(session.intent, session.requesterId) !== operationKey(input, requester.id)
-      ? { status: "busy" } : null;
-  });
+  registerEquipmentSessionGuard(laboratorySessionGuard);
   (CONFIG as typeof CONFIG & { queries: Record<string, unknown> }).queries[LABORATORY_QUERY] =
     (input: LaboratoryCommand, context: { user: foundry.documents.User }) => resolveLaboratoryCommand(input, context.user);
 }

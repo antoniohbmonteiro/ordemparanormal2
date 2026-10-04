@@ -1,4 +1,4 @@
-import { isEquipmentSourceUuid, type LaboratoryMechanicConfig } from "../../../documents/item/point-of-interest-data";
+import { isEquipmentSourceUuid, copyToolMechanicConfig, type ToolMechanicConfig } from "../../../documents/item/point-of-interest-data";
 import { readEquipmentUseForms, type EquipmentMechanic } from "../../../core/equipment/equipment-use";
 import { loadAvailableSingleItems, resolveSingleItemCatalogSource } from "../items/single-item-catalog";
 
@@ -38,14 +38,14 @@ export async function loadToolSources(): Promise<readonly ToolSourceChoice[]> {
   return result;
 }
 
-export async function describeToolApproach(equipmentUuid: string, useFormId: string, config?: LaboratoryMechanicConfig) {
+export async function describeToolApproach(equipmentUuid: string, useFormId: string, config?: ToolMechanicConfig) {
   try {
     const item = await fromUuid(equipmentUuid) as foundry.documents.Item | null;
     const system = item?.system as { category?: unknown; useForms?: unknown } | undefined;
     const form = readEquipmentUseForms(system?.useForms)?.find(use => use.id === useFormId);
     return { equipmentUuid, useFormId, equipmentName: item?.name ?? equipmentUuid,
-      useFormName: form?.name ?? useFormId, ...(config ? { mechanicConfig: { ...config } } : {}),
+      useFormName: form?.name ?? useFormId, ...(config ? { mechanicConfig: copyToolMechanicConfig(config) } : {}),
       valid: item?.type === "equipment" && system?.category === "tool" && !!form
-        && (form.mechanic === "laboratory" ? !!config : !config) };
+        && (form.mechanic === "standard" ? !config : config?.type === form.mechanic) };
   } catch { return { equipmentUuid, useFormId, equipmentName: equipmentUuid, useFormName: useFormId, valid: false }; }
 }

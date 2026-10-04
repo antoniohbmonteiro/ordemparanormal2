@@ -1,5 +1,6 @@
 import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
 import { approachIdentity, isSkillApproach, isAptitudeSpecializationKey, POINT_OF_INTEREST_DIFFICULTY_MIN,
+  isToolApproach, type PointOfInterestInformation,
   type PointOfInterestApproach, type PointOfInterestSkillApproach } from "../../documents/item/point-of-interest-data";
 import { loadToolSources, describeToolApproach } from "../../adapters/foundry/equipment/equipment-source";
 import { APTITUDE_OPTIONS } from "./point-of-interest-information-editor";
@@ -36,7 +37,7 @@ export function specializationFieldMarkup(
 }
 
 export async function selectPoiApproach(existing: readonly PointOfInterestApproach[],
-  initial?: PointOfInterestApproach): Promise<PointOfInterestApproach | null> {
+  initial?: PointOfInterestApproach, information: readonly PointOfInterestInformation[] = []): Promise<PointOfInterestApproach | null> {
   const used = new Set(existing.map(approachIdentity));
   const sources = await loadToolSources();
   const unusedSpecializations = APTITUDE_OPTIONS.filter(option => !used.has(`aptitude:${option.value}`));
@@ -50,13 +51,25 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
   let kind: "skill" | "tool" = initial?.type === "tool" || !skills.length ? "tool" : "skill";
   let equipmentUuid = initial?.equipmentUuid ?? "";
   let useFormId = initial?.useFormId ?? "";
+  let length: 4 | 5 | 6 | null = initial?.mechanicConfig?.sequenceLength ?? null;
+  const currentForm = () => sources.find(source => source.uuid === equipmentUuid)?.forms.find(form => form.id === useFormId);
+  const sharedApproaches = () => information.flatMap(entry => entry.approaches.filter(isToolApproach))
+    .filter(approach => approach.equipmentUuid === equipmentUuid && approach.useFormId === useFormId);
+  const reuseLength = () => {
+    const shared = sharedApproaches();
+    length = shared.length && shared.every(approach => approach.mechanicConfig?.sequenceLength === shared[0]?.mechanicConfig?.sequenceLength)
+      ? shared[0]?.mechanicConfig?.sequenceLength ?? null : null;
+  };
   const localize = (key: string) => game.i18n.localize(key);
   const skillOptions = skills.map(({ key, label }) => `<option value="${key}"${key === draft.skill ? " selected" : ""}>${label}</option>`).join("");
   const toolOptions = sources.map(source => `<option value="${foundry.utils.escapeHTML(source.uuid)}"${source.uuid === equipmentUuid ? " selected" : ""}>${foundry.utils.escapeHTML(`${source.name} — ${source.origin}`)}</option>`).join("");
   const resolve = (): PointOfInterestApproach | null => {
     if (kind === "tool") {
       if (!sources.some(source => source.uuid === equipmentUuid && source.forms.some(form => form.id === useFormId))) return null;
-      const approach = { type: "tool" as const, equipmentUuid, useFormId };
+      if (currentForm()?.mechanic === "laboratory" && length === null) return null;
+      const approach = { type: "tool" as const, equipmentUuid, useFormId,
+        ...(currentForm()?.mechanic === "laboratory" && length !== null
+          ? { mechanicConfig: { type: "laboratory" as const, sequenceLength: length } } : {}) };
       return used.has(approachIdentity(approach)) ? null : approach;
     }
     const approach = approachFromDraft(draft, used, availableSkills);
@@ -64,7 +77,7 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
       showDifficultyToPlayers: initial.showDifficultyToPlayers,
       ...(initial.difficultyOverride ? { difficultyOverride: { ...initial.difficultyOverride } } : {}) } : approach;
   };
-  return foundry.applications.api.DialogV2.input<PointOfInterestApproach>({
+  return foundry.applications.api.DialogV2.input<PointOfInterestApproach | null>({
     classes: ["ordemparanormal2"], modal: true, rejectClose: false,
     content: `<div class="op2-poi-approach-dialog"><label>${localize("ORDEMPARANORMAL2.EquipmentUse.ApproachType")}<select name="approachType"><option value="skill"${kind === "skill" ? " selected" : ""}>${localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}</option><option value="tool"${kind === "tool" ? " selected" : ""}>${localize("ORDEMPARANORMAL2.EquipmentUse.Tool")}</option></select></label><fieldset data-skill-fields><label>${localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}<select name="skill">${skillOptions}</select></label>${specializationFieldMarkup(draft.skill, used, localize)}</fieldset><fieldset data-tool-fields><label>${localize("ORDEMPARANORMAL2.EquipmentUse.Tool")}<select name="equipmentUuid"><option value="" disabled selected>—</option>${toolOptions}</select></label><label>${localize("ORDEMPARANORMAL2.EquipmentUse.SelectForm")}<select name="useFormId"></select></label></fieldset></div>`,
     render: (_event, dialog) => {
@@ -73,12 +86,18 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
       const add = dialog.element.querySelector<HTMLButtonElement>('button[data-action="add"]');
       if (!content || !skill || !add) return;
       const sync = () => {
+        const lengthField = content.querySelector<HTMLElement>("[data-laboratory-length]");
+        const lengthSelect = lengthField?.querySelector<HTMLSelectElement>("select");
+        if (lengthField) lengthField.hidden = kind !== "tool" || currentForm()?.mechanic !== "laboratory";
+        if (lengthSelect) lengthSelect.value = length === null ? "" : String(length);
         add.disabled = resolve() === null;
         const skillFields = content.querySelector<HTMLElement>("[data-skill-fields]");
         const toolFields = content.querySelector<HTMLElement>("[data-tool-fields]");
         if (skillFields) skillFields.hidden = kind !== "skill";
         if (toolFields) toolFields.hidden = kind !== "tool";
       };
+      content.querySelector("[data-tool-fields]")?.insertAdjacentHTML("beforeend",
+        `<label data-laboratory-length>${localize("ORDEMPARANORMAL2.Laboratory.Length")}<select name="sequenceLength"><option value="" disabled selected>—</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label>`);
       const formSelect = content.querySelector<HTMLSelectElement>('select[name="useFormId"]');
       const refreshForms = () => {
         if (!formSelect) return;
@@ -106,8 +125,9 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
         const target = event.target;
         if (!(target instanceof HTMLSelectElement)) return;
         if (target.name === "approachType") { kind = target.value === "tool" ? "tool" : "skill"; sync(); return; }
-        if (target.name === "equipmentUuid") { equipmentUuid = target.value; useFormId = ""; refreshForms(); sync(); return; }
-        if (target.name === "useFormId") { useFormId = target.value; sync(); return; }
+        if (target.name === "equipmentUuid") { equipmentUuid = target.value; useFormId = ""; length = null; refreshForms(); sync(); return; }
+        if (target.name === "useFormId") { useFormId = target.value; reuseLength(); sync(); return; }
+        if (target.name === "sequenceLength") { const value = Number(target.value); length = value === 4 || value === 5 || value === 6 ? value : null; sync(); return; }
         if (target.name !== "specialization") return;
         draft = { ...draft, specialization: isAptitudeSpecializationKey(target.value) ? target.value : null };
         sync();
@@ -119,8 +139,15 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
       callback: async () => {
         const approach = resolve();
         if (!approach) throw new Error("Invalid POI approach selection.");
-        if (approach.type === "tool" && !(await describeToolApproach(approach.equipmentUuid, approach.useFormId)).valid)
+        if (approach.type === "tool" && !(await describeToolApproach(approach.equipmentUuid, approach.useFormId, approach.mechanicConfig)).valid)
           throw new Error("The selected tool source or use form is no longer available.");
+        if (isToolApproach(approach) && sharedApproaches().some(existing =>
+          JSON.stringify(existing.mechanicConfig ?? null) !== JSON.stringify(approach.mechanicConfig ?? null))) {
+          const confirmed = await foundry.applications.api.DialogV2.confirm({ modal: true, rejectClose: false,
+            window: { title: localize("ORDEMPARANORMAL2.Laboratory.Length") },
+            content: `<p>${localize("ORDEMPARANORMAL2.Laboratory.ConfirmSharedLength")}</p>` });
+          if (!confirmed) return null;
+        }
         return approach;
       },
     },

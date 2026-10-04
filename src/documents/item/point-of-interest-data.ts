@@ -19,17 +19,57 @@ export type PointOfInterestSkillApproach = ({
   readonly specialization: AptitudeSpecializationKey;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
-}) & { readonly type?: never; readonly equipmentUuid?: never; readonly useFormId?: never;
+}) & { readonly type?: never; readonly equipmentUuid?: never; readonly useFormId?: never; readonly mechanicConfig?: never;
   readonly difficultyOverride?: PointOfInterestDifficultyOverride };
 export interface PointOfInterestToolApproach {
   readonly type: "tool";
   readonly equipmentUuid: string;
   readonly useFormId: string;
+  readonly mechanicConfig?: LaboratoryMechanicConfig;
   readonly skill?: never;
   readonly specialization?: never;
   readonly difficulty?: never;
   readonly showDifficultyToPlayers?: never;
   readonly difficultyOverride?: never;
+}
+export interface LaboratoryMechanicConfig {
+  readonly type: "laboratory";
+  readonly sequenceLength: 4 | 5 | 6;
+}
+export function isLaboratoryMechanicConfig(value: unknown): value is LaboratoryMechanicConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const config = value as Record<string, unknown>;
+  return config.type === "laboratory" && [4, 5, 6].includes(config.sequenceLength as number);
+}
+export function uniformToolMechanicConfigurations(information: readonly PointOfInterestInformation[]): boolean {
+  const configurations = new Map<string, string>();
+  for (const entry of information) for (const approach of entry.approaches) {
+    if (!isToolApproach(approach)) continue;
+    const key = approachIdentity(approach);
+    const value = approach.mechanicConfig ? `laboratory:${approach.mechanicConfig.sequenceLength}` : "standard";
+    if (configurations.has(key) && configurations.get(key) !== value) return false;
+    configurations.set(key, value);
+  }
+  return true;
+}
+export function uniformToolInteractionConfiguration(information: readonly PointOfInterestInformation[],
+  approach: PointOfInterestToolApproach): boolean {
+  return uniformToolMechanicConfigurations(information.map(entry => ({ ...entry,
+    approaches: entry.approaches.filter(existing => approachIdentity(existing) === approachIdentity(approach)) })));
+}
+/** Reconfigure one interaction across the POI in the same document write. */
+export function configureToolInteraction(information: readonly PointOfInterestInformation[],
+  approach: PointOfInterestToolApproach): readonly PointOfInterestInformation[] {
+  return information.map(entry => ({ ...entry, approaches: entry.approaches.map(existing => {
+    if (!isToolApproach(existing) || approachIdentity(existing) !== approachIdentity(approach)) return existing;
+    const { mechanicConfig: _previous, ...base } = existing;
+    return { ...base, ...(approach.mechanicConfig ? { mechanicConfig: { ...approach.mechanicConfig } } : {}) };
+  }) }));
+}
+export function toolConfigurationSignature(information: readonly PointOfInterestInformation[],
+  approach: PointOfInterestToolApproach): string {
+  return JSON.stringify(information.flatMap(entry => entry.approaches.filter(existing =>
+    approachIdentity(existing) === approachIdentity(approach)).map(existing => [entry.id, existing.mechanicConfig ?? null])));
 }
 export type PointOfInterestApproach = PointOfInterestSkillApproach | PointOfInterestToolApproach;
 export function isEquipmentSourceUuid(value: unknown): value is string {
@@ -84,9 +124,11 @@ export function isPointOfInterestApproach(value: unknown): value is PointOfInter
   const candidate = value as Record<string, unknown>;
   if (candidate.type === "tool") return isEquipmentSourceUuid(candidate.equipmentUuid)
     && typeof candidate.useFormId === "string" && !!candidate.useFormId.trim()
+    && (candidate.mechanicConfig === undefined || isLaboratoryMechanicConfig(candidate.mechanicConfig))
     && ["skill", "specialization", "difficulty", "showDifficultyToPlayers", "difficultyOverride"]
       .every(key => candidate[key] === undefined);
-  if (candidate.type !== undefined || candidate.equipmentUuid !== undefined || candidate.useFormId !== undefined) return false;
+  if (candidate.type !== undefined || candidate.equipmentUuid !== undefined || candidate.useFormId !== undefined
+    || candidate.mechanicConfig !== undefined) return false;
   if (!isSkillKey(candidate.skill) || !Number.isInteger(candidate.difficulty)
     || (candidate.difficulty as number) < POINT_OF_INTEREST_DIFFICULTY_MIN
     || typeof candidate.showDifficultyToPlayers !== "boolean"
@@ -150,7 +192,8 @@ export function readPointOfInterestInformation(system: unknown): readonly PointO
     availability: { ...readPointOfInterestInformationAvailability(entry.availability)! } }));
 }
 function readApproach(approach: PointOfInterestApproach): PointOfInterestApproach {
-  if (isToolApproach(approach)) return { type: "tool", equipmentUuid: approach.equipmentUuid, useFormId: approach.useFormId };
+  if (isToolApproach(approach)) return { type: "tool", equipmentUuid: approach.equipmentUuid, useFormId: approach.useFormId,
+    ...(approach.mechanicConfig ? { mechanicConfig: { ...approach.mechanicConfig } } : {}) };
   const base = { difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
     ...(approach.difficultyOverride ? { difficultyOverride: { difficulty: approach.difficultyOverride.difficulty,
       condition: approach.difficultyOverride.condition } } : {}) };
@@ -159,7 +202,8 @@ function readApproach(approach: PointOfInterestApproach): PointOfInterestApproac
     : { skill: approach.skill, ...base };
 }
 function assertValidInformation(list: readonly PointOfInterestInformation[]): void {
-  if (!isPointOfInterestInformationList(list)) throw new Error("Invalid Point of Interest information.");
+  if (!isPointOfInterestInformationList(list) || !uniformToolMechanicConfigurations(list))
+    throw new Error("Invalid Point of Interest information.");
 }
 export function addPointOfInterestInformation(
   list: readonly PointOfInterestInformation[], id: string, approach: PointOfInterestApproach,
@@ -287,7 +331,8 @@ export interface PoiInvestigationGmToolInformationView {
   readonly knownCount: number;
   readonly condition?: string;
   readonly approaches: readonly { readonly equipmentUuid: string; readonly useFormId: string;
-    readonly equipmentName: string; readonly useFormName: string; readonly valid: boolean }[];
+    readonly equipmentName: string; readonly useFormName: string; readonly valid: boolean;
+    readonly mechanicConfig?: LaboratoryMechanicConfig }[];
 }
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";

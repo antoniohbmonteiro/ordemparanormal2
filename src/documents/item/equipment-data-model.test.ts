@@ -56,13 +56,13 @@ describe("EquipmentDataModel", () => {
     const schema = EquipmentDataModel.defineSchema() as unknown as { useForms: MockArrayField };
     expect(schema.useForms.options).toMatchObject({ required: true, nullable: false, initial: [] });
     const fields = schema.useForms.element.fields;
-    expect(Object.keys(fields)).toEqual(["id", "name", "description", "consumesUse"]);
+    expect(Object.keys(fields)).toEqual(["id", "name", "description", "consumesUse", "mechanic"]);
     expect(fields.id.options).toMatchObject({ required: true, nullable: false, blank: false });
     expect(fields.name.options).toMatchObject({ required: true, nullable: false, blank: false });
     expect(fields.description.options).toMatchObject({ blank: true, initial: "" });
     expect(fields.consumesUse.options).toMatchObject({ required: true, nullable: false, initial: false });
     const validate = schema.useForms.options.validate as (value: unknown) => boolean;
-    const use = { id: "measure", name: "Medir", description: "", consumesUse: false };
+    const use = { id: "measure", name: "Medir", description: "", consumesUse: false, mechanic: "standard" };
     expect(validate([])).toBe(true);
     expect(validate([use])).toBe(true);
     expect(validate([use, use])).toBe(false);

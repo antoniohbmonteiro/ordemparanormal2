@@ -65,6 +65,12 @@
             {{/if}}
           </label>
           <div class="op2-equipment-sheet__use-form-footer">
+            <label>{{localize "ORDEMPARANORMAL2.Laboratory.Mechanic"}}
+              <select data-use-form-edit="mechanic" data-use-form-id="{{id}}"{{#unless ../editable}} disabled{{/unless}}>
+                <option value="standard"{{#unless isLaboratory}} selected{{/unless}}>{{localize "ORDEMPARANORMAL2.Laboratory.Standard"}}</option>
+                <option value="laboratory"{{#if isLaboratory}} selected{{/if}}>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}}</option>
+              </select>
+            </label>
             <label><input type="checkbox" data-use-form-edit="consumesUse" data-use-form-id="{{id}}"{{#if consumesUse}} checked{{/if}}{{#unless ../editable}} disabled{{/unless}} /> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.ConsumesUse"}}</label>
             {{#if ../editable}}
               <button type="button" data-action="removeUseForm" data-use-form-id="{{id}}" title="{{localize 'ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveUseForm'}}"><i class="fa-solid fa-trash"></i> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveUseForm"}}</button>

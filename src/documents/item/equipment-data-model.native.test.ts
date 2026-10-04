@@ -29,7 +29,8 @@ describe.skipIf(!commonPath)("installed Foundry v14 Equipment model (no persiste
       useForms: [{ id: "illuminate", name: "Iluminar", description: "", consumesUse: false },
         { id: "burst", name: "Estouro", description: "<p>Luz UV</p>", consumesUse: true }] };
     const model = new Model(structuredClone(source) as never, { strict: true } as never);
-    expect(JSON.parse(JSON.stringify(model.toObject()))).toEqual({ ...source, quantity: null });
+    expect(JSON.parse(JSON.stringify(model.toObject()))).toEqual({ ...source, quantity: null,
+      useForms: source.useForms.map(use => ({ ...use, mechanic: "standard" })) });
     const forms = readEquipmentUseForms(model.useForms)!;
     model.updateSource({ useForms: patchEquipmentUse(forms, "burst", { name: "Estouro UV" }) } as never);
     expect(model.toObject().useForms[1].name).toBe("Estouro UV");
@@ -65,6 +66,17 @@ describe.skipIf(!commonPath)("installed Foundry v14 Equipment model (no persiste
     }
     const model = new Model({ ...base, useForms: [use] } as never);
     expect(model.updateSource({ useForms: [{ ...use }, { ...use, name: "Outra forma" }] } as never)).toEqual({});
-    expect(model.toObject().useForms).toEqual([use]);
+    expect(model.toObject().useForms).toEqual([{ ...use, mechanic: "standard" }]);
+  });
+  it("defaults a legacy form and validates mechanics on construction and updateSource", async () => {
+    const Model = await loadModel();
+    const use = { id: "analyze", name: "Analisar", description: "", consumesUse: false };
+    const model = new Model({ useForms: [use] } as never, { strict: true } as never);
+    expect(model.toObject().useForms[0].mechanic).toBe("standard");
+    model.updateSource({ useForms: [{ ...use, mechanic: "laboratory" }] } as never);
+    expect(model.toObject().useForms[0]).toEqual({ ...use, mechanic: "laboratory" });
+    expect(() => new Model({ useForms: [{ ...use, mechanic: "unknown" }] } as never, { strict: true } as never)).toThrow();
+    expect(model.updateSource({ useForms: [{ ...use, mechanic: "unknown" }] } as never)).toEqual({});
+    expect(model.toObject().useForms[0].mechanic).toBe("laboratory");
   });
 });

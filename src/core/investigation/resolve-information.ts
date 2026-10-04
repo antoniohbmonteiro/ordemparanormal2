@@ -3,7 +3,8 @@ export type InvestigationApproach = {
   readonly skill: string;
   readonly specialization?: string;
   readonly difficulty: number;
-} | { readonly type: "tool"; readonly equipmentUuid: string; readonly useFormId: string };
+} | { readonly type: "tool"; readonly equipmentUuid: string; readonly useFormId: string;
+  readonly mechanicConfig?: { readonly type: "laboratory"; readonly sequenceLength: 4 | 5 | 6 } };
 export interface InvestigableInformation {
   readonly id: string;
   readonly availability: { readonly mode: "always" | "situational" };
@@ -24,8 +25,10 @@ export function reachableInformationIds(
 }
 
 export function toolInformationIds(information: readonly InvestigableInformation[], knownIds: ReadonlySet<string>,
-  equipmentUuid: string, useFormId: string): readonly string[] {
+  equipmentUuid: string, useFormId: string, laboratoryLength?: 4 | 5 | 6): readonly string[] {
   return [...new Set(information.filter(entry => entry.availability.mode === "always" && !knownIds.has(entry.id)
     && entry.approaches.some(approach => approach.type === "tool" && approach.equipmentUuid === equipmentUuid
-      && approach.useFormId === useFormId)).map(entry => entry.id))];
+      && approach.useFormId === useFormId && (laboratoryLength === undefined
+        ? approach.mechanicConfig === undefined
+        : approach.mechanicConfig?.sequenceLength === laboratoryLength))).map(entry => entry.id))];
 }

@@ -3,6 +3,7 @@ import {
   POINT_OF_INTEREST_AVAILABILITY_MODES,
   POINT_OF_INTEREST_DIFFICULTY_MIN,
   isPointOfInterestInformationList,
+  uniformToolMechanicConfigurations,
   type PointOfInterestAvailabilityMode,
 } from "./point-of-interest-data";
 
@@ -28,6 +29,10 @@ type ApproachSchema = {
   type: OptionalSpecializationField;
   equipmentUuid: OptionalSpecializationField;
   useFormId: OptionalSpecializationField;
+  mechanicConfig: foundry.data.fields.SchemaField<{
+    type: NonBlankStringField;
+    sequenceLength: foundry.data.fields.NumberField<number, number, true, false, false>;
+  }, { type: string; sequenceLength: number }, { type: string; sequenceLength: number }, false, false, false>;
   skill: SkillKeyField;
   specialization: OptionalSpecializationField;
   difficulty: RequiredIntegerField;
@@ -72,6 +77,13 @@ function richText(): RequiredStringField {
   return new foundry.data.fields.StringField({ required: true, nullable: false, blank: true, initial: "" });
 }
 
+class LaboratoryLengthField extends foundry.data.fields.NumberField<number, number, true, false, false> {
+  override clean(...args: Parameters<foundry.data.fields.NumberField<number, number, true, false, false>["clean"]>) {
+    if (![4, 5, 6].includes(args[0] as number)) throw new Error("Laboratory length must be 4, 5 or 6.");
+    return super.clean(...args);
+  }
+}
+
 class ApproachField extends foundry.data.fields.SchemaField<ApproachSchema> {
   override clean(...args: Parameters<foundry.data.fields.SchemaField<ApproachSchema>["clean"]>) {
     const [value, options, state] = args;
@@ -103,6 +115,10 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
               type: new foundry.data.fields.StringField({ required: false, nullable: false, blank: false, choices: ["tool"] }),
               equipmentUuid: new foundry.data.fields.StringField({ required: false, nullable: false, blank: false }),
               useFormId: new foundry.data.fields.StringField({ required: false, nullable: false, blank: false }),
+              mechanicConfig: new foundry.data.fields.SchemaField({
+                type: new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, choices: ["laboratory"] }),
+                sequenceLength: new LaboratoryLengthField({ required: true, nullable: false, integer: true }),
+              }, { required: false, nullable: false }),
               skill: new foundry.data.fields.StringField<SkillKey, SkillKey, false, false, false>({
                 required: false, nullable: false, blank: false, choices: [...SKILL_KEYS],
               }),
@@ -133,7 +149,8 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
             condition: new foundry.data.fields.StringField({ required: true, nullable: false, blank: true, initial: "" }),
           }, { required: true, nullable: false }),
         }),
-        { required: true, nullable: false, initial: [], validate: isPointOfInterestInformationList },
+        { required: true, nullable: false, initial: [], validate: (value: unknown) =>
+          isPointOfInterestInformationList(value) && uniformToolMechanicConfigurations(value) },
       ),
     };
   }

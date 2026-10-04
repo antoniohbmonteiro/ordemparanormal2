@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { planEquipmentUse } from "./equipment-use-plan";
 
-const forms = [{ id: "scan", name: "Examinar", description: "", consumesUse: true },
-  { id: "observe", name: "Observar", description: "", consumesUse: false }];
+const forms = [{ id: "scan", name: "Examinar", description: "", consumesUse: true, mechanic: "standard" },
+  { id: "observe", name: "Observar", description: "", consumesUse: false, mechanic: "standard" }];
 describe("equipment use payment", () => {
   it("preserves legacy publication without a form or automatic payment", () => {
     expect(planEquipmentUse([], { value: 2, max: 2 }, null)).toEqual({ status: "ready", use: null, remaining: null });

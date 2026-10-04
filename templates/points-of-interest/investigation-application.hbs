@@ -123,6 +123,7 @@
                 <div class="op2-investigation-skill-cell" role="rowheader">
                   {{#each approaches}}
                   <strong>{{equipmentName}} · {{useFormName}}</strong>
+                  {{#if mechanicConfig}}<span>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}} · {{mechanicConfig.sequenceLength}} dados</span>{{/if}}
                   {{#unless valid}}<span>{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/unless}}
                   {{/each}}
                 </div>

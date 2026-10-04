@@ -49,7 +49,7 @@ interface EquipmentItemSheetContext
     };
     readonly uses: EquipmentUsesData | null;
     readonly quantity: { readonly value: number; readonly limit: number } | null;
-    readonly useForms: readonly (EquipmentUseData & { readonly enrichedDescription: string })[];
+    readonly useForms: readonly (EquipmentUseData & { readonly enrichedDescription: string; readonly isLaboratory: boolean })[];
   };
 }
 
@@ -171,6 +171,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
         quantity: system.quantity === null ? null : { value: system.quantity, limit: Number.MAX_SAFE_INTEGER },
         useForms: await Promise.all((system.useForms ?? []).map(async use => ({
           ...use,
+          isLaboratory: use.mechanic === "laboratory",
           enrichedDescription: await TextEditor.implementation.enrichHTML(use.description, {
             relativeTo: item, secrets: item.isOwner,
           }),
@@ -206,7 +207,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
       });
     }
 
-    for (const input of htmlElement.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+    for (const input of htmlElement.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
       "[data-use-form-edit]",
     )) {
       input.addEventListener("change", event => {
@@ -220,6 +221,8 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
           patch = { consumesUse: input.checked };
         } else if (field === "name" || field === "description") {
           patch = { [field]: input.value };
+        } else if (field === "mechanic" && (input.value === "standard" || input.value === "laboratory")) {
+          patch = { mechanic: input.value };
         } else return;
         void this.#enqueueUseFormsChange(uses => patchEquipmentUse(uses, id, patch));
       });
@@ -256,6 +259,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
       name: game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.NewUseForm"),
       description: "",
       consumesUse: false,
+      mechanic: "standard",
     }));
   }
 

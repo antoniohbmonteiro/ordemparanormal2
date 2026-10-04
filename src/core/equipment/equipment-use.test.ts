@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { appendEquipmentUse, patchEquipmentUse, readEquipmentUse, readEquipmentUseForms,
   removeEquipmentUse, resolveEquipmentUse, type EquipmentUseData } from "./equipment-use";
 
-const use: EquipmentUseData = { id: "measure", name: "Medir", description: "", consumesUse: false };
+const use: EquipmentUseData = { id: "measure", name: "Medir", description: "", consumesUse: false, mechanic: "standard" };
+it("defaults only absent mechanics and rejects unrecognized mechanics", () => {
+  const { mechanic: _mechanic, ...legacy } = use;
+  expect(readEquipmentUse(legacy)?.mechanic).toBe("standard");
+  expect(readEquipmentUse({ ...legacy, mechanic: "laboratory" })?.mechanic).toBe("laboratory");
+  for (const mechanic of ["other", null, 1, false]) expect(readEquipmentUse({ ...legacy, mechanic })).toBeNull();
+});
 
 describe("Equipment use forms", () => {
   it("normalizes identity and name while preserving description and consumption", () => {

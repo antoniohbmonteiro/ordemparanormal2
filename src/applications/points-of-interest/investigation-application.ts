@@ -260,6 +260,9 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   #updateUserHook: number | null = null;
   #itemHooks: { name: string; id: number }[] = [];
   #stopEquipmentUse: (() => void) | null = null;
+  #toolAborts = new Set<AbortController>();
+  #currentRunId: string | null = null;
+  #cancelTools(): void { for (const controller of this.#toolAborts) controller.abort(); this.#toolAborts.clear(); }
 
   constructor(params: InvestigationApplicationParams) {
     super({
@@ -287,12 +290,13 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
 
   #agents(): foundry.documents.Actor[] {
     const actor = resolveSceneInvestigationAgent(this.#params.sceneId);
-    if (this.#actorUuid !== (actor?.uuid ?? null)) this.#feedback = "";
+    if (this.#actorUuid !== (actor?.uuid ?? null)) { this.#feedback = ""; this.#cancelTools(); }
     this.#actorUuid = actor?.uuid ?? null;
     return actor ? [actor] : [];
   }
 
   updateContext(params: InvestigationApplicationParams): void {
+    if (params.sceneId !== this.#params.sceneId || params.itemUuid !== this.#params.itemUuid) this.#cancelTools();
     this.#params = params;
     this.#result = null;
     this.#resultActorUuid = null;
@@ -352,6 +356,9 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       result = { error: "unavailable" };
     }
     if (this.#closed || revision !== this.#loadRevision) return;
+    const runId = "view" in result ? result.view.investigationRunId ?? null : null;
+    if (this.#currentRunId !== runId || !("view" in result)) this.#cancelTools();
+    this.#currentRunId = runId;
     this.#result = result;
     this.#resultActorUuid = requestedActorUuid;
     await this.render();
@@ -494,11 +501,13 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     const { sceneId, itemUuid } = this.#params;
     const runId = this.#result && "view" in this.#result ? this.#result.view.investigationRunId ?? null : null;
     const button = target.closest<HTMLButtonElement>("button");
+    const abort = new AbortController();
+    this.#toolAborts.add(abort);
     if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); }
     try {
       const result = await useInvestigationTool(actor, equipmentId, { sceneId, itemUuid, runId }, () =>
         !this.#closed && this.#params.sceneId === sceneId && this.#params.itemUuid === itemUuid
-        && resolveSceneInvestigationAgent(sceneId)?.uuid === actor.uuid);
+        && resolveSceneInvestigationAgent(sceneId)?.uuid === actor.uuid && this.#currentRunId === runId, abort.signal);
       const feedback = result.status === "success"
         ? result.newCount > 0
           ? game.i18n.format(`${LOCALIZATION_ROOT}.${result.newCount === 1 ? "ToolDiscoverySingle" : "ToolDiscoveryMultiple"}`,
@@ -506,7 +515,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
           : game.i18n.localize(`${LOCALIZATION_ROOT}.ToolDiscoveryNone`)
         : equipmentUseFeedback(result);
       if (this.#closed || this.#params.sceneId !== sceneId || this.#params.itemUuid !== itemUuid
-        || resolveSceneInvestigationAgent(sceneId)?.uuid !== actor.uuid) return;
+        || resolveSceneInvestigationAgent(sceneId)?.uuid !== actor.uuid || abort.signal.aborted || this.#currentRunId !== runId) return;
       if (feedback) {
         this.#feedback = feedback;
         if (result.status !== "success") ui.notifications.warn(feedback);
@@ -516,12 +525,14 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       console.error(`${SYSTEM_ID} | Failed to use Investigation tool`, error);
       ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.EquipmentUse.uncertain"));
     } finally {
+      this.#toolAborts.delete(abort);
       if (button?.isConnected) { button.disabled = false; button.removeAttribute("aria-busy"); }
     }
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {
     this.#closed = true;
+    this.#cancelTools();
     this.#stopInvalidation?.();
     this.#stopEquipmentUse?.();
     if (this.#controlTokenHook !== null) Hooks.off("controlToken", this.#controlTokenHook);

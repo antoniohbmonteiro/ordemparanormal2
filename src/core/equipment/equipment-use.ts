@@ -1,12 +1,14 @@
+export type EquipmentMechanic = "standard" | "laboratory";
 export interface EquipmentUseData {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly consumesUse: boolean;
+  readonly mechanic: EquipmentMechanic;
 }
 
 export type EquipmentUsePatch = Partial<Pick<EquipmentUseData,
-  "name" | "description" | "consumesUse"
+  "name" | "description" | "consumesUse" | "mechanic"
 >>;
 
 export function readEquipmentUse(value: unknown): EquipmentUseData | null {
@@ -16,7 +18,9 @@ export function readEquipmentUse(value: unknown): EquipmentUseData | null {
   const name = typeof use.name === "string" ? use.name.trim() : "";
   if (!id || !name || typeof use.description !== "string" ||
     typeof use.consumesUse !== "boolean") return null;
-  return { id, name, description: use.description, consumesUse: use.consumesUse };
+  const mechanic = use.mechanic === undefined ? "standard" : use.mechanic;
+  if (mechanic !== "standard" && mechanic !== "laboratory") return null;
+  return { id, name, description: use.description, consumesUse: use.consumesUse, mechanic };
 }
 
 export function readEquipmentUseForms(value: unknown): readonly EquipmentUseData[] | null {

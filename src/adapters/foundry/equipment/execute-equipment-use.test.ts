@@ -40,7 +40,7 @@ describe("authoritative equipment execution", () => {
     const post = vi.fn(async (_resolved: unknown) => ({ newCount: 2, manual: false }));
     expect(await executeEquipmentUse(f.intent, f.requester, "context", post)).toEqual({ status: "success", newCount: 2, manual: false });
     expect(f.equipment.update).toHaveBeenCalledExactlyOnceWith({ "system.uses.value": 1 });
-    expect(publish.mock.calls[0][2]).toEqual(f.equipment.system.useForms[0]);
+    expect(publish.mock.calls[0][2]).toEqual({ ...f.equipment.system.useForms[0], mechanic: "standard" });
     expect(post.mock.calls[0][0]).toMatchObject({ sourceUuid: "Item.source", isTool: true });
     expect(f.equipment.system.quantity).toBe(3);
     expect(f.actor.update).not.toHaveBeenCalled();

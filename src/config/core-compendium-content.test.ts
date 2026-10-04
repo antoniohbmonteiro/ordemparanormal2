@@ -392,7 +392,8 @@ describe("core compendium sources", () => {
       if (category === "tool") {
         expect(description).toBe(`<p>${TOOL_DESCRIPTIONS[index - 1]}</p>`);
         expect(item.system.useForms).toEqual(EQUIPMENT_USE_DEFINITIONS[index].map(
-          ([id, name, consumesUse]) => ({ id, name, description: "", consumesUse }),
+          ([id, name, consumesUse]) => ({ id, name, description: "", consumesUse,
+            ...(index === 2 ? { mechanic: "laboratory" } : {}) }),
         ));
         const forms = readEquipmentUseForms(item.system.useForms);
         expect(forms, `${item.name} has invalid use forms`).not.toBeNull();

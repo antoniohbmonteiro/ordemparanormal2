@@ -8,6 +8,7 @@ import {
   addPointOfInterestApproach, addPointOfInterestInformation, isAptitudeSpecializationKey,
   readPointOfInterestInformation,
   isSkillApproach,
+  isToolApproach, configureToolInteraction, toolConfigurationSignature, uniformToolInteractionConfiguration,
   removePointOfInterestApproach, removePointOfInterestInformation,
   updatePointOfInterestApproach, updatePointOfInterestApproachDifficultyOverride,
   updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
@@ -86,11 +87,13 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
       TextEditor.implementation.enrichHTML(publicDescription, { relativeTo: item, secrets: item.isOwner }),
       TextEditor.implementation.enrichHTML(gmContext, { relativeTo: item, secrets: item.isOwner }),
     ]);
-    const information = await Promise.all(buildInformationViewModels(readPointOfInterestInformation(item.system), this.#pendingSituational,
+    const stored = readPointOfInterestInformation(item.system);
+    const information = await Promise.all(buildInformationViewModels(stored, this.#pendingSituational,
       this.#pendingOverrides).map(async entry => ({ ...entry, approaches: await Promise.all(entry.approaches.map(async approach => {
-        if (!approach.isTool || !approach.equipmentUuid || !approach.useFormId) return approach;
-        const source = await describeToolApproach(approach.equipmentUuid, approach.useFormId);
-        return { ...approach, toolLabel: source.equipmentName, useFormLabel: source.useFormName, invalidSource: !source.valid };
+        if (!isToolApproach(approach)) return approach;
+        const source = await describeToolApproach(approach.equipmentUuid, approach.useFormId, approach.mechanicConfig);
+        return { ...approach, toolLabel: source.equipmentName, useFormLabel: source.useFormName,
+          invalidSource: !source.valid || !uniformToolInteractionConfiguration(stored, approach) };
       })) })));
     return { ...context, canViewAuthoring: true, editable: this.#canAuthor, poi: {
       name: item.name, img: item.img ?? "icons/svg/item-bag.svg", uuid: item.uuid,
@@ -205,21 +208,23 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
   static async #onAddInformation(this: PointOfInterestItemSheet): Promise<void> {
     if (!this.#canAuthor) return;
     await this.#updateQueue; await this.submit();
-    const approach = await selectPoiApproach([]);
+    const stored = readPointOfInterestInformation((this.document as foundry.documents.Item).system);
+    const approach = await selectPoiApproach([], undefined, stored);
     if (!approach) return;
     const id = createPointOfInterestInformationId();
-    this.#enqueueInformationChange(list => addPointOfInterestInformation(list, id, approach));
+    this.#enqueueInformationChange(list => addPointOfInterestInformation(this.#configureSelected(list, stored, approach), id, approach));
   }
   static async #onAddApproach(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
     if (!this.#canAuthor) return;
     const id = target.dataset.informationId;
     if (!id) return;
     await this.#updateQueue; await this.submit();
-    const existing = readPointOfInterestInformation((this.document as foundry.documents.Item).system)
+    const stored = readPointOfInterestInformation((this.document as foundry.documents.Item).system);
+    const existing = stored
       .find(entry => entry.id === id)?.approaches;
     if (!existing) return;
-    const approach = await selectPoiApproach(existing);
-    if (approach) this.#enqueueInformationChange(list => addPointOfInterestApproach(list, id, approach));
+    const approach = await selectPoiApproach(existing, undefined, stored);
+    if (approach) this.#enqueueInformationChange(list => addPointOfInterestApproach(this.#configureSelected(list, stored, approach), id, approach));
   }
   static async #onRemoveInformation(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
     if (!this.#canAuthor) return;
@@ -237,16 +242,24 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     const index = Number(target.dataset.approachIndex);
     if (!id || !Number.isInteger(index) || index < 0) return;
     await this.#updateQueue; await this.submit();
-    const approaches = readPointOfInterestInformation((this.document as foundry.documents.Item).system).find(entry => entry.id === id)?.approaches;
+    const stored = readPointOfInterestInformation((this.document as foundry.documents.Item).system);
+    const approaches = stored.find(entry => entry.id === id)?.approaches;
     if (!approaches?.[index]) return;
     const original = approaches[index];
-    const selected = await selectPoiApproach(approaches.filter((_, i) => i !== index), original);
+    const selected = await selectPoiApproach(approaches.filter((_, i) => i !== index), original, stored);
     if (!selected || !this.#canAuthor) return;
     this.#enqueueInformationChange(list => {
       const latest = list.find(entry => entry.id === id)?.approaches[index];
       if (JSON.stringify(latest) !== JSON.stringify(original)) throw new Error("POI approach changed during editing.");
-      return updatePointOfInterestApproach(list, id, index, selected);
+      return updatePointOfInterestApproach(this.#configureSelected(list, stored, selected), id, index, selected);
     });
+  }
+  #configureSelected(list: readonly PointOfInterestInformation[], previous: readonly PointOfInterestInformation[],
+    approach: PointOfInterestApproach): readonly PointOfInterestInformation[] {
+    if (!isToolApproach(approach)) return list;
+    if (toolConfigurationSignature(list, approach) !== toolConfigurationSignature(previous, approach))
+      throw new Error("POI interaction configuration changed during editing.");
+    return configureToolInteraction(list, approach);
   }
   static async #onRemoveApproach(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
     if (!this.#canAuthor) return;

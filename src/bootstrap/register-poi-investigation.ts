@@ -13,12 +13,14 @@ import { registerEquipmentUseQuery } from "../adapters/foundry/equipment/execute
 import { registerEquipmentUsesAdjustmentQuery } from "../adapters/foundry/equipment/adjust-owned-equipment-uses";
 import { registerEquipmentUsesMutationQuery } from "../adapters/foundry/equipment/mutate-owned-equipment-uses";
 import { registerPoiToolUseQuery } from "../adapters/foundry/points-of-interest/use-poi-tool";
+import { registerLaboratoryQueries } from "../adapters/foundry/equipment/laboratory-session";
 
 export function registerPoiInvestigation(): void {
   registerEquipmentUseQuery();
   registerEquipmentUsesAdjustmentQuery();
   registerEquipmentUsesMutationQuery();
   registerPoiToolUseQuery();
+  registerLaboratoryQueries();
   registerPoiInvestigationQuery();
   registerPoiRuntimeQueries();
   registerInvestigationRuntimeQueries();

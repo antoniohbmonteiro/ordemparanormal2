@@ -1036,6 +1036,33 @@
         "Roll": "Não foi possível concluir esta solicitação de Perícia."
       }
     },
+    "Laboratory": {
+      "Title": "LABORATÓRIO PORTÁTIL",
+      "Mechanic": "Mecânica",
+      "Standard": "Padrão",
+      "MechanicLabel": "Laboratório",
+      "Length": "Comprimento da sequência (dados)",
+      "ConfirmSharedLength": "Alterar esta configuração em todas as Informations vinculadas à mesma Ferramenta e Forma de Uso neste POI?",
+      "Budget": "Rerrolagens restantes:",
+      "Instruction": "Obtenha uma sequência crescente ou igual. Selecione os dados que deseja rerrolar.",
+      "SelectedCost": "dado(s) selecionado(s) · cada dado custa 1 rerrolagem",
+      "Keyboard": "Tab / Shift+Tab: navegar · Espaço: selecionar ou desmarcar",
+      "Breaks": "quebra(s)",
+      "Positions": "posições",
+      "Position": "Posição",
+      "Start": "Início",
+      "Break": "quebra",
+      "Valid": "válido",
+      "ValidSequence": "Sequência válida · sem quebras",
+      "Reroll": "Rerrolar",
+      "Finish": "Finalizar",
+      "Close": "Fechar",
+      "Retry": "Tentar novamente",
+      "success": "Análise concluída com sucesso.",
+      "failure": "A sequência possui quebras. A análise falhou.",
+      "cancelled": "Análise cancelada.",
+      "invalidated": "A análise foi interrompida porque seu contexto ou configuração mudou."
+    },
     "EquipmentUse": {
       "Use": "Usar",
       "Uses": "Usos",
@@ -1057,7 +1084,10 @@
       "insufficient": "Não há usos disponíveis para esta Forma de Uso.",
       "uncertain": "A conclusão do uso não foi confirmada. Tente novamente para consultar a mesma operação. Se a incerteza persistir, o GM ativo mudar ou a sessão reiniciar, confira recurso, chat e descobertas com o mestre antes de recarregar.",
       "PublicationFailed": "O uso foi executado, mas o card não foi confirmado. Tente novamente para concluir sem consumir outro uso.",
-      "DiscoveryFailed": "O uso foi executado, mas a descoberta não foi confirmada. Tente novamente para concluir sem consumir outro uso."
+      "DiscoveryFailed": "O uso foi executado, mas a descoberta não foi confirmada. Tente novamente para concluir sem consumir outro uso.",
+      "AnalysisFailed": "O uso foi executado, mas a análise não foi concluída. Tente novamente para completar a mesma etapa sem consumir ou repetir dados já rolados.",
+      "contextRequired": "Esta Forma de Uso exige a Investigation. Use-a na janela do ponto de interesse.",
+      "gmRequired": "O Laboratório exige um mestre ativo."
     },
     "ChatMessage": {
       "Delete": "Excluir mensagem",

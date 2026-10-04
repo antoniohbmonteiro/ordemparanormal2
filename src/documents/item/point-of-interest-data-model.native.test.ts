@@ -4,6 +4,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const commonPath = process.env.FOUNDRY_V14_COMMON_PATH;
 afterEach(() => vi.unstubAllGlobals());
 describe.skipIf(!commonPath)("installed Foundry v14 Point of Interest model (no persistence)", () => {
+  it("round trips laboratory config without introducing it on other branches and rejects conflicts", async () => {
+    vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
+    const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");
+    const tool = { type: "tool", equipmentUuid: "Item.lab", useFormId: "analyze",
+      mechanicConfig: { type: "laboratory", sequenceLength: 4 } };
+    const info = (id: string, approach = tool) => ({ id, content: "", approaches: [approach],
+      availability: { mode: "always", condition: "" } });
+    const model = new Model({ information: [info("a"), info("b")] } as never, { strict: true } as never);
+    expect(model.toObject().information).toEqual([info("a"), info("b")]);
+    model.updateSource({ information: [info("a", { ...tool, mechanicConfig: { type: "laboratory", sequenceLength: 6 } }),
+      info("b", { ...tool, mechanicConfig: { type: "laboratory", sequenceLength: 6 } })] } as never);
+    expect(model.toObject().information[0].approaches[0].mechanicConfig?.sequenceLength).toBe(6);
+    for (const length of [3, 7, 4.5, "4", null]) {
+      expect(() => new Model({ information: [info("a", { ...tool,
+        mechanicConfig: { type: "laboratory", sequenceLength: length as number } })] } as never, { strict: true } as never)).toThrow();
+      expect(() => model.updateSource({ information: [info("a", { ...tool,
+        mechanicConfig: { type: "laboratory", sequenceLength: length as number } })] } as never)).toThrow();
+    }
+    expect(() => new Model({ information: [info("a"), info("b", { ...tool,
+      mechanicConfig: { type: "laboratory", sequenceLength: 5 } })] } as never, { strict: true } as never)).toThrow();
+    expect(model.updateSource({ information: [info("a"), info("b", { ...tool,
+      mechanicConfig: { type: "laboratory", sequenceLength: 5 } })] } as never)).toEqual({});
+    expect(model.toObject().information.every(entry => entry.approaches[0].mechanicConfig?.sequenceLength === 6)).toBe(true);
+    expect(() => new Model({ information: [{ ...info("s"), approaches: [{ skill: "research", difficulty: 2,
+      showDifficultyToPlayers: true, mechanicConfig: tool.mechanicConfig }] }] } as never, { strict: true } as never)).toThrow();
+  });
   it("round-trips tool-only and mixed branches through construction and updateSource without artificial skill defaults", async () => {
     const native = await import(/* @vite-ignore */ pathToFileURL(commonPath!).href);
     vi.stubGlobal("foundry", native);

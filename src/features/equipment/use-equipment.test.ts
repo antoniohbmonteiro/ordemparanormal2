@@ -24,7 +24,7 @@ it("selects every form independently of POI configuration and cancellation has n
   expect(await useEquipment(f.actor, "e", f.dispatch)).toEqual({ status: "cancelled" });
   expect(f.dispatch).not.toHaveBeenCalled();
   expect(await useEquipment(f.actor, "e", f.dispatch)).toMatchObject({ status: "success" });
-  expect(select).toHaveBeenCalledWith(f.equipment, f.equipment.system.useForms);
+  expect(select).toHaveBeenCalledWith(f.equipment, f.equipment.system.useForms.map(form => ({ ...form, mechanic: "standard" })));
   expect(f.dispatch.mock.calls[0][0]).toMatchObject({ useFormId: "second" });
 });
 it.each([0, 1])("runs %i forms without opening a picker", async count => {

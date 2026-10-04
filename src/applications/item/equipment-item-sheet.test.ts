@@ -4,7 +4,7 @@ import Handlebars from "handlebars";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EquipmentUseData } from "../../core/equipment/equipment-use";
 
-const use: EquipmentUseData = { id: "measure", name: "Medir", description: "<p>Descrição</p>", consumesUse: false };
+const use: EquipmentUseData = { id: "measure", name: "Medir", description: "<p>Descrição</p>", consumesUse: false, mechanic: "standard" };
 const confirmRemove = vi.fn();
 const notifyError = vi.fn();
 const randomID = vi.fn();
@@ -99,12 +99,25 @@ beforeEach(() => {
 });
 
 describe("Equipment Item Sheet use forms", () => {
+  it("edits the mechanic with existing permission and preserves the rest of the form", async () => {
+    const equipment = item();
+    const sheet = new Sheet(equipment);
+    const mechanic = new Control("measure", "mechanic");
+    attach(sheet, mechanic);
+    mechanic.change("laboratory");
+    await vi.waitFor(() => expect(equipment.update).toHaveBeenCalledOnce());
+    expect(equipment.system.useForms).toEqual([{ ...use, mechanic: "laboratory" }]);
+    expect(equipment.system.uses).toEqual({ value: 3, max: 3 });
+    sheet.isEditable = false;
+    mechanic.change("standard");
+    expect(equipment.update).toHaveBeenCalledOnce();
+  });
   it("adds a default form without touching the counter or replacing existing forms", async () => {
     const equipment = item();
     const sheet = new Sheet(equipment);
     await Sheet.DEFAULT_OPTIONS.actions.addUseForm.call(sheet);
     expect(equipment.system.useForms).toEqual([use, {
-      id: "new-use", name: "Nova forma de uso", description: "", consumesUse: false,
+      id: "new-use", name: "Nova forma de uso", description: "", consumesUse: false, mechanic: "standard",
     }]);
     expect(equipment.update).toHaveBeenCalledWith({ "system.useForms": equipment.system.useForms });
     expect(equipment.system.uses).toEqual({ value: 3, max: 3 });
@@ -211,6 +224,7 @@ describe("Equipment Item Sheet use forms", () => {
     expect(html).toContain('data-action="addUseForm"');
     expect(html).toContain('data-action="removeUseForm"');
     expect(html).toContain('data-use-form-edit="consumesUse"');
+    expect(html).toContain('data-use-form-edit="mechanic"');
     expect(html).toContain("&lt;p&gt;Texto&lt;/p&gt;");
     sheet.isEditable = false;
     const observer = await sheet._prepareContext({});
@@ -222,6 +236,16 @@ describe("Equipment Item Sheet use forms", () => {
     expect(readonly).toContain('data-use-form-edit="name"');
     expect(readonly).toContain('disabled');
     expect(enrichHTML).toHaveBeenCalledWith("<p>Texto</p>", { relativeTo: sheet.document, secrets: true });
+  });
+  it("keeps the stored mechanic selector visible in every Equipment category", async () => {
+    const equipment = item([{ ...use, mechanic: "laboratory" }]);
+    const sheet = new Sheet(equipment);
+    for (const category of ["tool", "general", "weapon"]) {
+      (equipment.system as typeof equipment.system & { category: string }).category = category;
+      const html = template(await sheet._prepareContext({}));
+      expect(html).toContain('data-use-form-edit="mechanic"');
+      expect(html).toContain('value="laboratory" selected');
+    }
   });
 });
 

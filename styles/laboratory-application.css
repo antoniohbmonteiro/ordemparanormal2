@@ -1,0 +1,39 @@
+.op2-laboratory {
+  --op2-lab-bg: #1b1e24; --op2-lab-input: #111418; --op2-lab-text: #e8e9ed;
+  --op2-lab-muted: #9aa0ac; --op2-lab-border: #343943; --op2-lab-accent: #c12d3b;
+  --op2-lab-success: #69b88d;
+  color: var(--op2-lab-text); font-family: Inter, sans-serif;
+  min-width: 320px; max-height: calc(100dvh - 24px);
+}
+.op2-laboratory .window-header { background: var(--op2-lab-input); border-bottom: 1px solid var(--op2-lab-border); }
+.op2-laboratory .window-icon { color: var(--op2-lab-accent); }
+.op2-laboratory .window-content { padding: 0; background: var(--op2-lab-bg); }
+.op2-laboratory-body { padding: 16px; overflow: auto; min-height: 0; max-height: calc(100dvh - 90px); }
+.op2-laboratory-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 600; }
+.op2-laboratory-instruction { color: var(--op2-lab-muted); font-size: 12px; margin: 14px 0 18px; }
+.op2-laboratory-sequence { display: grid; grid-template-columns: repeat(var(--op2-lab-count), minmax(60px, 72px)); justify-content: center; gap: 8px; min-width: 400px; }
+.op2-laboratory-position { min-width: 0; text-align: center; }
+.op2-laboratory-die-label { display: flex; gap: 5px; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; margin-bottom: 7px; }
+.op2-laboratory-die-label img { border: 0; width: 14px; height: 14px; }
+.op2-laboratory-body button { color: var(--op2-lab-text); background: var(--op2-lab-input); border: 1px solid var(--op2-lab-border); box-shadow: none; cursor: pointer; }
+.op2-laboratory button:focus-visible { outline: 2px solid var(--op2-lab-text); outline-offset: 3px; }
+.op2-laboratory button:disabled { opacity: .55; cursor: default; }
+.op2-laboratory .op2-laboratory-die { width: 100%; height: 72px; border: 2px solid var(--op2-lab-border); border-radius: 10px; font-size: 28px; font-weight: 700; }
+.op2-laboratory .op2-laboratory-die.is-broken { border-color: var(--op2-lab-accent); }
+.op2-laboratory .op2-laboratory-die.is-selected { border-color: #eb4253; background: #c12d3b26; }
+.op2-laboratory .op2-laboratory-die:disabled { opacity: 1; }
+.op2-laboratory-comparison { display: block; white-space: nowrap; font-size: 10px; color: var(--op2-lab-muted); margin-top: 8px; }
+.op2-laboratory-comparison.is-broken { color: #eb6471; }
+.op2-laboratory-sequence[data-dice-count="6"] .op2-laboratory-comparison { font-size: 9px; }
+.op2-laboratory-summary { font-size: 12px; font-weight: 600; margin: 18px 0 12px; }
+.op2-laboratory-selection { font-size: 11px; color: var(--op2-lab-muted); }
+.op2-laboratory-keyboard { font-size: 10px; color: var(--op2-lab-muted); margin: 12px 0 20px; }
+.op2-laboratory-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+.op2-laboratory-actions button { flex: 1; min-height: 36px; border-radius: 5px; font-size: 12px; font-weight: 600; }
+.op2-laboratory .op2-laboratory-primary { background: #c12d3b26; border-color: var(--op2-lab-accent); }
+.op2-laboratory-outcome { padding: 14px; border: 1px solid; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.op2-laboratory-outcome.is-success { color: var(--op2-lab-success); background: #69b88d15; }
+.op2-laboratory-outcome.is-failure, .op2-laboratory-error { color: #eb6471; background: #c12d3b15; }
+.op2-laboratory-error { padding: 8px; font-size: 12px; }
+.op2-laboratory-card { font-size: 12px; }
+.op2-laboratory-card__sequence { display: flex; flex-wrap: wrap; gap: 10px; }

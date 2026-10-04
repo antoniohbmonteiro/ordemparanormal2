@@ -27,6 +27,7 @@ type EquipmentUseSchema = {
   name: RequiredStringField;
   description: RequiredStringField;
   consumesUse: foundry.data.fields.BooleanField<boolean, boolean, true, false, true>;
+  mechanic: RequiredStringField;
 };
 
 class EquipmentQuantityField extends foundry.data.fields.NumberField<number, number, true, true, true> {
@@ -112,6 +113,9 @@ export class EquipmentDataModel extends foundry.abstract.TypeDataModel<
           }),
           consumesUse: new foundry.data.fields.BooleanField({
             required: true, nullable: false, initial: false,
+          }),
+          mechanic: new foundry.data.fields.StringField({
+            required: true, nullable: false, blank: false, choices: ["standard", "laboratory"], initial: "standard",
           }),
         }),
         {

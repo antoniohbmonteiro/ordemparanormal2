@@ -50,7 +50,7 @@
                 <div class="op2-poi-sheet__approach">
                   {{#if @root.editable}}<button type="button" data-action="editApproach" data-information-id="{{../id}}" data-approach-index="{{index}}">{{localize "ORDEMPARANORMAL2.EquipmentUse.EditApproach"}}</button>{{/if}}
                   {{#if isTool}}
-                    <div class="op2-poi-sheet__tool-source"><strong>{{localize "ORDEMPARANORMAL2.EquipmentUse.Tool"}}: {{toolLabel}}</strong><span>{{useFormLabel}}</span>{{#if invalidSource}}<span role="status">{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/if}}</div>
+                    <div class="op2-poi-sheet__tool-source"><strong>{{localize "ORDEMPARANORMAL2.EquipmentUse.Tool"}}: {{toolLabel}}</strong><span>{{useFormLabel}}</span>{{#if mechanicConfig}}<span>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}} · {{mechanicConfig.sequenceLength}} dados</span>{{/if}}{{#if invalidSource}}<span role="status">{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/if}}</div>
                   {{else}}
                   <label><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill"}}</span>
                     <select data-poi-edit="skill" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}}>

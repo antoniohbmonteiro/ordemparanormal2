@@ -103,11 +103,13 @@ function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
 }
 
 describe("Adventure Point of Interest import", () => {
-  it("treats a manually added ToolApproach as a POI edit without changing preset digests", async () => {
+  it.each([undefined, { type: "laboratory" as const, sequenceLength: 4 as const }])(
+    "treats a manually added ToolApproach/config %j as an edit without changing preset digests", async mechanicConfig => {
     const world = new FakeWorld();
     await run(world, ["actOne"]);
     const first = world.items[0];
-    const tool = { type: "tool" as const, equipmentUuid: "Item.source", useFormId: "scan" };
+    const tool = { type: "tool" as const, equipmentUuid: "Item.source", useFormId: "scan",
+      ...(mechanicConfig ? { mechanicConfig } : {}) };
     world.items[0] = { ...first, system: { ...first.system, information: first.system.information.map((entry, index) =>
       index ? entry : { ...entry, approaches: [...entry.approaches, tool] }) } };
     const manual = structuredClone(world.items[0].system);

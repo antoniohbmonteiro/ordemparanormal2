@@ -1,5 +1,5 @@
-import { isEquipmentSourceUuid } from "../../../documents/item/point-of-interest-data";
-import { readEquipmentUseForms } from "../../../core/equipment/equipment-use";
+import { isEquipmentSourceUuid, type LaboratoryMechanicConfig } from "../../../documents/item/point-of-interest-data";
+import { readEquipmentUseForms, type EquipmentMechanic } from "../../../core/equipment/equipment-use";
 import { loadAvailableSingleItems, resolveSingleItemCatalogSource } from "../items/single-item-catalog";
 
 export function equipmentSourceUuid(item: foundry.documents.Item): string | null {
@@ -19,7 +19,7 @@ export interface ToolSourceChoice {
   readonly uuid: string;
   readonly name: string;
   readonly origin: string;
-  readonly forms: readonly { readonly id: string; readonly name: string }[];
+  readonly forms: readonly { readonly id: string; readonly name: string; readonly mechanic: EquipmentMechanic }[];
 }
 export async function loadToolSources(): Promise<readonly ToolSourceChoice[]> {
   if (!game.user?.isGM) return [];
@@ -32,18 +32,20 @@ export async function loadToolSources(): Promise<readonly ToolSourceChoice[]> {
       const uuid = equipmentSourceUuid(item);
       const forms = readEquipmentUseForms(system.useForms);
       if (system.category !== "tool" || !uuid || !forms?.length || result.some(choice => choice.uuid === uuid)) continue;
-      result.push({ uuid, name: item.name, origin: entry.origin, forms: forms.map(({ id, name }) => ({ id, name })) });
+      result.push({ uuid, name: item.name, origin: entry.origin, forms: forms.map(({ id, name, mechanic }) => ({ id, name, mechanic })) });
     } catch { /* An inaccessible source must not prevent editing other approaches. */ }
   }
   return result;
 }
 
-export async function describeToolApproach(equipmentUuid: string, useFormId: string) {
+export async function describeToolApproach(equipmentUuid: string, useFormId: string, config?: LaboratoryMechanicConfig) {
   try {
     const item = await fromUuid(equipmentUuid) as foundry.documents.Item | null;
     const system = item?.system as { category?: unknown; useForms?: unknown } | undefined;
     const form = readEquipmentUseForms(system?.useForms)?.find(use => use.id === useFormId);
     return { equipmentUuid, useFormId, equipmentName: item?.name ?? equipmentUuid,
-      useFormName: form?.name ?? useFormId, valid: item?.type === "equipment" && system?.category === "tool" && !!form };
+      useFormName: form?.name ?? useFormId, ...(config ? { mechanicConfig: { ...config } } : {}),
+      valid: item?.type === "equipment" && system?.category === "tool" && !!form
+        && (form.mechanic === "laboratory" ? !!config : !config) };
   } catch { return { equipmentUuid, useFormId, equipmentName: equipmentUuid, useFormName: useFormId, valid: false }; }
 }

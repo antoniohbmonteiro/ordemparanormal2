@@ -68,5 +68,5 @@ export function equipmentUseFeedback(result: Awaited<ReturnType<typeof useEquipm
     ? game.i18n.format(`${root}.Discovered`, { count: result.newCount })
     : game.i18n.localize(`${root}.${result.manual ? "Manual" : "Completed"}`);
   return game.i18n.localize(`${root}.${result.status === "partial"
-    ? result.stage === "publication" ? "PublicationFailed" : "DiscoveryFailed" : result.status}`);
+    ? result.stage === "publication" ? "PublicationFailed" : result.stage === "analysis" ? "AnalysisFailed" : "DiscoveryFailed" : result.status}`);
 }

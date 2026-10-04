@@ -1,6 +1,6 @@
 import { skillLabel, type SkillKey } from "../../../config/skills";
 import {
-  approachIdentity, isSkillApproach, isToolApproach, playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
+  approachIdentity, isSkillApproach, isToolApproach, playerVisiblePointOfInterestInformation, readPointOfInterestInformation, uniformToolInteractionConfiguration,
   type PointOfInterestSkillApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
@@ -84,8 +84,10 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
         toolInformation: await Promise.all(information.filter(entry => entry.approaches.some(isToolApproach)).map(async entry => ({
           id: entry.id, content: entry.content, knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length,
           ...(entry.availability.mode === "situational" ? { condition: entry.availability.condition } : {}),
-          approaches: await Promise.all(entry.approaches.filter(isToolApproach).map(approach =>
-            describeToolApproach(approach.equipmentUuid, approach.useFormId))),
+          approaches: await Promise.all(entry.approaches.filter(isToolApproach).map(async approach => {
+            const source = await describeToolApproach(approach.equipmentUuid, approach.useFormId, approach.mechanicConfig);
+            return { ...source, valid: source.valid && uniformToolInteractionConfiguration(information, approach) };
+          })),
         }))),
         skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
           information: rows.map(({ entry, approach }) => ({ id: entry.id, content: entry.content,

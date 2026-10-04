@@ -51,7 +51,7 @@ describe("publishEquipmentMessage", () => {
     const { renderTemplate, create } = stubFoundry();
     vi.stubGlobal("game", { messages: { contents: [] } });
     await publishEquipmentMessage(actor, equipmentWith(), {
-      id: "scan", name: "<Analisar>", description: "Resultado narrativo", consumesUse: true,
+      id: "scan", name: "<Analisar>", description: "Resultado narrativo", consumesUse: true, mechanic: "standard",
     }, "owner:operation");
     expect(renderTemplate.mock.calls[0][1].description).toContain("&lt;Analisar&gt;");
     expect(renderTemplate.mock.calls[0][1].description).toContain("Resultado narrativo");

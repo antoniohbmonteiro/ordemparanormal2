@@ -3,6 +3,7 @@ import {
   POINT_OF_INTEREST_AVAILABILITY_MODES,
   POINT_OF_INTEREST_DIFFICULTY_MIN,
   approachIdentity,
+  isSkillApproach,
   type PointOfInterestApproach,
   type PointOfInterestAvailabilityMode,
   type PointOfInterestDifficultyOverride,
@@ -17,6 +18,10 @@ export const APTITUDE_OPTIONS = SKILL_DEFINITIONS.find(definition => definition.
   .specializations.map(({ key, label }) => ({ value: key, label }));
 
 export type ApproachViewModel = PointOfInterestApproach & {
+  readonly isTool: boolean;
+  readonly toolLabel?: string;
+  readonly useFormLabel?: string;
+  readonly invalidSource?: boolean;
   readonly index: number;
   readonly skillOptions: readonly (SkillOptionViewModel & { readonly selected: boolean })[];
   readonly specializationOptions: readonly { readonly value: AptitudeSpecializationKey; readonly label: string; readonly selected: boolean }[];
@@ -67,11 +72,12 @@ export function buildInformationViewModels(
         value, label: AVAILABILITY_LABELS[value], selected: value === mode })),
       showCondition: mode === "situational",
       condition: entry.availability.condition,
-      canAddApproach: entry.approaches.length < SKILL_OPTION_VIEW_MODELS.length - 1 + APTITUDE_OPTIONS.length,
+      canAddApproach: true,
       canRemoveApproach: entry.approaches.length > 1,
       approaches: entry.approaches.map((approach, index) => ({
         ...approach,
         index,
+        isTool: !isSkillApproach(approach),
         isAptitude: approach.skill === "aptitude",
         skillOptions: SKILL_OPTION_VIEW_MODELS.map(option => ({ ...option, selected: option.value === approach.skill })),
         specializationOptions: APTITUDE_OPTIONS.map(option => ({ ...option,

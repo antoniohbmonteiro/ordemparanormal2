@@ -116,7 +116,7 @@ describe("Agent Sheet drop permission", () => {
     "adds an external %s Item without requiring Edit Mode",
     async (type) => {
       const { sheet, actor } = createSheet({ isEditable: true, editMode: false });
-      const item = { type, actor: null, uuid: "Compendium.foo.bar.Item.x" };
+      const item = { type, actor: null, inCompendium: true, uuid: "Compendium.foo.bar.Item.x" };
 
       await sheet._onDropItem({}, item);
 
@@ -130,6 +130,26 @@ describe("Agent Sheet drop permission", () => {
       }
     },
   );
+
+  it("delegates a native ephemeral World Equipment clone with source provenance", async () => {
+    const { sheet } = createSheet();
+    const clone = { type: EQUIPMENT_ITEM_TYPE, uuid: "Item.world", _stats: { duplicateSource: "Item.world" } };
+    const item = { type: EQUIPMENT_ITEM_TYPE, actor: null, isEmbedded: false, inCompendium: false,
+      uuid: "Item.world", clone: vi.fn(() => clone) };
+    await sheet._onDropItem({}, item);
+    expect(item.clone).toHaveBeenCalledExactlyOnceWith({}, { keepId: true, addSource: true });
+    expect(superDropItem).toHaveBeenCalledWith({}, clone);
+    expect(item).not.toHaveProperty("_stats");
+  });
+
+  it("preserves provenance when copying embedded Equipment from another Actor", async () => {
+    const { sheet } = createSheet();
+    const item = { type: EQUIPMENT_ITEM_TYPE, actor: {}, isEmbedded: true, uuid: "Actor.other.Item.e",
+      _stats: { duplicateSource: "Item.world" }, clone: vi.fn() };
+    await sheet._onDropItem({}, item);
+    expect(superDropItem).toHaveBeenCalledWith({}, item);
+    expect(item.clone).not.toHaveBeenCalled();
+  });
 
   it.each([ABILITY_ITEM_TYPE, EQUIPMENT_ITEM_TYPE])(
     "still requires Edit Mode to reorder an already-embedded %s Item",

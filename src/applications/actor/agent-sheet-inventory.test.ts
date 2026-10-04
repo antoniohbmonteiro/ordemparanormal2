@@ -11,7 +11,8 @@ import type { AgentSheetViewModel } from "../../ui/actor/agent-sheet-view-model"
 const flow = vi.hoisted(() => ({
   publish: vi.fn(), confirm: vi.fn(), enrichHTML: vi.fn(async (html: string) => html),
 }));
-vi.mock("../../adapters/foundry/chat/publish-equipment-message", () => ({ publishEquipmentMessage: flow.publish }));
+vi.mock("../../features/equipment/use-equipment", () => ({ useEquipment: flow.publish,
+  equipmentUseFeedback: () => null }));
 vi.mock("../profiles/profile-picker", () => ({ confirmProfileReplacement: vi.fn(), ProfilePicker: class {} }));
 vi.mock("../occupations/occupation-picker", () => ({ confirmOccupationReplacement: vi.fn(), OccupationPicker: class {} }));
 vi.mock("./agent-sheet-settings", () => ({ AgentSheetSettings: class {} }));
@@ -200,7 +201,8 @@ beforeAll(async () => {
     const element = { innerHTML: "", textContent: "", get outerHTML() { return `<p>${element.textContent}</p>`; }, get content() { return { textContent: element.innerHTML.replace(/<[^>]*>/g, ""), querySelector: () => null }; } };
     return element;
   } });
-  vi.stubGlobal("game", { user: { isGM: true }, i18n: { localize: (key: string) => key, format: (key: string) => key } });
+  vi.stubGlobal("game", { user: { isGM: true }, users: { activeGM: null },
+    i18n: { localize: (key: string) => key, format: (key: string) => key } });
   vi.stubGlobal("ui", { notifications: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } });
   const module = await import("./agent-sheet");
   Sheet = module.AgentSheet as unknown as typeof Sheet;
@@ -420,7 +422,7 @@ describe("Agent Sheet Inventory actions and menus", () => {
     await click(sheet, container, rows[0]!.name);
     await action("useEquipment").call(sheet, new TestMouseEvent("click", { detail: 0 }), rows[0]!.main);
     expect(flow.publish).toHaveBeenCalledTimes(3);
-    expect(flow.publish).toHaveBeenCalledWith(actor, item);
+    expect(flow.publish).toHaveBeenCalledWith(actor, item.id);
     expect(item.update).not.toHaveBeenCalled();
     await click(sheet, container, rows[0]!.main, 2);
     container.emit("contextmenu", rows[0]!.main, 2);

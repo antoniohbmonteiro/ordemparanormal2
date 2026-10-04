@@ -9,8 +9,16 @@ import { registerCommitPoiExaminationQuery } from "../adapters/foundry/points-of
 import { registerInteractPoiQuery } from "../adapters/foundry/points-of-interest/interact-poi";
 import { registerShareCandidatesQuery } from "../adapters/foundry/points-of-interest/investigation-share";
 import { onInvestigationCheckMessageUpdated, registerInvestigationRequestQueries } from "../adapters/foundry/points-of-interest/investigation-requests";
+import { registerEquipmentUseQuery } from "../adapters/foundry/equipment/execute-equipment-use";
+import { registerEquipmentUsesAdjustmentQuery } from "../adapters/foundry/equipment/adjust-owned-equipment-uses";
+import { registerEquipmentUsesMutationQuery } from "../adapters/foundry/equipment/mutate-owned-equipment-uses";
+import { registerPoiToolUseQuery } from "../adapters/foundry/points-of-interest/use-poi-tool";
 
 export function registerPoiInvestigation(): void {
+  registerEquipmentUseQuery();
+  registerEquipmentUsesAdjustmentQuery();
+  registerEquipmentUsesMutationQuery();
+  registerPoiToolUseQuery();
   registerPoiInvestigationQuery();
   registerPoiRuntimeQueries();
   registerInvestigationRuntimeQueries();

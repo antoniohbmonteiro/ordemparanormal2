@@ -7,6 +7,7 @@ import {
   POINT_OF_INTEREST_ALWAYS_AVAILABLE,
   addPointOfInterestApproach, addPointOfInterestInformation, isAptitudeSpecializationKey,
   readPointOfInterestInformation,
+  isSkillApproach,
   removePointOfInterestApproach, removePointOfInterestInformation,
   updatePointOfInterestApproach, updatePointOfInterestApproachDifficultyOverride,
   updatePointOfInterestInformation, updatePointOfInterestInformationAvailability,
@@ -15,6 +16,7 @@ import {
 import { APTITUDE_OPTIONS, buildInformationViewModels, difficultyOverrideDraftKey, readApproachFieldPatch,
   readDifficultyOverride, readSituationalAvailability, type InformationViewModel } from "./point-of-interest-information-editor";
 import { selectPoiApproach } from "./point-of-interest-approach-dialog";
+import { describeToolApproach } from "../../adapters/foundry/equipment/equipment-source";
 
 const POI_SHEET_TEMPLATE = "systems/ordemparanormal2/templates/item/point-of-interest-item-sheet.hbs";
 interface PointOfInterestItemSheetContext extends DocumentSheetRenderContext<foundry.documents.Item> {
@@ -37,6 +39,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
       addInformation: PointOfInterestItemSheet.#onAddInformation,
       removeInformation: PointOfInterestItemSheet.#onRemoveInformation,
       addApproach: PointOfInterestItemSheet.#onAddApproach,
+      editApproach: PointOfInterestItemSheet.#onEditApproach,
       removeApproach: PointOfInterestItemSheet.#onRemoveApproach,
       addDifficultyOverride: PointOfInterestItemSheet.#onAddDifficultyOverride,
       removeDifficultyOverride: PointOfInterestItemSheet.#onRemoveDifficultyOverride,
@@ -64,6 +67,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
   }
   #enqueueInformationChange(mutate: InformationMutation): void {
     this.#enqueue(async () => {
+      if (!this.#canAuthor) return;
       const item = this.document as foundry.documents.Item;
       const next = mutate(readPointOfInterestInformation(item.system));
       await item.update({ "system.information": next });
@@ -82,11 +86,16 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
       TextEditor.implementation.enrichHTML(publicDescription, { relativeTo: item, secrets: item.isOwner }),
       TextEditor.implementation.enrichHTML(gmContext, { relativeTo: item, secrets: item.isOwner }),
     ]);
+    const information = await Promise.all(buildInformationViewModels(readPointOfInterestInformation(item.system), this.#pendingSituational,
+      this.#pendingOverrides).map(async entry => ({ ...entry, approaches: await Promise.all(entry.approaches.map(async approach => {
+        if (!approach.isTool || !approach.equipmentUuid || !approach.useFormId) return approach;
+        const source = await describeToolApproach(approach.equipmentUuid, approach.useFormId);
+        return { ...approach, toolLabel: source.equipmentName, useFormLabel: source.useFormName, invalidSource: !source.valid };
+      })) })));
     return { ...context, canViewAuthoring: true, editable: this.#canAuthor, poi: {
       name: item.name, img: item.img ?? "icons/svg/item-bag.svg", uuid: item.uuid,
       publicDescription, enrichedPublicDescription, gmContext, enrichedGmContext,
-      information: buildInformationViewModels(readPointOfInterestInformation(item.system), this.#pendingSituational,
-        this.#pendingOverrides),
+      information,
     } };
   }
   #approach(id: string, index: number): PointOfInterestApproach | undefined {
@@ -96,7 +105,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
   // Both fields are read together: a new alternative DT is saved only once its DT and condition are both valid.
   #onDifficultyOverrideChange(id: string, index: number, control: HTMLElement): void {
     const approach = this.#approach(id, index);
-    if (!approach) return;
+    if (!approach || !isSkillApproach(approach)) return;
     const row = control.closest(".op2-poi-sheet__approach");
     const field = (name: string) => row?.querySelector<HTMLInputElement>(`[data-poi-edit="${name}"]`)?.value ?? "";
     const override = readDifficultyOverride(field("overrideDifficulty"), field("overrideCondition"));
@@ -165,7 +174,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
           ? String(control.checked) : control.value;
         this.#enqueueInformationChange(list => {
           const current = list.find(entry => entry.id === id)?.approaches[index];
-          if (!current) throw new Error("Unknown POI approach.");
+          if (!current || !isSkillApproach(current)) throw new Error("Unknown POI skill approach.");
           let next: PointOfInterestApproach;
           if (control.dataset.poiEdit === "skill") {
             if (!isSkillKey(raw)) throw new Error("Invalid POI skill.");
@@ -222,6 +231,23 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
       window: { title: game.i18n.localize("ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveInformation") } });
     if (confirmed) this.#enqueueInformationChange(list => removePointOfInterestInformation(list, id));
   }
+  static async #onEditApproach(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    if (!this.#canAuthor) return;
+    const id = target.dataset.informationId;
+    const index = Number(target.dataset.approachIndex);
+    if (!id || !Number.isInteger(index) || index < 0) return;
+    await this.#updateQueue; await this.submit();
+    const approaches = readPointOfInterestInformation((this.document as foundry.documents.Item).system).find(entry => entry.id === id)?.approaches;
+    if (!approaches?.[index]) return;
+    const original = approaches[index];
+    const selected = await selectPoiApproach(approaches.filter((_, i) => i !== index), original);
+    if (!selected || !this.#canAuthor) return;
+    this.#enqueueInformationChange(list => {
+      const latest = list.find(entry => entry.id === id)?.approaches[index];
+      if (JSON.stringify(latest) !== JSON.stringify(original)) throw new Error("POI approach changed during editing.");
+      return updatePointOfInterestApproach(list, id, index, selected);
+    });
+  }
   static async #onRemoveApproach(this: PointOfInterestItemSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
     if (!this.#canAuthor) return;
     const id = target.dataset.informationId;
@@ -235,7 +261,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     const id = target.dataset.informationId;
     const index = Number(target.dataset.approachIndex);
     const approach = id ? this.#approach(id, index) : undefined;
-    if (!id || !approach || approach.difficultyOverride) return;
+    if (!id || !approach || !isSkillApproach(approach) || approach.difficultyOverride) return;
     // Shown for editing now; saved once both the alternative DT and its condition are filled in.
     this.#pendingOverrides.add(difficultyOverrideDraftKey(id, approach));
     await this.render();
@@ -247,7 +273,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     const id = target.dataset.informationId;
     const index = Number(target.dataset.approachIndex);
     const approach = id ? this.#approach(id, index) : undefined;
-    if (!id || !approach) return;
+    if (!id || !approach || !isSkillApproach(approach)) return;
     this.#pendingOverrides.delete(difficultyOverrideDraftKey(id, approach));
     if (!approach.difficultyOverride) { await this.render(); return; }
     await this.#updateQueue;

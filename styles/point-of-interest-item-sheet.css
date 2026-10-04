@@ -51,3 +51,4 @@
 .op2-poi-approach-dialog { display: flex; flex-direction: column; gap: .75rem; }
 .op2-poi-approach-dialog label { display: flex; flex-direction: column; gap: .25rem; }
 .op2-poi-approach-dialog select { width: 100%; }
+ .point-of-interest-item-sheet .op2-poi-sheet__tool-source { display: grid; gap: 4px; overflow-wrap: anywhere; grid-column: span 2; }

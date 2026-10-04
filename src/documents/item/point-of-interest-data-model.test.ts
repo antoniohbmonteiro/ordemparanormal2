@@ -89,7 +89,7 @@ describe("PointOfInterestDataModel", () => {
       min: 1,
     });
     expect(approaches.element.fields.difficulty.options).not.toHaveProperty("max");
-    expect(approaches.element.fields.showDifficultyToPlayers.options).toMatchObject({ initial: true });
+    expect(approaches.element.fields.showDifficultyToPlayers.options.initial).toBeUndefined();
     expect(approaches.element.fields.specialization.options).toMatchObject({ required: false });
   });
 

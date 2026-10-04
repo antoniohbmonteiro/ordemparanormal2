@@ -1,5 +1,5 @@
 import { SYSTEM_ID } from "../../../config/system-config";
-import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { isSkillApproach, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { publishPoiRevealNotice } from "./publish-poi-reveal-notice";
 import { knownNarrativeClues } from "./investigation-clues";
 import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
@@ -70,11 +70,11 @@ export function resolvePoiScene(sceneId: string, requester: foundry.documents.Us
     const groups = new Map<string, PoiSceneKnownClue[]>();
     if (!requester.isGM) for (const info of readPointOfInterestInformation(item.system)) {
       if (!known.has(info.id)) continue;
-      const first = info.approaches[0];
-      if (!first) continue;
-      const clues = groups.get(first.skill) ?? [];
+      const first = info.approaches.find(isSkillApproach);
+      const skill = first?.skill ?? "Informações descobertas";
+      const clues = groups.get(skill) ?? [];
       clues.push({ text: info.content, ...(shareReference(itemUuid, info.id) ? { shareReference: shareReference(itemUuid, info.id) } : {}) });
-      groups.set(first.skill, clues);
+      groups.set(skill, clues);
     }
     entries.push({ itemUuid, name: item.name, img: item.img ?? "", linkedRegionIds: requester.isGM ? associatedRegionIds(scene, itemUuid) : [],
       ...(!requester.isGM ? { knownGroups: [...groups].map(([skill, clues]) => ({ skill, clues })) } : {}) });

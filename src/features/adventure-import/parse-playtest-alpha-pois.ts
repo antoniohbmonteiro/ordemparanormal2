@@ -1,7 +1,7 @@
 import { PLAYTEST_ALPHA_POI_SOURCES, type AdventurePoiSource } from "../../config/adventure-poi-sources/playtest-alpha";
 import { SKILL_DEFINITIONS, type SkillKey, type AptitudeSpecializationKey } from "../../config/skills";
 import { validateAdventurePoiData, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
-import { POINT_OF_INTEREST_ALWAYS_AVAILABLE, type PointOfInterestApproach,
+import { POINT_OF_INTEREST_ALWAYS_AVAILABLE, type PointOfInterestSkillApproach,
   type PointOfInterestInformation } from "../../documents/item/point-of-interest-data";
 import type { AdventurePdfTextItem, AdventurePdfTextPage } from "../../adapters/files/read-adventure-poi-pages";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
@@ -75,10 +75,10 @@ const skills = SKILL_DEFINITIONS.flatMap(def => [[def.label, def.key] as const,
   ...("specializations" in def ? def.specializations.map(spec => [`${def.label} (${spec.label})`, `${def.key}:${spec.key}`] as const) : [])])
   .sort((a, b) => b[0].length - a[0].length);
 const startsWithSkill = (text: string): boolean => skills.some(([name]) => normalize(text).startsWith(normalize(name)));
-function approaches(label: string, difficulty: number): readonly PointOfInterestApproach[] {
+function approaches(label: string, difficulty: number): readonly PointOfInterestSkillApproach[] {
   const cleaned = label.replace(prerequisiteParenthetical, "").trim();
   const parts = cleaned.split(/\s+ou\s+/iu);
-  const result: PointOfInterestApproach[] = [];
+  const result: PointOfInterestSkillApproach[] = [];
   for (const part of parts) {
     const normalized = normalize(part);
     const match = skills.find(([name]) => normalize(name) === normalized);

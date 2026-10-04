@@ -10,7 +10,7 @@ export interface PointOfInterestDifficultyOverride {
   readonly difficulty: number;
   readonly condition: string;
 }
-export type PointOfInterestApproach = ({
+export type PointOfInterestSkillApproach = ({
   readonly skill: OrdinaryPoiSkillKey;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
@@ -19,7 +19,29 @@ export type PointOfInterestApproach = ({
   readonly specialization: AptitudeSpecializationKey;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
-}) & { readonly difficultyOverride?: PointOfInterestDifficultyOverride };
+}) & { readonly type?: never; readonly equipmentUuid?: never; readonly useFormId?: never;
+  readonly difficultyOverride?: PointOfInterestDifficultyOverride };
+export interface PointOfInterestToolApproach {
+  readonly type: "tool";
+  readonly equipmentUuid: string;
+  readonly useFormId: string;
+  readonly skill?: never;
+  readonly specialization?: never;
+  readonly difficulty?: never;
+  readonly showDifficultyToPlayers?: never;
+  readonly difficultyOverride?: never;
+}
+export type PointOfInterestApproach = PointOfInterestSkillApproach | PointOfInterestToolApproach;
+export function isEquipmentSourceUuid(value: unknown): value is string {
+  return typeof value === "string" && (/^Item\.[^.]+$/u.test(value)
+    || /^Compendium\.[^.]+\.[^.]+\.Item\.[^.]+$/u.test(value));
+}
+export function isSkillApproach(approach: PointOfInterestApproach): approach is PointOfInterestSkillApproach {
+  return approach.type === undefined;
+}
+export function isToolApproach(approach: PointOfInterestApproach): approach is PointOfInterestToolApproach {
+  return approach.type === "tool";
+}
 export const POINT_OF_INTEREST_AVAILABILITY_MODES = ["always", "situational"] as const;
 export type PointOfInterestAvailabilityMode = typeof POINT_OF_INTEREST_AVAILABILITY_MODES[number];
 /**
@@ -60,6 +82,11 @@ export function isPointOfInterestDifficultyOverride(value: unknown): value is Po
 export function isPointOfInterestApproach(value: unknown): value is PointOfInterestApproach {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Record<string, unknown>;
+  if (candidate.type === "tool") return isEquipmentSourceUuid(candidate.equipmentUuid)
+    && typeof candidate.useFormId === "string" && !!candidate.useFormId.trim()
+    && ["skill", "specialization", "difficulty", "showDifficultyToPlayers", "difficultyOverride"]
+      .every(key => candidate[key] === undefined);
+  if (candidate.type !== undefined || candidate.equipmentUuid !== undefined || candidate.useFormId !== undefined) return false;
   if (!isSkillKey(candidate.skill) || !Number.isInteger(candidate.difficulty)
     || (candidate.difficulty as number) < POINT_OF_INTEREST_DIFFICULTY_MIN
     || typeof candidate.showDifficultyToPlayers !== "boolean"
@@ -71,6 +98,7 @@ export function isPointOfInterestApproach(value: unknown): value is PointOfInter
     : candidate.specialization === undefined;
 }
 export function approachIdentity(approach: PointOfInterestApproach): string {
+  if (isToolApproach(approach)) return `tool:${JSON.stringify([approach.equipmentUuid, approach.useFormId])}`;
   return approach.skill === "aptitude" ? `${approach.skill}:${approach.specialization}` : approach.skill;
 }
 /**
@@ -122,6 +150,7 @@ export function readPointOfInterestInformation(system: unknown): readonly PointO
     availability: { ...readPointOfInterestInformationAvailability(entry.availability)! } }));
 }
 function readApproach(approach: PointOfInterestApproach): PointOfInterestApproach {
+  if (isToolApproach(approach)) return { type: "tool", equipmentUuid: approach.equipmentUuid, useFormId: approach.useFormId };
   const base = { difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
     ...(approach.difficultyOverride ? { difficultyOverride: { difficulty: approach.difficultyOverride.difficulty,
       condition: approach.difficultyOverride.condition } } : {}) };
@@ -188,7 +217,7 @@ export function updatePointOfInterestApproachDifficultyOverride(
   override: PointOfInterestDifficultyOverride | null,
 ): readonly PointOfInterestInformation[] {
   const approach = list.find(candidate => candidate.id === id)?.approaches[index];
-  if (!approach) throw new Error(`Unknown Point of Interest approach: ${id}/${index}`);
+  if (!approach || !isSkillApproach(approach)) throw new Error(`Unknown Point of Interest skill approach: ${id}/${index}`);
   const { difficultyOverride: _previous, ...base } = approach;
   return updatePointOfInterestApproach(list, id, index,
     override ? { ...base, difficultyOverride: { difficulty: override.difficulty, condition: override.condition } } : base);
@@ -242,11 +271,29 @@ interface PoiInvestigationBaseViewData {
 export interface PoiInvestigationPlayerViewData extends PoiInvestigationBaseViewData {
   readonly audience: "player";
   readonly skills: readonly PoiInvestigationPlayerSkillView[];
+  readonly tools?: readonly PoiInvestigationToolView[];
+  readonly discoveries?: readonly { readonly content: string }[];
+}
+export interface PoiInvestigationToolView {
+  readonly canUse?: boolean;
+  readonly id: string;
+  readonly name: string;
+  readonly img: string;
+  readonly uses: { readonly value: number; readonly max: number } | null;
+}
+export interface PoiInvestigationGmToolInformationView {
+  readonly id: string;
+  readonly content: string;
+  readonly knownCount: number;
+  readonly condition?: string;
+  readonly approaches: readonly { readonly equipmentUuid: string; readonly useFormId: string;
+    readonly equipmentName: string; readonly useFormName: string; readonly valid: boolean }[];
 }
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";
   readonly itemUuid: string;
   readonly skills: readonly PoiInvestigationGmSkillView[];
   readonly gmContext: string;
+  readonly toolInformation?: readonly PoiInvestigationGmToolInformationView[];
 }
 export type PoiInvestigationViewData = PoiInvestigationPlayerViewData | PoiInvestigationGmViewData;

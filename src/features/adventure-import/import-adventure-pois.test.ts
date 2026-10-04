@@ -103,6 +103,22 @@ function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
 }
 
 describe("Adventure Point of Interest import", () => {
+  it("treats a manually added ToolApproach as a POI edit without changing preset digests", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actOne"]);
+    const first = world.items[0];
+    const tool = { type: "tool" as const, equipmentUuid: "Item.source", useFormId: "scan" };
+    world.items[0] = { ...first, system: { ...first.system, information: first.system.information.map((entry, index) =>
+      index ? entry : { ...entry, approaches: [...entry.approaches, tool] }) } };
+    const manual = structuredClone(world.items[0].system);
+    expect(await managedPoiDigest(manual)).not.toBe((first.flag as PoiImportFlag).baseline);
+    const decide = vi.fn(async () => "preserve" as const);
+    expect(await run(world, ["actOne"], decide)).toMatchObject({ preserved: 1, unchanged: 28 });
+    expect(decide).toHaveBeenCalledOnce();
+    expect(world.items[0].system).toEqual(manual);
+    expect(await run(world, ["actOne"], async () => "restore")).toMatchObject({ updated: 1, unchanged: 28 });
+    expect(world.items[0].system).toEqual(first.system);
+  });
   it.each(["relative", "hosted"])("uses %s materialized POI images and reimports without browsing", async representation => {
     const world = new FakeWorld();
     const imagePresets = SYNTHETIC_POI_PRESETS.filter(p => p.imageAssetId);

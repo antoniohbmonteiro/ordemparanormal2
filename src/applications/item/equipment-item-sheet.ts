@@ -26,6 +26,7 @@ import {
   type EquipmentUsePatch,
 } from "../../core/equipment/equipment-use";
 import { isEquipmentQuantity, readEquipmentQuantity } from "../../core/equipment/equipment-quantity";
+import { mutateOwnedEquipmentUses, type EquipmentUsesMutation } from "../../adapters/foundry/equipment/mutate-owned-equipment-uses";
 
 const EQUIPMENT_SHEET_TEMPLATE =
   "systems/ordemparanormal2/templates/item/equipment-item-sheet.hbs";
@@ -240,7 +241,9 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
       input.addEventListener("change", (event) => {
         event.stopPropagation();
         if (!this.isEditable) return;
-        this.#enqueueUpdate(() => this.#updateUses(input));
+        const field = input.dataset.usesField;
+        const value = input.valueAsNumber;
+        this.#enqueueUpdate(() => this.#updateUses(field, value));
       });
     }
   }
@@ -315,10 +318,9 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
     });
   }
 
-  async #updateUses(input: HTMLInputElement): Promise<void> {
-    const field = input.dataset.usesField;
+  async #updateUses(field: string | undefined, value: number): Promise<void> {
     if (field !== "value" && field !== "max") return;
-    if (!Number.isInteger(input.valueAsNumber) || input.valueAsNumber < 0) {
+    if (!Number.isInteger(value) || value < 0) {
       ui.notifications.error(
         game.i18n.localize("ORDEMPARANORMAL2.EquipmentSheet.Errors.InvalidUses"),
       );
@@ -326,12 +328,22 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
       return;
     }
 
+    await this.#changeUses({ kind: "set", field, value });
+  }
+
+  async #changeUses(mutation: EquipmentUsesMutation): Promise<void> {
+    if (!this.isEditable) return;
     const item = this.document as foundry.documents.Item;
-    const uses = readEquipmentSystem(item).uses;
-    if (!uses) return;
-    await item.update({
-      "system.uses": { ...uses, [field]: input.valueAsNumber },
-    });
+    if (item.actor?.type === "agent" && item.id) {
+      if (!await mutateOwnedEquipmentUses(item.actor, item.id, mutation)) throw new Error("Equipment counter change was rejected.");
+      return;
+    }
+    const current = readEquipmentSystem(item).uses;
+    if (mutation.kind === "set") {
+      if (current) await item.update({ [`system.uses.${mutation.field}`]: mutation.value });
+    } else if (mutation.kind === "add") {
+      if (!current) await item.update({ "system.uses": { ...EMPTY_EQUIPMENT_USES } });
+    } else if (current) await item.update({ "system.uses": null });
   }
 
   static async #onAddUses(this: EquipmentItemSheet): Promise<void> {
@@ -340,7 +352,7 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
     await this.submit();
     const item = this.document as foundry.documents.Item;
     if (readEquipmentSystem(item).uses) return;
-    await item.update({ "system.uses": { ...EMPTY_EQUIPMENT_USES } });
+    await this.#enqueueUpdate(() => this.#changeUses({ kind: "add" }));
   }
 
   static async #onRemoveUses(this: EquipmentItemSheet): Promise<void> {
@@ -369,6 +381,6 @@ export class EquipmentItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
       if (!confirmed) return;
     }
 
-    await item.update({ "system.uses": null });
+    await this.#enqueueUpdate(() => this.#changeUses({ kind: "remove" }));
   }
 }

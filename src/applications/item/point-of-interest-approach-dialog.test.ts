@@ -96,15 +96,15 @@ describe("Point of Interest approach dialog", () => {
     content.skill.change("aptitude");
     expect(content.specializationMarkup).toContain('name="specialization"');
     expect(add.disabled).toBe(true);
-    expect(() => options.ok.callback()).toThrow("Invalid POI approach selection.");
+    await expect(options.ok.callback()).rejects.toThrow("Invalid POI approach selection.");
     content.chooseSpecialization("arts");
     expect(add.disabled).toBe(false);
-    expect(options.ok.callback()).toMatchObject({ skill: "aptitude", specialization: "arts" });
+    expect(await options.ok.callback()).toMatchObject({ skill: "aptitude", specialization: "arts" });
     content.skill.change("acrobatics");
     expect(content.specialization).toBeNull();
     expect(content.specializationMarkup).toBe("");
     expect(add.disabled).toBe(false);
-    expect(options.ok.callback()).toEqual({ skill: "acrobatics", difficulty: 1, showDifficultyToPlayers: true });
+    expect(await options.ok.callback()).toEqual({ skill: "acrobatics", difficulty: 1, showDifficultyToPlayers: true });
   });
 
   it("uses the requested pt-BR wording in the title, button and field", async () => {

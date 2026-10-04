@@ -10,7 +10,7 @@ function fixture() {
   const gm = { id: "gm", isGM: true };
   const player = { id: "player", isGM: false };
   const users = [gm, player];
-  const actors = ["a", "b"].map(id => ({ id, uuid: `Actor.${id}`, type: "agent",
+  const actors = ["a", "b"].map(id => ({ id, uuid: `Actor.${id}`, type: "agent", items: [],
     testUserPermission: vi.fn(() => true) }));
   const item = { id: "poi", uuid: "Item.poi", type: "pointOfInterest", name: "Computador", img: "icon.svg",
     isEmbedded: false, pack: null, ownership: { default: 0 },
@@ -37,6 +37,41 @@ function fixture() {
   return { flags, item, scene, actors, player };
 }
 afterEach(() => vi.unstubAllGlobals());
+
+it("projects all inventory tools independently of private matching, and only known tool-only discoveries", async () => {
+  const f = fixture();
+  const approach = { type: "tool", equipmentUuid: "Item.privateSource", useFormId: "private-form" };
+  f.item.system.information.push(
+    { id: "tool-only", content: "Temperatura baixa.", approaches: [approach] } as never,
+    { id: "unknown-tool", content: "Resposta oculta", approaches: [approach] } as never,
+    { id: "mixed-tool", content: "Vestígios", approaches: [approach, { skill: "perception", difficulty: 8, showDifficultyToPlayers: true }] } as never,
+    { id: "situational-tool", content: "Resposta situacional", availability: { mode: "situational", condition: "Condição privada" }, approaches: [approach] } as never);
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["tool-only", "mixed-tool"] }] };
+  f.actors[0].items.push(
+    { id: "old", name: "Ferramenta antiga", type: "equipment", sort: 2, system: { category: "tool", useForms: [] } } as never,
+    { id: "duplicate", name: "Ferramenta antiga", type: "equipment", sort: 1, system: { category: "tool", quantity: 0, useForms: [] } } as never);
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.a", requesterUserId: "player" });
+  const view = "view" in result && result.view.audience === "player" ? result.view : null;
+  expect(view?.tools?.map(tool => [tool.id, tool.uses, tool.canUse])).toEqual([["duplicate", null, true], ["old", null, true]]);
+  expect(view?.discoveries).toEqual([{ content: "Temperatura baixa." }]);
+  expect(view?.skills.find(skill => skill.key === "perception")?.information).toEqual([{ visibility: "public", difficulty: 8, content: "Vestígios" }]);
+  const serialized = JSON.stringify(result);
+  expect(serialized).not.toMatch(/privateSource|private-form|unknown-tool|Resposta oculta|Condição privada|tool-only|equipmentUuid|useFormId|approaches|matching/);
+  f.actors[0].items.length = 0;
+  const afterRemoval = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.a", requesterUserId: "player" });
+  expect("view" in afterRemoval && afterRemoval.view.audience === "player" && afterRemoval.view.discoveries)
+    .toEqual([{ content: "Temperatura baixa." }]);
+});
+
+it("preserves unresolved ToolApproaches for the GM instead of deleting their information", async () => {
+  const f = fixture();
+  f.item.system.information.push({ id: "missing", content: "Resposta", approaches: [
+    { type: "tool", equipmentUuid: "Item.missing", useFormId: "deleted" } ] } as never);
+  vi.stubGlobal("fromUuid", vi.fn(async () => null));
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", requesterUserId: "gm" });
+  expect("view" in result && result.view.audience === "gm" && result.view.toolInformation?.[0])
+    .toMatchObject({ id: "missing", content: "Resposta", approaches: [{ equipmentUuid: "Item.missing", useFormId: "deleted", valid: false }] });
+});
 
 it("delivers only information known by the selected OWNER Agent", async () => {
   fixture();

@@ -23,6 +23,7 @@ it("lets only the active GM add Region associations and reconcile at startup", a
   const other = { id: "other", isGM: true };
   const game = { user: other, users: { activeGM: gm }, i18n: { localize: (key: string) => key } };
   vi.stubGlobal("game", game);
+  vi.stubGlobal("CONFIG", { queries: {} });
   vi.stubGlobal("Hooks", { on: (name: string, fn: (...args: unknown[]) => void) => hooks.set(name, fn),
     once: (name: string, fn: (...args: unknown[]) => void) => hooks.set(name, fn) });
   registerPoiInvestigation();

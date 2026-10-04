@@ -4,6 +4,36 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const commonPath = process.env.FOUNDRY_V14_COMMON_PATH;
 afterEach(() => vi.unstubAllGlobals());
 describe.skipIf(!commonPath)("installed Foundry v14 Point of Interest model (no persistence)", () => {
+  it("round-trips tool-only and mixed branches through construction and updateSource without artificial skill defaults", async () => {
+    const native = await import(/* @vite-ignore */ pathToFileURL(commonPath!).href);
+    vi.stubGlobal("foundry", native);
+    const { PointOfInterestDataModel } = await import("./point-of-interest-data-model");
+    const tool = { type: "tool", equipmentUuid: "Item.source", useFormId: "scan" };
+    const skill = { skill: "aptitude", specialization: "arts", difficulty: 9, showDifficultyToPlayers: false,
+      difficultyOverride: { difficulty: 6, condition: "Requer luz." } };
+    const information = [
+      { id: "only", content: "Temperatura", approaches: [tool], availability: { mode: "always", condition: "" } },
+      { id: "mixed", content: "Vestígios", approaches: [skill, tool], availability: { mode: "situational", condition: "Requer chave." } },
+    ];
+    const model = new PointOfInterestDataModel({ publicDescription: "", gmContext: "", information: structuredClone(information) } as never, { strict: true } as never);
+    expect(JSON.parse(JSON.stringify(model.toObject().information))).toEqual(information);
+    model.updateSource({ information: structuredClone([information[1], information[0]]) } as never);
+    expect(JSON.parse(JSON.stringify(model.toObject().information))).toEqual([information[1], information[0]]);
+    const legacy = new PointOfInterestDataModel({ information: [{ id: "old", content: "", approaches: [{ skill: "perception" }] }] } as never);
+    expect(legacy.toObject().information[0].approaches[0]).toEqual({ skill: "perception", difficulty: 1, showDifficultyToPlayers: true });
+  });
+
+  it("rejects duplicate tool identities, invalid UUIDs and fields from the other union branch", async () => {
+    const native = await import(/* @vite-ignore */ pathToFileURL(commonPath!).href);
+    vi.stubGlobal("foundry", native);
+    const { PointOfInterestDataModel } = await import("./point-of-interest-data-model");
+    const tool = { type: "tool", equipmentUuid: "Compendium.test.tools.Item.source", useFormId: "scan" };
+    for (const approaches of [[tool, tool], [{ ...tool, skill: "research" }], [{ ...tool, difficulty: 1 }],
+      [{ ...tool, equipmentUuid: "Actor.a.Item.e" }], [{ ...tool, useFormId: "" }]]) {
+      expect(() => new PointOfInterestDataModel({ information: [{ id: "a", content: "", approaches }] } as never,
+        { strict: true } as never)).toThrow();
+    }
+  });
   it("cleans stored information without availability to always and rejects a blank situational condition", async () => {
     const native = await import(/* @vite-ignore */ pathToFileURL(commonPath!).href);
     vi.stubGlobal("foundry", native);

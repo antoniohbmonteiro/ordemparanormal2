@@ -7,6 +7,8 @@ import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/ap
 import {
   type PoiInvestigationGmSkillView,
   type PoiInvestigationPlayerSkillView,
+  type PoiInvestigationToolView,
+  type PoiInvestigationGmToolInformationView,
 } from "../../documents/item/point-of-interest-data";
 import { aptitudeSpecializationLabel } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
@@ -21,6 +23,9 @@ import { openPoiAgentRevealDialog } from "./poi-agent-reveal-dialog";
 import { resolveSceneInvestigationAgent } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
 import { commitPoiExamination } from "../../adapters/foundry/points-of-interest/commit-poi-examination";
 import type { ExaminePoiInput } from "../../adapters/foundry/points-of-interest/examine-poi";
+import { investigationToolInventory } from "../../adapters/foundry/equipment/investigation-tool-inventory";
+import { useInvestigationTool } from "../../features/points-of-interest/use-investigation-tool";
+import { equipmentUseFeedback, isEquipmentUseInFlight, subscribeEquipmentUse } from "../../features/equipment/use-equipment";
 
 const INVESTIGATION_TEMPLATE =
   "systems/ordemparanormal2/templates/points-of-interest/investigation-application.hbs";
@@ -47,6 +52,9 @@ interface InvestigationRenderContextBase extends ApplicationRenderContext {
   readonly canExamine: boolean;
   readonly investigationActive: boolean;
   readonly feedback: string;
+  readonly tools?: readonly PoiInvestigationToolView[];
+  readonly discoveries?: readonly { readonly content: string }[];
+  readonly toolInformation?: readonly PoiInvestigationGmToolInformationView[];
 }
 
 export interface PlayerInvestigationInformationRow {
@@ -141,6 +149,7 @@ export function buildInvestigationRenderContext(
         isPlayer: false,
         isGm: true,
         gmContext: result.view.gmContext,
+        toolInformation: result.view.toolInformation ?? [],
         skills: result.view.skills.map((skill) => ({
           key: skill.key,
           name: skill.name,
@@ -165,6 +174,8 @@ export function buildInvestigationRenderContext(
       ...base,
       isPlayer: true,
       isGm: false,
+      tools: result.view.tools ?? [],
+      discoveries: result.view.discoveries ?? [],
       skills: result.view.skills.map((skill) => {
         const knownRows: PlayerInvestigationInformationRow[] = skill.information.map(entry => ({
           isHidden: entry.visibility === "hidden",
@@ -224,6 +235,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       enlargeImage: InvestigationApplication.#onEnlargeImage,
       examine: InvestigationApplication.#onExamine,
       revealInformation: InvestigationApplication.#onRevealInformation,
+      useTool: InvestigationApplication.#onUseTool,
     },
     classes: ["ordemparanormal2", "op2-investigation", "op2-poi-investigation"],
     window: { title: `${LOCALIZATION_ROOT}.Title`, resizable: true, contentClasses: ["op2-investigation-content"] },
@@ -246,6 +258,8 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   #stopInvalidation: (() => void) | null = null;
   #controlTokenHook: number | null = null;
   #updateUserHook: number | null = null;
+  #itemHooks: { name: string; id: number }[] = [];
+  #stopEquipmentUse: (() => void) | null = null;
 
   constructor(params: InvestigationApplicationParams) {
     super({
@@ -261,15 +275,19 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       this.#result = null;
       queueMicrotask(() => { void this.refresh(); });
     }
-    return buildInvestigationRenderContext(this.#params.name, this.#result, key =>
+    const context = buildInvestigationRenderContext(this.#params.name, this.#result, key =>
       game.i18n.localize(`${LOCALIZATION_ROOT}.${key}`),
       agents,
       this.#feedback,
     );
+    const actor = !game.user?.isGM ? resolveSceneInvestigationAgent(this.#params.sceneId) : null;
+    return actor ? { ...context, tools: investigationToolInventory(actor).map(tool => ({
+      ...tool, canUse: tool.canUse && !isEquipmentUseInFlight(actor.uuid, tool.id) })) } : context;
   }
 
   #agents(): foundry.documents.Actor[] {
     const actor = resolveSceneInvestigationAgent(this.#params.sceneId);
+    if (this.#actorUuid !== (actor?.uuid ?? null)) this.#feedback = "";
     this.#actorUuid = actor?.uuid ?? null;
     return actor ? [actor] : [];
   }
@@ -287,6 +305,16 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     await super._onFirstRender(context, options as never);
     this.#stopInvalidation = subscribePoiInvalidation(() => { void this.refresh(); });
     if (!game.user?.isGM) {
+      this.#stopEquipmentUse = subscribeEquipmentUse(actorUuid => {
+        if (actorUuid === this.#actorUuid) void this.render();
+      });
+      for (const name of ["createItem", "updateItem", "deleteItem"]) {
+        const id = Hooks.on(name, (item: unknown) => {
+          const document = item as foundry.documents.Item;
+          if (document.actor?.uuid === this.#actorUuid) void this.refresh();
+        });
+        this.#itemHooks.push({ name, id });
+      }
       this.#controlTokenHook = Hooks.on("controlToken", () => { void this.refresh(); });
       this.#updateUserHook = Hooks.on("updateUser", (user: unknown) => {
         if (user && typeof user === "object" && "id" in user && user.id === game.user?.id) void this.refresh();
@@ -422,7 +450,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     if (!informationId || view?.audience !== "gm") return;
     const information = view.skills
       .flatMap(skill => skill.information)
-      .find(entry => entry.id === informationId);
+      .find(entry => entry.id === informationId) ?? view.toolInformation?.find(entry => entry.id === informationId);
     if (!information) return;
 
     const button = target.closest<HTMLButtonElement>("button") ??
@@ -456,11 +484,49 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     }
   }
 
+  static async #onUseTool(this: InvestigationApplication, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    if (game.user?.isGM) return;
+    const actor = resolveSceneInvestigationAgent(this.#params.sceneId);
+    const equipmentId = target.dataset.itemId;
+    if (!actor || !equipmentId) return;
+    const equipment = actor.getEmbeddedDocument("Item", equipmentId) as foundry.documents.Item | null;
+    if (equipment?.type !== "equipment" || (equipment.system as { category?: unknown }).category !== "tool") return;
+    const { sceneId, itemUuid } = this.#params;
+    const runId = this.#result && "view" in this.#result ? this.#result.view.investigationRunId ?? null : null;
+    const button = target.closest<HTMLButtonElement>("button");
+    if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); }
+    try {
+      const result = await useInvestigationTool(actor, equipmentId, { sceneId, itemUuid, runId }, () =>
+        !this.#closed && this.#params.sceneId === sceneId && this.#params.itemUuid === itemUuid
+        && resolveSceneInvestigationAgent(sceneId)?.uuid === actor.uuid);
+      const feedback = result.status === "success"
+        ? result.newCount > 0
+          ? game.i18n.format(`${LOCALIZATION_ROOT}.${result.newCount === 1 ? "ToolDiscoverySingle" : "ToolDiscoveryMultiple"}`,
+            { count: result.newCount })
+          : game.i18n.localize(`${LOCALIZATION_ROOT}.ToolDiscoveryNone`)
+        : equipmentUseFeedback(result);
+      if (this.#closed || this.#params.sceneId !== sceneId || this.#params.itemUuid !== itemUuid
+        || resolveSceneInvestigationAgent(sceneId)?.uuid !== actor.uuid) return;
+      if (feedback) {
+        this.#feedback = feedback;
+        if (result.status !== "success") ui.notifications.warn(feedback);
+      }
+      await this.refresh();
+    } catch (error) {
+      console.error(`${SYSTEM_ID} | Failed to use Investigation tool`, error);
+      ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.EquipmentUse.uncertain"));
+    } finally {
+      if (button?.isConnected) { button.disabled = false; button.removeAttribute("aria-busy"); }
+    }
+  }
+
   protected override _onClose(options: ApplicationClosingOptions): void {
     this.#closed = true;
     this.#stopInvalidation?.();
+    this.#stopEquipmentUse?.();
     if (this.#controlTokenHook !== null) Hooks.off("controlToken", this.#controlTokenHook);
     if (this.#updateUserHook !== null) Hooks.off("updateUser", this.#updateUserHook);
+    for (const hook of this.#itemHooks) Hooks.off(hook.name, hook.id);
     super._onClose(options);
     releaseInvestigationApplication(this.#params.itemUuid);
   }

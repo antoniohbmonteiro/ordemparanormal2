@@ -24,7 +24,7 @@ import { adjustOwnedEquipmentQuantity } from "../../adapters/foundry/equipment/a
 import { enrichEquipmentDescription } from "../../adapters/foundry/equipment/enrich-equipment-description";
 import { canUserRollActor } from "../../adapters/foundry/actors/agent-check-permission";
 import { publishAbilityMessage } from "../../adapters/foundry/chat/publish-ability-message";
-import { publishEquipmentMessage } from "../../adapters/foundry/chat/publish-equipment-message";
+import { useEquipment, equipmentUseFeedback } from "../../features/equipment/use-equipment";
 import { readAgentAccentColor } from "../../adapters/foundry/actors/read-agent-accent-color";
 import { parseAgentCheckSelection } from "../../application/checks/build-agent-check";
 import {
@@ -1008,7 +1008,12 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
 
       try {
-        await publishEquipmentMessage(actor, equipment);
+        const result = await useEquipment(actor, equipmentId);
+        const feedback = equipmentUseFeedback(result);
+        if (feedback) {
+          if (result.status === "success") ui.notifications.info(feedback);
+          else ui.notifications.warn(feedback);
+        }
       } catch (error) {
         console.error(
           "ordemparanormal2 | Failed to post Equipment chat card",
@@ -1222,7 +1227,9 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
 
       if (item.type === EQUIPMENT_ITEM_TYPE) {
-        return super._onDropItem(event, item);
+        const source = !item.isEmbedded && !item.inCompendium
+          ? item.clone({}, { keepId: true, addSource: true }) : item;
+        return super._onDropItem(event, source);
       }
 
       const [created] = await actor.createEmbeddedDocuments("Item", [

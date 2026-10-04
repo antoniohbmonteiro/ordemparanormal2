@@ -27,7 +27,6 @@
 .ordemparanormal2.op2-investigation .op2-investigation-button:disabled { opacity: .5; cursor: not-allowed; }
 .ordemparanormal2.op2-investigation .op2-investigation-button:focus-visible { outline: 2px solid #f1f2f4; outline-offset: 2px; }
 .ordemparanormal2.op2-investigation .op2-investigation-badge { display: inline-flex; border: 1px solid rgba(160, 190, 210, .34); border-radius: 999px; padding: 2px 8px; font-size: .75rem; }
-.ordemparanormal2.op2-investigation .op2-investigation-section-header { margin: 0 0 8px; color: #f1f2f4; font-size: .85rem; letter-spacing: .05em; }
 .op2-poi-investigation .op2-investigation-feedback { border: 1px solid var(--op2-border-strong); border-radius: 6px; padding: 8px 10px; color: var(--op2-text); }
 
 .op2-poi-investigation .op2-investigation-content {
@@ -130,18 +129,6 @@
 .op2-poi-investigation .op2-investigation-gm-context {
   margin-top: 12px;
   padding: 12px;
-}
-
-.op2-poi-investigation .op2-investigation-panel > h3,
-.op2-poi-investigation .op2-investigation-gm-context > h3 {
-  width: fit-content;
-  margin: 0;
-  padding: 0 8px 9px;
-  border: 0;
-  border-bottom: 3px solid var(--op2-accent);
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  font-size: 17px;
 }
 
 .op2-poi-investigation .op2-investigation-hint {
@@ -400,17 +387,21 @@
 .ordemparanormal2.op2-investigation .op2-investigation-recap-prompt { display: grid; gap: 10px; padding: 8px 4px; color: #f1f2f4; }
 .ordemparanormal2.op2-investigation .op2-investigation-recap-prompt p { margin: 0; line-height: 1.45; }
 .ordemparanormal2.op2-investigation .op2-investigation-section-header {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
   color: #bfc7d1;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.3;
   letter-spacing: .08em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 .ordemparanormal2.op2-investigation .op2-investigation-section-header::after {
   content: "";
   display: block;
-  width: 60px;
-  height: 3px;
+  width: 40px;
+  height: 2px;
   margin-top: 6px;
   border-radius: 1px;
   background: #7f252b;
@@ -429,8 +420,6 @@
 .op2-poi-investigation .op2-investigation-body.is-gm .op2-investigation-intro h2 { margin: 0 0 6px; font-size: 20px; font-weight: 800; }
 .op2-poi-investigation .op2-investigation-body.is-gm .op2-investigation-description { color: #a7acb5; font-size: 12px; line-height: 1.3; }
 .op2-poi-investigation .op2-investigation-body.is-gm .op2-investigation-panel { padding: 0; border: 0; background: transparent; }
-.op2-poi-investigation .op2-investigation-body.is-gm .op2-investigation-section-header { margin-bottom: 10px; }
-.op2-poi-investigation .op2-investigation-body.is-gm .op2-investigation-section-header::after { width: 40px; height: 2px; }
 .op2-poi-investigation .op2-investigation-table.is-gm {
   --op2-investigation-skill-column: 100px;
   --op2-investigation-action-column: 100px;
@@ -438,9 +427,7 @@
 }
 .op2-poi-investigation .op2-investigation-table.is-gm .op2-investigation-reveal {
   min-width: 84px;
-  border: 1px solid #333840;
   border-radius: 3px;
-  background: #1f2126;
   color: #bfc7d1;
   font-size: 11px;
 }
@@ -464,3 +451,35 @@
   text-transform: uppercase;
   letter-spacing: .04em;
 }
+
+.op2-poi-investigation .op2-investigation-tool-list,
+.op2-poi-investigation .op2-investigation-discoveries ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--op2-border-strong, #333840);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.op2-poi-investigation .op2-investigation-tool {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px;
+  min-width: 0;
+  background: #121519;
+}
+.op2-poi-investigation .op2-investigation-tool:nth-child(even) { background: #0e1114; }
+.op2-poi-investigation .op2-investigation-tool + .op2-investigation-tool,
+.op2-poi-investigation .op2-investigation-discoveries li + li { border-top: 1px solid #282d34; }
+.op2-poi-investigation .op2-investigation-tool img { width: 28px; height: 28px; object-fit: contain; border: 1px solid #333840; border-radius: 3px; }
+.op2-poi-investigation .op2-investigation-tool__name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.op2-poi-investigation .op2-investigation-tool__uses { color: #a7acb5; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.op2-poi-investigation .op2-investigation-tool button { flex: 0 0 auto; min-width: 64px; }
+.op2-poi-investigation .op2-investigation-discoveries li { padding: 9px; overflow-wrap: anywhere; background: #121519; }
+.op2-poi-investigation .op2-investigation-table--tools .op2-investigation-table__header,
+.op2-poi-investigation .op2-investigation-table--tools .op2-investigation-skill {
+  grid-template-columns: minmax(132px, 25%) var(--op2-investigation-action-column) minmax(0, 1fr);
+}
+.op2-poi-investigation .op2-investigation-table--tools .op2-investigation-information { grid-column: 3; }
+.op2-poi-investigation .op2-investigation-tool button:focus-visible { outline: 2px solid #bfc7d1; outline-offset: 2px; }

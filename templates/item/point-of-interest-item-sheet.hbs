@@ -48,6 +48,10 @@
               <h4>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Approaches"}}</h4>
               {{#each approaches}}
                 <div class="op2-poi-sheet__approach">
+                  {{#if @root.editable}}<button type="button" data-action="editApproach" data-information-id="{{../id}}" data-approach-index="{{index}}">{{localize "ORDEMPARANORMAL2.EquipmentUse.EditApproach"}}</button>{{/if}}
+                  {{#if isTool}}
+                    <div class="op2-poi-sheet__tool-source"><strong>{{localize "ORDEMPARANORMAL2.EquipmentUse.Tool"}}: {{toolLabel}}</strong><span>{{useFormLabel}}</span>{{#if invalidSource}}<span role="status">{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/if}}</div>
+                  {{else}}
                   <label><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill"}}</span>
                     <select data-poi-edit="skill" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}}>
                       {{#each skillOptions}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
@@ -64,7 +68,9 @@
                     <input type="number" min="1" step="1" inputmode="numeric" value="{{difficulty}}" data-poi-edit="difficulty" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}} />
                   </label>
                   <label class="op2-poi-sheet__visibility"><input type="checkbox" data-poi-edit="showDifficultyToPlayers" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#if showDifficultyToPlayers}} checked{{/if}}{{#unless @root.editable}} disabled{{/unless}} /><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Table.ShowDifficulty"}}</span></label>
+                  {{/if}}
                   {{#if @root.editable}}<button type="button" class="op2-poi-sheet__remove" data-action="removeApproach" data-information-id="{{../id}}" data-approach-index="{{index}}" title="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Actions.RemoveApproach'}}"{{#unless ../canRemoveApproach}} disabled{{/unless}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>{{/if}}
+                  {{#unless isTool}}
                   <div class="op2-poi-sheet__difficulty-override">
                     {{#if showDifficultyOverride}}
                       <label class="op2-poi-sheet__difficulty"><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.OverrideDifficulty"}}</span>
@@ -78,6 +84,7 @@
                       <button type="button" data-action="addDifficultyOverride" data-information-id="{{../id}}" data-approach-index="{{index}}"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddDifficultyOverride"}}</button>
                     {{/if}}
                   </div>
+                  {{/unless}}
                 </div>
               {{/each}}
               {{#if @root.editable}}<button type="button" class="op2-poi-sheet__add-approach" data-action="addApproach" data-information-id="{{id}}"{{#unless canAddApproach}} disabled{{/unless}}><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddApproach"}}</button>{{/if}}

@@ -436,6 +436,18 @@ Therefore:
 
 The architecture should optimize for **safe change**, not speculative feature count.
 
+## Equipment usage and Investigation tools
+
+Pure `core/equipment/equipment-use-plan` validates the current form and plans a one-use payment; `core/investigation/resolve-information` separately matches source/form pairs against new always information. Neither depends on Documents, markup, chat or private POI access. The authored POI union and guards retain the existing skill representation and isolate tools from DT calculations.
+
+`features/equipment/use-equipment` owns shared selection, client busy state, authority routing and same-operation retries. `applications/equipment/equipment-use-dialog` only selects a form. Inventory and Investigation send distinct intents; only Investigation supplies contextual binding. `adapters/foundry/equipment` owns native provenance, authorization, serialization, payment and session receipts. Manual uses adjustments enter the same authoritative queue. The Equipment publisher remains presentation-only.
+
+`adapters/foundry/points-of-interest/use-poi-tool` owns contextual revalidation and existing Knowledge/Discovery writes under the POI queue. It never calls Examinar, changes PD or marks round participation. Generic execution accepts an opaque binding and post-use callback without interpreting Investigation state. Partial results distinguish publication and discovery failures, with resumable stages; there is no cross-Document transaction, custom socket or persisted journal.
+
+Player projections whitelist inventory and known content, never ToolApproaches or private provenance. Investigation derives tools from the resolved owned Agent, subscribes to Item changes and client busy state, and releases listeners on close. Authoring alone loads the reusable tool catalog. Scene sharing retains current references and provenance, with neutral grouping when no SkillApproach exists.
+
+Manual Foundry validation is pending for the user: [INVESTIGATION_TOOLS_MANUAL_CHECKLIST.md](INVESTIGATION_TOOLS_MANUAL_CHECKLIST.md). Automated tests may load the installed v14 common module without launching Foundry.
+
 ## Stateful Opposed Checks
 
 A stateful Opposed Check owns exactly one ChatMessage. Its versioned `flags.ordemparanormal2.opposedCheck` value is persistent truth; the stored content is a shared, control-free fallback. `OrdemParanormal2ChatMessage` delegates per-client button projection and DOM listeners to `ui/chat`, while creation, rolling and authoritative submission remain separate feature use cases. Foundry UUID/User resolution and Query registration remain adapters.

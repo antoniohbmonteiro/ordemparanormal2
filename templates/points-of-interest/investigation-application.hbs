@@ -107,8 +107,44 @@
     {{/if}}
 
     {{#if isGm}}
+      {{#if toolInformation.length}}
+      <section class="op2-investigation-panel">
+        <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.EquipmentUse.ToolsHeading"}}</h3>
+        <div class="op2-investigation-table is-gm op2-investigation-table--tools" role="table" aria-label="{{localize 'ORDEMPARANORMAL2.EquipmentUse.ToolsHeading'}}">
+          <div class="op2-investigation-table__header" role="row">
+            <span role="columnheader">{{localize "ORDEMPARANORMAL2.EquipmentUse.Tool"}}</span>
+            <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Control"}}</span>
+            <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.CluesInformation"}}</span>
+          </div>
+          <div class="op2-investigation-table__body">
+            {{#each toolInformation}}
+            <section class="op2-investigation-skill" role="rowgroup" style="--op2-information-count: 1">
+              <div class="op2-investigation-row is-first" role="row">
+                <div class="op2-investigation-skill-cell" role="rowheader">
+                  {{#each approaches}}
+                  <strong>{{equipmentName}} · {{useFormName}}</strong>
+                  {{#unless valid}}<span>{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/unless}}
+                  {{/each}}
+                </div>
+                <div class="op2-investigation-action" role="cell">
+                  <button type="button" class="op2-investigation-reveal{{#if knownCount}} is-revealed{{/if}}" data-action="revealInformation" data-information-id="{{id}}">{{#if knownCount}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Revealed"}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"}}{{/if}}</button>
+                  {{#if knownCount}}<span class="op2-investigation-revealed">{{knownCount}} {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.AgentsKnow"}}</span>{{/if}}
+                </div>
+                <div class="op2-investigation-information" role="cell">
+                  {{#if condition}}
+                  <p class="op2-investigation-situational"><span class="op2-investigation-situational__badge">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Situational"}}</span> <span class="op2-investigation-situational__condition">{{condition}}</span></p>
+                  {{/if}}
+                  <div class="op2-investigation-information__content">{{content}}</div>
+                </div>
+              </div>
+            </section>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+      {{/if}}
       <aside class="op2-investigation-gm-context">
-        <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.GmContext"}}</h3>
+        <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.GmContext"}}</h3>
         {{#if gmContext}}
           <div class="op2-investigation-gm-context__content">{{{gmContext}}}</div>
         {{else}}
@@ -119,5 +155,26 @@
   {{else}}
     <h2>{{name}}</h2>
     <p role="status">{{message}}</p>
+  {{/if}}
+  {{#if tools.length}}
+  <section class="op2-investigation-panel op2-investigation-tools">
+    <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.EquipmentUse.ToolsHeading"}}</h3>
+    <ul class="op2-investigation-tool-list">
+      {{#each tools}}
+      <li class="op2-investigation-tool">
+        <img src="{{img}}" alt="" loading="lazy" />
+        <span class="op2-investigation-tool__name">{{name}}</span>
+        {{#if uses}}<span class="op2-investigation-tool__uses" aria-label="{{localize 'ORDEMPARANORMAL2.EquipmentUse.Uses'}}">{{uses.value}} / {{uses.max}}</span>{{/if}}
+        <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="useTool" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.EquipmentUse.Use'}} — {{name}}" {{#unless canUse}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.EquipmentUse.Use"}}</button>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/if}}
+  {{#if discoveries.length}}
+  <section class="op2-investigation-panel op2-investigation-discoveries">
+    <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.EquipmentUse.DiscoveriesHeading"}}</h3>
+    <ul>{{#each discoveries}}<li>{{content}}</li>{{/each}}</ul>
+  </section>
   {{/if}}
 </section>

@@ -1,10 +1,12 @@
 import { skillLabel, type SkillKey } from "../../../config/skills";
 import {
-  approachIdentity, playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
-  type PointOfInterestApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
+  approachIdentity, isSkillApproach, isToolApproach, playerVisiblePointOfInterestInformation, readPointOfInterestInformation,
+  type PointOfInterestSkillApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
+import { investigationToolInventory } from "../equipment/investigation-tool-inventory";
+import { describeToolApproach } from "../equipment/equipment-source";
 
 export interface PoiInvestigationRequest {
   readonly sceneId: string;
@@ -15,10 +17,11 @@ export interface PoiInvestigationRequest {
 export type PoiInvestigationError = "unavailable" | "forbidden" | "no-gm";
 export type PoiInvestigationResult = { readonly view: PoiInvestigationViewData } | { readonly error: PoiInvestigationError };
 
-interface DerivedRow { readonly entry: PointOfInterestInformation; readonly approach: PointOfInterestApproach }
+interface DerivedRow { readonly entry: PointOfInterestInformation; readonly approach: PointOfInterestSkillApproach }
 function groupApproaches(information: readonly PointOfInterestInformation[]): ReadonlyMap<SkillKey, readonly DerivedRow[]> {
   const groups = new Map<SkillKey, DerivedRow[]>();
   for (const entry of information) for (const approach of entry.approaches) {
+    if (!isSkillApproach(approach)) continue;
     const rows = groups.get(approach.skill) ?? [];
     rows.push({ entry, approach });
     groups.set(approach.skill, rows);
@@ -70,6 +73,7 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   const groups = groupApproaches(information);
   const playerGroups = new Map<string, DerivedRow[]>();
   for (const entry of playerVisiblePointOfInterestInformation(information, known)) for (const approach of entry.approaches) {
+    if (!isSkillApproach(approach)) continue;
     const key = approachIdentity(approach);
     const rows = playerGroups.get(key) ?? [];
     rows.push({ entry, approach });
@@ -77,6 +81,12 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   }
   const view: PoiInvestigationViewData = user.isGM
     ? { ...base, audience: "gm", itemUuid: latest.item.uuid, gmContext,
+        toolInformation: await Promise.all(information.filter(entry => entry.approaches.some(isToolApproach)).map(async entry => ({
+          id: entry.id, content: entry.content, knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length,
+          ...(entry.availability.mode === "situational" ? { condition: entry.availability.condition } : {}),
+          approaches: await Promise.all(entry.approaches.filter(isToolApproach).map(approach =>
+            describeToolApproach(approach.equipmentUuid, approach.useFormId))),
+        }))),
         skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
           information: rows.map(({ entry, approach }) => ({ id: entry.id, content: entry.content,
             difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
@@ -85,6 +95,9 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
             ...(approach.difficultyOverride ? { difficultyOverride: { ...approach.difficultyOverride } } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
     : { ...base, audience: "player",
+      tools: actor ? investigationToolInventory(actor) : [],
+      discoveries: information.filter(entry => known.has(entry.id) && !entry.approaches.some(isSkillApproach))
+        .map(entry => ({ content: entry.content })),
       skills: [...playerGroups.values()].map(rows => ({ key: rows[0].approach.skill, name: skillLabel(rows[0].approach.skill),
         ...(rows[0].approach.skill === "aptitude" ? { specialization: rows[0].approach.specialization } : {}),
         publicDifficulties: [...new Set(rows.filter(({ entry, approach }) =>
@@ -95,5 +108,9 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
           ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
           content: entry.content,
         })) })) };
+  const final = authorized(request);
+  if ("error" in final) return final;
+  if (final.item !== latest.item || final.user.isGM !== (view.audience === "gm") || final.actor !== actor)
+    return { error: "forbidden" };
   return { view };
 }

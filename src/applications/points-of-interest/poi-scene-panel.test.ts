@@ -48,6 +48,108 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
+describe("POI Scene panel search", () => {
+  function searchRoot(value = "") {
+    const search = Object.assign(new EventTarget(), { value });
+    const rows = ["Item.idol", "Item.wardrobe"].map(itemUuid => ({ dataset: { itemUuid }, hidden: false }));
+    const noMatches = { hidden: true };
+    const empty = { hidden: true };
+    const root = new EventTarget() as HTMLElement;
+    Object.defineProperties(root, {
+      contains: { value: () => false },
+      classList: { value: { remove: () => undefined, toggle: () => undefined } },
+      querySelector: { value: (selector: string) => selector === 'input[name="search"]' ? search
+        : selector === "[data-poi-search-empty]" ? noMatches : empty },
+      querySelectorAll: { value: () => rows },
+    });
+    const type = (value: string) => { search.value = value; search.dispatchEvent(new Event("input")); };
+    return { root, rows, noMatches, empty, type };
+  }
+
+  it.each([true, false])("filters locally and preserves expansion through clearing and rerender (GM=%s)", async isGM => {
+    const { PoiScenePanel } = await import("./poi-scene-panel");
+    (game.user as { isGM: boolean }).isGM = isGM;
+    vi.stubGlobal("document", new EventTarget());
+    const entries = [
+      { itemUuid: "Item.idol", name: "Ídolo", img: "", linkedRegionIds: [] },
+      { itemUuid: "Item.wardrobe", name: "Armário", img: "", linkedRegionIds: [] },
+    ];
+    requestScene.mockResolvedValue({ entries });
+    const panel = new PoiScenePanel("scene");
+    const view = panel as unknown as {
+      _prepareContext(): Promise<{ entries: Array<{ itemUuid: string; expanded: boolean; matchesSearch: boolean }>; search: string; empty: boolean; noSearchResults: boolean }>;
+      _attachPartListeners(part: string, root: HTMLElement, options: object): void;
+      _onClose(options: object): void;
+    };
+    await panel.refresh();
+    if (!isGM) {
+      const target = { closest: () => ({ dataset: { itemUuid: "Item.idol" } }) } as unknown as HTMLElement;
+      await PoiScenePanel.DEFAULT_OPTIONS.actions.toggle.call(panel, {} as PointerEvent, target);
+    }
+    const first = searchRoot();
+    view._attachPartListeners("main", first.root, {});
+    vi.mocked(panel.render).mockClear();
+    first.type("IDOLO");
+    expect(first.rows.map(row => row.hidden)).toEqual([false, true]);
+    expect(first.noMatches.hidden).toBe(true);
+    expect(requestScene).toHaveBeenCalledTimes(1);
+    expect(panel.render).not.toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
+    const searched = await view._prepareContext();
+    expect(searched.search).toBe("IDOLO");
+    expect(searched.entries.map(entry => entry.matchesSearch)).toEqual([true, false]);
+    expect(searched.entries.map(entry => entry.itemUuid)).toEqual(entries.map(entry => entry.itemUuid));
+    await panel.refresh();
+    expect(await view._prepareContext()).toMatchObject({ search: "IDOLO" });
+    first.type("sem resultado");
+    expect(first.rows.every(row => row.hidden)).toBe(true);
+    expect(first.noMatches.hidden).toBe(false);
+    expect(first.empty.hidden).toBe(true);
+    expect(await view._prepareContext()).toMatchObject({ noSearchResults: true, empty: false });
+    const second = searchRoot("sem resultado");
+    view._attachPartListeners("main", second.root, {});
+    first.type("stale input");
+    expect((await view._prepareContext()).search).toBe("sem resultado");
+    second.type("");
+    expect(second.rows.every(row => !row.hidden)).toBe(true);
+    expect(second.noMatches.hidden).toBe(true);
+    expect(second.empty.hidden).toBe(true);
+    const restored = await view._prepareContext();
+    expect(restored.entries[0].expanded).toBe(!isGM);
+    expect(restored.entries.every(entry => entry.matchesSearch)).toBe(true);
+    view._onClose({});
+    second.type("closed input");
+    expect((await view._prepareContext()).search).toBe("");
+  });
+
+  it("distinguishes an empty Scene from an empty search and labels the search field", async () => {
+    const { PoiScenePanel } = await import("./poi-scene-panel");
+    (game.user as { isGM: boolean }).isGM = false;
+    const panel = new PoiScenePanel("scene");
+    const view = panel as unknown as {
+      _prepareContext(): Promise<object>;
+      _attachPartListeners(part: string, root: HTMLElement, options: object): void;
+      _onClose(options: object): void;
+    };
+    await panel.refresh();
+    expect(await view._prepareContext()).toMatchObject({ empty: true, noSearchResults: false });
+    const search = searchRoot();
+    view._attachPartListeners("main", search.root, {});
+    search.type("idolo");
+    expect(await view._prepareContext()).toMatchObject({ empty: false, noSearchResults: true });
+    search.type("");
+    expect(search.empty.hidden).toBe(false);
+    view._onClose({});
+    const template = await readFile(fileURLToPath(new URL("../../../templates/points-of-interest/poi-scene-panel.hbs", import.meta.url)), "utf8");
+    expect(template).toMatch(/type="search" name="search"[^>]*placeholder=[^>]*aria-label=/su);
+    expect(template.indexOf('name="search"')).toBeLessThan(template.indexOf('class="op2-poi-scene-panel__list"'));
+    expect(template).toContain('data-poi-search-empty role="status"');
+    const translations = JSON.parse(await readFile(fileURLToPath(new URL("../../../lang/pt-BR.json", import.meta.url)), "utf8"));
+    expect(translations.ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Search).toBe("Pesquisar ponto de interesse...");
+    expect(translations.ORDEMPARANORMAL2.PointOfInterest.ScenePanel.NoMatches).not.toBe(translations.ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Empty);
+  });
+});
+
 describe("POI Scene panel add entry points", () => {
   it("the existing Add action opens the picker and adds its selection", async () => {
     const { PoiScenePanel } = await import("./poi-scene-panel");
@@ -65,6 +167,7 @@ describe("POI Scene panel add entry points", () => {
     Object.defineProperties(root, {
       classList: { value: { remove: () => undefined, toggle: () => undefined } },
       contains: { value: () => false },
+      querySelector: { value: () => null },
     });
     const document = new EventTarget();
     vi.stubGlobal("document", document);
@@ -96,6 +199,7 @@ describe("POI Scene panel add entry points", () => {
       getBoundingClientRect: () => ({ right: 10, bottom: 20 }) };
     const root = new EventTarget() as HTMLElement;
     Object.defineProperty(root, "contains", { value: (target: unknown) => target === row });
+    Object.defineProperty(root, "querySelector", { value: () => null });
     (panel as unknown as { _attachPartListeners(part: string, root: HTMLElement, options: object): void })
       ._attachPartListeners("main", root, {});
     const click = new Event("click") as MouseEvent;

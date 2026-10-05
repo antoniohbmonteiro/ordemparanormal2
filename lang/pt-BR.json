@@ -432,6 +432,8 @@
       },
       "ScenePanel": {
         "Title": "Pontos de Interesse",
+        "Search": "Pesquisar ponto de interesse...",
+        "NoMatches": "Nenhum ponto de interesse encontrado para esta pesquisa.",
         "InScene": "Nesta cena:",
         "Add": "Adicionar ponto de interesse",
         "Actions": "Ações do ponto de interesse",

@@ -9,7 +9,7 @@ import { openPoiUserRevealDialog } from "./poi-user-reveal-dialog";
 import { openInvestigationApplication } from "./investigation-application";
 import { openInvestigationControl } from "./investigation-control";
 import { listenPoiSceneMenuTriggers, poiSceneMenuEntries, showPoiSceneMenu, type PoiSceneMenuAction, type PoiMenuAnchor } from "./poi-scene-panel-menu";
-import { poiSceneRowView } from "./poi-scene-panel-view";
+import { filterPoiSceneEntries, poiSceneRowView } from "./poi-scene-panel-view";
 import { listenPoiScenePanelDrop } from "./poi-scene-panel-drop";
 import { resolveSceneInvestigationAgent } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
 import { requestInvestigationAction } from "../../adapters/foundry/points-of-interest/investigation-requests";
@@ -42,6 +42,8 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
   #stop: (() => void) | null = null;
   #stopMenuTriggers: (() => void) | null = null;
   #stopDrop: (() => void) | null = null;
+  #stopSearch: (() => void) | null = null;
+  #search = "";
   #closeMenu: (() => void) | null = null;
   #revision = 0;
   #expanded = new Set<string>();
@@ -65,6 +67,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
       queueMicrotask(() => { void this.refresh(); });
     }
     const projected = this.#result && "entries" in this.#result ? this.#result.entries : [];
+    const matches = new Set(filterPoiSceneEntries(projected, this.#search).map(entry => entry.itemUuid));
     const allowed = new Map(projected.map(entry => [entry.itemUuid, entry.name]));
     const entries = projected.map(entry => {
       let clueIndex = 0;
@@ -72,6 +75,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
       const count = isGM ? (scene ? associatedRegionIds(scene, entry.itemUuid).length : 0)
         : countPoiVisibleLocations(this.#sceneId, entry.itemUuid, allowed);
       return { ...poiSceneRowView(entry, item ? readPoiVisibility(item) : null, count, key => game.i18n.localize(key), isGM ? "gm" : "player"),
+        matchesSearch: matches.has(entry.itemUuid),
         expanded: this.#expanded.has(entry.itemUuid),
         knownGroups: entry.knownGroups?.map(group => ({ ...group, label: isSkillKey(group.skill) ? skillLabel(group.skill) : group.skill,
           clues: group.clues.map(clue => ({ ...clue, index: clueIndex++ })) })) ?? [] };
@@ -82,6 +86,9 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
       loading: this.#result === null,
       error: this.#result && "error" in this.#result,
       entries,
+      search: this.#search,
+      noSearchResults: !!this.#search.trim() && matches.size === 0,
+      empty: !this.#search.trim() && entries.length === 0,
       count: entries.length,
       countLabel: game.i18n.localize(`${ROOT}.${entries.length === 1 ? "CountOne" : "CountMany"}`),
       runActive: !!(this.#result && "entries" in this.#result && this.#result.runId),
@@ -96,12 +103,34 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#closeMenu?.();
     this.#stopMenuTriggers?.();
     this.#stopDrop?.();
+    this.#stopSearch?.();
     if (partId !== "main") return;
+    const search = element.querySelector<HTMLInputElement>('input[name="search"]');
+    if (search) {
+      const onInput = () => {
+        this.#search = search.value;
+        this.#applySearch(element);
+      };
+      search.addEventListener("input", onInput);
+      this.#stopSearch = () => search.removeEventListener("input", onInput);
+    }
     this.#stopMenuTriggers = listenPoiSceneMenuTriggers(element, (uuid, anchor) => this.#showMenu(uuid, anchor));
     if (!game.user?.isGM) return;
     this.#stopDrop = listenPoiScenePanelDrop(element, this.#sceneId,
       uuid => this.#addItem(uuid),
       () => ui.notifications.info(game.i18n.localize(`${ROOT}.AlreadyInScene`)));
+  }
+
+  #applySearch(element: HTMLElement): void {
+    const entries = this.#result && "entries" in this.#result ? this.#result.entries : [];
+    const matches = new Set(filterPoiSceneEntries(entries, this.#search).map(entry => entry.itemUuid));
+    for (const row of element.querySelectorAll<HTMLElement>(".op2-poi-scene-panel__row")) {
+      row.hidden = !matches.has(row.dataset.itemUuid ?? "");
+    }
+    const noMatches = element.querySelector<HTMLElement>("[data-poi-search-empty]");
+    if (noMatches) noMatches.hidden = !this.#search.trim() || matches.size > 0;
+    const empty = element.querySelector<HTMLElement>("[data-poi-scene-empty]");
+    if (empty) empty.hidden = !!this.#search.trim() || entries.length > 0;
   }
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
@@ -300,6 +329,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this.#updateUserHook !== null) Hooks.off("updateUser", this.#updateUserHook);
     this.#stopMenuTriggers?.();
     this.#stopDrop?.();
+    this.#stopSearch?.();
     this.#closeMenu?.();
     open.delete(this.#sceneId);
     super._onClose(options);

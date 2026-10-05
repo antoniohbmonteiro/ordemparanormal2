@@ -186,6 +186,7 @@
 .op2-poi-scene-panel__menu-trigger:hover { color: var(--op2-text); background: var(--op2-input-bg); }
 .op2-poi-scene-panel__footer { margin-top: auto; color: var(--op2-text-muted); font-size: .75rem; text-align: right; }
 .op2-poi-scene-panel button:focus-visible,
+.op2-poi-scene-panel input:focus-visible,
 .op2-poi-picker button:focus-visible,
 .op2-poi-picker input:focus-visible { outline: 2px solid var(--op2-focus); outline-offset: 2px; }
 
@@ -245,7 +246,8 @@
 
 .op2-poi-picker { display: grid; gap: 12px; padding: 16px; color: var(--op2-text); }
 .op2-poi-picker__search { display: grid; gap: 5px; color: var(--op2-text-muted); font-size: .8rem; }
-.op2-poi-picker__search input {
+.op2-poi-picker__search input,
+.op2-poi-scene-panel__search {
   width: 100%;
   height: 34px;
   padding: 6px 10px;
@@ -254,6 +256,7 @@
   background: var(--op2-input-bg);
   color: var(--op2-text);
 }
+.op2-poi-scene-panel__list > [hidden] { display: none; }
 .op2-poi-picker__list {
   display: grid;
   max-height: min(350px, 45dvh);

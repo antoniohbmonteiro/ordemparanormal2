@@ -8,6 +8,12 @@ export interface PoiSceneRowView extends PoiSceneEntry {
   readonly locationCount: number;
 }
 
+export function filterPoiSceneEntries<T extends { readonly name: string }>(entries: readonly T[], query: string): readonly T[] {
+  const normalize = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR");
+  const search = normalize(query.trim());
+  return entries.filter(entry => normalize(entry.name).includes(search));
+}
+
 export function poiSceneRowView(
   entry: PoiSceneEntry,
   visibility: PoiVisibility | null,

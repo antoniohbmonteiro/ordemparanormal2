@@ -1,10 +1,28 @@
 import { expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { poiSceneRowView } from "./poi-scene-panel-view";
+import { filterPoiSceneEntries, poiSceneRowView } from "./poi-scene-panel-view";
 
 const entry = { itemUuid: "Item.poi", name: "Armário", img: "", linkedRegionIds: ["region"] };
 const localize = (key: string) => key.split(".").at(-1)!;
+
+it("searches only names without case or accents, preserving entries and order", () => {
+  const entries = [
+    { ...entry, name: "Ídolo de Pedra" },
+    { ...entry, itemUuid: "Item.idolo", name: "Armário", knownGroups: [{ text: "Ídolo" }] },
+    { ...entry, itemUuid: "Item.second", name: "Outro ídolo" },
+  ];
+  const original = structuredClone(entries);
+  const filtered = filterPoiSceneEntries(entries, "  IDOLO  ");
+  expect(filtered).toEqual([entries[0], entries[2]]);
+  expect(filtered[0]).toBe(entries[0]);
+  expect(filterPoiSceneEntries(entries, "ÍDOLO")).toEqual(filtered);
+  expect(filterPoiSceneEntries(entries, "arma\u0301rio")).toEqual([entries[1]]);
+  expect(filterPoiSceneEntries(entries, "inexistente")).toEqual([]);
+  expect(filterPoiSceneEntries(entries, "")).toEqual(entries);
+  expect(filterPoiSceneEntries(entries, "   ")).toEqual(entries);
+  expect(entries).toEqual(original);
+});
 
 it("shows the requested visibility and spatial summaries", () => {
   const hidden = poiSceneRowView(entry, { mode: "hidden", users: [], notified: [] }, 0, localize);

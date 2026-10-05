@@ -21,9 +21,12 @@
 
   {{#unless loading}}
   {{#unless error}}
+    <input type="search" name="search" class="op2-poi-scene-panel__search" value="{{search}}"
+      placeholder="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Search'}}"
+      aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Search'}}" />
     <ul class="op2-poi-scene-panel__list">
       {{#each entries}}
-        <li class="op2-poi-scene-panel__row{{#if expanded}} is-expanded{{/if}}" data-item-uuid="{{itemUuid}}">
+        <li class="op2-poi-scene-panel__row{{#if expanded}} is-expanded{{/if}}" data-item-uuid="{{itemUuid}}" {{#unless matchesSearch}}hidden{{/unless}}>
           <button type="button" class="op2-poi-scene-panel__image" data-action="open" aria-label="{{name}}">
             {{#if img}}<img src="{{img}}" alt="" />{{else}}<i class="fa-solid fa-location-dot"></i>{{/if}}
           </button>
@@ -59,9 +62,9 @@
             {{/if}}
           {{/if}}
         </li>
-      {{else}}
-        <li class="op2-poi-scene-panel__empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Empty"}}</li>
       {{/each}}
+      <li class="op2-poi-scene-panel__empty" data-poi-scene-empty {{#unless empty}}hidden{{/unless}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Empty"}}</li>
+      <li class="op2-poi-scene-panel__empty" data-poi-search-empty role="status" {{#unless noSearchResults}}hidden{{/unless}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.NoMatches"}}</li>
     </ul>
     {{#unless isGM}}{{#if narrativeClues}}
       <section class="op2-poi-scene-panel__narrative" data-item-uuid="narrative">

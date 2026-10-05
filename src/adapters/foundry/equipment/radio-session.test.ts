@@ -99,6 +99,31 @@ async function solved(f: ReturnType<typeof fixture>, initial: RadioView) {
   return view;
 }
 describe("authoritative radio sessions", () => {
+  it("finishes with nonmanual zero when its only automatic answer is already known", async () => {
+    const f = fixture();
+    f.rawItem.system.information = f.rawItem.system.information.slice(0, 1);
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one"] }] };
+    const view = await solved(f, await started(f));
+    const finish = f.command(view, "finish");
+    const expected = { terminal: { status: "success", newCount: 0, manual: false } };
+    expect(await adapter.resolveRadioCommand(finish, f.requester)).toMatchObject(expected);
+    expect(await adapter.resolveRadioCommand(finish, f.requester)).toMatchObject(expected);
+    expect(f.rawItem.update).not.toHaveBeenCalled();
+    expect(mocks.roll).toHaveBeenCalledOnce();
+    expect(mocks.result).toHaveBeenCalledOnce();
+  });
+  it("retains zero with pending manual resolution after a partial conclusion publication", async () => {
+    const f = fixture();
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one", "two"] }] };
+    const view = await solved(f, await started(f));
+    const finish = f.command(view, "finish");
+    mocks.result.mockRejectedValueOnce(new Error("Lost conclusion"));
+    expect(await adapter.resolveRadioCommand(finish, f.requester)).toEqual({ status: "partial", stage: "publication" });
+    expect(await adapter.resolveRadioCommand(finish, f.requester))
+      .toMatchObject({ terminal: { status: "success", newCount: 0, manual: true } });
+    expect(f.rawItem.update).not.toHaveBeenCalled();
+    expect(mocks.roll).toHaveBeenCalledOnce();
+  });
   it("concludes an imported Computer puzzle through the existing Check, Knowledge and blind-safe protocol", async () => {
     const f = fixture();
     const preset = syntheticToolPresets().find(preset => preset.id === "actTwo.map.24")!;

@@ -82,6 +82,33 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("authoritative laboratory sessions", () => {
+  it("finishes with nonmanual zero when its only automatic answer is already known", async () => {
+    const f = fixture(true, false);
+    f.rawItem.system.information = f.rawItem.system.information.slice(0, 1);
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one"] }] };
+    const prepared = asView(await adapter.prepareLaboratory(f.intent, f.requester));
+    const started = asView(await adapter.resolveLaboratoryCommand(f.command(prepared, "start"), f.requester));
+    const finish = f.command(started, "finish");
+    const expected = { terminal: { status: "success", newCount: 0, manual: false } };
+    expect(await adapter.resolveLaboratoryCommand(finish, f.requester)).toMatchObject(expected);
+    expect(await adapter.resolveLaboratoryCommand(finish, f.requester)).toMatchObject(expected);
+    expect(f.rawItem.update).not.toHaveBeenCalled();
+    expect(mocks.roll).toHaveBeenCalledTimes(4);
+    expect(mocks.result).toHaveBeenCalledOnce();
+  });
+  it("retains zero with pending manual resolution after a partial conclusion publication", async () => {
+    const f = fixture(true, false);
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one", "two"] }] };
+    const prepared = asView(await adapter.prepareLaboratory(f.intent, f.requester));
+    const started = asView(await adapter.resolveLaboratoryCommand(f.command(prepared, "start"), f.requester));
+    const finish = f.command(started, "finish");
+    mocks.result.mockRejectedValueOnce(new Error("Lost conclusion"));
+    expect(await adapter.resolveLaboratoryCommand(finish, f.requester)).toEqual({ status: "partial", stage: "publication" });
+    expect(await adapter.resolveLaboratoryCommand(finish, f.requester))
+      .toMatchObject({ terminal: { status: "success", newCount: 0, manual: true } });
+    expect(f.rawItem.update).not.toHaveBeenCalled();
+    expect(mocks.roll).toHaveBeenCalledTimes(4);
+  });
   it("uses the imported knife interaction and leaves the three-player blood response manual", async () => {
     const f = fixture(true, false);
     const preset = syntheticToolPresets().find(preset => preset.id === "actTwo.map.06")!;

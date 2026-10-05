@@ -101,7 +101,7 @@ export async function prepareLaboratory(input: EquipmentUseIntent & { readonly c
       else if (!owner || !currentResolved(occupied, owner)) {
         const committed = recoverToolKnowledgeCount(occupied.context, occupied.resolved, occupied.knowledge);
         if (occupied.state === "success" && committed !== undefined) {
-          occupied.terminal = { status: "success", newCount: committed, manual: false };
+          occupied.terminal = { status: "success", newCount: committed, manual: occupied.knowledge.manual ?? false };
           await publishTerminal(occupied);
         } else await invalidate(occupied);
       }
@@ -285,7 +285,7 @@ async function finish(session: Session, requester: foundry.documents.User): Prom
     try {
       const result = resolved ? await grantToolKnowledge(session.context, resolved, requester,
         { length: session.length, informationIds: session.informationIds }, session.knowledge)
-        : { newCount: session.knowledge.newCount!, manual: false };
+        : { newCount: session.knowledge.newCount!, manual: session.knowledge.manual ?? false };
       session.terminal = { status: "success", ...result };
     } catch { return { status: "partial", stage: "discovery" }; }
   } else session.terminal = { status: "success", newCount: 0, manual: false };

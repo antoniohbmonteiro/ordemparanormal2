@@ -14,6 +14,9 @@ import { resolvePoiScene } from "./poi-runtime-queries";
 import { useInvestigationTool } from "../../../features/points-of-interest/use-investigation-tool";
 import { syntheticToolPresets } from "../../../qa/playtest-alpha-tools-fixture";
 import { ACT_TWO_TOOL_SOURCES } from "../../../config/adventure-poi-sources/playtest-alpha-act-two-tools";
+import { grantToolKnowledge, type ToolKnowledgeReceipt } from "./poi-tool-context";
+import { ownedEquipmentForUser } from "../equipment/execute-equipment-use";
+import { readEquipmentUseForms } from "../../../core/equipment/equipment-use";
 
 let sequence = 0;
 function fixture(active = true) {
@@ -131,7 +134,7 @@ it.each(["already-known", "no-tool-approach", "situational-only"])(
     if (condition === "situational-only") system.information = system.information.filter(entry => entry.id === "conditional");
     const before = readPoiKnowledge(f.item);
     const result = await resolvePoiToolUse(f.intent, f.requester);
-    expect(result).toEqual({ status: "success", newCount: 0, manual: true });
+    expect(result).toEqual({ status: "success", newCount: 0, manual: condition !== "no-tool-approach" });
     expect(readPoiKnowledge(f.item)).toEqual(before);
     expect(readPoiDiscoveries(f.item)).toEqual([]);
     expect(f.equipment.system.uses.value).toBe(2);
@@ -146,11 +149,39 @@ it.each(["no-match", "hidden", "removed", "stale-run", "no-origin"])(
     if (condition === "removed") f.sceneFlags.pointOfInterestItems = [];
     if (condition === "stale-run") f.intent = { ...f.intent, context: { ...f.intent.context, runId: "old" } };
     if (condition === "no-origin") f.equipment._stats.duplicateSource = "";
-    expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "success", newCount: 0, manual: true });
+    expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "success", newCount: 0, manual: condition !== "no-match" });
     expect(f.equipment.system.uses.value).toBe(2);
     expect(readPoiKnowledge(f.item)).toEqual([]);
     expect(publish).toHaveBeenCalledOnce();
   });
+
+it.each(["no-manual-answer", "manual-already-known"])(
+  "returns nonmanual zero for a known standard tool with %s", async condition => {
+    const f = fixture();
+    const system = f.item.system as unknown as { information: { id: string }[] };
+    if (condition === "no-manual-answer") system.information = system.information.filter(entry => entry.id === "one");
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one", "two", "conditional"] }] };
+    const result = { status: "success", newCount: 0, manual: false };
+    expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual(result);
+    expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual(result);
+    expect(f.item.update).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledOnce();
+  });
+
+it("preserves pending manual resolution in the Knowledge receipt without leaking its condition", async () => {
+  const f = fixture();
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one", "two"] }] };
+  const owned = ownedEquipmentForUser(f.intent, f.requester)!;
+  const resolved = { ...owned, use: readEquipmentUseForms(f.equipment.system.useForms)![0] };
+  const receipt: ToolKnowledgeReceipt = {};
+  expect(await grantToolKnowledge(f.intent.context, resolved, f.requester, undefined, receipt))
+    .toEqual({ newCount: 0, manual: true });
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["one", "two", "conditional"] }] };
+  const replay = await grantToolKnowledge(f.intent.context, resolved, f.requester, undefined, receipt);
+  expect(replay).toEqual({ newCount: 0, manual: true });
+  expect(JSON.stringify(replay)).not.toMatch(/conditional|Chave|approaches/);
+  expect(f.item.update).not.toHaveBeenCalled();
+});
 it("rejects a requester without OWNER and a forged operation context without leaking private answers", async () => {
   const f = fixture();
   expect(await resolvePoiToolUse(f.intent, f.second)).toEqual({ status: "forbidden" });

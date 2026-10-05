@@ -181,7 +181,7 @@ async function publishTerminal(session: Session): Promise<RadioResponse> {
 async function invalidate(session: Session): Promise<RadioResponse> {
   const committed = recoverToolKnowledgeCount(session.input.context, session.resolved, session.knowledge);
   if (session.state === "success" && committed !== undefined) {
-    session.terminal = { status: "success", newCount: committed, manual: false };
+    session.terminal = { status: "success", newCount: committed, manual: session.knowledge.manual ?? false };
   } else {
     session.state = "invalidated"; session.revision++; session.terminal = { status: "invalid" };
   }
@@ -241,7 +241,7 @@ async function finish(session: Session, requester: foundry.documents.User): Prom
     try {
       const result = resolved ? await grantToolKnowledge(session.input.context, resolved, requester,
         { radioConfig: session.config, informationIds: session.informationIds }, session.knowledge)
-        : { newCount: session.knowledge.newCount!, manual: false };
+        : { newCount: session.knowledge.newCount!, manual: session.knowledge.manual ?? false };
       session.terminal = { status: "success", ...result };
     } catch { return { status: "partial", stage: "discovery" }; }
   } else session.terminal = { status: "success", newCount: 0, manual: false };

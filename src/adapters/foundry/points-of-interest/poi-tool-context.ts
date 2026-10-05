@@ -1,5 +1,5 @@
 import type { RadioPuzzleConfig } from "../../../core/equipment/radio-puzzle";
-import { radioInformationIds, toolInformationIds } from "../../../core/investigation/resolve-information";
+import { hasPendingManualToolInformation, radioInformationIds, toolInformationIds } from "../../../core/investigation/resolve-information";
 import { isToolApproach, isPointOfInterestInformationList, isLaboratoryMechanicConfig,
   readPointOfInterestInformation, copyToolMechanicConfig, toolMechanicSignature } from "../../../documents/item/point-of-interest-data";
 import { isRadioPuzzleConfig } from "../../../core/equipment/radio-puzzle";
@@ -89,7 +89,7 @@ export function radioInteraction(context: PoiToolContext, resolved: ResolvedEqui
   const result = classifyRadioInteraction(context, resolved, requester);
   return result.status === "ready" ? result.interaction : null;
 }
-export interface ToolKnowledgeReceipt { ids?: readonly string[]; newCount?: number }
+export interface ToolKnowledgeReceipt { ids?: readonly string[]; newCount?: number; manual?: boolean }
 export function recoverToolKnowledgeCount(context: PoiToolContext, resolved: ResolvedEquipmentUse,
   receipt: ToolKnowledgeReceipt): number | undefined {
   if (receipt.newCount !== undefined) return receipt.newCount;
@@ -116,7 +116,7 @@ export async function grantToolKnowledge(context: PoiToolContext, resolved: Reso
       throw new Error("Tool challenge configuration changed.");
     if (receipt?.newCount !== undefined) {
       await broadcastPoiInvalidation();
-      return { newCount: receipt.newCount, manual: false };
+      return { newCount: receipt.newCount, manual: receipt.manual ?? false };
     }
     const knowledge = readPoiKnowledge(item).map(entry => ({ actorUuid: entry.actorUuid, informationIds: [...entry.informationIds] }));
     const entry = knowledge.find(candidate => candidate.actorUuid === actor.uuid);
@@ -133,10 +133,13 @@ export async function grantToolKnowledge(context: PoiToolContext, resolved: Reso
       : toolInformationIds(currentInformation, known, sourceUuid, use.id, challenge && "length" in challenge ? challenge.length : undefined))
       .filter(id => !challenge || challenge.informationIds.includes(id));
     if (!ids.length) {
-      if (receipt) receipt.newCount = 0;
-      return { newCount: 0, manual: true };
+      const config = challenge && ("radioConfig" in challenge ? challenge.radioConfig
+        : { type: "laboratory" as const, sequenceLength: challenge.length });
+      const manual = hasPendingManualToolInformation(currentInformation, known, sourceUuid, use.id, config);
+      if (receipt) { receipt.newCount = 0; receipt.manual = manual; }
+      return { newCount: 0, manual };
     }
-    if (receipt) receipt.ids = ids;
+    if (receipt) { receipt.ids = ids; receipt.manual = false; }
     if (entry) entry.informationIds.push(...ids);
     else knowledge.push({ actorUuid: actor.uuid, informationIds: [...ids] });
     const update: Record<string, unknown> = {

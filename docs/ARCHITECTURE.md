@@ -458,6 +458,8 @@ Special preparation distinguishes a missing canonical source/form binding from i
 
 Investigation keeps its existing status/refresh and selects positive discovery counts first, manual contextual feedback for zero plus `manual: true`, and the zero-discovery message only for zero plus `manual: false`. The manual branch reuses `equipmentUseFeedback` and the existing Equipment translation. Errors, cancellation and partial failures retain their current distinction.
 
+For zero grants, `grantToolKnowledge` derives `manual` from unknown situational Informations compatible with the actual source/form and mechanic configuration. Known automatic answers alone do not require the GM; neither do already-known or unrelated situational bindings. The pure matching boundary owns that decision, and the Knowledge receipt retains it through retries and minigame conclusion recovery. The explicit special no-binding fallback still returns manual feedback. Investigation only presents the authoritative result, without name/mechanic heuristics.
+
 ### Laboratory use forms
 
 The use-form parser normalizes absent `mechanic` to `standard`; the Equipment DataModel has the same default. A ToolApproach can contain a typed laboratory length (4, 5 or 6), without changing its source/form identity. Native validation rejects conflicting lengths for one pair within a POI. Authoring exposes each form's mechanic, reuses an existing pair's length, and confirms one shared reconfiguration before an atomic Information-array write. Invalid references remain stored. Only the portable laboratory source's existing `analyze` form opts in; existing copies are not recognized by name or migrated.

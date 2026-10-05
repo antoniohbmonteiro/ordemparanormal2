@@ -59,8 +59,6 @@ O Mestre continua selecionando seus próprios arquivos legalmente obtidos. **O s
 - **Não há nova migração de Mundo nesta release.**
 - Cópias de equipamentos já existentes no Inventário não recebem automaticamente as novas formas ou mecânicas das fontes do compêndio; confira suas configurações ao preparar a mesa.
 
-O smoke principal no Foundry foi aprovado pelo usuário, incluindo importação do Ato II, ferramentas padrão, Laboratório, Rádio, respostas manuais e situacionais, consumo, pesquisa e reimportação. Os cenários avançados dos checklists não têm confirmação individual de execução.
-
 O projeto continua **source-available** sob a PolyForm Strict License 1.0.0. Releases públicas até v0.0.22 permanecem sob os termos MIT aplicáveis às cópias já distribuídas.
 
 ## Instalação

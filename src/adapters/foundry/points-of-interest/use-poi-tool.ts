@@ -4,7 +4,7 @@ import { SYSTEM_ID } from "../../../config/system-config";
 import { readEquipmentUseForms } from "../../../core/equipment/equipment-use";
 import type { LaboratoryResponse } from "../../../application/equipment/laboratory-session";
 import { activeEquipmentAuthority, executeEquipmentUse, isEquipmentUseIntent, ownedEquipmentForUser,
-  type EquipmentUseIntent, type ResolvedEquipmentUse } from "../equipment/execute-equipment-use";
+  type EquipmentUseIntent } from "../equipment/execute-equipment-use";
 import { prepareLaboratory } from "../equipment/laboratory-session";
 import { classifyLaboratoryInteraction, classifyRadioInteraction, grantToolKnowledge, isPoiToolContext,
   type PoiToolContext, type ToolKnowledgeReceipt } from "./poi-tool-context";
@@ -14,9 +14,6 @@ export interface PoiToolIntent extends EquipmentUseIntent { readonly context: Po
 export const POI_TOOL_USE_QUERY = `${SYSTEM_ID}.usePoiTool`;
 const receipts = new Map<string, ToolKnowledgeReceipt>();
 const manualOperations = new Map<string, { binding: string; authorityId: string; mechanic: "laboratory" | "radio" }>();
-export const revealToolInformation = (context: PoiToolContext, resolved: ResolvedEquipmentUse,
-  requester: foundry.documents.User) => grantToolKnowledge(context, resolved, requester);
-
 export async function resolvePoiToolUse(input: PoiToolIntent, requester: foundry.documents.User): Promise<LaboratoryResponse | RadioResponse> {
   if (!activeEquipmentAuthority(requester)) return { status: "forbidden" };
   if (!isEquipmentUseIntent(input) || !isPoiToolContext(input.context)) return { status: "invalid" };

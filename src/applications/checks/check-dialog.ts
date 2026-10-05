@@ -2,7 +2,6 @@ import type { AgentCheckChoices } from "../../application/checks/build-agent-che
 import type {
   CheckExtraDieInput,
   CheckInput,
-  CheckStepAdjustments,
 } from "../../core/checks/check";
 import type { AttributeKey } from "../../core/actors/agent-attributes";
 import {

@@ -1,6 +1,6 @@
 # Laboratório Portátil — smoke test manual
 
-**Status: PENDENTE.** Executar pessoalmente no Foundry v14 com GM e jogador em clientes separados. O Codex não abriu Foundry nem executou este checklist. Os testes nativos automatizados carregam somente o módulo common instalado.
+**Status: smoke principal APROVADO pelo usuário**, conforme [o registro do Ato II](ACT_TWO_TOOLS_MANUAL_CHECKLIST.md). Os cenários detalhados abaixo permanecem sem confirmação individual. O Codex não abriu Foundry nem executou este checklist. Os testes nativos automatizados carregam somente o módulo common instalado.
 
 ## Preparação
 
@@ -45,7 +45,7 @@
 ## Knowledge, feedback e histórico — GM e jogador
 
 - [ ] Em sucesso com duas Informations desconhecidas, conferir `2 novas informações descobertas.` no status existente. A Information mista aparece na tabela; a tool-only aparece em **DESCOBERTAS**; usos e demais projeções atualizam juntos.
-- [ ] Revelar uma das pistas previamente e repetir sucesso: `1 nova informação descoberta.`. Repetir quando todas já conhecidas: `Nenhuma informação nova foi descoberta.`.
+- [ ] Revelar uma das pistas previamente e repetir sucesso: `1 nova informação descoberta.`. Repetir quando todas já conhecidas e sem resposta situacional compatível pendente: `Nenhuma informação nova foi descoberta.`. Se ainda houver resposta situacional compatível desconhecida, esperar `Equipamento utilizado. A resposta contextual pode ser resolvida pelo mestre.`.
 - [ ] Finalizar sequência quebrada: zero descobertas. Situacional continua desconhecida até revelação manual; não deve aparecer motivo técnico de configuração ou condição privada no jogador.
 - [ ] Somente A aprende. B e outros Agents não recebem Knowledge; compartilhar uma pista pelo fluxo existente concede só ao receptor escolhido.
 - [ ] Encerrar o run antes de preparar outra análise e testar sucesso com contexto sem run: apenas Knowledge, sem Discovery daquele run. Encerrar um run durante análise existente invalida a sessão e não concede novas pistas.
@@ -66,4 +66,4 @@
 - [ ] Trocar GM ativo ou reiniciar durante uma tentativa inconclusiva: exigir conferência manual; nenhuma reconstrução pelo cliente. Reconexão com a mesma autoridade consulta a sessão existente.
 - [ ] Sem GM ativo, Laboratório bloqueado. Ferramentas padrão mantêm fallback local autorizado, sem acessar POI privado.
 
-Registrar data, versão instalada, casos executados e observações antes de mudar o status de **PENDENTE**.
+Registrar data, versão instalada, casos executados e observações antes de aprovar individualmente os cenários detalhados pendentes.

@@ -225,10 +225,6 @@ export function releaseInvestigationApplication(itemUuid: string): void {
   open.delete(investigationApplicationKey(itemUuid));
 }
 
-export function refreshInvestigationApplications(): void {
-  for (const app of open.values()) void app.refresh();
-}
-
 export class InvestigationApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static override DEFAULT_OPTIONS = {
     actions: {

@@ -1,6 +1,6 @@
 # Rádio Modificado — smoke test manual
 
-**Status: PENDENTE.** Checklist para execução pessoal do usuário no Foundry v14, com GM e jogador em clientes separados. O Codex não abriu Foundry nem executou o smoke. Os testes nativos automatizados apenas carregam o módulo common instalado.
+**Status: smoke principal APROVADO pelo usuário**, conforme [o registro do Ato II](ACT_TWO_TOOLS_MANUAL_CHECKLIST.md). Os cenários detalhados abaixo permanecem sem confirmação individual. O Codex não abriu Foundry nem executou o smoke. Os testes nativos automatizados apenas carregam o módulo common instalado.
 
 ## Preparação
 
@@ -55,8 +55,8 @@
 ## Knowledge, feedback e histórico
 
 - [ ] Acertar com uma e várias Informations elegíveis: A aprende, B e demais Agents permanecem isolados. Conferir status existente `1 nova informação descoberta.` / `N novas informações descobertas.` e atualização de perícias, DESCOBERTAS, usos e projeções.
-- [ ] Acertar quando todas já são conhecidas ou só há vínculos Situacionais: `Nenhuma informação nova foi descoberta.`; não revelar condição privada. Errar também produz zero descobertas.
-- [ ] Sem configuração apropriada: impedir início antes do uso. Padrão no embedded nunca revela vínculo Rádio automaticamente.
+- [ ] Acertar quando todas já são conhecidas e não há resposta situacional compatível pendente: `Nenhuma informação nova foi descoberta.`. Se ainda houver vínculo situacional compatível desconhecido, esperar `Equipamento utilizado. A resposta contextual pode ser resolvida pelo mestre.`, sem revelar condição privada. Errar produz zero descobertas.
+- [ ] Vínculo especial presente com configuração ausente, inválida ou conflitante: impedir início antes do uso. Sem vínculo especial no contexto válido, esperar uso contextual manual sem Check/puzzle, como no Ídolo. Padrão no embedded nunca revela vínculo Rádio automaticamente.
 - [ ] Compartilhar pelo fluxo atual: receptor aprende somente o que foi compartilhado; outros permanecem isolados. Situacionais continuam com Revelar manual do GM.
 - [ ] Preparar sem run ativo: sucesso escreve Knowledge sem Discovery. Encerrar/trocar o run durante a tentativa invalida; não conceder novas pistas.
 - [ ] Adicionar Information durante a tentativa: não entra na concessão congelada. Renomear Item/forma não altera dados; editar puzzle, origem, vínculo ou permissão invalida antes da concessão.
@@ -80,4 +80,4 @@
 - [ ] Testar frases longas, redimensionamento e scroll; controles não ficam inacessíveis. Confirmar Escape/fechamento nativo e ausência de listeners/janelas órfãs.
 - [ ] Repetir Laboratório já validado (início/rerrolagem por posição/cancelamento/sucesso) e Equipment Padrão/Inventário; conferir Examinar, Aptidão, reveal manual e compartilhamento sem regressão.
 
-Registrar versão/build, ambiente, clientes, passos executados e evidências. Manter **PENDENTE** até a execução pessoal e aprovação do usuário.
+Registrar versão/build, ambiente, clientes, passos executados e evidências antes de aprovar individualmente os cenários detalhados pendentes.

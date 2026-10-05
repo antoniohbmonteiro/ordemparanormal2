@@ -1,6 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import Handlebars from "handlebars";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SKILL_DEFINITIONS } from "../../config/skills";
@@ -546,7 +544,7 @@ describe("Agent Sheet Inventory actions and menus", () => {
   });
 
   it("deletes the selected Item after confirmation outside Edit Mode", async () => {
-    const { sheet, actor, rows, attach } = setup();
+    const { actor, rows, attach } = setup();
     attach();
     await inventoryMenu().entries[1]!.onClick(pointer(rows[0]!.main), rows[0]!.main);
     expect(actor.deleteEmbeddedDocuments).toHaveBeenCalledWith("Item", ["equipment-1"]);

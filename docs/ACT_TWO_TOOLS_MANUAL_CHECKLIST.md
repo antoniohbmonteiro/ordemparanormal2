@@ -1,6 +1,24 @@
 # Ferramentas nos POIs do Ato II — smoke manual
 
-**Status: PENDENTE. Execução pessoal do usuário, com GM e jogador separados.**
+**Status: smoke principal APROVADO pelo usuário no Foundry. Checks avançados sem confirmação individual permanecem PENDENTES.**
+
+## Registro da validação
+
+Confirmação registrada em **2026-10-05** para a branch `feat/poi-investigation`. O usuário executou o smoke e informou aprovação dos fluxos abaixo. O Codex não abriu Foundry nem executou o smoke.
+
+- [x] Importação do Ato II.
+- [x] Ferramentas padrão.
+- [x] Laboratório.
+- [x] Rádio.
+- [x] Fallbacks manuais.
+- [x] Respostas situational relevantes.
+- [x] Consumo de usos.
+- [x] Pesquisa de POIs.
+- [x] Reimportação do Ato II sem duplicação ou conflito inesperado.
+
+A data exata de execução, versões do Foundry/sistema, composição dos clientes e evidências por cenário não foram informadas. A aprovação acima registra os fluxos confirmados, sem afirmar que cada passo detalhado deste documento foi executado.
+
+**Checks avançados ainda sem confirmação:** contagens/configurações individuais de todos os POIs; authoring inválido e alterações durante sessão; todos os message modes e inspeção de payload blind; concorrência, timeout/retry e falhas parciais; ausência de GM e perda de permissão; isolamento/compartilhamento e run inativo; preservar/restaurar edições; teclado/foco, redimensionamento/scroll e regressões de Ato I/v1.0/Sobreviventes. Os passos abaixo permanecem como roteiro dessas conferências, sem aprovação individual presumida.
 
 ## Preparação
 
@@ -49,4 +67,9 @@
 - Editar um resumo/puzzle e testar **Preservar** e depois **Restaurar**: preservar mantém a edição; restaurar aplica a revisão 6. Knowledge, Discovery, visibilidade, associações e alterações de nome/imagem/organização continuam preservados.
 - Conferir Ato I, Agentes v1.0, Sobreviventes, perícias e DT alternativa; essas fontes e fluxos mantêm o comportamento anterior.
 
-Registrar data, versão do Foundry, resultado de cada etapa e qualquer divergência encontrada.
+## 7. Pesquisa de POIs
+
+- Como GM e jogador, pesquisar pelo nome na lista principal; `idolo` deve encontrar `Ídolo`. Conferir ausência de resultado com estado específico de pesquisa e limpar para restaurar a lista.
+- Conferir ordem, expansão e foco durante digitação/rerender; redimensionar e rolar o painel. A aprovação geral da pesquisa não confirma individualmente essas variações.
+
+Nas próximas conferências, registrar data, versão do Foundry/sistema, cenários efetivamente executados e divergências. Manter os checks avançados como pendentes até confirmação específica.

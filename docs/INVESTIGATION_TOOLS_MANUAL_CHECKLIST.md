@@ -1,6 +1,6 @@
 # Ferramentas e Investigation — checklist manual
 
-**Smoke test: PENDENTE.** Este checklist deve ser executado pessoalmente pelo usuário. O Codex não abriu Foundry nem executou smoke test. Os testes nativos automatizados usam somente o módulo comum instalado e não substituem esta validação.
+**Smoke principal: APROVADO pelo usuário**, conforme [o registro do Ato II](ACT_TWO_TOOLS_MANUAL_CHECKLIST.md). Os cenários detalhados abaixo não receberam confirmação individual e permanecem pendentes. O Codex não abriu Foundry nem executou smoke test. Os testes nativos automatizados usam somente o módulo comum instalado e não substituem esta validação.
 
 Registrar a versão do Foundry/sistema, data, navegadores e resultado de cada item. Usar um mundo de teste ou cópia de segurança. Não testar falhas deliberadas em uma sessão de jogo em andamento.
 
@@ -53,8 +53,8 @@ Registrar a versão do Foundry/sistema, data, navegadores e resultado de cada it
 
 - [ ] No GM, preparar um POI com somente uma Information always desconhecida para A vinculada à forma usada. No jogador, abrir a Investigation e usar a ferramenta. Esperado: “1 nova informação descoberta.” no mesmo status de Examinar, com `role="status"`; a pista aparece na tabela de perícias ou em DESCOBERTAS, conforme seus approaches.
 - [ ] Preparar outro POI com três Informations always desconhecidas, todas vinculadas ao mesmo par, incluindo uma mista e duas tool-only. Usar com A. Esperado: “3 novas informações descobertas.”, a pista mista na tabela, as duas tool-only em DESCOBERTAS e o contador reduzido em um uso, sem precisar fechar a janela.
-- [ ] Repetir o uso quando todas as respostas já forem conhecidas. Esperado: “Nenhuma informação nova foi descoberta.”; consumo/card normais, sem repetir conteúdo conhecido.
-- [ ] Conferir separadamente um POI sem ToolApproach correspondente e outro com apenas Information situacional correspondente, ainda não revelada. Esperado nos dois: “Nenhuma informação nova foi descoberta.”, sem explicar configuração, condição ou motivo privado.
+- [ ] Repetir o uso quando todas as respostas já forem conhecidas e não houver resposta situacional compatível pendente. Esperado: “Nenhuma informação nova foi descoberta.”; consumo/card normais, sem repetir conteúdo conhecido.
+- [ ] Usar ferramenta padrão em POI sem ToolApproach correspondente: “Nenhuma informação nova foi descoberta.”. Com Information situacional compatível ainda desconhecida: “Equipamento utilizado. A resposta contextual pode ser resolvida pelo mestre.”, sem explicar condição ou motivo privado. Laboratório/Armário e Rádio/Ídolo mantêm essa mensagem manual no fallback especial.
 - [ ] Em uma janela recém-aberta, cancelar a escolha de Forma de Uso. Esperado: nenhum feedback de sucesso, consumo, card ou descoberta. Confirmar também perda de OWNER, remoção da forma e usos zerados durante o diálogo: erro apropriado, sem substituir por mensagem de zero descobertas.
 - [ ] Nas falhas parciais de publicação/descoberta previstas abaixo, conferir o status. Esperado: aviso de uso já executado e etapa não confirmada, sem apresentar sucesso ou “Nenhuma informação nova foi descoberta.”; contador atualizado após consumo. Retentar mantém a proteção contra consumo/card duplicados.
 - [ ] Usar pelo Inventário, com a Investigation aberta, e conferir Examinar, rerender, teclado/foco, redimensionamento e scroll. Esperado: Inventário conserva seu feedback próprio, sem feedback contextual na Investigation; Examinar e o componente visual de status continuam funcionando.
@@ -70,7 +70,7 @@ Registrar a versão do Foundry/sistema, data, navegadores e resultado de cada it
 - [ ] Conferir painel de Scene: I2 sob a primeira SkillApproach; tool-only sob Informações descobertas, sem vínculo de ferramenta.
 - [ ] Compartilhar I1 de A para B pelo fluxo existente. Esperado: candidato com referência existente, B aprende somente o conteúdo transferido, C intacto; B não ganha provenance de descoberta própria.
 - [ ] Encerrar o run e usar em POI válido com outro Agent que ainda não conhece a resposta. Esperado: Knowledge registrado, sem Discovery de run inativo.
-- [ ] Remover vínculo/ocultar POI ou trocar run durante a escolha. Esperado: Equipment segue uso normal; contexto obsoleto impede somente descoberta automática.
+- [ ] Remover vínculo/ocultar POI ou trocar run durante a escolha de uma forma Padrão. Esperado: Equipment segue uso normal; contexto obsoleto impede somente descoberta automática. Laboratório/Rádio revalidam o contexto e podem invalidar a sessão especial.
 
 ## Permissões e payload
 
@@ -78,7 +78,7 @@ Registrar a versão do Foundry/sistema, data, navegadores e resultado de cada it
 - [ ] Usar Agent não participante, POI oculto e uma cópia Equipment pertencente a outro Actor. Esperado: autorização impede acesso indevido; contexto inválido não fornece resposta privada.
 - [ ] No navegador do jogador, inspecionar a resposta da query de projeção com as ferramentas de desenvolvimento. Esperado: somente dados públicos, campos mínimos de inventário e conteúdo conhecido; nenhum ToolApproach, UUID configurado no POI, ID desconhecido, condição, contagem oculta ou flag de correspondência.
 - [ ] Trocar controle de A para outro Agent elegível durante uma resposta lenta. Esperado: projeção anterior descartada, ferramentas/Knowledge do novo Agent atualizados; confirmação de escolha antiga não retargeta o uso.
-- [ ] Sair do GM ativo. Esperado: usuário autorizado continua usando Equipment localmente, inclusive consumo; contexto é manual e POI privado não é carregado.
+- [ ] Sair do GM ativo. Esperado: usuário autorizado continua usando formas Padrão localmente, inclusive consumo; contexto é manual e POI privado não é carregado. Laboratório/Rádio continuam exigindo GM ativo.
 
 ## Concorrência e falhas
 
@@ -100,17 +100,17 @@ Registrar a versão do Foundry/sistema, data, navegadores e resultado de cada it
 - [ ] Testar hover/focus, permissões somente leitura, rerender durante uso e troca de Agent. Esperado: ações seguem autorização e busy state.
 - [ ] Testar Examinar, Aptidão, DT pública/oculta/alternativa, revelação manual e Inventário (menu, detalhes, quantidade/uses). Esperado: fluxos existentes preservados.
 - [ ] Alterar o Equipment depois de publicar e reabrir chat histórico. Esperado: card antigo mantém conteúdo/apresentação gravados.
-- [ ] Reimportar POIs sem edição: sem falso conflito. Acrescentar ToolApproach manual e reimportar: decisão existente preservar/restaurar detecta edição; preservar mantém approach e restaurar repõe preset, sem mudança de revisão.
+- [ ] Reimportar POIs sem edição: sem falso conflito. Acrescentar ToolApproach manual e reimportar: decisão existente preservar/restaurar detecta edição; preservar mantém approach e restaurar repõe o preset atual da revisão 6.
 
 ## Registro final
 
 | Campo | Resultado |
 |---|---|
-| Status | **PENDENTE** |
+| Status | **Smoke principal APROVADO; cenários detalhados sem confirmação individual** |
 | Responsável | Usuário |
-| Data / Foundry / sistema | A preencher |
+| Data / Foundry / sistema | Confirmação registrada em 2026-10-05; data de execução e versões não informadas |
 | Sessões GM/jogadores | A preencher |
 | Itens aprovados/falhas | A preencher |
 | Conferências manuais de operações inconclusivas | A preencher |
 
-Somente marcar concluído depois da execução pessoal e registro das falhas encontradas.
+Somente marcar cada cenário detalhado como concluído depois de sua confirmação pessoal, registrando eventuais falhas.

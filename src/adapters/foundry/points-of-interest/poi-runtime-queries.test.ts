@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mutatePoi, POI_MUTATION_QUERY, reconcileScenePoiMembership, registerPoiRuntimeQueries, resolvePoiScene } from "./poi-runtime-queries";
 
 vi.mock("./publish-poi-reveal-notice", () => ({ publishPoiRevealNotice: vi.fn().mockResolvedValue(undefined) }));

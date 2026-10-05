@@ -12,6 +12,9 @@
     }
   },
   "ORDEMPARANORMAL2": {
+    "Common": {
+      "World": "Mundo"
+    },
     "Sheets": {
       "Agent": "Ficha de Agente",
       "Profile": "Ficha de Perfil",

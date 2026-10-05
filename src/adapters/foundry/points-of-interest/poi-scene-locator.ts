@@ -29,7 +29,7 @@ function playerLocations(sceneId: string, itemUuid: string, allowed: ReadonlyMap
   const user = game.user;
   if (!canvas?.scene || !user || user.isGM || !allowed.has(itemUuid)) return [];
   return [...canvas.scene.regions].filter(region => validBounds(region)
-    && readPoiCanvasRegion(region, sceneId, { isGM: false, userId: user.id }, allowed)?.itemUuid === itemUuid);
+    && readPoiCanvasRegion(region, sceneId, allowed)?.itemUuid === itemUuid);
 }
 
 export function countPoiVisibleLocations(sceneId: string, itemUuid: string, allowed: ReadonlyMap<string, string>): number {

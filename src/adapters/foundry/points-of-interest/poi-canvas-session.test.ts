@@ -10,12 +10,11 @@ function geometry(area = 100): PoiGeometry {
 it("uses the authorized Scene projection to decide whether a Region can appear", () => {
   const region = { id: "r", parent: { id: "scene" }, viewed: true, polygonTree: geometry(),
     getFlag: () => ({ itemUuid: "Item.poi", name: "untrusted snapshot" }) };
-  const viewer = { isGM: false, userId: "player" };
-  expect(readPoiCanvasRegion(region, "scene", viewer, new Map())).toBeNull();
-  expect(readPoiCanvasRegion(region, "scene", viewer, new Map([["Item.poi", "Approved name"]])))
+  expect(readPoiCanvasRegion(region, "scene", new Map())).toBeNull();
+  expect(readPoiCanvasRegion(region, "scene", new Map([["Item.poi", "Approved name"]])))
     .toMatchObject({ itemUuid: "Item.poi", name: "Approved name" });
   expect(readPoiCanvasRegion({ ...region, getFlag: () => ({ itemUuid: "Compendium.world.poi.Item.a" }) },
-    "scene", viewer, new Map([["Compendium.world.poi.Item.a", "Old"]]))).toBeNull();
+    "scene", new Map([["Compendium.world.poi.Item.a", "Old"]]))).toBeNull();
 });
 
 it("keeps native PolygonTree hit testing and overlap priority", () => {

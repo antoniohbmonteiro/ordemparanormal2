@@ -19,12 +19,6 @@ export interface PoiCanvasRegion {
   getFlag(scope: string, key: string): unknown;
 }
 
-/** Who is looking at the canvas: the GM sees every eligible POI, a player only revealed ones. */
-export interface PoiRegionViewer {
-  readonly isGM: boolean;
-  readonly userId: string;
-}
-
 export interface PoiRegionView {
   readonly id: string;
   readonly itemUuid: string;
@@ -36,7 +30,6 @@ export interface PoiRegionView {
 export function readPoiCanvasRegion(
   region: PoiCanvasRegion,
   sceneId: string,
-  viewer: PoiRegionViewer,
   allowed: ReadonlyMap<string, string>,
 ): PoiRegionView | null {
   if (!region.id || region.parent?.id !== sceneId || !region.viewed) return null;

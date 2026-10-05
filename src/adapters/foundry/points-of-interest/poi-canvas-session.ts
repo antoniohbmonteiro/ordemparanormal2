@@ -63,7 +63,6 @@ export function createPoiCanvasSession(
   let loadRevision = 0;
   renderer.setVisible(env.mode.get());
   const active = () => !disposed && env.canvas.ready && env.canvas.scene === scene;
-  const viewer = () => ({ isGM: env.isGM(), userId: env.userId });
 
   function refreshHover(): void {
     const target = active() && env.mode.get() && pointer
@@ -89,7 +88,7 @@ export function createPoiCanvasSession(
   }
 
   function upsert(region: PoiCanvasRegion): void {
-    const view = readPoiCanvasRegion(region, scene.id, viewer(), allowed);
+    const view = readPoiCanvasRegion(region, scene.id, allowed);
     if (!view) {
       if (region.id && entries.delete(region.id)) renderer.remove(region.id);
       return;

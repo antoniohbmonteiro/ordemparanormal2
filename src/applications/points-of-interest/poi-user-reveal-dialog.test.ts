@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PoiTestElement, poiTestDocument, flushPoiTasks } from "./poi-dom-test-fixture";
 import { openPoiUserRevealDialog } from "./poi-user-reveal-dialog";
 
-const { listPlayerUsers } = vi.hoisted(() => ({ listPlayerUsers: vi.fn() }));
+const { listPlayerUsers, resolveSceneAgent } = vi.hoisted(() => ({ listPlayerUsers: vi.fn(), resolveSceneAgent: vi.fn() }));
 vi.mock("../../adapters/foundry/users/list-player-users", () => ({ listPlayerUsers }));
+vi.mock("../../adapters/foundry/points-of-interest/resolve-investigation-agent", () => ({ resolveSceneInvestigationAgentForUser: resolveSceneAgent }));
 
 interface StubButton { action: string; label: string; callback?: () => unknown }
 
@@ -33,7 +34,9 @@ beforeEach(() => {
     { id: "p2", name: "Player Two" },
   ]);
   vi.stubGlobal("document", poiTestDocument);
-  vi.stubGlobal("game", { i18n: { localize: (key: string) => key } });
+  resolveSceneAgent.mockReset().mockImplementation((_scene, user) => user.id === "p1" ? { name: "Alan" } : null);
+  vi.stubGlobal("game", { i18n: { localize: (key: string) => key },
+    scenes: { get: () => ({}) }, users: { get: (id: string) => ({ id }) } });
   vi.stubGlobal("foundry", { applications: { api: { DialogV2: DialogStub } } });
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
@@ -41,9 +44,12 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("POI user reveal dialog", () => {
   it("pre-checks the currently revealed users and returns the confirmed selection", async () => {
-    const result = openPoiUserRevealDialog(["p2"]);
+    const result = openPoiUserRevealDialog(["p2"], "scene");
     await flushPoiTasks();
     expect(checkboxes().map(box => box.checked)).toEqual([false, true]);
+    const rows = DialogStub.latest.window.content.find(el => el.className === "op2-poi-reveal-dialog")!.children;
+    expect(rows[0].children[1].children.map(child => child.textContent)).toEqual(["Alan", "Jogador: Player One"]);
+    expect(rows[1].children[1].children.map(child => child.textContent)).toEqual(["Player Two", "Sem personagem na cena"]);
 
     checkboxes()[0].checked = true;
     checkboxes()[1].checked = false;

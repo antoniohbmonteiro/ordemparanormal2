@@ -1,87 +1,157 @@
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-
+import Handlebars from "handlebars";
 import { beforeAll, describe, expect, it } from "vitest";
+import translations from "../../../lang/pt-BR.json";
 
-let template = "";
+let render: Handlebars.TemplateDelegate;
+let renderSheet: Handlebars.TemplateDelegate;
+let styles = "";
+const card = {
+  id: "ability-1", name: "Olhar Clínico", img: "icons/ability.webp",
+  descriptionHTML: "", useForms: [], isExpanded: false, detailsId: "sheet-1-ability-1",
+  resource: null,
+};
 
 beforeAll(async () => {
-  const templatePath = fileURLToPath(
-    new URL(
-      "../../../templates/actor/agent-sheet-abilities.hbs",
-      import.meta.url,
-    ),
-  );
-  template = await readFile(templatePath, "utf8");
+  const template = await readFile(new URL("../../../templates/actor/agent-sheet-abilities.hbs", import.meta.url), "utf8");
+  styles = await readFile(new URL("../../../styles/agent-sheet.css", import.meta.url), "utf8");
+  const handlebars = Handlebars.create();
+  handlebars.registerHelper("localize", (key: string) => key.split(".").reduce<unknown>((value, part) => (value as Record<string, unknown>)[part], translations));
+  render = handlebars.compile(template);
+  handlebars.registerPartial("systems/ordemparanormal2/templates/actor/agent-sheet-abilities.hbs", template);
+  for (const part of ["identity", "skills", "inventory"]) {
+    handlebars.registerPartial(`systems/ordemparanormal2/templates/actor/agent-sheet-${part}.hbs`, "");
+  }
+  renderSheet = handlebars.compile(await readFile(new URL("../../../templates/actor/agent-sheet.hbs", import.meta.url), "utf8"));
 });
 
-describe("Agent Sheet Ability card template", () => {
-  it("uses one full-card semantic surface behind the visible content", () => {
-    const useSurface = template.match(
-      /<button class="op2-ability-card__use"[\s\S]*?<\/button>/,
-    )?.[0];
+function html(overrides: object = {}, permissions = { editable: true, canEditStructure: false }): string {
+  return render({ ...permissions, agent: { abilities: [{ ...card, ...overrides }] } });
+}
 
-    expect(useSurface).toBeDefined();
-    expect(useSurface).toContain('data-action="useAbility"');
-    expect(useSurface).toContain('aria-label="{{name}}"');
-    expect(useSurface).not.toContain("<img");
-
-    const useEnd = template.indexOf("</button>");
-    expect(template.indexOf("op2-ability-card__identity")).toBeGreaterThan(
-      useEnd,
-    );
-    expect(template.indexOf("op2-ability-card__name")).toBeGreaterThan(useEnd);
-    expect(template.indexOf("op2-ability-card__cost")).toBeGreaterThan(useEnd);
+describe("Agent Sheet Ability rows", () => {
+  it("renders column labels below the parent tabs without repeating section titles", () => {
+    const output = html();
+    expect(output).not.toContain("op2-abilities__title");
+    expect(output).not.toContain("op2-abilities__heading");
+    expect(output).not.toContain("<h2");
+    expect(output).toMatch(/op2-abilities__columns[\s\S]*?<span>Habilidade<\/span>[\s\S]*?op2-abilities__resource-heading">Recurso<\/span>/);
+    expect(output).toContain('op2-ability-card__subtitle">Habilidade</span>');
+    expect(styles).not.toContain(".op2-abilities__title");
+    expect(styles).not.toContain(".op2-abilities__heading");
+    const parent = renderSheet({
+      editable: true, canEditStructure: false, agent: { abilities: [card] },
+      tabs: Object.fromEntries(["abilities", "inventory", "notes"].map((id) => [id, {
+        id, group: "content", label: `ORDEMPARANORMAL2.AgentSheet.Tabs.${id[0].toUpperCase()}${id.slice(1)}`,
+        active: id === "abilities", cssClass: id === "abilities" ? "active" : "",
+      }])),
+    });
+    expect(parent).toMatch(/<nav[^>]*op2-content-tabs[\s\S]*>Habilidades<\/button>[\s\S]*>Inventário<\/button>[\s\S]*>Notas<\/button>/);
+    expect(parent.match(/>Habilidades<\/button>/g)).toHaveLength(1);
+    expect(parent).toContain('data-action="useAbility"');
+  });
+  it("renders the real image, fixed subtitle and accessible use surface without a resource or quantity", () => {
+    const output = html();
+    expect(output).toContain('src="icons/ability.webp"');
+    expect(output).toContain('data-action="useAbility"');
+    expect(output).toContain('aria-label="Olhar Clínico"');
+    expect(output).toContain('aria-hidden="true">Usar</span>');
+    expect(output).toContain('op2-ability-card__subtitle">Habilidade</span>');
+    expect(output).not.toContain('class="op2-ability-card__resource"');
+    expect(output).not.toContain("QTD");
+    expect(output).not.toContain("useSummary");
   });
 
-  it("renders the optional resource and inline adjustment controls", () => {
-    const resourceBlock = template.match(
-      /<div class="op2-ability-card__resource">([\s\S]*?)<\/div>/,
-    )?.[1];
-
-    expect(resourceBlock).toBeDefined();
-    expect(resourceBlock).toContain(
-      'aria-valuenow="{{resource.fillPercentage}}"',
-    );
-    expect(resourceBlock).toContain(
-      'style="width: {{resource.fillPercentage}}%;"',
-    );
-    expect(resourceBlock).toContain(
-      "{{resource.value}} / {{resource.max}}",
-    );
-    expect(resourceBlock).toContain('data-action="decreaseAbilityResource"');
-    expect(resourceBlock).toContain('data-action="increaseAbilityResource"');
-    expect(resourceBlock).toContain("resource.canDecrease");
-    expect(resourceBlock).toContain("resource.canIncrease");
-    expect(resourceBlock).toContain("{{#if @root.editable}}");
+  it("renders value/max, the existing percentage and sibling resource controls", () => {
+    const output = html({ resource: { value: 2, max: 3, fillPercentage: 66.67, canDecrease: true, canIncrease: true } });
+    expect(output).toContain('aria-valuenow="66.67"');
+    expect(output).toContain('aria-valuemax="100"');
+    expect(output).toContain('aria-valuetext="2 / 3"');
+    expect(output).toContain('width: 66.67%;');
+    expect(output).toContain('data-action="decreaseAbilityResource"');
+    expect(output).toContain('data-action="increaseAbilityResource"');
+    const use = output.match(/<button class="op2-ability-card__use"[\s\S]*?<\/button>/)?.[0];
+    expect(use).not.toContain("resource");
+    expect(use).not.toContain("toggleAbilityDescription");
+    expect(use).not.toContain("details");
   });
 
-  it("keeps resource controls and the actions trigger outside the use surface", () => {
-    const useEnd = template.indexOf("</button>");
-    const resourceStart = template.indexOf("op2-ability-card__resource");
-    const menuStart = template.indexOf("op2-ability-card__menu-trigger");
-
-    expect(useEnd).toBeGreaterThan(0);
-    expect(resourceStart).toBeGreaterThan(useEnd);
-    expect(menuStart).toBeGreaterThan(useEnd);
-    expect(template).toContain("fa-ellipsis-vertical");
-    expect(template).toContain('aria-haspopup="menu"');
-    expect(template).toContain("{{#if @root.canEditStructure}}");
+  it("preserves adjustment limits and hides editing controls without permission", () => {
+    const resource = { value: 0, max: 3, fillPercentage: 0, canDecrease: false, canIncrease: true };
+    expect(html({ resource })).toMatch(/data-action="decreaseAbilityResource"[^>]*disabled/);
+    const readOnly = html({ resource }, { editable: false, canEditStructure: false });
+    expect(readOnly).toMatch(/data-action="useAbility"[^>]*disabled/);
+    expect(readOnly).not.toContain('data-action="decreaseAbilityResource"');
+    expect(readOnly).not.toContain('data-action="increaseAbilityResource"');
+    expect(readOnly).not.toContain("menu-trigger");
+    expect(readOnly).toContain('data-action="toggleAbilityDescription"');
   });
 
-  it("does not render an explicit Use control or reserve description height", () => {
-    expect(template).not.toContain("AgentSheet.Abilities.Use\"");
-    expect(template).not.toContain("op2-ability-card__description");
-    expect(template).not.toContain("editAbility");
+  it("starts collapsed and renders enriched descriptions only when present", () => {
+    const collapsed = html();
+    expect(collapsed).toContain('aria-expanded="false"');
+    expect(collapsed).toContain('aria-controls="sheet-1-ability-1"');
+    expect(collapsed).toContain('id="sheet-1-ability-1" hidden');
+    expect(collapsed).not.toContain('class="op2-ability-card__description"');
+    const expanded = html({ isExpanded: true, descriptionHTML: '<p>Leia <a href="#entry">a pista</a>.</p>' });
+    expect(expanded).toContain('aria-expanded="true"');
+    expect(expanded).not.toContain('id="sheet-1-ability-1" hidden');
+    expect(expanded).toContain('<a href="#entry">a pista</a>');
   });
 
-  it("renders a single health cost as PV", () => {
-    expect(template).toContain("useSummary.isSingleHealth");
-    expect(template).toContain("ORDEMPARANORMAL2.AgentSheet.Resources.Health");
+  it("renders ordered forms as a light list, including check integration and empty descriptions", () => {
+    const output = html({ isExpanded: true, useForms: [
+      { id: "first", name: "Identificar", descriptionHTML: "<p>Descrição enriquecida</p>", isCheckIntegrated: false },
+      { id: "second", name: "Interpretar", descriptionHTML: "", isCheckIntegrated: true },
+    ] });
+    expect(output).toContain("Formas de Uso");
+    expect(output.indexOf("Identificar")).toBeLessThan(output.indexOf("Interpretar"));
+    expect(output).toContain("Disponível nos checks");
+    expect(output.match(/class="op2-ability-card__description"/g)).toHaveLength(1);
   });
 
-  it("labels Abilities whose forms are available only while configuring Checks", () => {
-    expect(template).toContain("useSummary.isCheckOnly");
-    expect(template).toContain("ORDEMPARANORMAL2.AgentSheet.Abilities.CheckOnly");
+  it("replaces the chevron with the existing menu trigger only in Edit Mode", () => {
+    const output = html({}, { editable: true, canEditStructure: true });
+    expect(output).toContain("op2-ability-card__menu-trigger");
+    expect(output).toContain('aria-haspopup="menu"');
+    expect(output).toContain('data-action="openAbilityMenu"');
+    expect(output).not.toContain('data-action="toggleAbilityDescription"');
+    expect(html()).not.toContain("menu-trigger");
+  });
+
+  it("keeps hover/focus overlays out of structural sizing and scopes changes to Abilities", () => {
+    const controls = styles.match(/\.op2-ability-card__resource-controls \{([^}]+)\}/)?.[1];
+    expect(controls).toContain("position: absolute");
+    expect(controls).toContain("width: 130px");
+    expect(controls).toContain("height: 32px");
+    expect(controls).toContain("opacity: 0");
+    expect(styles).toContain(".op2-ability-card__resource:focus-within");
+    expect(styles).toContain(".op2-ability-card__use:focus-visible");
+    expect(styles).toContain(".op2-ability-card__use:hover:not(:disabled) .op2-ability-card__use-label");
+    expect(styles).not.toContain(".op2-ability-card:hover .op2-ability-card__use");
+    expect(styles).toContain(".op2-ability-card__details[hidden]");
+    expect(styles).toContain("overflow-wrap: anywhere");
+  });
+
+  it("groups full-width rows at the top without stretching them or clipping their overlays", () => {
+    const section = styles.match(/\.op2-abilities \{([^}]+)\}/)?.[1];
+    const list = styles.match(/\.op2-abilities__list \{([^}]+)\}/)?.[1];
+    const row = styles.match(/\.op2-ability-card \{([^}]+)\}/)?.[1];
+    expect(section).toContain("align-content: start");
+    expect(list).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(list).toContain("grid-auto-rows: max-content");
+    expect(list).toContain("align-content: start");
+    expect(list).toContain("gap: 6px");
+    expect(row).toContain("width: 100%");
+    expect(row).toContain("min-height: 56px");
+    expect(row).toContain("border-radius: var(--op2-radius)");
+    expect(styles).toContain("--op2-radius: 8px");
+    for (const rule of [section, list, row]) {
+      expect(rule).toContain("overflow: visible");
+      expect(rule).not.toContain("overflow: hidden");
+    }
+    expect(styles).toContain('.op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="abilities"].active)');
+    expect(styles.match(/\.op2-ability-card__subtitle \{([^}]+)\}/)?.[1]).toContain("color: var(--op2-accent)");
+    expect(html()).not.toContain('class="op2-ability-card__resource"');
   });
 });

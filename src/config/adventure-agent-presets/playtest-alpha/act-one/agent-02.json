@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 2,
+  "key": "agent-02",
+  "level": 2,
+  "resources": {
+    "healthMax": 18,
+    "determinationMax": 10
+  },
+  "attributes": {
+    "physical": 10,
+    "mind": 6,
+    "emotion": 6
+  },
+  "skills": {
+    "acrobatics": 4,
+    "aptitude": {
+      "arts": 4,
+      "currentAffairs": 4,
+      "bureaucracy": 4,
+      "exactSciences": 4,
+      "humanities": 4,
+      "tactics": 4
+    },
+    "athletics": 8,
+    "crime": 6,
+    "discipline": 4,
+    "deception": 4,
+    "stealth": 4,
+    "intimidation": 6,
+    "intuition": 4,
+    "fighting": 6,
+    "machinery": 4,
+    "medicine": 4,
+    "occultism": 4,
+    "perception": 6,
+    "persuasion": 4,
+    "research": 4,
+    "marksmanship": 4,
+    "survival": 6,
+    "technology": 4,
+    "vigor": 6
+  },
+  "profileUuid": "Compendium.ordemparanormal2.profiles.Item.profile000000001",
+  "occupationUuid": "Compendium.ordemparanormal2.occupations.Item.occupation000005",
+  "abilityUuids": [
+    "Compendium.ordemparanormal2.abilities.Item.ability000000008",
+    "Compendium.ordemparanormal2.abilities.Item.ability000000004"
+  ]
+}

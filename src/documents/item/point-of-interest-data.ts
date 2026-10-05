@@ -1,268 +1,357 @@
-import { isSkillKey, type SkillKey } from "../../config/skills";
+import { isRadioPuzzleConfig, type RadioPuzzleConfig } from "../../core/equipment/radio-puzzle";
+import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
 
-/** Minimum confirmed Difficulty for Point of Interest information. */
 export const POINT_OF_INTEREST_DIFFICULTY_MIN = 1;
-
-/** A stable, skill-owned piece of information. */
+export type OrdinaryPoiSkillKey = Exclude<SkillKey, "aptitude">;
+/**
+ * One alternative DT for an approach and the GM-facing situation in which it replaces the base DT. The system never
+ * interprets the condition: the GM chooses which DT applies. It is GM-private and never part of a player projection.
+ */
+export interface PointOfInterestDifficultyOverride {
+  readonly difficulty: number;
+  readonly condition: string;
+}
+export type PointOfInterestSkillApproach = ({
+  readonly skill: OrdinaryPoiSkillKey;
+  readonly difficulty: number;
+  readonly showDifficultyToPlayers: boolean;
+} | {
+  readonly skill: "aptitude";
+  readonly specialization: AptitudeSpecializationKey;
+  readonly difficulty: number;
+  readonly showDifficultyToPlayers: boolean;
+}) & { readonly type?: never; readonly equipmentUuid?: never; readonly useFormId?: never; readonly mechanicConfig?: never;
+  readonly difficultyOverride?: PointOfInterestDifficultyOverride };
+export interface PointOfInterestToolApproach {
+  readonly type: "tool";
+  readonly equipmentUuid: string;
+  readonly useFormId: string;
+  readonly mechanicConfig?: ToolMechanicConfig;
+  readonly skill?: never;
+  readonly specialization?: never;
+  readonly difficulty?: never;
+  readonly showDifficultyToPlayers?: never;
+  readonly difficultyOverride?: never;
+}
+export type RadioMechanicConfig = RadioPuzzleConfig;
+export type ToolMechanicConfig = LaboratoryMechanicConfig | RadioMechanicConfig;
+export function copyToolMechanicConfig(config: ToolMechanicConfig): ToolMechanicConfig {
+  return config.type === "laboratory" ? { ...config } : { type: "radio",
+    trueFragments: config.trueFragments.map(text => text.trim()), falseFragments: config.falseFragments.map(text => text.trim()) };
+}
+export function toolMechanicSignature(config: ToolMechanicConfig | undefined): string {
+  return config ? JSON.stringify(copyToolMechanicConfig(config)) : "standard";
+}
+export interface LaboratoryMechanicConfig {
+  readonly type: "laboratory";
+  readonly sequenceLength: 4 | 5 | 6;
+  readonly trueFragments?: never;
+  readonly falseFragments?: never;
+}
+export function isLaboratoryMechanicConfig(value: unknown): value is LaboratoryMechanicConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const config = value as Record<string, unknown>;
+  return config.type === "laboratory" && [4, 5, 6].includes(config.sequenceLength as number)
+    && config.trueFragments === undefined && config.falseFragments === undefined;
+}
+export function uniformToolMechanicConfigurations(information: readonly PointOfInterestInformation[]): boolean {
+  const configurations = new Map<string, string>();
+  for (const entry of information) for (const approach of entry.approaches) {
+    if (!isToolApproach(approach)) continue;
+    const key = approachIdentity(approach);
+    const value = toolMechanicSignature(approach.mechanicConfig);
+    if (configurations.has(key) && configurations.get(key) !== value) return false;
+    configurations.set(key, value);
+  }
+  return true;
+}
+export function uniformToolInteractionConfiguration(information: readonly PointOfInterestInformation[],
+  approach: PointOfInterestToolApproach): boolean {
+  return uniformToolMechanicConfigurations(information.map(entry => ({ ...entry,
+    approaches: entry.approaches.filter(existing => approachIdentity(existing) === approachIdentity(approach)) })));
+}
+/** Reconfigure one interaction across the POI in the same document write. */
+export function configureToolInteraction(information: readonly PointOfInterestInformation[],
+  approach: PointOfInterestToolApproach): readonly PointOfInterestInformation[] {
+  return information.map(entry => ({ ...entry, approaches: entry.approaches.map(existing => {
+    if (!isToolApproach(existing) || approachIdentity(existing) !== approachIdentity(approach)) return existing;
+    const { mechanicConfig: _previous, ...base } = existing;
+    return { ...base, ...(approach.mechanicConfig ? { mechanicConfig: copyToolMechanicConfig(approach.mechanicConfig) } : {}) };
+  }) }));
+}
+export function toolConfigurationSignature(information: readonly PointOfInterestInformation[],
+  approach: PointOfInterestToolApproach): string {
+  return JSON.stringify(information.flatMap(entry => entry.approaches.filter(existing =>
+    approachIdentity(existing) === approachIdentity(approach)).map(existing => [entry.id, existing.mechanicConfig ?? null])));
+}
+export type PointOfInterestApproach = PointOfInterestSkillApproach | PointOfInterestToolApproach;
+export function isEquipmentSourceUuid(value: unknown): value is string {
+  return typeof value === "string" && (/^Item\.[^.]+$/u.test(value)
+    || /^Compendium\.[^.]+\.[^.]+\.Item\.[^.]+$/u.test(value));
+}
+export function isSkillApproach(approach: PointOfInterestApproach): approach is PointOfInterestSkillApproach {
+  return approach.type === undefined;
+}
+export function isToolApproach(approach: PointOfInterestApproach): approach is PointOfInterestToolApproach {
+  return approach.type === "tool";
+}
+export const POINT_OF_INTEREST_AVAILABILITY_MODES = ["always", "situational"] as const;
+export type PointOfInterestAvailabilityMode = typeof POINT_OF_INTEREST_AVAILABILITY_MODES[number];
+/**
+ * Whether an information can be investigated now. A situational condition is GM-facing text that the system
+ * never interprets: the GM decides when it holds. It is unrelated to what an Agent already knows.
+ */
+export type PointOfInterestInformationAvailability =
+  | { readonly mode: "always"; readonly condition: "" }
+  | { readonly mode: "situational"; readonly condition: string };
+// Not frozen: Foundry cleans update data in place, so written data always receives a copy of it.
+export const POINT_OF_INTEREST_ALWAYS_AVAILABLE: PointOfInterestInformationAvailability = { mode: "always", condition: "" };
 export interface PointOfInterestInformation {
   readonly id: string;
-  readonly difficulty: number;
   readonly content: string;
-  readonly showDifficultyToPlayers: boolean;
+  readonly approaches: readonly PointOfInterestApproach[];
+  readonly availability: PointOfInterestInformationAvailability;
 }
-
-/** The canonical group for one skill inside a Point of Interest. */
-export interface PointOfInterestSkill {
-  readonly skill: SkillKey;
-  readonly information: readonly PointOfInterestInformation[];
-}
-
-/** Persisted `system` shape of a Point of Interest Item. */
 export interface PointOfInterestSystemData {
   readonly publicDescription: string;
   readonly gmContext: string;
-  readonly skills: readonly PointOfInterestSkill[];
+  readonly information: readonly PointOfInterestInformation[];
 }
 
-export type PointOfInterestInformationDraft = {
-  readonly difficulty: number;
-  readonly content?: string;
-  readonly showDifficultyToPlayers?: boolean;
-};
-
-export type PointOfInterestInformationPatch = Partial<
-  Pick<PointOfInterestInformation, "difficulty" | "content" | "showDifficultyToPlayers">
->;
-
-function isNonBlankString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+const aptitude = SKILL_DEFINITIONS.find(definition => definition.key === "aptitude");
+const specializationKeys = new Set<string>(
+  aptitude && "specializations" in aptitude
+    ? aptitude.specializations.map(specialization => specialization.key) : [],
+);
+export function isAptitudeSpecializationKey(value: unknown): value is AptitudeSpecializationKey {
+  return typeof value === "string" && specializationKeys.has(value);
 }
-
-export function isPointOfInterestInformation(
-  value: unknown,
-): value is PointOfInterestInformation {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PointOfInterestInformation>;
-  return (
-    isNonBlankString(candidate.id) &&
-    typeof candidate.difficulty === "number" &&
-    Number.isInteger(candidate.difficulty) &&
-    candidate.difficulty >= POINT_OF_INTEREST_DIFFICULTY_MIN &&
-    typeof candidate.content === "string" &&
-    typeof candidate.showDifficultyToPlayers === "boolean"
-  );
+export function isPointOfInterestDifficultyOverride(value: unknown): value is PointOfInterestDifficultyOverride {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const { difficulty, condition } = value as Record<string, unknown>;
+  return Number.isInteger(difficulty) && (difficulty as number) >= POINT_OF_INTEREST_DIFFICULTY_MIN
+    && typeof condition === "string" && !!condition.trim();
 }
-
-export function isPointOfInterestSkill(value: unknown): value is PointOfInterestSkill {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PointOfInterestSkill>;
-  return (
-    isSkillKey(candidate.skill) &&
-    Array.isArray(candidate.information) &&
-    candidate.information.length > 0 &&
-    candidate.information.every(isPointOfInterestInformation)
-  );
-}
-
-/**
- * Defensively reads only the current grouped shape. Invalid or duplicate
- * groups and entries are omitted; the removed flat shape is never interpreted.
- */
-export function readPointOfInterestSkills(system: unknown): readonly PointOfInterestSkill[] {
-  if (!system || typeof system !== "object") return [];
-  const skills = (system as { readonly skills?: unknown }).skills;
-  if (!Array.isArray(skills)) return [];
-
-  const seenSkills = new Set<SkillKey>();
-  const seenInformationIds = new Set<string>();
-  const result: PointOfInterestSkill[] = [];
-
-  for (const value of skills) {
-    if (!isPointOfInterestSkill(value) || seenSkills.has(value.skill)) continue;
-    const ids = value.information.map(({ id }) => id);
-    if (
-      new Set(ids).size !== ids.length ||
-      ids.some((id) => seenInformationIds.has(id))
-    ) continue;
-
-    seenSkills.add(value.skill);
-    ids.forEach((id) => seenInformationIds.add(id));
-    result.push({
-      skill: value.skill,
-      information: value.information.map((entry) => ({
-        id: entry.id,
-        difficulty: entry.difficulty,
-        content: entry.content,
-        showDifficultyToPlayers: entry.showDifficultyToPlayers,
-      })),
-    });
+export function isPointOfInterestApproach(value: unknown): value is PointOfInterestApproach {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type === "tool") return isEquipmentSourceUuid(candidate.equipmentUuid)
+    && typeof candidate.useFormId === "string" && !!candidate.useFormId.trim()
+    && (candidate.mechanicConfig === undefined || isLaboratoryMechanicConfig(candidate.mechanicConfig) || isRadioPuzzleConfig(candidate.mechanicConfig))
+    && ["skill", "specialization", "difficulty", "showDifficultyToPlayers", "difficultyOverride"]
+      .every(key => candidate[key] === undefined);
+  if (candidate.type !== undefined || candidate.equipmentUuid !== undefined || candidate.useFormId !== undefined
+    || candidate.mechanicConfig !== undefined) return false;
+  if (!isSkillKey(candidate.skill) || !Number.isInteger(candidate.difficulty)
+    || (candidate.difficulty as number) < POINT_OF_INTEREST_DIFFICULTY_MIN
+    || typeof candidate.showDifficultyToPlayers !== "boolean"
+    || (candidate.difficultyOverride !== undefined && !isPointOfInterestDifficultyOverride(candidate.difficultyOverride))) {
+    return false;
   }
-  return result;
+  return candidate.skill === "aptitude"
+    ? isAptitudeSpecializationKey(candidate.specialization)
+    : candidate.specialization === undefined;
+}
+export function approachIdentity(approach: PointOfInterestApproach): string {
+  if (isToolApproach(approach)) return `tool:${JSON.stringify([approach.equipmentUuid, approach.useFormId])}`;
+  return approach.skill === "aptitude" ? `${approach.skill}:${approach.specialization}` : approach.skill;
+}
+/**
+ * Normalizes a stored availability. Information persisted before availability existed has none and is always
+ * available; the DataModel supplies the same default when it cleans that source. Returns null when invalid.
+ */
+export function readPointOfInterestInformationAvailability(value: unknown): PointOfInterestInformationAvailability | null {
+  if (value === undefined) return POINT_OF_INTEREST_ALWAYS_AVAILABLE;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const { mode, condition } = value as Record<string, unknown>;
+  if (mode === "always" && (condition === undefined || condition === "")) return POINT_OF_INTEREST_ALWAYS_AVAILABLE;
+  return mode === "situational" && typeof condition === "string" && condition.trim()
+    ? { mode, condition } : null;
+}
+export function isSituationalPointOfInterestInformation(entry: PointOfInterestInformation): boolean {
+  return entry.availability.mode === "situational";
+}
+/**
+ * Information a player may receive for an Agent: always-available information, plus situational information the
+ * Agent already knows. Unknown situational information must not leave the GM client in any form.
+ */
+export function playerVisiblePointOfInterestInformation(
+  information: readonly PointOfInterestInformation[], knownIds: ReadonlySet<string>,
+): readonly PointOfInterestInformation[] {
+  return information.filter(entry => !isSituationalPointOfInterestInformation(entry) || knownIds.has(entry.id));
+}
+export function isPointOfInterestInformation(value: unknown): value is PointOfInterestInformation {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== "string" || !candidate.id.trim()
+    || typeof candidate.content !== "string" || !Array.isArray(candidate.approaches)
+    || candidate.approaches.length === 0 || !candidate.approaches.every(isPointOfInterestApproach)
+    || !readPointOfInterestInformationAvailability(candidate.availability)) return false;
+  const identities = candidate.approaches.map(approachIdentity);
+  return new Set(identities).size === identities.length;
+}
+export function isPointOfInterestInformationList(value: unknown): value is readonly PointOfInterestInformation[] {
+  if (!Array.isArray(value) || !value.every(isPointOfInterestInformation)) return false;
+  const ids = value.map(entry => entry.id);
+  return new Set(ids).size === ids.length;
+}
+/** Runtime reads never interpret the legacy grouped shape. */
+export function readPointOfInterestInformation(system: unknown): readonly PointOfInterestInformation[] {
+  if (!system || typeof system !== "object") return [];
+  const value = (system as { readonly information?: unknown }).information;
+  if (!isPointOfInterestInformationList(value)) return [];
+  return value.map(entry => ({ id: entry.id, content: entry.content,
+    approaches: entry.approaches.map(readApproach),
+    availability: { ...readPointOfInterestInformationAvailability(entry.availability)! } }));
+}
+function readApproach(approach: PointOfInterestApproach): PointOfInterestApproach {
+  if (isToolApproach(approach)) return { type: "tool", equipmentUuid: approach.equipmentUuid, useFormId: approach.useFormId,
+    ...(approach.mechanicConfig ? { mechanicConfig: copyToolMechanicConfig(approach.mechanicConfig) } : {}) };
+  const base = { difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
+    ...(approach.difficultyOverride ? { difficultyOverride: { difficulty: approach.difficultyOverride.difficulty,
+      condition: approach.difficultyOverride.condition } } : {}) };
+  return approach.skill === "aptitude"
+    ? { skill: approach.skill, specialization: approach.specialization, ...base }
+    : { skill: approach.skill, ...base };
+}
+function assertValidInformation(list: readonly PointOfInterestInformation[]): void {
+  if (!isPointOfInterestInformationList(list) || !uniformToolMechanicConfigurations(list))
+    throw new Error("Invalid Point of Interest information.");
+}
+export function addPointOfInterestInformation(
+  list: readonly PointOfInterestInformation[], id: string, approach: PointOfInterestApproach,
+  content = "",
+): readonly PointOfInterestInformation[] {
+  const next = [...list, { id, content, approaches: [approach], availability: { ...POINT_OF_INTEREST_ALWAYS_AVAILABLE } }];
+  assertValidInformation(next);
+  return next;
+}
+export function updatePointOfInterestInformationAvailability(
+  list: readonly PointOfInterestInformation[], id: string, availability: PointOfInterestInformationAvailability,
+): readonly PointOfInterestInformation[] {
+  if (!list.some(entry => entry.id === id)) throw new Error(`Unknown Point of Interest information id: ${id}`);
+  const next = list.map(entry => entry.id === id ? { ...entry, availability: { ...availability } } : entry);
+  assertValidInformation(next);
+  return next;
+}
+export function updatePointOfInterestInformation(
+  list: readonly PointOfInterestInformation[], id: string, content: string,
+): readonly PointOfInterestInformation[] {
+  if (!list.some(entry => entry.id === id)) throw new Error(`Unknown Point of Interest information id: ${id}`);
+  const next = list.map(entry => entry.id === id ? { ...entry, content } : entry);
+  assertValidInformation(next);
+  return next;
+}
+export function removePointOfInterestInformation(
+  list: readonly PointOfInterestInformation[], id: string,
+): readonly PointOfInterestInformation[] {
+  return list.filter(entry => entry.id !== id);
+}
+export function addPointOfInterestApproach(
+  list: readonly PointOfInterestInformation[], id: string, approach: PointOfInterestApproach,
+): readonly PointOfInterestInformation[] {
+  if (!list.some(entry => entry.id === id)) throw new Error(`Unknown Point of Interest information id: ${id}`);
+  const next = list.map(entry => entry.id === id
+    ? { ...entry, approaches: [...entry.approaches, approach] } : entry);
+  assertValidInformation(next);
+  return next;
+}
+export function updatePointOfInterestApproach(
+  list: readonly PointOfInterestInformation[], id: string, index: number,
+  approach: PointOfInterestApproach,
+): readonly PointOfInterestInformation[] {
+  const entry = list.find(candidate => candidate.id === id);
+  if (!entry || !entry.approaches[index]) throw new Error(`Unknown Point of Interest approach: ${id}/${index}`);
+  const next = list.map(candidate => candidate.id === id
+    ? { ...candidate, approaches: candidate.approaches.map((value, i) => i === index ? approach : value) }
+    : candidate);
+  assertValidInformation(next);
+  return next;
+}
+/** Adds, replaces or (with null) removes the alternative DT of one approach; the base DT is unchanged. */
+export function updatePointOfInterestApproachDifficultyOverride(
+  list: readonly PointOfInterestInformation[], id: string, index: number,
+  override: PointOfInterestDifficultyOverride | null,
+): readonly PointOfInterestInformation[] {
+  const approach = list.find(candidate => candidate.id === id)?.approaches[index];
+  if (!approach || !isSkillApproach(approach)) throw new Error(`Unknown Point of Interest skill approach: ${id}/${index}`);
+  const { difficultyOverride: _previous, ...base } = approach;
+  return updatePointOfInterestApproach(list, id, index,
+    override ? { ...base, difficultyOverride: { difficulty: override.difficulty, condition: override.condition } } : base);
+}
+export function removePointOfInterestApproach(
+  list: readonly PointOfInterestInformation[], id: string, index: number,
+): readonly PointOfInterestInformation[] {
+  const entry = list.find(candidate => candidate.id === id);
+  if (!entry || !entry.approaches[index] || entry.approaches.length === 1)
+    throw new Error(`Cannot remove Point of Interest approach: ${id}/${index}`);
+  return list.map(candidate => candidate.id === id
+    ? { ...candidate, approaches: candidate.approaches.filter((_, i) => i !== index) }
+    : candidate);
 }
 
 export type PoiInvestigationPlayerInformationView = (
-  | {
-      readonly visibility: "public";
-      readonly difficulty: number;
-    }
-  | {
-      readonly visibility: "hidden";
-    }
-) & {
-  /** Present only after this placement has revealed the information. */
-  readonly content?: string;
-};
-
+  | { readonly visibility: "public"; readonly difficulty: number }
+  | { readonly visibility: "hidden" }
+) & { readonly content: string; readonly specialization?: AptitudeSpecializationKey };
 export interface PoiInvestigationPlayerSkillView {
   readonly key: SkillKey;
   readonly name: string;
+  readonly specialization?: AptitudeSpecializationKey;
+  /** Distinct public base DTs; carries no information IDs or hidden row counts. */
+  readonly publicDifficulties: readonly number[];
   readonly information: readonly PoiInvestigationPlayerInformationView[];
 }
-
 export interface PoiInvestigationGmInformationView {
   readonly id: string;
   readonly difficulty: number;
   readonly content: string;
   readonly showDifficultyToPlayers: boolean;
-  readonly isRevealed: boolean;
+  readonly knownCount: number;
+  readonly specialization?: AptitudeSpecializationKey;
+  /** Present only for situational information; GM-private. */
+  readonly condition?: string;
+  /** Present only when this approach has an alternative DT; GM-private. */
+  readonly difficultyOverride?: PointOfInterestDifficultyOverride;
 }
-
 export interface PoiInvestigationGmSkillView {
   readonly key: SkillKey;
   readonly name: string;
   readonly information: readonly PoiInvestigationGmInformationView[];
 }
-
 interface PoiInvestigationBaseViewData {
   readonly name: string;
   readonly description: string;
   readonly img: string;
+  readonly investigationRunId?: string | null;
 }
-
-/** Whitelisted player presentation; array length intentionally exposes clue count. */
-export interface PoiInvestigationPlayerViewData
-  extends PoiInvestigationBaseViewData {
+export interface PoiInvestigationPlayerViewData extends PoiInvestigationBaseViewData {
   readonly audience: "player";
   readonly skills: readonly PoiInvestigationPlayerSkillView[];
+  readonly tools?: readonly PoiInvestigationToolView[];
+  readonly discoveries?: readonly { readonly content: string }[];
 }
-
-/** Full local-GM presentation; never returned to a non-GM requester. */
+export interface PoiInvestigationToolView {
+  readonly canUse?: boolean;
+  readonly id: string;
+  readonly name: string;
+  readonly img: string;
+  readonly uses: { readonly value: number; readonly max: number } | null;
+}
+export interface PoiInvestigationGmToolInformationView {
+  readonly id: string;
+  readonly content: string;
+  readonly knownCount: number;
+  readonly condition?: string;
+  readonly approaches: readonly { readonly equipmentUuid: string; readonly useFormId: string;
+    readonly equipmentName: string; readonly useFormName: string; readonly valid: boolean;
+    readonly mechanicConfig?: ToolMechanicConfig }[];
+}
 export interface PoiInvestigationGmViewData extends PoiInvestigationBaseViewData {
   readonly audience: "gm";
-  readonly associationItemUuid: string;
+  readonly itemUuid: string;
   readonly skills: readonly PoiInvestigationGmSkillView[];
   readonly gmContext: string;
+  readonly toolInformation?: readonly PoiInvestigationGmToolInformationView[];
 }
-
-export type PoiInvestigationViewData =
-  | PoiInvestigationPlayerViewData
-  | PoiInvestigationGmViewData;
-
-function assertInformationIdAvailable(
-  skills: readonly PointOfInterestSkill[],
-  id: string,
-): void {
-  if (!isNonBlankString(id)) {
-    throw new Error("Point of Interest information id must be non-blank.");
-  }
-  if (skills.some((group) => group.information.some((entry) => entry.id === id))) {
-    throw new Error(`Point of Interest information id already exists: ${id}`);
-  }
-}
-
-function createInformation(
-  id: string,
-  draft: PointOfInterestInformationDraft,
-): PointOfInterestInformation {
-  const information = {
-    id,
-    difficulty: draft.difficulty,
-    content: draft.content ?? "",
-    showDifficultyToPlayers: draft.showDifficultyToPlayers === true,
-  };
-  if (!isPointOfInterestInformation(information)) {
-    throw new Error("Invalid Point of Interest information.");
-  }
-  return information;
-}
-
-export function addPointOfInterestSkill(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-  draft: PointOfInterestInformationDraft,
-): readonly PointOfInterestSkill[] {
-  if (skills.some((group) => group.skill === skill)) {
-    throw new Error(`Point of Interest skill already exists: ${skill}`);
-  }
-  assertInformationIdAvailable(skills, informationId);
-  return [
-    ...skills,
-    { skill, information: [createInformation(informationId, draft)] },
-  ];
-}
-
-export function addPointOfInterestInformation(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-  draft: PointOfInterestInformationDraft,
-): readonly PointOfInterestSkill[] {
-  if (!skills.some((group) => group.skill === skill)) {
-    throw new Error(`Unknown Point of Interest skill: ${skill}`);
-  }
-  assertInformationIdAvailable(skills, informationId);
-  const information = createInformation(informationId, draft);
-  return skills.map((group) =>
-    group.skill === skill
-      ? { ...group, information: [...group.information, information] }
-      : group,
-  );
-}
-
-export function updatePointOfInterestInformation(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-  patch: PointOfInterestInformationPatch,
-): readonly PointOfInterestSkill[] {
-  const group = skills.find((candidate) => candidate.skill === skill);
-  const current = group?.information.find(({ id }) => id === informationId);
-  if (!current) {
-    throw new Error(`Unknown Point of Interest information id: ${informationId}`);
-  }
-  const updated = { ...current, ...patch };
-  if (!isPointOfInterestInformation(updated)) {
-    throw new Error("Invalid Point of Interest information.");
-  }
-  return skills.map((candidate) =>
-    candidate.skill === skill
-      ? {
-          ...candidate,
-          information: candidate.information.map((entry) =>
-            entry.id === informationId ? updated : entry,
-          ),
-        }
-      : candidate,
-  );
-}
-
-/** Removes the group too when its last information is removed. */
-export function removePointOfInterestInformation(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-  informationId: string,
-): readonly PointOfInterestSkill[] {
-  return skills.flatMap((group) => {
-    if (group.skill !== skill) return [group];
-    const information = group.information.filter(({ id }) => id !== informationId);
-    return information.length > 0 ? [{ ...group, information }] : [];
-  });
-}
-
-export function removePointOfInterestSkill(
-  skills: readonly PointOfInterestSkill[],
-  skill: SkillKey,
-): readonly PointOfInterestSkill[] {
-  return skills.filter((group) => group.skill !== skill);
-}
+export type PoiInvestigationViewData = PoiInvestigationPlayerViewData | PoiInvestigationGmViewData;

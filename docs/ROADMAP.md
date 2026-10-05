@@ -13,6 +13,10 @@ The project follows SemVer `MAJOR.MINOR.PATCH` while it is pre-1.0, using the `0
 - `0.X.0` marks a relevant functional milestone;
 - `0.X.Y` delivers maintenance, fixes, UX, polish, and other incremental improvements within that milestone.
 
+## Investigation v2 development — planned milestone 0.5.0
+
+The development branch implements a Scene-owned investigation run, passive investigation within a confirmed Examinar action, Check-based information revelation or PD loss, private narrative clues, Interagir requests, Recapitular and Compartilhar with GM authority, and the final Exploration vNext player/GM/Control presentation. This work does not change package version or publish a release. Runtime and Foundry v14 smoke validation precede any release claim.
+
 ## Current public releases
 
 ### 0.1.0 — Consolidated public baseline ✅

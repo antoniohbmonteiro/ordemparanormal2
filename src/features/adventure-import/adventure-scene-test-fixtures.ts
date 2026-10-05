@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { PLAYTEST_ALPHA_ADVENTURE } from "../../config/adventure-definitions/playtest-alpha";
 import { PLAYTEST_ALPHA_SCENE_PRESETS } from "../../config/adventure-scene-presets/playtest-alpha";
-import { PLAYTEST_ALPHA_AGENT_PRESETS } from "../../config/adventure-agent-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES } from "../../config/adventure-agent-sources/playtest-alpha";
 import { importFlag, type AgentActorSource } from "../../core/adventure-import/adventure-agent-reconciliation";
 import { SCENE_COLLECTIONS, type AdventureSceneSource, type SceneEmbeddedSource } from "../../core/adventure-import/adventure-scene-reconciliation";
 import { buildSceneCandidate, type AdventureScenePort } from "./prepare-adventure-scenes";
@@ -17,10 +17,10 @@ export function sceneImportFixture(options: { readonly materializedActs?: readon
     tokens: Mutable<SceneEmbeddedSource>[]; drawings: Mutable<SceneEmbeddedSource>[];
   }
   const world: MutableScene[] = [];
-  const actors: Mutable<AgentActorSource>[] = PLAYTEST_ALPHA_AGENT_PRESETS.filter(p => materializedActs.includes(p.act)).map((p, i) => ({
-    _id: `actor-${i}`, name: p.name, type: "agent", system: {}, items: [], prototypeToken: { texture: { src: `token-${i}.png` } },
-    flags: { ordemparanormal2: { adventureImport: { importer: "actor", adventureId: "playtest-alpha", documentId: p.id,
-      presetId: p.id, presetRevision: 1, version: 1, act: p.act, edition: "playtest-alpha-v1.1", portraitAssetId: p.portraitAssetId,
+  const actors: Mutable<AgentActorSource>[] = PLAYTEST_ALPHA_AGENT_SOURCES.filter(p => materializedActs.includes(p.act)).map((p, i) => ({
+    _id: `actor-${i}`, name: p.documentId.split(".").at(-1)!.replace(/^./u, first => first.toUpperCase()), type: "agent", system: {}, items: [], prototypeToken: { texture: { src: `token-${i}.png` } },
+    flags: { ordemparanormal2: { adventureImport: { importer: "actor", adventureId: "playtest-alpha", documentId: p.documentId,
+      presetId: p.documentId, presetRevision: 1, version: 1, act: p.act, edition: "playtest-alpha-v1.1", portraitAssetId: p.portraitAssetId,
       tokenAssetId: p.tokenAssetId, state: "complete", baseline: { digest: "baseline", items: [], manualUuids: [] } } } },
   }));
   const find = (id: string) => world.find(s => s._id === id)!;

@@ -1,17 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SKILL_DEFINITIONS } from "../../config/skills";
-import { selectInvestigationAptitudeSpecialization } from "./investigation-aptitude-selection";
+import { selectInvestigationApproachCheck, selectInvestigationAptitudeSpecialization } from "./investigation-aptitude-selection";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Investigation Aptitude selection", () => {
-  it("offers the canonical specializations and returns the selected key", async () => {
+  it("uses each canonical Aptitude specialization directly without a second selector", async () => {
+    const select = vi.fn();
+    expect(await selectInvestigationApproachCheck({ key: "aptitude", specialization: "currentAffairs" }, select))
+      .toEqual({ kind: "aptitude", key: "currentAffairs" });
+    expect(await selectInvestigationApproachCheck({ key: "aptitude", specialization: "humanities" }, select))
+      .toEqual({ kind: "aptitude", key: "humanities" });
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it("offers only the POI specializations and returns the selected key", async () => {
     const input = vi.fn().mockResolvedValue("humanities");
     vi.stubGlobal("foundry", { applications: { api: { DialogV2: { input } } } });
     vi.stubGlobal("game", { i18n: { localize: (key: string) => key } });
 
-    await expect(selectInvestigationAptitudeSpecialization())
+    await expect(selectInvestigationAptitudeSpecialization(["arts", "humanities"]))
       .resolves.toBe("humanities");
     const content = input.mock.calls[0]?.[0].content as string;
     const canonical = SKILL_DEFINITIONS.find(({ key }) => key === "aptitude");
@@ -19,8 +28,8 @@ describe("Investigation Aptitude selection", () => {
       throw new Error("Missing canonical Aptitude definition.");
     }
     for (const specialization of canonical.specializations) {
-      expect(content).toContain(`value="${specialization.key}"`);
-      expect(content).toContain(specialization.label);
+      if (["arts", "humanities"].includes(specialization.key)) expect(content).toContain(`value="${specialization.key}"`);
+      else expect(content).not.toContain(`value="${specialization.key}"`);
     }
   });
 
@@ -29,6 +38,6 @@ describe("Investigation Aptitude selection", () => {
       applications: { api: { DialogV2: { input: vi.fn().mockResolvedValue("cancel") } } },
     });
     vi.stubGlobal("game", { i18n: { localize: (key: string) => key } });
-    await expect(selectInvestigationAptitudeSpecialization()).resolves.toBeNull();
+    await expect(selectInvestigationAptitudeSpecialization(["arts"])).resolves.toBeNull();
   });
 });

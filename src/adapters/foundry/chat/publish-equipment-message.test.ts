@@ -14,6 +14,7 @@ function stubFoundry(renderTemplate = vi.fn().mockResolvedValue("<article>card</
   );
   const loadTemplates = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal("foundry", {
+    utils: { escapeHTML: (value: string) => value.replaceAll("<", "&lt;").replaceAll(">", "&gt;") },
     applications: {
       handlebars: { renderTemplate, loadTemplates },
       ux: { TextEditor: { implementation: { enrichHTML } } },
@@ -46,6 +47,25 @@ function equipmentWith(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 describe("publishEquipmentMessage", () => {
+  it("includes the committed form in a card and recognizes an already published operation", async () => {
+    const { renderTemplate, create } = stubFoundry();
+    vi.stubGlobal("game", { messages: { contents: [] } });
+    await publishEquipmentMessage(actor, equipmentWith(), {
+      id: "scan", name: "<Analisar>", description: "Resultado narrativo", consumesUse: true, mechanic: "standard",
+    }, "owner:operation");
+    expect(renderTemplate.mock.calls[0][1].description).toContain("&lt;Analisar&gt;");
+    expect(renderTemplate.mock.calls[0][1].description).toContain("Resultado narrativo");
+    expect(create.mock.calls[0][0].flags.ordemparanormal2.equipmentUseOperation).toBe("owner:operation");
+    vi.stubGlobal("game", { messages: { contents: [{ getFlag: () => "owner:operation" }] } });
+    await publishEquipmentMessage(actor, equipmentWith(), null, "owner:operation");
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it("reports a rejected message creation instead of completing the payment stage twice", async () => {
+    const { create } = stubFoundry();
+    create.mockResolvedValueOnce(undefined);
+    await expect(publishEquipmentMessage(actor, equipmentWith())).rejects.toThrow("was not created");
+  });
   it("renders the card with the enriched description, category and uses, and posts it as the Agent", async () => {
     const { renderTemplate, create, getSpeaker } = stubFoundry();
 

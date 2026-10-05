@@ -10,6 +10,7 @@ import {
 import { DIE_STEPS, type DieStep } from "../../core/dice/die-step";
 import type { OwnedAbilityView } from "../../adapters/foundry/abilities/owned-abilities";
 import type { OwnedEquipmentView } from "../../adapters/foundry/equipment/owned-equipment";
+import { EQUIPMENT_CATEGORIES, type EquipmentCategory } from "../../core/equipment/equipment-category";
 
 const RESOURCE_DEFINITIONS = [
   {
@@ -131,6 +132,17 @@ export interface AbilityResourceViewModel {
 export interface AbilityCardViewModel
   extends Omit<OwnedAbilityView, "resource"> {
   readonly resource: AbilityResourceViewModel | null;
+  readonly descriptionHTML: string;
+  readonly useForms: readonly AbilityUseFormViewModel[];
+  readonly isExpanded: boolean;
+  readonly detailsId: string;
+}
+
+export interface AbilityUseFormViewModel {
+  readonly id: string;
+  readonly name: string;
+  readonly descriptionHTML: string;
+  readonly isCheckIntegrated: boolean;
 }
 
 export interface EquipmentUsesViewModel {
@@ -142,10 +154,34 @@ export interface EquipmentUsesViewModel {
 }
 
 export interface EquipmentCardViewModel
-  extends Omit<OwnedEquipmentView, "uses"> {
+  extends Omit<OwnedEquipmentView, "uses" | "quantity"> {
   readonly uses: EquipmentUsesViewModel | null;
   readonly hasUses: boolean;
   readonly categoryLabelKey: string;
+  readonly quantity: {
+    readonly value: number;
+    readonly canDecrease: boolean;
+    readonly canIncrease: boolean;
+  } | null;
+  readonly descriptionHTML: string;
+  readonly isExpanded: boolean;
+  readonly detailsId: string;
+}
+
+export interface EquipmentSectionViewModel {
+  readonly category: EquipmentCategory;
+  readonly labelKey: string;
+  readonly items: readonly EquipmentCardViewModel[];
+}
+
+export function buildEquipmentSections(
+  cards: readonly EquipmentCardViewModel[],
+): readonly EquipmentSectionViewModel[] {
+  return EQUIPMENT_CATEGORIES.map(category => ({
+    category,
+    labelKey: `ORDEMPARANORMAL2.AgentSheet.Inventory.Sections.${category}`,
+    items: cards.filter(card => card.category === category),
+  })).filter(section => section.items.length > 0);
 }
 
 export interface AgentSheetViewModel {
@@ -167,6 +203,7 @@ export interface AgentSheetViewModel {
   readonly resources: readonly ResourceViewModel[];
   readonly abilities: readonly AbilityCardViewModel[];
   readonly equipment: readonly EquipmentCardViewModel[];
+  readonly equipmentSections: readonly EquipmentSectionViewModel[];
   readonly attributes: readonly AttributeViewModel[];
   readonly skills: readonly SkillViewModel[];
 }
@@ -201,8 +238,14 @@ function createSkillDieStepControl(
 function createAbilityCardViewModel(
   ability: OwnedAbilityView,
 ): AbilityCardViewModel {
+  const content = {
+    descriptionHTML: "",
+    useForms: [],
+    isExpanded: false,
+    detailsId: `op2-ability-details-${ability.id}`,
+  };
   const resource = ability.resource;
-  if (!resource) return { ...ability, resource: null };
+  if (!resource) return { ...ability, ...content, resource: null };
 
   const unclampedPercentage =
     resource.max > 0 ? (resource.value / resource.max) * 100 : 0;
@@ -212,6 +255,7 @@ function createAbilityCardViewModel(
 
   return {
     ...ability,
+    ...content,
     resource: {
       ...resource,
       fillPercentage,
@@ -225,9 +269,19 @@ function createEquipmentCardViewModel(
   equipment: OwnedEquipmentView,
 ): EquipmentCardViewModel {
   const categoryLabelKey = `ORDEMPARANORMAL2.Equipment.Categories.${equipment.category}`;
+  const content = {
+    quantity: equipment.quantity === null ? null : {
+      value: equipment.quantity,
+      canDecrease: equipment.quantity > 0,
+      canIncrease: equipment.quantity < Number.MAX_SAFE_INTEGER,
+    },
+    descriptionHTML: "",
+    isExpanded: false,
+    detailsId: `op2-equipment-details-${equipment.id}`,
+  };
   const uses = equipment.uses;
   if (!uses) {
-    return { ...equipment, uses: null, hasUses: false, categoryLabelKey };
+    return { ...equipment, ...content, uses: null, hasUses: false, categoryLabelKey };
   }
 
   const unclampedPercentage =
@@ -238,6 +292,7 @@ function createEquipmentCardViewModel(
 
   return {
     ...equipment,
+    ...content,
     uses: {
       ...uses,
       fillPercentage,
@@ -252,6 +307,7 @@ function createEquipmentCardViewModel(
 export function buildAgentSheetViewModel(
   source: AgentSheetSource,
 ): AgentSheetViewModel {
+  const equipment = source.equipment.map(createEquipmentCardViewModel);
   const resources = RESOURCE_DEFINITIONS.map(
     ({ key, labelKey }): ResourceViewModel => ({
       key,
@@ -347,7 +403,8 @@ export function buildAgentSheetViewModel(
     level: source.system.level,
     resources,
     abilities: source.abilities.map(createAbilityCardViewModel),
-    equipment: source.equipment.map(createEquipmentCardViewModel),
+    equipment,
+    equipmentSections: buildEquipmentSections(equipment),
     attributes,
     skills,
   };

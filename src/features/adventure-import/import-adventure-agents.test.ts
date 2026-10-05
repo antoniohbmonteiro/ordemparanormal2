@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { PLAYTEST_ALPHA_ADVENTURE as definition } from "../../config/adventure-definitions/playtest-alpha";
 import { PLAYTEST_ALPHA_AGENT_PRESETS as presets } from "../../config/adventure-agent-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES as sources } from "../../config/adventure-agent-sources/playtest-alpha";
 import { importAdventureAgents, AgentImportError } from "./import-adventure-agents";
 import { createAdventureAgentActorPort } from "../../adapters/foundry/adventure-agent-actors";
 import { prepareAdventureAgents, type AdventureAgentActorPort, type AgentPortableItem, type PreparedAdventureAgent, type PreparedAgentItem } from "./prepare-adventure-agents";
@@ -21,6 +22,14 @@ for (const [pack, type] of [["profiles", "profile"], ["occupations", "occupation
   }
 }
 type MutableActor = { -readonly [K in keyof AgentActorSource]: AgentActorSource[K] } & { items: AgentItemSource[]; folder?: string; ownership?: unknown; sort?: number };
+function materialization(acts: readonly ("actOne" | "actTwo")[]): MaterializationResult {
+  const ids = new Set(sources.filter(source => acts.includes(source.act)).flatMap(source =>
+    [source.portraitAssetId, source.tokenAssetId]));
+  return { materializedActs: acts, assets: definition.assets.filter(asset => ids.has(asset.id)).map(asset => ({
+    act: asset.source.act, originalEntryPath: asset.source.originalEntryPath,
+    sourceEntryPath: asset.source.originalEntryPath, storedPath: `worlds/test/${asset.source.originalEntryPath}`,
+  })) };
+}
 function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
   let counter = 0, authorized = true;
   const world: MutableActor[] = [];
@@ -44,7 +53,7 @@ function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
     isAuthorized: () => authorized, newId: () => `id${++counter}`, listActors: () => structuredClone(world),
     resolveCanonical: vi.fn(async (uuid, type) => { const source = canonical.get(uuid); if (!source || source.type !== type) throw new Error("missing canonical"); return structuredClone(source); }),
     validatePrepared: vi.fn(), prepareProfileAbilities: (_actor, _profileId, profile, abilities) => abilities.filter(a => (profile.system.abilityGrants as { uuid: string }[]).some(g => g.uuid === a.uuid)),
-    createActor: async (p, folder, placement) => { writes.push("createActor"); const a: MutableActor = { _id: `actor${++counter}`, type: "agent", name: p.preset.name, system: {}, items: [], folder }; update(a, p, true); (a.flags!.ordemparanormal2 as Record<string, unknown>).adventureImportFolder = placement; world.push(a); return a._id; },
+    createActor: async (p, folder, placement) => { writes.push("createActor"); const a: MutableActor = { _id: `actor${++counter}`, type: "agent", name: p.name, system: {}, items: [], folder }; update(a, p, true); (a.flags!.ordemparanormal2 as Record<string, unknown>).adventureImportFolder = placement; world.push(a); return a._id; },
     updateFolderPlacement: async (id, folder, flag) => { writes.push("folderPlacement"); const a = actor(id); a.folder = folder ?? undefined; const scope = a.flags!.ordemparanormal2 as Record<string, unknown>; scope.adventureImportFolder = flag; },
     updateActor: async (id, p) => { writes.push("updateActor"); update(actor(id), p); },
     createItems: async (id, items, p) => { writes.push("createItems"); actor(id).items.push(...items.map(i => item(i, p))); },
@@ -66,13 +75,35 @@ function harness(acts: ("actOne" | "actTwo")[] = ["actOne", "actTwo"]) {
       } } } };
   const decide = vi.fn(async () => "restore" as const);
   const lookup = { worldId: "test", findExisting: vi.fn(async (dir: string, name: string) => `${dir}/${name}`) };
-  const input = { definition, presets, revision: 1, acts, pdf, actors: port, folders,
-    assetSource: { kind: "worldStorage" as const, lookup }, decide };
+  const input = { definition, presets, revision: 2, acts, pdf, actors: port, folders,
+    assetSource: { kind: "materialization" as const, result: materialization(acts) }, decide };
   return { input, port, world, writes, decide, lookup, setAuthorized: (v: boolean) => { authorized = v; } };
 }
 function resource(a: MutableActor) { return a.system.resources as { health: { value: number; max: number }; determination: { value: number; max: number } }; }
 
 describe("Adventure preset Actor import", () => {
+  it("names new Actors from the matched ZIP entries and preserves later renames", async () => {
+    const h = harness(["actOne"]);
+    const alan = sources.find(source => source.documentId === "actOne.alan")!;
+    const assetPath = (id: string) => definition.assets.find(asset => asset.id === id)!.source.originalEntryPath;
+    const result: MaterializationResult = { ...h.input.assetSource.result,
+      assets: h.input.assetSource.result.assets.map(asset => asset.originalEntryPath === assetPath(alan.portraitAssetId)
+        ? { ...asset, sourceEntryPath: "Pacote/Tokens/Personagem - Novo Nome.png" }
+        : asset.originalEntryPath === assetPath(alan.tokenAssetId)
+          ? { ...asset, sourceEntryPath: "Pacote/Tokens/Token - Novo Nome.png" } : asset) };
+    const input = { ...h.input, assetSource: { kind: "materialization" as const, result } };
+    expect((await importAdventureAgents(input)).created).toBe(5);
+    const actor = h.world.find(value => importFlag(value)?.documentId === alan.documentId)!;
+    expect(actor.name).toBe("Novo Nome");
+    actor.name = "Nome editado";
+    expect((await importAdventureAgents(input)).unchanged).toBe(5);
+    expect(actor.name).toBe("Nome editado");
+    const mismatch = { ...result, assets: result.assets.map(asset => asset.originalEntryPath === assetPath(alan.tokenAssetId)
+      ? { ...asset, sourceEntryPath: "Pacote/Tokens/Token - Outra Pessoa.png" } : asset) };
+    await expect(importAdventureAgents({ ...h.input, assetSource: { kind: "materialization", result: mismatch } }))
+      .rejects.toMatchObject({ stage: "preflight" });
+  });
+
   it("rejects an explicit Ato II request for the survivors PDF before Actor writes", async () => {
     const h = harness(["actTwo"]);
     const pdf: PdfSourceAnalysis = { ...h.input.pdf, variant: "survivors", supportedActs: ["actOne"] };
@@ -82,19 +113,20 @@ describe("Adventure preset Actor import", () => {
 
   it.each(["relative", "hosted"])("uses %s materialized portrait and token paths without browsing", async representation => {
     const h = harness(["actOne"]);
-    const selected = presets.filter(p => p.act === "actOne");
+    const selected = sources.filter(p => p.act === "actOne");
     const ids = new Set(selected.flatMap(p => [p.portraitAssetId, p.tokenAssetId]));
     const paths = new Map<string, string>();
     const assets = definition.assets.filter(a => ids.has(a.id)).map(asset => {
       const storedPath = `${representation === "hosted" ? "https://assets.example.test/prefix/" : ""}worlds/test/${asset.source.originalEntryPath.split("/").map(encodeURIComponent).join("/")}`;
       paths.set(asset.id, storedPath);
-      return { act: asset.source.act, originalEntryPath: asset.source.originalEntryPath, storedPath };
+      return { act: asset.source.act, originalEntryPath: asset.source.originalEntryPath,
+        sourceEntryPath: asset.source.originalEntryPath, storedPath };
     });
     const result: MaterializationResult = { materializedActs: ["actOne"], assets };
     const input = { ...h.input, assetSource: { kind: "materialization" as const, result } };
     expect((await importAdventureAgents(input)).created).toBe(5);
     for (const preset of selected) {
-      const actor = h.world.find(a => (a.flags?.ordemparanormal2 as { adventureImport?: { documentId: string } })?.adventureImport?.documentId === preset.id)!;
+      const actor = h.world.find(a => (a.flags?.ordemparanormal2 as { adventureImport?: { documentId: string } })?.adventureImport?.documentId === preset.documentId)!;
       expect(actor.img).toBe(paths.get(preset.portraitAssetId));
       expect((actor.prototypeToken?.texture as { src?: string } | undefined)?.src).toBe(paths.get(preset.tokenAssetId));
     }
@@ -121,19 +153,19 @@ describe("Adventure preset Actor import", () => {
   it("checks every preset reference against current pack sources and keeps canonical Executor intact", async () => {
     const h = harness(); const plans = await prepareAdventureAgents(h.input);
     expect(plans).toHaveLength(10); expect(h.writes).toEqual([]);
-    const amanda = plans.find(a => a.preset.id === "actTwo.amanda")!;
+    const amanda = plans.find(a => a.source.documentId === "actTwo.amanda")!;
     expect(amanda.items.filter(i => i.name === "Avaliação")).toHaveLength(1);
     expect(amanda.items.find(i => i.name === "Avaliação")?.grant).toBe(true);
     expect(amanda.items.find(i => i.name === "Foco Mental (Aprimorado)")?.grant).toBe(false);
-    const heitor = plans.find(a => a.preset.id === "actTwo.heitor")!;
-    expect(heitor.items.find(i => i.type === "profile")?.system.abilityGrants).toEqual([{ uuid: presets[9].abilities[0].uuid }]);
-    expect(heitor.items.filter(i => i.type === "ability").map(i => i.uuid)).toEqual(presets[9].abilities.map(i => i.uuid));
+    const heitor = plans.find(a => a.source.documentId === "actTwo.heitor")!;
+    expect(heitor.items.find(i => i.type === "profile")?.system.abilityGrants).toEqual([{ uuid: presets[9].abilityUuids[0] }]);
+    expect(heitor.items.filter(i => i.type === "ability").map(i => i.uuid)).toEqual(presets[9].abilityUuids);
     expect(heitor.items.find(i => i.grant)?.system.resource).toEqual({ value: 0, max: 5 });
-    expect(canonical.get(presets[9].profile.uuid)?.system.abilityGrants).toEqual([{ uuid: "Compendium.ordemparanormal2.abilities.Item.ability000000008" }]);
+    expect(canonical.get(presets[9].profileUuid)?.system.abilityGrants).toEqual([{ uuid: "Compendium.ordemparanormal2.abilities.Item.ability000000008" }]);
   });
   it.each([4, 9])("preflights the whole batch before writing when Agent index %i fails", async index => {
     const h = harness(); const validate = h.port.validatePrepared;
-    h.port.validatePrepared = agent => { validate(agent); if (agent.preset.id === presets[index].id) throw new Error("invalid snapshot"); };
+    h.port.validatePrepared = agent => { validate(agent); if (agent.preset.key === presets[index].key) throw new Error("invalid snapshot"); };
     await expect(importAdventureAgents(h.input)).rejects.toThrow("invalid snapshot"); expect(h.writes).toEqual([]);
   });
   it.each(["playtest-alpha-v1.0", "playtest-alpha-v1.1"])("uses the same presets for %s", async edition => {
@@ -146,7 +178,7 @@ describe("Adventure preset Actor import", () => {
   });
   it("is idempotent; ignores manual homonyms, renames and gameplay changes; recreates deleted Actors", async () => {
     const h = harness(["actOne"]);
-    h.world.push({ _id: "manual", type: "agent", name: presets[0].name, system: {}, items: [] });
+    h.world.push({ _id: "manual", type: "agent", name: "Kênia", system: {}, items: [] });
     await importAdventureAgents(h.input);
     const a = h.world[1]; a.name = "Renamed"; resource(a).health.value = 999; a.folder = "manual-folder"; a.ownership = { default: 3 };
     h.writes.length = 0; const again = await importAdventureAgents(h.input);
@@ -184,19 +216,19 @@ describe("Adventure preset Actor import", () => {
     const a = h.world.find(a => importFlag(a)?.documentId === "actTwo.amanda")!;
     const evaluation = a.items.find(i => i.name === "Avaliação")!;
     a.items = a.items.filter(i => i._id !== evaluation._id);
-    const manual: AgentItemSource = { ...evaluation, _id: "manual-ability", name: "Custom", system: { custom: true }, flags: { ordemparanormal2: { sourceUuid: presets[8].abilities[0].uuid } } };
+    const manual: AgentItemSource = { ...evaluation, _id: "manual-ability", name: "Custom", system: { custom: true }, flags: { ordemparanormal2: { sourceUuid: presets[8].abilityUuids[0] } } };
     a.items.push(manual); await importAdventureAgents(h.input);
     expect(a.items.filter(i => i._id === "manual-ability")).toEqual([manual]);
     const flag = importFlag(a) as unknown as AgentImportFlag;
-    expect(flag.baseline?.manualUuids).toContain(presets[8].abilities[0].uuid);
+    expect(flag.baseline?.manualUuids).toContain(presets[8].abilityUuids[0]);
     expect(flag.baseline?.items.some(i => i.id === manual._id)).toBe(false);
     manual.system.custom = false; h.writes.length = 0;
     await importAdventureAgents(h.input); expect(h.writes).toEqual([]);
   });
   it("updates changed canonical source/revision automatically against the last applied baseline", async () => {
     const h = harness(["actOne"]); await importAdventureAgents(h.input);
-    const changed = presets.map(p => p.id === presets[0].id ? { ...p, level: 3 } : p);
-    expect((await importAdventureAgents({ ...h.input, presets: changed, revision: 2 })).updated).toBe(5);
+    const changed = presets.map(p => p.key === presets[0].key ? { ...p, level: 3 } : p);
+    expect((await importAdventureAgents({ ...h.input, presets: changed, revision: 3 })).updated).toBe(5);
     expect(h.decide).not.toHaveBeenCalled(); expect(h.world[0].system.level).toBe(3);
   });
   it("cancels the entire Actor stage on dialog close before any write", async () => {
@@ -225,7 +257,7 @@ describe("Adventure preset Actor import", () => {
     await expect(importAdventureAgents(h.input)).rejects.toThrow("Múltiplos"); expect(h.writes).toEqual([]); expect(h.decide).not.toHaveBeenCalled();
   });
   it("rejects unexpected effective grants or replacements before writes", async () => {
-    const h = harness(); const broken = presets.map(p => p.id === "actTwo.heitor" ? { ...p, profileGrantReplacements: undefined } : p);
+    const h = harness(); const broken = presets.map(p => p.key === "agent-10" ? { ...p, profileGrantReplacements: undefined } : p);
     await expect(importAdventureAgents({ ...h.input, presets: broken })).rejects.toThrow(); expect(h.writes).toEqual([]);
   });
   it("recovers Alan after a failed restore while keeping two impetus charges and manual Items", async () => {
@@ -261,7 +293,7 @@ describe("Adventure preset Actor import", () => {
       vi.unstubAllGlobals();
     }
     expect(importFlag(alan)?.state).toBe("complete");
-    expect(alan.items.find(i => i._id === impetus._id)?.system.resource).toEqual({ ...canonical.get(presets[2].abilities[0].uuid)!.system.resource as object, value: 2 });
+    expect(alan.items.find(i => i._id === impetus._id)?.system.resource).toEqual({ ...canonical.get(presets[2].abilityUuids[0])!.system.resource as object, value: 2 });
     expect(alan.system.skills).toEqual(presets[2].skills);
     expect(alan.items.map(i => i._id)).toEqual(originalIds);
     expect(alan.items.find(i => i._id === manual._id)).toEqual(beforeManual);
@@ -275,7 +307,7 @@ describe("Adventure preset Actor import", () => {
     const foreign: AgentItemSource = { _id: "foreignGrant", type: "ability", name: "Custom grant", system: { custom: true },
       flags: { ordemparanormal2: { profileGrant: { profileItemId: "manualProfile", abilityUuid: "Compendium.ordemparanormal2.abilities.Item.ability000000014" } } } };
     a.items.push({ _id: "manualProfile", type: "profile", name: "Manual selection", system: {} }, foreign);
-    const changed = presets.map(p => p.id === "actTwo.amanda" ? { ...p, abilities: p.abilities.slice(0, 2) } : p);
+    const changed = presets.map(p => p.key === "agent-09" ? { ...p, abilityUuids: p.abilityUuids.slice(0, 2) } : p);
     await importAdventureAgents({ ...h.input, presets: changed, revision: 2 });
     expect(a.items.find(i => i._id === "foreignGrant")).toEqual(foreign);
     expect(a.items.filter(i => i.type === "profile")).toHaveLength(1);

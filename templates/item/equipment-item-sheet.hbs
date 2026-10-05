@@ -26,6 +26,62 @@
       </label>
     </fieldset>
 
+    <section class="op2-equipment-sheet__quantity-section">
+      <header class="op2-equipment-sheet__toolbar">
+        <h2>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Quantity"}}</h2>
+        {{#if editable}}{{#unless equipment.quantity}}
+          <button type="button" data-action="addQuantity"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.AddQuantity"}}</button>
+        {{/unless}}{{/if}}
+      </header>
+      {{#if equipment.quantity}}
+        <div class="op2-equipment-sheet__quantity">
+          <label><span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Quantity"}}</span><input type="number" value="{{equipment.quantity.value}}" min="0" max="{{equipment.quantity.limit}}" step="1" data-quantity-edit{{#unless editable}} disabled{{/unless}} /></label>
+          {{#if editable}}<button type="button" data-action="removeQuantity">{{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveQuantity"}}</button>{{/if}}
+        </div>
+      {{else}}
+        <p class="op2-equipment-sheet__empty">{{localize "ORDEMPARANORMAL2.EquipmentSheet.EmptyQuantity"}}</p>
+      {{/if}}
+    </section>
+
+    <section class="op2-equipment-sheet__use-forms-section">
+      <header class="op2-equipment-sheet__toolbar">
+        <h2>{{localize "ORDEMPARANORMAL2.EquipmentSheet.UseForms"}}</h2>
+        {{#if editable}}
+          <button type="button" data-action="addUseForm"><i class="fa-solid fa-plus"></i> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.AddUseForm"}}</button>
+        {{/if}}
+      </header>
+      {{#each equipment.useForms}}
+        <fieldset class="op2-equipment-sheet__use-form">
+          <label class="op2-equipment-sheet__use-form-field">
+            <span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Name"}}</span>
+            <input type="text" value="{{name}}" data-use-form-edit="name" data-use-form-id="{{id}}" autocomplete="off"{{#unless ../editable}} disabled{{/unless}} />
+          </label>
+          <label class="op2-equipment-sheet__use-form-field">
+            <span>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.Description"}}</span>
+            {{#if ../editable}}
+              <textarea rows="3" data-use-form-edit="description" data-use-form-id="{{id}}">{{description}}</textarea>
+            {{else}}
+              <div class="op2-equipment-sheet__use-form-description">{{{enrichedDescription}}}</div>
+            {{/if}}
+          </label>
+          <div class="op2-equipment-sheet__use-form-footer">
+            <label>{{localize "ORDEMPARANORMAL2.Laboratory.Mechanic"}}
+              <select data-use-form-edit="mechanic" data-use-form-id="{{id}}"{{#unless ../editable}} disabled{{/unless}}>
+                <option value="standard"{{#unless isLaboratory}} selected{{/unless}}>{{localize "ORDEMPARANORMAL2.Laboratory.Standard"}}</option>
+                <option value="laboratory"{{#if isLaboratory}} selected{{/if}}>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}}</option><option value="radio" {{#if isRadio}}selected{{/if}}>{{localize "ORDEMPARANORMAL2.Radio.MechanicLabel"}}</option>
+              </select>
+            </label>
+            <label><input type="checkbox" data-use-form-edit="consumesUse" data-use-form-id="{{id}}"{{#if consumesUse}} checked{{/if}}{{#unless ../editable}} disabled{{/unless}} /> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Fields.ConsumesUse"}}</label>
+            {{#if ../editable}}
+              <button type="button" data-action="removeUseForm" data-use-form-id="{{id}}" title="{{localize 'ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveUseForm'}}"><i class="fa-solid fa-trash"></i> {{localize "ORDEMPARANORMAL2.EquipmentSheet.Actions.RemoveUseForm"}}</button>
+            {{/if}}
+          </div>
+        </fieldset>
+      {{else}}
+        <p class="op2-equipment-sheet__empty">{{localize "ORDEMPARANORMAL2.EquipmentSheet.EmptyUseForms"}}</p>
+      {{/each}}
+    </section>
+
     <section class="op2-equipment-sheet__uses-section">
       <header class="op2-equipment-sheet__toolbar">
         <h2>{{localize "ORDEMPARANORMAL2.EquipmentSheet.Uses"}}</h2>

@@ -47,86 +47,98 @@ describe("PointOfInterestDataModel", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
       publicDescription: MockField;
       gmContext: MockField;
-      skills: MockArrayField;
+      information: MockArrayField;
     };
 
     expect(Object.keys(schema)).toEqual([
       "publicDescription",
       "gmContext",
-      "skills",
+      "information",
     ]);
     expect(schema.publicDescription.options).toMatchObject({
       blank: true,
       initial: "",
     });
     expect(schema.gmContext.options).toMatchObject({ blank: true, initial: "" });
+    expect(schema).not.toHaveProperty("skills");
   });
 
-  it("models 0..N unique skill groups containing 1..N information", () => {
+  it("models ordered information and approaches with canonical constraints", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
-      skills: MockArrayField;
+      information: MockArrayField;
     };
-    const { skills } = schema;
+    const { information } = schema;
 
-    expect(skills.options).toMatchObject({ initial: [] });
-    expect(typeof skills.options.validate).toBe("function");
+    expect(information.options).toMatchObject({ initial: [] });
+    expect(typeof information.options.validate).toBe("function");
 
-    const group = skills.element;
-    expect(Object.keys(group.fields)).toEqual([
-      "skill",
-      "information",
-    ]);
-    expect(group.fields.skill.options.choices).toEqual([...SKILL_KEYS]);
-
-    const information = group.fields.information as unknown as MockArrayField;
-    expect(information.options).toMatchObject({ initial: [], min: 1 });
     const entry = information.element;
     expect(Object.keys(entry.fields)).toEqual([
       "id",
-      "difficulty",
       "content",
-      "showDifficultyToPlayers",
+      "approaches",
+      "availability",
     ]);
     expect(entry.fields.id.options).toMatchObject({ blank: false });
-    expect(entry.fields.difficulty.options).toMatchObject({
+    expect(entry.fields.content.options).toMatchObject({ blank: true });
+    const approaches = entry.fields.approaches as unknown as MockArrayField;
+    expect(approaches.options).toMatchObject({ min: 1 });
+    expect(approaches.element.fields.skill.options.choices).toEqual([...SKILL_KEYS]);
+    expect(approaches.element.fields.difficulty.options).toMatchObject({
       integer: true,
       min: 1,
     });
-    expect(entry.fields.difficulty.options).not.toHaveProperty("max");
-    expect(entry.fields.content.options).toMatchObject({ blank: true });
-    expect(entry.fields.showDifficultyToPlayers.options).toMatchObject({ initial: false });
+    expect(approaches.element.fields.difficulty.options).not.toHaveProperty("max");
+    expect(approaches.element.fields.showDifficultyToPlayers.options.initial).toBeUndefined();
+    expect(approaches.element.fields.specialization.options).toMatchObject({ required: false });
   });
 
-  it("rejects duplicate skills, empty groups, and repeated information ids", () => {
+  it("models one optional alternative DT per approach, absent by default so stored approaches keep their source", () => {
+    const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
+    const approaches = schema.information.element.fields.approaches as unknown as MockArrayField;
+    const override = approaches.element.fields.difficultyOverride as unknown as MockSchemaField;
+    expect(override.options).toMatchObject({ required: false, nullable: false });
+    expect(override.options).not.toHaveProperty("initial");
+    expect(Object.keys(override.fields)).toEqual(["difficulty", "condition"]);
+    expect(override.fields.difficulty.options).toMatchObject({ required: true, integer: true, min: 1 });
+    expect(override.fields.difficulty.options).not.toHaveProperty("initial");
+    expect(override.fields.condition.options).toMatchObject({ required: true, blank: false });
+  });
+
+  it("defaults information availability to always so stored information without it needs no migration", () => {
+    const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
+    const availability = schema.information.element.fields.availability as unknown as MockSchemaField;
+    expect(availability.options).toMatchObject({ required: true, nullable: false });
+    expect(Object.keys(availability.fields)).toEqual(["mode", "condition"]);
+    expect(availability.fields.mode.options).toMatchObject({
+      required: true, blank: false, choices: ["always", "situational"], initial: "always",
+    });
+    expect(availability.fields.condition.options).toMatchObject({ required: true, blank: true, initial: "" });
+  });
+
+  it("rejects situational information without a condition", () => {
+    const schema = PointOfInterestDataModel.defineSchema() as unknown as { information: MockArrayField };
+    const validate = schema.information.options.validate as (value: unknown) => boolean;
+    const entry = { id: "a", content: "", approaches: [{ skill: "crime", difficulty: 6, showDifficultyToPlayers: false }] };
+    expect(validate([{ ...entry, availability: { mode: "always", condition: "" } }])).toBe(true);
+    expect(validate([{ ...entry, availability: { mode: "situational", condition: "Requer a chave." } }])).toBe(true);
+    expect(validate([{ ...entry, availability: { mode: "situational", condition: "" } }])).toBe(false);
+  });
+
+  it("rejects duplicate IDs, empty approaches and duplicate semantic approaches", () => {
     const schema = PointOfInterestDataModel.defineSchema() as unknown as {
-      skills: MockArrayField;
+      information: MockArrayField;
     };
-    const validate = schema.skills.options.validate as (
+    const validate = schema.information.options.validate as (
       value: unknown,
     ) => boolean;
-
-    expect(validate([
-      { skill: "crime", information: [{ id: "a" }, { id: "b" }] },
-      { skill: "perception", information: [{ id: "c" }] },
-    ])).toBe(true);
-    expect(validate([
-      { skill: "crime", information: [{ id: "a" }] },
-      { skill: "crime", information: [{ id: "b" }] },
-    ])).toBe(false);
-    expect(validate([{ skill: "crime", information: [] }])).toBe(false);
-    expect(validate([
-      { skill: "crime", information: [{ id: "a" }] },
-      { skill: "perception", information: [{ id: "a" }] },
-    ])).toBe(false);
-  });
-
-  it("does not override migrateData (no backfill; type never shipped)", () => {
-    expect(
-      Object.prototype.hasOwnProperty.call(
-        PointOfInterestDataModel,
-        "migrateData",
-      ),
-    ).toBe(false);
+    const approach = { skill: "crime", difficulty: 6, showDifficultyToPlayers: false };
+    const entry = { id: "a", content: "", approaches: [approach] };
+    expect(validate([entry])).toBe(true);
+    expect(validate([{ ...entry, approaches: [{ ...approach, specialization: undefined }] }])).toBe(true);
+    expect(validate([entry, entry])).toBe(false);
+    expect(validate([{ ...entry, approaches: [] }])).toBe(false);
+    expect(validate([{ ...entry, approaches: [approach, approach] }])).toBe(false);
   });
 });
 

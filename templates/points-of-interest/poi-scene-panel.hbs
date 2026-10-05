@@ -1,0 +1,78 @@
+<section class="op2-poi-scene-panel">
+  <header class="op2-poi-scene-panel__header">
+    <div class="op2-poi-scene-panel__heading">
+      <h2>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Title"}}</h2>
+      <p>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.InScene"}} <strong>{{sceneName}}</strong></p>
+    </div>
+    {{#if isGM}}
+      <button type="button" class="op2-poi-scene-panel__add" data-action="control">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Open"}}</button>
+      <button type="button" class="op2-poi-scene-panel__add" data-action="add">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        {{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Add"}}
+      </button>
+    {{else}}
+      {{#if runActive}}<button type="button" class="op2-poi-scene-panel__add" data-action="recap" {{#unless recapAvailable}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Recap"}}</button>{{/if}}
+    {{/if}}
+  </header>
+  {{#if isGM}}<p class="op2-poi-scene-panel__drop-hint" aria-hidden="true">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.DropHint"}}</p>{{/if}}
+
+  {{#if loading}}<p class="op2-poi-scene-panel__status" role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Loading"}}</p>{{/if}}
+  {{#if error}}<p class="op2-poi-scene-panel__status" role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Failed"}}</p>{{/if}}
+
+  {{#unless loading}}
+  {{#unless error}}
+    <input type="search" name="search" class="op2-poi-scene-panel__search" value="{{search}}"
+      placeholder="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Search'}}"
+      aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Search'}}" />
+    <ul class="op2-poi-scene-panel__list">
+      {{#each entries}}
+        <li class="op2-poi-scene-panel__row{{#if expanded}} is-expanded{{/if}}" data-item-uuid="{{itemUuid}}" {{#unless matchesSearch}}hidden{{/unless}}>
+          <button type="button" class="op2-poi-scene-panel__image" data-action="open" aria-label="{{name}}">
+            {{#if img}}<img src="{{img}}" alt="" />{{else}}<i class="fa-solid fa-location-dot"></i>{{/if}}
+          </button>
+          <div class="op2-poi-scene-panel__identity">
+            <button type="button" class="op2-poi-scene-panel__name" data-action="open">{{name}}</button>
+            {{#if @root.isGM}}
+            <p class="op2-poi-scene-panel__meta">
+              <span><i class="fa-solid {{visibilityIcon}}" aria-hidden="true"></i> {{visibilityLabel}}</span>
+              <span class="op2-poi-scene-panel__separator" aria-hidden="true">·</span>
+              <span>{{locationLabel}}</span>
+            </p>
+            {{/if}}
+          </div>
+          {{#if @root.isGM}}
+            <button type="button" class="op2-poi-scene-panel__menu-trigger" data-poi-menu-trigger
+              aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Actions'}}"
+              title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Actions'}}">
+              <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+            </button>
+          {{else}}
+            <button type="button" class="op2-poi-scene-panel__menu-trigger" data-action="toggle" aria-expanded="{{expanded}}" aria-label="{{name}}"><i class="fa-solid fa-chevron-{{#if expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i></button>
+            {{#if expanded}}
+              <div class="op2-poi-scene-panel__clues">
+                {{#each knownGroups}}
+                  <section class="op2-poi-scene-panel__clue-group">
+                    <h3>{{label}}</h3>
+                    <ul>{{#each clues}}<li><span>{{text}}</span>{{#if shareReference}}{{#if @root.shareAvailable}}<button type="button" data-action="share" data-clue-index="{{index}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Share"}}</button>{{/if}}{{/if}}</li>{{/each}}</ul>
+                  </section>
+                {{else}}
+                  <p class="op2-poi-scene-panel__empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}</p>
+                {{/each}}
+              </div>
+            {{/if}}
+          {{/if}}
+        </li>
+      {{/each}}
+      <li class="op2-poi-scene-panel__empty" data-poi-scene-empty {{#unless empty}}hidden{{/unless}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.Empty"}}</li>
+      <li class="op2-poi-scene-panel__empty" data-poi-search-empty role="status" {{#unless noSearchResults}}hidden{{/unless}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.ScenePanel.NoMatches"}}</li>
+    </ul>
+    {{#unless isGM}}{{#if narrativeClues}}
+      <section class="op2-poi-scene-panel__narrative" data-item-uuid="narrative">
+        <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NarrativeClues"}}</h3>
+        <ul>{{#each narrativeClues}}<li><span>{{text}}</span>{{#if shareReference}}{{#if @root.shareAvailable}}<button type="button" data-action="share" data-clue-index="{{@index}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Share"}}</button>{{/if}}{{/if}}</li>{{/each}}</ul>
+      </section>
+    {{/if}}{{/unless}}
+    <footer class="op2-poi-scene-panel__footer">{{count}} {{countLabel}}</footer>
+  {{/unless}}
+  {{/unless}}
+</section>

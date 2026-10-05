@@ -1,0 +1,20 @@
+<section class="op2-laboratory-body" aria-busy="{{busy}}">
+  <div class="op2-laboratory-meta"><span>Exatas {{#if ceiling}}d{{ceiling}}{{else}}—{{/if}}</span><span>{{localize "ORDEMPARANORMAL2.Laboratory.Budget"}} <strong>{{remaining}}</strong></span></div>
+  <p class="op2-laboratory-instruction">{{localize "ORDEMPARANORMAL2.Laboratory.Instruction"}}</p>
+  <div class="op2-laboratory-sequence" data-dice-count="{{diceCount}}" style="--op2-lab-count: {{diceCount}}">
+    {{#each positions}}<div class="op2-laboratory-position">
+      <div class="op2-laboratory-die-label"><img src="{{icon}}" alt="" /> d{{die}}</div>
+      <button type="button" data-action="selectDie" data-position="{{index}}" aria-label="{{accessibleLabel}}" aria-pressed="{{selected}}" class="op2-laboratory-die{{#if broken}} is-broken{{/if}}{{#if selected}} is-selected{{/if}}"{{#if disabled}} disabled{{/if}}>{{value}}</button>
+      <span class="op2-laboratory-comparison{{#if broken}} is-broken{{/if}}">{{comparison}} · {{comparisonLabel}}</span>
+    </div>{{/each}}
+  </div>
+  <p class="op2-laboratory-summary">{{breaksSummary}}</p>
+  {{#if terminal}}<div class="op2-laboratory-outcome{{#if success}} is-success{{else}} is-failure{{/if}}" role="status">{{outcome}}</div>
+  {{else}}<p class="op2-laboratory-selection">{{selectedCount}} {{localize "ORDEMPARANORMAL2.Laboratory.SelectedCost"}}</p><p class="op2-laboratory-keyboard">{{localize "ORDEMPARANORMAL2.Laboratory.Keyboard"}}</p>{{/if}}
+  {{#if error}}<p class="op2-laboratory-error" role="status">{{error}}</p>{{/if}}
+  <footer class="op2-laboratory-actions">
+    {{#if terminal}}<button type="button" data-action="close">{{localize "ORDEMPARANORMAL2.Laboratory.Close"}}</button>
+    {{else}}{{#if retry}}<button type="button" data-action="retry"{{#if busy}} disabled{{/if}}>{{localize "ORDEMPARANORMAL2.Laboratory.Retry"}}</button>
+    {{else}}<button type="button" class="op2-laboratory-primary" data-action="reroll"{{#unless canReroll}} disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.Laboratory.Reroll"}}</button><button type="button" data-action="finish"{{#unless canFinish}} disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.Laboratory.Finish"}}</button>{{/if}}{{/if}}
+  </footer>
+</section>

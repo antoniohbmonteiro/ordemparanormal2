@@ -69,6 +69,35 @@ function createSource(
 }
 
 describe("Agent Sheet view model", () => {
+  it.each([
+    [], ["general"], ["weapon"], ["tool"],
+    ["tool", "general"], ["weapon", "tool"], ["weapon", "general"],
+    ["tool", "weapon", "general"],
+  ] as const)("groups only populated Equipment categories from %s in canonical order", (...categories) => {
+    const equipment: AgentSheetSource["equipment"] = categories.map((category, index) => ({
+      id: `equipment-${index}`, name: "Item", img: "item.webp", description: "", category, quantity: null, uses: null,
+    }));
+    const copy = structuredClone(equipment);
+    const result = buildAgentSheetViewModel(createSource([], equipment));
+    const expected = ["general", "weapon", "tool"].filter(category => categories.includes(category as never));
+    expect(result.equipmentSections.map(section => section.category)).toEqual(expected);
+    expect(result.equipmentSections.every(section => section.items.length > 0)).toBe(true);
+    expect(equipment).toEqual(copy);
+  });
+
+  it("preserves Item order within each Equipment section and exposes zero as a real quantity", () => {
+    const equipment: AgentSheetSource["equipment"] = ["tool", "general", "tool"].map((category, index) => ({
+      id: `${index}`, name: "Item", img: "item.webp", description: "", category: category as "general" | "tool",
+      quantity: index === 0 ? 0 : index === 1 ? Number.MAX_SAFE_INTEGER : null, uses: null,
+    }));
+    const result = buildAgentSheetViewModel(createSource([], equipment));
+    expect(result.equipment.map(card => card.id)).toEqual(["0", "1", "2"]);
+    expect(result.equipmentSections.map(section => section.items.map(card => card.id))).toEqual([["1"], ["0", "2"]]);
+    expect(result.equipment[0]?.quantity).toEqual({ value: 0, canDecrease: false, canIncrease: true });
+    expect(result.equipment[1]?.quantity).toEqual({ value: Number.MAX_SAFE_INTEGER, canDecrease: true, canIncrease: false });
+    expect(result.equipment[2]?.quantity).toBeNull();
+    expect(result.equipment.every(card => !card.isExpanded && card.descriptionHTML === "")).toBe(true);
+  });
   it("preserves identity and resource update paths without clamping values", () => {
     const viewModel = buildAgentSheetViewModel(createSource());
 
@@ -182,6 +211,7 @@ describe("Agent Sheet view model", () => {
         img: "icons/svg/item-bag.svg",
         description: "",
         category: "tool",
+        quantity: null,
         uses: { value: 2, max: 3 },
       },
       {
@@ -190,6 +220,7 @@ describe("Agent Sheet view model", () => {
         img: "icons/svg/item-bag.svg",
         description: "",
         category: "tool",
+        quantity: null,
         uses: null,
       },
     ];

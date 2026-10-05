@@ -1,22 +1,60 @@
+import { registerRadioQueries, radioSessionGuard } from "../adapters/foundry/equipment/radio-session";
+import { SYSTEM_ID } from "../config/system-config";
 import { registerPoiInvestigationQuery } from "../adapters/foundry/points-of-interest/poi-investigation-query";
-import { POI_INFORMATION_REVEAL_FLAG_PATH } from "../adapters/foundry/points-of-interest/poi-information-reveal-state";
-import { refreshInvestigationApplication } from "../applications/points-of-interest/investigation-application";
+import { mutatePoi, reconcileScenePoiMembership, registerPoiRuntimeQueries } from "../adapters/foundry/points-of-interest/poi-runtime-queries";
+import { readPoiRegionAssociation } from "../adapters/foundry/points-of-interest/poi-region-association";
+import { registerInvestigationRuntimeQueries } from "../adapters/foundry/points-of-interest/investigation-runtime";
+import { registerInvestigatePoiQuery } from "../adapters/foundry/points-of-interest/investigate-poi";
+import { registerExaminePoiQuery } from "../adapters/foundry/points-of-interest/examine-poi";
+import { registerCommitPoiExaminationQuery } from "../adapters/foundry/points-of-interest/commit-poi-examination";
+import { registerInteractPoiQuery } from "../adapters/foundry/points-of-interest/interact-poi";
+import { registerShareCandidatesQuery } from "../adapters/foundry/points-of-interest/investigation-share";
+import { onInvestigationCheckMessageUpdated, registerInvestigationRequestQueries } from "../adapters/foundry/points-of-interest/investigation-requests";
+import { registerEquipmentUseQuery, registerEquipmentSessionGuard } from "../adapters/foundry/equipment/execute-equipment-use";
+import { registerEquipmentUsesAdjustmentQuery } from "../adapters/foundry/equipment/adjust-owned-equipment-uses";
+import { registerEquipmentUsesMutationQuery } from "../adapters/foundry/equipment/mutate-owned-equipment-uses";
+import { registerPoiToolUseQuery } from "../adapters/foundry/points-of-interest/use-poi-tool";
+import { registerLaboratoryQueries, laboratorySessionGuard } from "../adapters/foundry/equipment/laboratory-session";
 
-/** Wires the sanitized query and replicated-state invalidation for open views. */
 export function registerPoiInvestigation(): void {
+  registerEquipmentUseQuery();
+  registerEquipmentUsesAdjustmentQuery();
+  registerEquipmentUsesMutationQuery();
+  registerPoiToolUseQuery();
+  registerLaboratoryQueries();
+  registerRadioQueries();
+  registerEquipmentSessionGuard((input, requester) => laboratorySessionGuard(input, requester) ?? radioSessionGuard(input, requester));
   registerPoiInvestigationQuery();
-  Hooks.on("updateRegion", (region: unknown, changes: unknown) => {
-    if (
-      !changes
-      || typeof changes !== "object"
-      || !foundry.utils.hasProperty(changes, POI_INFORMATION_REVEAL_FLAG_PATH)
-    ) return;
-    const document = region as {
-      readonly id?: string | null;
-      readonly parent?: { readonly id?: string | null } | null;
-    };
-    const sceneId = document.parent?.id;
-    const regionId = document.id;
-    if (sceneId && regionId) refreshInvestigationApplication(sceneId, regionId);
+  registerPoiRuntimeQueries();
+  registerInvestigationRuntimeQueries();
+  registerInvestigatePoiQuery();
+  registerExaminePoiQuery();
+  registerCommitPoiExaminationQuery();
+  registerInteractPoiQuery();
+  registerShareCandidatesQuery();
+  registerInvestigationRequestQueries();
+  Hooks.on("updateChatMessage", (message: unknown) => {
+    void onInvestigationCheckMessageUpdated(message as ChatMessage).catch(error => console.error(`${SYSTEM_ID} | Investigation Check update failed`, error));
   });
+  const ensure = (region: unknown) => {
+    if (!game.user?.isGM || game.users.activeGM?.id !== game.user.id) return;
+    const document = region as foundry.documents.RegionDocument;
+    const itemUuid = readPoiRegionAssociation(document)?.itemUuid;
+    const sceneId = document.parent?.id;
+    if (!itemUuid || !sceneId) return;
+    void mutatePoi({ action: "add", sceneId, itemUuid }).then(result => {
+      if (!result.ok) ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.ScenePanel.MembershipFailed"));
+    }).catch(error => {
+      console.error(`${SYSTEM_ID} | Failed to add Region POI to Scene`, error);
+      ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.ScenePanel.MembershipFailed"));
+    });
+  };
+  Hooks.on("createRegion", ensure);
+  Hooks.on("updateRegion", ensure);
+  const reconcile = () => { void reconcileScenePoiMembership().catch(error => {
+    console.error(`${SYSTEM_ID} | POI membership reconciliation failed`, error);
+    ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.PointOfInterest.ScenePanel.MembershipFailed"));
+  }); };
+  Hooks.once("ready", reconcile);
+  Hooks.on("updateUser", reconcile);
 }

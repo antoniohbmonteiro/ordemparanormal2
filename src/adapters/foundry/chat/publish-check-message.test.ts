@@ -64,6 +64,13 @@ describe("Foundry chat message mode", () => {
     },
   );
 
+  it("allows Examinar to publish a GM-visible Check when the current mode is self-only", async () => {
+    stubFoundryMode("self");
+    const toMessage = vi.fn().mockResolvedValue({ id: "check-1" });
+    await sendRollToMessage({ toMessage }, { content: "card" }, "gm");
+    expect(toMessage).toHaveBeenCalledWith({ content: "card" }, { messageMode: "gm" });
+  });
+
   it("does not accept inherited registry properties", async () => {
     stubFoundryMode("toString");
     const toMessage = vi.fn();

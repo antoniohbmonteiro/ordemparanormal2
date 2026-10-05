@@ -1,4 +1,5 @@
 import { EQUIPMENT_ITEM_TYPE } from "../../../config/system-config";
+import { readEquipmentQuantity } from "../../../core/equipment/equipment-quantity";
 import { isEquipmentCategory, type EquipmentCategory } from "../../../core/equipment/equipment-category";
 import {
   readEquipmentUses,
@@ -11,6 +12,7 @@ export interface OwnedEquipmentView {
   readonly img: string;
   readonly description: string;
   readonly category: EquipmentCategory;
+  readonly quantity: number | null;
   readonly uses: EquipmentUsesData | null;
 }
 
@@ -41,6 +43,9 @@ export function collectOwnedEquipment(
       img: item.img ?? "icons/svg/item-bag.svg",
       description: readDescription(item.system),
       category: readCategory(item.system),
+      quantity: readEquipmentQuantity(
+        (item.system as unknown as { readonly quantity?: unknown }).quantity,
+      ),
       uses: readEquipmentUses(
         (item.system as unknown as { readonly uses?: unknown }).uses,
       ),

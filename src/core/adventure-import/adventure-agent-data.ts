@@ -1,6 +1,5 @@
 import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../actors/agent-attributes";
 import { isDieStep, NORMAL_DIE_STEPS, type DieStep, type NormalDieStep } from "../dice/die-step";
-import type { AdventureAct } from "./recognize-zip-source";
 
 export interface AdventureSkillDefinition { readonly key: string; readonly specializations?: readonly { readonly key: string }[] }
 export type AgentPresetSkills<R extends readonly AdventureSkillDefinition[] = readonly AdventureSkillDefinition[]> = string extends R[number]["key"]
@@ -8,15 +7,13 @@ export type AgentPresetSkills<R extends readonly AdventureSkillDefinition[] = re
   readonly [D in R[number] as D["key"]]: D extends { readonly specializations: readonly { readonly key: string }[] }
     ? Readonly<Record<D["specializations"][number]["key"], NormalDieStep>> : NormalDieStep;
 };
-export interface AdventureCanonicalItemReference { readonly name: string; readonly uuid: string }
 export interface AdventureAgentPreset<R extends readonly AdventureSkillDefinition[] = readonly AdventureSkillDefinition[]> {
-  readonly schemaVersion: 1; readonly id: string; readonly act: AdventureAct; readonly name: string; readonly level: number;
+  readonly schemaVersion: 2; readonly key: string; readonly level: number;
   readonly resources: { readonly healthMax: number; readonly determinationMax: number };
   readonly attributes: Readonly<Record<AttributeKey, DieStep>>;
   readonly skills: AgentPresetSkills<R>;
-  readonly profile: AdventureCanonicalItemReference; readonly occupation: AdventureCanonicalItemReference;
-  readonly abilities: readonly AdventureCanonicalItemReference[];
-  readonly portraitAssetId: string; readonly tokenAssetId: string;
+  readonly profileUuid: string; readonly occupationUuid: string;
+  readonly abilityUuids: readonly string[];
   readonly profileGrantReplacements?: readonly { readonly grantUuid: string; readonly replacementUuid: string }[];
 }
 export function adventureDataRecord(value: unknown): Record<string, unknown> | null {
@@ -40,11 +37,9 @@ export function validateAdventureAgentData<R extends readonly AdventureSkillDefi
     else for (const key of Object.keys(record)) if (!keys.includes(key)) issues.push(`${path}.${key}`);
     return record ?? {};
   }
-  const data = object(value, ["schemaVersion", "id", "act", "name", "level", "resources", "attributes", "skills", "profile", "occupation", "abilities", "portraitAssetId", "tokenAssetId", "profileGrantReplacements"], "preset");
-  if (data.schemaVersion !== 1) issues.push("schemaVersion");
-  for (const key of ["id", "name", "portraitAssetId", "tokenAssetId"]) if (!nonblank(data[key])) issues.push(key);
-  if (data.act !== "actOne" && data.act !== "actTwo") issues.push("act");
-  if (!nonblank(data.id) || !data.id.startsWith(`${data.act}.`)) issues.push("id");
+  const data = object(value, ["schemaVersion", "key", "level", "resources", "attributes", "skills", "profileUuid", "occupationUuid", "abilityUuids", "profileGrantReplacements"], "preset");
+  if (data.schemaVersion !== 2) issues.push("schemaVersion");
+  if (!nonblank(data.key) || !/^agent-\d{2}$/.test(data.key)) issues.push("key");
   if (!natural(data.level) || (data.level as number) < 1 || (data.level as number) > 10) issues.push("level");
   const resources = object(data.resources, ["healthMax", "determinationMax"], "resources");
   for (const key of ["healthMax", "determinationMax"]) if (!natural(resources[key])) issues.push(`resources.${key}`);
@@ -59,17 +54,15 @@ export function validateAdventureAgentData<R extends readonly AdventureSkillDefi
     }
   }
   function reference(v: unknown, type: string, path: string) {
-    const ref = object(v, ["name", "uuid"], path);
-    if (!nonblank(ref.name)) issues.push(`${path}.name`);
-    if (typeof ref.uuid !== "string" || !ref.uuid.startsWith(`Compendium.ordemparanormal2.${type}.Item.`) || !/^Compendium\.ordemparanormal2\.[a-z]+\.Item\.[A-Za-z0-9]+$/.test(ref.uuid)) issues.push(`${path}.uuid`);
-    return ref.uuid;
+    if (typeof v !== "string" || !v.startsWith(`Compendium.ordemparanormal2.${type}.Item.`) || !/^Compendium\.ordemparanormal2\.[a-z]+\.Item\.[A-Za-z0-9]+$/.test(v)) issues.push(path);
+    return v;
   }
-  reference(data.profile, "profiles", "profile"); reference(data.occupation, "occupations", "occupation");
+  reference(data.profileUuid, "profiles", "profileUuid"); reference(data.occupationUuid, "occupations", "occupationUuid");
   const uuids = new Set<unknown>();
-  if (!Array.isArray(data.abilities)) issues.push("abilities");
-  else for (const [i, ref] of data.abilities.entries()) {
-    const uuid = reference(ref, "abilities", `abilities.${i}`);
-    if (uuids.has(uuid)) issues.push(`abilities.${i}.duplicate`);
+  if (!Array.isArray(data.abilityUuids)) issues.push("abilityUuids");
+  else for (const [i, uuid] of data.abilityUuids.entries()) {
+    reference(uuid, "abilities", `abilityUuids.${i}`);
+    if (uuids.has(uuid)) issues.push(`abilityUuids.${i}.duplicate`);
     uuids.add(uuid);
   }
   if (Object.hasOwn(data, "profileGrantReplacements")) {

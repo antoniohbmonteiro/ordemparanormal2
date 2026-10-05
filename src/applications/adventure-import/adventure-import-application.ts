@@ -28,18 +28,22 @@ import {
 } from "../../features/adventure-import/materialize-adventure-assets";
 import { openAdventureImportPasswordDialog } from "./adventure-import-password-dialog";
 import { PLAYTEST_ALPHA_AGENT_PRESETS, PLAYTEST_ALPHA_PRESET_REVISION } from "../../config/adventure-agent-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES } from "../../config/adventure-agent-sources/playtest-alpha";
 import { usableAdventurePdf } from "../../features/adventure-import/prepare-adventure-agents";
 import { AgentImportError, importAdventureAgents } from "../../features/adventure-import/import-adventure-agents";
 import { createAdventureAgentActorPort } from "../../adapters/foundry/adventure-agent-actors";
 import { openAdventureImportAgentConflictDialog } from "./adventure-import-agent-conflict-dialog";
 import { PLAYTEST_ALPHA_SCENE_PRESETS } from "../../config/adventure-scene-presets/playtest-alpha";
 import { createAdventureScenePort } from "../../adapters/foundry/adventure-scenes";
+import { registerImportedPoisInScenes } from "../../adapters/foundry/register-imported-pois-in-scenes";
 import { importAdventureScenes, SceneImportError } from "../../features/adventure-import/import-adventure-scenes";
 import { materializeAdventureDerivedAssets } from "../../features/adventure-import/materialize-adventure-derived-assets";
 import { createAdventureFolderPort } from "../../adapters/foundry/adventure-folders";
 import { preflightAdventureFolders, type AdventureFolderRequirement } from "../../features/adventure-import/adventure-folders";
 import { openAdventureImportSceneConflictDialog } from "./adventure-import-scene-conflict-dialog";
-import { PLAYTEST_ALPHA_POI_PRESETS, PLAYTEST_ALPHA_POI_PRESET_REVISION } from "../../config/adventure-poi-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_POI_SOURCES, PLAYTEST_ALPHA_POI_REVISION } from "../../config/adventure-poi-sources/playtest-alpha";
+import { readAdventurePoiPages } from "../../adapters/files/read-adventure-poi-pages";
+import { prepareAdventurePois } from "../../features/adventure-import/prepare-adventure-pois";
 import { createAdventurePoiItemPort } from "../../adapters/foundry/adventure-poi-items";
 import { importAdventurePois, PoiImportError } from "../../features/adventure-import/import-adventure-pois";
 import { openAdventureImportPoiConflictDialog } from "./adventure-import-poi-conflict-dialog";
@@ -241,11 +245,12 @@ function buildDetectedActViewModel(act: AdventureAct, analysis: ZipSourceAnalysi
     ] : [],
     content: selectable ? [
       { icon: "fa-solid fa-users", label: localize("Analysis.Content.Agents"),
-        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.actors, PLAYTEST_ALPHA_AGENT_PRESETS, act) },
+        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.actors,
+          PLAYTEST_ALPHA_AGENT_SOURCES.map(source => ({ id: source.documentId, act: source.act })), act) },
       { icon: "fa-solid fa-book-open", label: localize("Analysis.Content.Handouts"),
         count: PLAYTEST_ALPHA_ADVENTURE.handouts.filter(handout => handout.act === act).length },
       { icon: "fa-solid fa-magnifying-glass", label: localize("Analysis.Content.PointsOfInterest"),
-        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.pointsOfInterest, PLAYTEST_ALPHA_POI_PRESETS, act) },
+        count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.pointsOfInterest, PLAYTEST_ALPHA_POI_SOURCES, act) },
       { icon: "fa-solid fa-map", label: localize("Analysis.Content.Scenes"),
         count: countReferencedPresets(PLAYTEST_ALPHA_ADVENTURE.scenes, PLAYTEST_ALPHA_SCENE_PRESETS, act) },
     ] : [],
@@ -444,12 +449,20 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
-    let stage: "assets" | "handouts" | "pois" | "actors" | "scenes" = "assets";
+    let stage: "preflight" | "assets" | "handouts" | "pois" | "actors" | "scenes" = "preflight";
     try {
       await this.render();
       this.#result = null;
       this.#completionWarnings = [];
       this.#confirmedOnFailure = [];
+      const pdfFile = this.#files.pdf;
+      if (!pdfFile) throw new Error("PDF ausente.");
+      const pages = await readAdventurePoiPages(pdfFile, this.#password, analysis.pdf);
+      const poiPreparation = prepareAdventurePois(PLAYTEST_ALPHA_ADVENTURE, analysis.pdf, pages, requestedActs);
+      if (this.#analysis !== analysis || requestedActs.some(act => !this.#selectedActs.has(act))) {
+        throw new Error("As fontes mudaram durante a preparação.");
+      }
+      stage = "assets";
       this.#result = await materializeAdventureAssets({
         ...files,
         actOneAnalysis: analysis.actOne,
@@ -459,6 +472,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         acknowledgeWarnings,
         storage: createAdventureAssetStorage(),
         mimeTypes: CONST.UPLOADABLE_FILE_EXTENSIONS,
+        agentEntrySources: { definition: PLAYTEST_ALPHA_ADVENTURE, sources: PLAYTEST_ALPHA_AGENT_SOURCES },
         onProgress: async (completed, total) => {
           this.#progress = format("Actions.Progress", { completed: String(completed), total: String(total) });
           await this.render();
@@ -471,11 +485,11 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       if (PLAYTEST_ALPHA_ADVENTURE.handouts.some(handout => selectedActs.includes(handout.act))) {
         requirements.push({ documentType: "JournalEntry", acts: selectedActs.filter(act => PLAYTEST_ALPHA_ADVENTURE.handouts.some(handout => handout.act === act)) });
       }
-      if (PLAYTEST_ALPHA_AGENT_PRESETS.some(preset => selectedActs.includes(preset.act))) {
-        requirements.push({ documentType: "Actor", acts: selectedActs.filter(act => PLAYTEST_ALPHA_AGENT_PRESETS.some(preset => preset.act === act)) });
+      if (PLAYTEST_ALPHA_AGENT_SOURCES.some(source => selectedActs.includes(source.act))) {
+        requirements.push({ documentType: "Actor", acts: selectedActs.filter(act => PLAYTEST_ALPHA_AGENT_SOURCES.some(source => source.act === act)) });
       }
-      if (PLAYTEST_ALPHA_POI_PRESETS.some(preset => selectedActs.includes(preset.act))) {
-        requirements.push({ documentType: "Item", acts: selectedActs.filter(act => PLAYTEST_ALPHA_POI_PRESETS.some(preset => preset.act === act)) });
+      if (PLAYTEST_ALPHA_POI_SOURCES.some(source => selectedActs.includes(source.act))) {
+        requirements.push({ documentType: "Item", acts: selectedActs.filter(act => PLAYTEST_ALPHA_POI_SOURCES.some(source => source.act === act)) });
       }
       if (PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => selectedActs.includes(preset.act))) {
         requirements.push({ documentType: "Scene", acts: selectedActs.filter(act => PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => preset.act === act)) });
@@ -500,8 +514,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       await this.render();
       const poiPort = createAdventurePoiItemPort();
       const pois = await importAdventurePois({
-        definition: PLAYTEST_ALPHA_ADVENTURE, presets: PLAYTEST_ALPHA_POI_PRESETS,
-        revision: PLAYTEST_ALPHA_POI_PRESET_REVISION, acts: selectedActs,
+        definition: PLAYTEST_ALPHA_ADVENTURE, presets: poiPreparation.presets,
+        revision: PLAYTEST_ALPHA_POI_REVISION, acts: selectedActs,
         items: { ...poiPort, isAuthorized: () => poiPort.isAuthorized() && this.#analysis === analysis },
         folders: folderPort, assetSource, decide: openAdventureImportPoiConflictDialog,
         onProgress: async (completed, total) => {
@@ -531,6 +545,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       });
       if (agents.cancelled) { ui.notifications.warn(localize("Actions.AgentsCancelled")); return; }
       if (agents.preserved) summaries.push(format("Actions.AgentsSummary", { created: String(agents.created), updated: String(agents.updated), unchanged: String(agents.unchanged), preserved: String(agents.preserved) }));
+      const catalogWarnings: string[] = [];
       if (PLAYTEST_ALPHA_SCENE_PRESETS.some(p => this.#result!.materializedActs.includes(p.act))) {
         stage = "scenes";
         this.#progress = localize("Actions.ScenesPreparing");
@@ -558,13 +573,23 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           return;
         }
         summaries.push(format("Actions.ScenesSummary", { created: String(scenes.created), updated: String(scenes.updated), unchanged: String(scenes.unchanged), preserved: String(scenes.preserved) }));
+        catalogWarnings.push(...await registerImportedPoisInScenes(PLAYTEST_ALPHA_ADVENTURE.id,
+          poiPreparation.presets, PLAYTEST_ALPHA_SCENE_PRESETS, this.#result.materializedActs));
       }
-      this.#completionWarnings = (this.#result.warnings ?? []).map((warning) => warning.path);
+      this.#completionWarnings = [...(this.#result.warnings ?? []).map((warning) => warning.path), ...catalogWarnings];
       ui.notifications.info([localize("Actions.ImportSuccess"),
         ...(this.#completionWarnings.length ? [format("Actions.ImportSuccessWithWarnings", {
           count: String(this.#completionWarnings.length),
         })] : []), ...summaries].join(" "));
     } catch (error) {
+      if (stage === "preflight") {
+        ui.notifications.error(format("Actions.PoisImportFailure", {
+          detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure"),
+          completed: "0", preserved: "0",
+        }));
+        console.error("ordemparanormal2 | Adventure POI preparation failed.", error);
+        return;
+      }
       if (stage === "pois") {
         const counts = error instanceof PoiImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
         ui.notifications.error(format("Actions.PoisImportFailure", {
@@ -587,7 +612,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         const counts = error instanceof AgentImportError ? error.counts : { created: 0, updated: 0, unchanged: 0, preserved: 0 };
         ui.notifications.error(format("Actions.AgentsImportFailure", { detail,
           stage: error instanceof AgentImportError ? localize(`Actions.AgentStages.${error.stage}`) : "",
-          agent: error instanceof AgentImportError && error.agent ? `${localize(error.agent.preset.act === "actOne" ? "ActOne" : "ActTwo")} · ${error.agent.preset.name}` : "",
+          agent: error instanceof AgentImportError && error.agent ? `${localize(error.agent.source.act === "actOne" ? "ActOne" : "ActTwo")} · ${error.agent.name}` : "",
           completed: String(counts.created + counts.updated + counts.unchanged), preserved: String(counts.preserved) }));
         return;
       }

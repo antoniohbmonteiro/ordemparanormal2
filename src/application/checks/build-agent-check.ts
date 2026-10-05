@@ -1,3 +1,5 @@
+import type { CheckExtraDieInput, CheckStepAdjustments } from "../../core/checks/check";
+import type { CheckAbilityUseReference } from "./check-ability-use-state";
 import {
   ATTRIBUTE_DEFINITIONS,
   getAttributeDefinition,
@@ -18,6 +20,14 @@ import {
   type CheckInput,
 } from "../../core/checks/check";
 import type { DieStep } from "../../core/dice/die-step";
+
+export interface AgentCheckChoices {
+  readonly difficulty?: number;
+  readonly selectedAttribute?: AttributeKey;
+  readonly stepAdjustments: CheckStepAdjustments;
+  readonly extraDice: readonly CheckExtraDieInput[];
+  readonly abilityUses: readonly CheckAbilityUseReference[];
+}
 
 export type AgentCheckSelection =
   | { readonly kind: "attribute"; readonly key: AttributeKey }

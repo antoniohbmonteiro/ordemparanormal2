@@ -1,4 +1,5 @@
 import { PLAYTEST_ALPHA_AGENT_PRESETS } from "../adventure-agent-presets/playtest-alpha";
+import { PLAYTEST_ALPHA_AGENT_SOURCES } from "../adventure-agent-sources/playtest-alpha";
 import { describe, expect, it } from "vitest";
 import { ZIP_PACKAGE_BY_ACT } from "../../core/adventure-import/known-adventure-sources";
 import { safeZipEntryPath } from "../../core/adventure-import/safe-zip-entry-path";
@@ -8,16 +9,18 @@ import { validateAdventureAgentReferences } from "../../core/adventure-import/ad
 
 describe("playtest alpha definition", () => {
   it("declares ten unique preset references without duplicating the sheets", () => {
-    expect(validateAdventureAgentReferences(PLAYTEST_ALPHA_ADVENTURE, PLAYTEST_ALPHA_AGENT_PRESETS)).toEqual([]);
+    expect(validateAdventureAgentReferences(PLAYTEST_ALPHA_ADVENTURE, PLAYTEST_ALPHA_AGENT_SOURCES,
+      PLAYTEST_ALPHA_AGENT_PRESETS.map(p => p.key))).toEqual([]);
     expect(PLAYTEST_ALPHA_ADVENTURE.actors).toHaveLength(10);
     for (const actor of PLAYTEST_ALPHA_ADVENTURE.actors) expect(Object.keys(actor)).toEqual(["presetId"]);
   });
   it("rejects duplicate, unavailable and cross-Act references", () => {
     const actor = PLAYTEST_ALPHA_ADVENTURE.actors[0];
-    expect(validateAdventureAgentReferences({ ...PLAYTEST_ALPHA_ADVENTURE, actors: [actor, actor] }, PLAYTEST_ALPHA_AGENT_PRESETS)).toContain(`Duplicate or empty preset reference: ${actor.presetId}`);
-    expect(validateAdventureAgentReferences({ ...PLAYTEST_ALPHA_ADVENTURE, actors: [{ presetId: "missing" }] }, PLAYTEST_ALPHA_AGENT_PRESETS)).toContain("Unknown preset: missing");
-    const presets = PLAYTEST_ALPHA_AGENT_PRESETS.map(p => p.id === actor.presetId ? { ...p, tokenAssetId: "actTwo.val.token" } : p);
-    expect(validateAdventureAgentReferences(PLAYTEST_ALPHA_ADVENTURE, presets)).toContain(`Invalid token reference: ${actor.presetId}`);
+    const keys = PLAYTEST_ALPHA_AGENT_PRESETS.map(p => p.key);
+    expect(validateAdventureAgentReferences({ ...PLAYTEST_ALPHA_ADVENTURE, actors: [actor, actor] }, PLAYTEST_ALPHA_AGENT_SOURCES, keys)).toContain(`Duplicate or empty preset reference: ${actor.presetId}`);
+    expect(validateAdventureAgentReferences({ ...PLAYTEST_ALPHA_ADVENTURE, actors: [{ presetId: "missing" }] }, PLAYTEST_ALPHA_AGENT_SOURCES, keys)).toContain("Unknown preset: missing");
+    const sources = PLAYTEST_ALPHA_AGENT_SOURCES.map(p => p.documentId === actor.presetId ? { ...p, tokenAssetId: "actTwo.val.token" } : p);
+    expect(validateAdventureAgentReferences(PLAYTEST_ALPHA_ADVENTURE, sources, keys)).toContain(`Invalid token reference: ${actor.presetId}`);
   });
   it("has unique semantic IDs and safe original entries for the two recognized ZIPs", () => {
     expect(PLAYTEST_ALPHA_ADVENTURE.packageIds).toEqual(ZIP_PACKAGE_BY_ACT);

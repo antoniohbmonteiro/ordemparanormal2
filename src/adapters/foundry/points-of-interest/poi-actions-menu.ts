@@ -1,21 +1,14 @@
 import { POINT_OF_INTEREST_ITEM_TYPE, SYSTEM_ID } from "../../../config/system-config";
 import { openPoiUserRevealDialog } from "../../../applications/points-of-interest/poi-user-reveal-dialog";
-import { listPlayerUsers } from "../users/list-player-users";
-import { applyPoiRegionReveal, type ApplyPoiRegionRevealInput } from "./apply-poi-region-reveal";
+import { mutatePoi } from "./poi-runtime-queries";
 import type { PoiActionTarget } from "./poi-canvas-session";
 import type { PoiPoint } from "./poi-canvas-regions";
-import { publishPoiRevealNotice } from "./publish-poi-reveal-notice";
-import { readPoiRegionReveal } from "./poi-region-reveal";
-
-interface RevealRegion {
-  update(data: Record<string, unknown>): Promise<unknown>;
-  getFlag(scope: string, key: string): unknown;
-}
+import { readPoiVisibility, worldPoi } from "./poi-runtime-state";
 
 export interface PoiActionsMenuDeps {
-  resolveRegion(regionId: string): RevealRegion | null;
   openItem(itemUuid: string): Promise<void>;
-  applyReveal(region: RevealRegion, input: ApplyPoiRegionRevealInput): Promise<void>;
+  applyReveal(target: PoiActionTarget, input: { mode: "hidden" | "everyone" | "users"; users: readonly string[] }): Promise<void>;
+  readUsers(itemUuid: string): readonly string[];
   pickUsers(preselected: readonly string[]): Promise<readonly string[] | null>;
   mount: { append(node: unknown): void };
   dismiss: EventTarget;
@@ -41,28 +34,26 @@ async function openAssociatedItem(itemUuid: string): Promise<void> {
   }
 }
 
-function applyRevealWithNotice(region: RevealRegion, input: ApplyPoiRegionRevealInput): Promise<void> {
-  return applyPoiRegionReveal(region, input, {
-    listPlayerUserIds: () => listPlayerUsers().map(user => user.id),
-    publishNotice: publishPoiRevealNotice,
+function applyReveal(target: PoiActionTarget, input: { mode: "hidden" | "everyone" | "users"; users: readonly string[] }): Promise<void> {
+  const sceneId = (globalThis as typeof globalThis & { canvas?: { scene?: { id?: string } } }).canvas?.scene?.id;
+  if (!sceneId) return Promise.resolve();
+  return mutatePoi({ action: "visibility", sceneId, itemUuid: target.itemUuid, ...input }).then(result => {
+    if (!result.ok) throw new Error(result.reason);
   }).catch(error => {
     console.error(`${SYSTEM_ID} | Failed to update POI visibility`, error);
     ui.notifications.error(localize("Failed"));
   });
 }
 
-function resolveSceneRegion(regionId: string): RevealRegion | null {
-  const scene = (globalThis as {
-    canvas?: { scene?: { regions?: { get(id: string): unknown } } | null };
-  }).canvas?.scene;
-  return (scene?.regions?.get(regionId) as RevealRegion | undefined) ?? null;
-}
-
 export function defaultPoiActionsMenuDeps(): PoiActionsMenuDeps {
   return {
-    resolveRegion: resolveSceneRegion,
     openItem: openAssociatedItem,
-    applyReveal: applyRevealWithNotice,
+    applyReveal,
+    readUsers: itemUuid => {
+      const item = worldPoi(itemUuid);
+      const visibility = item ? readPoiVisibility(item) : null;
+      return visibility?.mode === "users" ? visibility.users : [];
+    },
     pickUsers: openPoiUserRevealDialog,
     mount: document.body,
     dismiss: window,
@@ -110,12 +101,6 @@ export function openPoiActionsMenu(
   }
   closeOpenMenu = close;
 
-  const withRegion = (run: (region: RevealRegion) => void) => {
-    close();
-    const region = deps.resolveRegion(target.regionId);
-    if (region) run(region);
-  };
-
   const button = (key: string, run: () => void) => {
     const element = document.createElement("button");
     element.type = "button";
@@ -128,19 +113,14 @@ export function openPoiActionsMenu(
     close();
     void deps.openItem(target.itemUuid);
   });
-  button("Menu.Everyone", () => withRegion(region => {
-    void deps.applyReveal(region, { mode: "everyone", users: [] });
-  }));
-  button("Menu.Users", () => withRegion(region => {
-    const reveal = readPoiRegionReveal(region);
-    const preselected = reveal.mode === "users" ? reveal.users : [];
-    void deps.pickUsers(preselected).then(users => {
-      if (users) void deps.applyReveal(region, { mode: "users", users });
+  button("Menu.Everyone", () => { close(); void deps.applyReveal(target, { mode: "everyone", users: [] }); });
+  button("Menu.Users", () => {
+    close();
+    void deps.pickUsers(deps.readUsers(target.itemUuid)).then(users => {
+      if (users) void deps.applyReveal(target, { mode: "users", users });
     });
-  }));
-  button("Menu.Hide", () => withRegion(region => {
-    void deps.applyReveal(region, { mode: "hidden", users: [] });
-  }));
+  });
+  button("Menu.Hide", () => { close(); void deps.applyReveal(target, { mode: "hidden", users: [] }); });
 
   deps.dismiss.addEventListener("pointerdown", onDismiss, true);
   deps.dismiss.addEventListener("keydown", onKey, true);

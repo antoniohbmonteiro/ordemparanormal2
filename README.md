@@ -48,7 +48,7 @@
 ## O que já funciona
 
 - 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
-- 🎲 **Sistema de Testes** — DT opcional, RA/RB, críticos, falha crítica, atributo alternativo, dados situacionais e histórico persistente no chat. Checks também apresentam Habilidades aplicáveis antes da rolagem quando o Agent possui uma Forma de uso compatível.
+- 🎲 **Sistema de Testes** — pré-roll com atributo alternativo para Perícia/Aptidão, passos temporários, dados situacionais d4–d12 e Habilidades compatíveis; DT opcional, RA/RB, críticos e histórico persistente no chat.
 - ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
 - 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos, Request de Perícias e Importador de Aventura.
 - 📦 **Importador de Aventura** — prepara os Atos I e II a partir dos arquivos oficiais fornecidos pelo próprio usuário, criando Agentes, Handouts, Pontos de Interesse e Scenes no Mundo.
@@ -67,7 +67,7 @@ A ficha concentra o que importa durante a sessão: **Perfil, Ocupação, PV, PD,
 
 ### Checks que mostram o que aconteceu
 
-Checks de atributo e Perícia usam a progressão **d4 → d6 → d8 → d10 → d12**, com DT opcional, RA/RB, críticos, falha crítica, atributo alternativo e dados situacionais.
+Checks de atributo, Perícia e Aptidão usam a progressão **d4 → d6 → d8 → d10 → d12**, com DT opcional, RA/RB, críticos e falha crítica. No diálogo anterior à rolagem, é possível trocar o atributo de Checks de Perícia ou Aptidão, ajustar temporariamente o passo de cada componente, adicionar dados situacionais d4–d12 e usar Habilidades compatíveis. Esses ajustes não alteram os valores-base da ficha; Habilidades podem consumir seus custos.
 
 Os **Testes Opostos** usam o mesmo Check Engine, podem ser iniciados pela paleta de ferramentas do Mestre e preservam o confronto resolvido em uma única mensagem de chat.
 
@@ -87,9 +87,13 @@ Perícias, DTs públicas ou ocultas e pistas reveladas ficam conectadas aos Pont
   <img src="docs/screenshots/investigation.webp" alt="Cena de investigação com Caio Nunes, Rafael Sato e um Ponto de Interesse destacado no Foundry VTT" width="760">
 </p>
 
-### Importe sua aventura no próprio Mundo
+### Importador de Aventura para os Atos I e II
 
-O **Importador de Aventura**, nas Ferramentas do Mestre, prepara os Atos I e II a partir de arquivos que o usuário obteve legalmente e fornece ao sistema. O processamento cria o conteúdo dentro do próprio Mundo do Foundry. O sistema não distribui PDFs, mapas, tokens, handouts ou outros arquivos oficiais. A importação pode ser executada novamente e procura preservar as alterações feitas pelo Mestre.
+O **Importador de Aventura (Adventure Importer)**, nas Ferramentas do Mestre, usa arquivos fornecidos pelo próprio usuário para preparar Agentes, Handouts, Pontos de Interesse e Scenes dos Atos I e II no Mundo do Foundry. Pode ser executado novamente e procura preservar alterações feitas pelo Mestre. O sistema não distribui PDFs, mapas, tokens, handouts ou outros arquivos oficiais.
+
+<p align="center">
+  <img src="docs/screenshots/adventure-import.png" alt="Janela do Importador de Aventura com PDF do playtest e arquivos dos Atos I e II selecionados, mostrando Agentes, Handouts, Pontos de Interesse e Scenes detectados" width="800">
+</p>
 
 ## Instalação
 
@@ -128,6 +132,7 @@ O branch `main` pode conter trabalho ainda não incluído na release pública ma
 
 ## Documentação
 
+- [Recursos do sistema](FEATURES.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Modelo de domínio](docs/DOMAIN_MODEL.md)
 - [Roadmap](docs/ROADMAP.md)

@@ -1,0 +1,214 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mutatePoi, POI_MUTATION_QUERY, reconcileScenePoiMembership, registerPoiRuntimeQueries, resolvePoiScene } from "./poi-runtime-queries";
+
+vi.mock("./publish-poi-reveal-notice", () => ({ publishPoiRevealNotice: vi.fn().mockResolvedValue(undefined) }));
+
+function world() {
+  const flags: Record<string, unknown> = {};
+  const sceneFlags: Record<string, unknown> = {};
+  const region = { id: "r1", getFlag: (_scope: string, key: string) => key === "pointOfInterest" ? { itemUuid: "Item.poi" } : undefined };
+  const regions = [region];
+  const scene = { id: "scene", regions, tokens: [], getFlag: (_scope: string, key: string) => sceneFlags[key],
+    update: vi.fn(async (data: Record<string, unknown>) => { sceneFlags.pointOfInterestItems = data["flags.ordemparanormal2.pointOfInterestItems"]; }) };
+  const item = { id: "poi", uuid: "Item.poi", type: "pointOfInterest", name: "Armário", img: "icon.svg", isEmbedded: false, pack: null,
+    ownership: { default: 0 }, system: { information: [{ id: "clue", content: "segredo", approaches: [{ skill: "perception", difficulty: 6, showDifficultyToPlayers: false }] }] },
+    getFlag: (_scope: string, key: string) => flags[key],
+    testUserPermission: () => false,
+    update: vi.fn(async (data: Record<string, unknown>) => {
+      if (data["flags.ordemparanormal2.pointOfInterestVisibility"]) flags.pointOfInterestVisibility = data["flags.ordemparanormal2.pointOfInterestVisibility"];
+      if (data["flags.ordemparanormal2.pointOfInterestKnowledge"]) flags.pointOfInterestKnowledge = data["flags.ordemparanormal2.pointOfInterestKnowledge"];
+      if (data["flags.ordemparanormal2.pointOfInterestDiscovery"]) flags.pointOfInterestDiscovery = data["flags.ordemparanormal2.pointOfInterestDiscovery"];
+    }) };
+  const actor = { id: "a1", uuid: "Actor.a1", type: "agent", name: "Agente A", img: "", testUserPermission: () => true };
+  const otherActor = { id: "a2", uuid: "Actor.a2", type: "agent", name: "Agente B", img: "", testUserPermission: () => true };
+  const gm = { id: "gm", isGM: true, active: false, query: vi.fn() };
+  const second = { id: "second", isGM: true, active: false, query: vi.fn() };
+  const player = { id: "player", isGM: false, active: false, query: vi.fn() };
+  const users = [gm, second, player];
+  const game = { user: gm, users: { activeGM: gm, contents: users, get: (id: string) => users.find(user => user.id === id) },
+    scenes: { get: (id: string) => id === "scene" ? scene : undefined, [Symbol.iterator]: function* () { yield scene; } },
+    items: { get: (id: string) => id === "poi" ? item : undefined }, actors: { get: (id: string) => id === "a1" ? actor : id === "a2" ? otherActor : undefined },
+    i18n: { localize: (key: string) => key } };
+  vi.stubGlobal("game", game);
+  vi.stubGlobal("foundry", { data: { operators: { ForcedReplacement: { create: (value: unknown) => value } } } });
+  vi.stubGlobal("CONST", { DOCUMENT_OWNERSHIP_LEVELS: { NONE: 0, LIMITED: 1, OWNER: 3 } });
+  vi.stubGlobal("CONFIG", { queries: {} });
+  return { flags, sceneFlags, region, regions, scene, item, actor, otherActor, gm, second, player, game };
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("POI runtime ownership", () => {
+  it("adds valid Region membership once, retains it after unlink, and refuses removal while linked", async () => {
+    const f = world();
+    await reconcileScenePoiMembership();
+    expect(f.sceneFlags.pointOfInterestItems).toEqual(["Item.poi"]);
+    await reconcileScenePoiMembership();
+    expect(f.scene.update).toHaveBeenCalledOnce();
+    expect(await mutatePoi({ action: "remove", sceneId: "scene", itemUuid: "Item.poi" }))
+      .toEqual({ ok: false, reason: "linked" });
+    f.regions.length = 0;
+    expect(f.sceneFlags.pointOfInterestItems).toEqual(["Item.poi"]);
+    expect(await mutatePoi({ action: "remove", sceneId: "scene", itemUuid: "Item.poi" }))
+      .toEqual({ ok: true });
+    expect(f.sceneFlags.pointOfInterestItems).toEqual([]);
+  });
+
+  it("does not run automatic reconciliation on the second GM", async () => {
+    const f = world(); f.game.user = f.second;
+    await reconcileScenePoiMembership();
+    expect(f.scene.update).not.toHaveBeenCalled();
+  });
+
+  it("forwards a second GM mutation and rejects a player using the same query", async () => {
+    const f = world();
+    registerPoiRuntimeQueries();
+    const handler = (CONFIG as typeof CONFIG & { queries: Record<string, (data: unknown, context: unknown) => Promise<unknown>> }).queries[POI_MUTATION_QUERY];
+    f.gm.query.mockImplementation((name: string, data: unknown) => {
+      expect(name).toBe(POI_MUTATION_QUERY);
+      const requester = f.game.user;
+      (f.game as { user: unknown }).user = f.gm;
+      return handler(data, { user: requester });
+    });
+    f.game.user = f.second;
+    expect(await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" })).toEqual({ ok: true });
+    expect(f.sceneFlags.pointOfInterestItems).toEqual(["Item.poi"]);
+    expect(f.scene.update).toHaveBeenCalledOnce();
+    expect(await handler({ action: "visibility", sceneId: "scene", itemUuid: "Item.poi", mode: "everyone", users: [], userId: "gm" }, { user: f.player }))
+      .toEqual({ ok: false, reason: "forbidden" });
+    expect(f.item.update).not.toHaveBeenCalled();
+  });
+
+  it("keeps visibility and knowledge on the Item, independently per Agent", async () => {
+    const f = world();
+    await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" });
+    await mutatePoi({ action: "visibility", sceneId: "scene", itemUuid: "Item.poi", mode: "users", users: ["player"] });
+    expect(f.flags.pointOfInterestVisibility).toEqual({ mode: "users", users: ["player"], notified: ["player"] });
+    await mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi", informationId: "clue", actorUuids: ["Actor.a1"] });
+    expect(f.flags.pointOfInterestKnowledge).toEqual({ agents: [{ actorUuid: "Actor.a1", informationIds: ["clue"] }] });
+    expect(resolvePoiScene("scene", f.player as unknown as foundry.documents.User)).toEqual({
+      entries: [{ itemUuid: "Item.poi", name: "Armário", img: "icon.svg", linkedRegionIds: [], knownGroups: [] }],
+      runId: null, recapAvailable: false, shareAvailable: false, participants: [], narrativeClues: [],
+    });
+    expect(f.sceneFlags).toEqual({ pointOfInterestItems: ["Item.poi"] });
+  });
+
+  it("projects only known clues and current-run share references to an owned Scene Agent", async () => {
+    const f = world();
+    f.sceneFlags.pointOfInterestItems = ["Item.poi"];
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "run", round: 1, actedAgentUuids: [] };
+    f.flags.pointOfInterestVisibility = { mode: "everyone", users: [], notified: [] };
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a1", informationIds: ["clue"] }] };
+    f.flags.pointOfInterestDiscovery = [{ runId: "run", actorUuid: "Actor.a1", informationId: "clue" }];
+    (f.scene.tokens as unknown[]).push({ actorId: "a1", actorLink: true }, { actorId: "a2", actorLink: true });
+    (f.item.system.information as unknown[]).push({ id: "unknown", content: "outro segredo",
+      approaches: [{ skill: "research", difficulty: 12, showDifficultyToPlayers: true }] });
+    (f.item.system.information[0].approaches as unknown[]).push({ skill: "research", difficulty: 8, showDifficultyToPlayers: false });
+    const result = resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.a1");
+    expect("entries" in result && result.entries[0].knownGroups).toEqual([{ skill: "perception", clues: [{
+      text: "segredo", shareReference: { kind: "poi", itemUuid: "Item.poi", informationId: "clue" },
+    }] }]);
+    expect(JSON.stringify(result)).not.toContain("outro segredo");
+    expect("entries" in result && result.recapAvailable).toBe(true);
+    const noActor = resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.missing");
+    expect("entries" in noActor && noActor.entries[0].knownGroups).toEqual([]);
+    expect("entries" in noActor && noActor.shareAvailable).toBe(false);
+  });
+
+  it("offers Compartilhar only for knowledge discovered in the current run before the global lock", () => {
+    const f = world();
+    f.sceneFlags.pointOfInterestItems = ["Item.poi"];
+    f.sceneFlags.pointOfInterestVisibility = { mode: "everyone", users: [], notified: [] };
+    f.flags.pointOfInterestVisibility = { mode: "everyone", users: [], notified: [] };
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a1", informationIds: ["clue"] }] };
+    (f.scene.tokens as unknown[]).push({ actorId: "a1", actorLink: true });
+    const project = () => resolvePoiScene("scene", f.player as unknown as foundry.documents.User, "Actor.a1");
+    const reference = () => {
+      const result = project();
+      return "entries" in result ? result.entries[0].knownGroups?.[0]?.clues[0]?.shareReference : undefined;
+    };
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "current", round: 1, actedAgentUuids: [] };
+    f.flags.pointOfInterestDiscovery = [{ runId: "old", actorUuid: "Actor.a1", informationId: "clue" }];
+    expect(reference()).toBeUndefined();
+    f.flags.pointOfInterestDiscovery = [{ runId: "current", actorUuid: "Actor.a1", informationId: "clue" }];
+    expect(reference()).toEqual({ kind: "poi", itemUuid: "Item.poi", informationId: "clue" });
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "current", round: 1,
+      actedAgentUuids: [], shareSuccessActorUuid: "Actor.a1" };
+    expect(reference()).toBeUndefined();
+    const locked = project();
+    expect("entries" in locked && locked.shareAvailable).toBe(false);
+  });
+
+  it("records manual Reveal provenance only for newly known participants in an active run", async () => {
+    const f = world();
+    f.sceneFlags.pointOfInterestItems = ["Item.poi"];
+    f.sceneFlags.investigationRuntime = { schemaVersion: 1, runId: "current", round: 1, actedAgentUuids: [] };
+    (f.scene.tokens as unknown[]).push({ actorId: "a1", actorLink: true });
+    const reveal = () => mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi",
+      informationId: "clue", actorUuids: ["Actor.a1"] });
+    expect(await reveal()).toEqual({ ok: true });
+    expect(f.flags.pointOfInterestDiscovery).toEqual([{ runId: "current", actorUuid: "Actor.a1", informationId: "clue" }]);
+    expect(await reveal()).toEqual({ ok: true });
+    expect(f.item.update).toHaveBeenCalledOnce();
+  });
+
+  it("forwards visibility and knowledge from a second GM to the active GM", async () => {
+    const f = world();
+    registerPoiRuntimeQueries();
+    const handler = (CONFIG as typeof CONFIG & { queries: Record<string, (data: unknown, context: unknown) => Promise<unknown>> }).queries[POI_MUTATION_QUERY];
+    await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" });
+    f.gm.query.mockImplementation(async (_name: string, data: unknown) => {
+      f.game.user = f.gm;
+      const result = await handler(data, { user: f.second });
+      f.game.user = f.second;
+      return result;
+    });
+    f.game.user = f.second;
+    expect(await mutatePoi({ action: "visibility", sceneId: "scene", itemUuid: "Item.poi", mode: "everyone", users: [] }))
+      .toEqual({ ok: true });
+    expect(await mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi", informationId: "clue", actorUuids: ["Actor.a1"] }))
+      .toEqual({ ok: true });
+    expect(f.gm.query).toHaveBeenCalledTimes(2);
+    expect(f.item.update).toHaveBeenCalledTimes(2);
+  });
+
+  it("records knowledge separately and idempotently for each World Agent", async () => {
+    const f = world();
+    await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" });
+    const reveal = (actorUuids: string[]) => mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi", informationId: "clue", actorUuids });
+    await reveal(["Actor.a1"]);
+    await reveal(["Actor.a1"]);
+    expect(f.item.update).toHaveBeenCalledOnce();
+    await reveal(["Actor.a2"]);
+    expect(f.flags.pointOfInterestKnowledge).toEqual({ agents: [
+      { actorUuid: "Actor.a1", informationIds: ["clue"] },
+      { actorUuid: "Actor.a2", informationIds: ["clue"] },
+    ] });
+  });
+
+  it("reveals situational information like any other information, and still rejects unknown IDs", async () => {
+    const f = world();
+    await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" });
+    (f.item.system.information as unknown[]).push({ id: "vault", content: "cofre", availability: {
+      mode: "situational", condition: "Requer a chave." },
+      approaches: [{ skill: "perception", difficulty: 8, showDifficultyToPlayers: false }] });
+    const reveal = (informationId: string) => mutatePoi({ action: "knowledge", sceneId: "scene", itemUuid: "Item.poi",
+      informationId, actorUuids: ["Actor.a1"] });
+    expect(await reveal("clue")).toEqual({ ok: true });
+    expect(await reveal("vault")).toEqual({ ok: true });
+    expect(f.flags.pointOfInterestKnowledge).toEqual({ agents: [{ actorUuid: "Actor.a1", informationIds: ["clue", "vault"] }] });
+    expect(await reveal("missing")).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("invalidates other clients only after a successful write", async () => {
+    const f = world();
+    f.player.active = true;
+    f.scene.update.mockRejectedValueOnce(new Error("write failed"));
+    await expect(mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" })).rejects.toThrow("write failed");
+    expect(f.player.query).not.toHaveBeenCalled();
+    expect(await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" })).toEqual({ ok: true });
+    expect(f.player.query).toHaveBeenCalledOnce();
+    await mutatePoi({ action: "add", sceneId: "scene", itemUuid: "Item.poi" });
+    expect(f.player.query).toHaveBeenCalledOnce();
+  });
+});

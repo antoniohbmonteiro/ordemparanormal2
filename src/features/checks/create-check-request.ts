@@ -8,6 +8,8 @@ import { createCheckRequestMessage } from "../../adapters/foundry/chat/create-ch
 
 export async function createCheckRequest(
   configuration: CheckRequestDialogResult,
+  options?: { readonly whisper?: readonly string[]; readonly systemFlags?: Record<string, unknown>;
+    readonly speakerActor?: foundry.documents.Actor },
 ): Promise<ChatMessage> {
   if (!game.user.isGM) throw new Error("Only a GM can create a Check Request.");
   if (configuration.selection.kind !== "skill") {
@@ -41,5 +43,7 @@ export async function createCheckRequest(
       requestedCheckContext: check.components.map(({ label }) => label).join(" + "),
     },
   };
-  return createCheckRequestMessage(actor, state, readAgentAccentColor(actor));
+  return options
+    ? createCheckRequestMessage(actor, state, readAgentAccentColor(actor), options)
+    : createCheckRequestMessage(actor, state, readAgentAccentColor(actor));
 }

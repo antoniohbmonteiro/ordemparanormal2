@@ -1,16 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { adjustOwnedEquipmentUses } from "./adjust-owned-equipment-uses";
 
 function createActor(uses: unknown, type = "equipment") {
+  vi.stubGlobal("game", { user: { isGM: false }, users: { activeGM: null } });
   const update = vi.fn().mockResolvedValue(undefined);
   const equipment = { type, system: { uses }, update };
   const actor = {
+    uuid: "Actor.agent", isOwner: true,
     getEmbeddedDocument: vi.fn().mockReturnValue(equipment),
   } as unknown as foundry.documents.Actor;
 
   return { actor, update };
 }
+afterEach(() => vi.unstubAllGlobals());
 
 describe("adjust owned Equipment uses", () => {
   it("updates only the embedded Equipment uses value", async () => {

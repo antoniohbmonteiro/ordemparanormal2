@@ -178,10 +178,9 @@ describe("Interactive RegionConfig", () => {
     lifecycle.form.dispatchEvent(Object.assign(new Event("formdata"), { formData }));
     expect(runtime.replace).toHaveBeenCalledWith({
       itemUuid: "Item.poi",
-      name: "Biblioteca",
     });
     expect(formData.get("flags.ordemparanormal2.pointOfInterest")).toEqual({
-      replacement: { itemUuid: "Item.poi", name: "Biblioteca" },
+      replacement: { itemUuid: "Item.poi" },
     });
   });
 

@@ -10,6 +10,7 @@ import {
   readCheckRequestMessageLifecycle,
 } from "../../adapters/foundry/chat/read-check-request-message";
 import { renderCheckCardContent } from "../../adapters/foundry/chat/render-check-card-content";
+import { isShareCheckCurrentlyAuthorized } from "../../adapters/foundry/points-of-interest/investigation-requests";
 import {
   CHECK_PRESENTATION_FLAG,
   CHECK_REQUEST_STATE_FLAG,
@@ -66,6 +67,7 @@ async function persist(
   if (!lifecycle || lifecycle.state.status !== "pending") {
     throw new Error("Check Request is not pending.");
   }
+  if (!isShareCheckCurrentlyAuthorized(message)) throw new Error("Investigation Share is no longer active.");
   const actor = await resolveAgentCheckParticipant(lifecycle.state.participant);
   if (!actor) throw new Error("Check Request participant is no longer available.");
   if (!canUserRollActor(actor, canonicalSender)) {

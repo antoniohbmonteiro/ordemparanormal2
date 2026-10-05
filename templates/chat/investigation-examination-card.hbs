@@ -1,0 +1,14 @@
+<article class="op2-investigation-examination-card">
+  {{> chatCardHeader title=title subtitle=actorName}}
+  <p><strong>{{poiName}}</strong></p>
+  {{#if passive.length}}
+    <p>Você percebeu {{passiveCount}} {{#if passivePlural}}novas informações{{else}}nova informação{{/if}} pelo seu valor em {{skillName}}.</p>
+    {{#each passive}}<blockquote>{{this}}</blockquote>{{/each}}
+  {{/if}}
+  {{#if examined.length}}
+    <p>O exame revelou {{examinedCount}} {{#if examinedPlural}}novas informações{{else}}nova informação{{/if}}.</p>
+    {{#each examined}}<blockquote>{{this}}</blockquote>{{/each}}
+  {{/if}}
+  {{#if noExaminationFindings}}<p>O exame não revelou nenhuma informação nova.</p>{{/if}}
+  {{#if lostPd}}<p>Você perdeu 1 PD.</p>{{/if}}
+</article>

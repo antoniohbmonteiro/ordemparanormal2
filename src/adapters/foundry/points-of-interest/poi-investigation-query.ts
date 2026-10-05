@@ -8,7 +8,8 @@ export const POI_INVESTIGATION_QUERY = `${SYSTEM_ID}.poiInvestigation`;
 
 export interface PoiInvestigationQueryData {
   readonly sceneId: string;
-  readonly regionId: string;
+  readonly itemUuid: string;
+  readonly actorUuid?: string;
 }
 
 // Foundry 14.367 invokes a CONFIG.queries handler as `handler(data, { user, timeout })`,
@@ -22,7 +23,8 @@ type PoiInvestigationQueryHandler = (
 const handler: PoiInvestigationQueryHandler = (data, context) =>
   resolvePoiInvestigationView({
     sceneId: data.sceneId,
-    regionId: data.regionId,
+    itemUuid: data.itemUuid,
+    actorUuid: data.actorUuid,
     requesterUserId: context.user.id,
   });
 
@@ -37,7 +39,7 @@ interface ActiveGmUser {
 }
 
 /**
- * Obtains the sanitized projection for a POI placement. The GM resolves it
+ * Obtains the sanitized projection for a World POI. The GM resolves it
  * locally; a player asks the active GM through the public query API and never
  * resolves the Item itself.
  */

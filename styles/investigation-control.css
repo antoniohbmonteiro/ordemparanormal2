@@ -1,0 +1,47 @@
+.ordemparanormal2.op2-investigation-control .window-content {
+  background: #121418;
+  color: #f1f2f4;
+}
+
+.op2-investigation-control__body { display: grid; gap: 14px; padding: 12px; min-width: 0; }
+.op2-investigation-control__summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.op2-investigation-control__summary > div { display: grid; gap: 3px; }
+.op2-investigation-control__summary strong { font-size: 1.8rem; }
+.op2-investigation-control__panel { border: 1px solid rgba(160, 190, 210, .18); border-radius: 8px; padding: 10px; }
+.op2-investigation-control__agents { list-style: none; padding: 0; margin: 0; }
+.op2-investigation-control__agents li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; }
+.op2-investigation-control__agents li + li { border-top: 1px solid rgba(160, 190, 210, .14); }
+.op2-investigation-control__agent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op2-investigation-control__uses { display: grid; gap: 0; margin: 0; }
+.op2-investigation-control__uses > div { display: grid; gap: 3px; padding: 8px 0; }
+.op2-investigation-control__uses > div + div { border-top: 1px solid rgba(160, 190, 210, .14); }
+.op2-investigation-control__uses dt { color: #f1f2f4; font-size: 12px; font-weight: 700; }
+.op2-investigation-control__uses dd { margin: 0; color: #a7acb5; font-size: 11px; }
+.op2-investigation-control__status-section,
+.op2-investigation-control__master-section { display: grid; gap: 8px; min-width: 0; }
+.op2-investigation-control__master-section { padding-top: 12px; border-top: 1px solid rgba(160, 190, 210, .18); }
+.op2-investigation-control__pending { margin: 0; color: #e3b332; font-size: 11px; font-weight: 700; }
+.ordemparanormal2.op2-investigation-control { min-width: 340px; }
+.ordemparanormal2.op2-investigation-control .window-content { padding: 0; }
+.op2-investigation-control__body { min-height: 540px; gap: 14px; padding: 20px; align-content: start; }
+.op2-investigation-control__title p { margin: 0 0 2px; color: #a7acb5; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.op2-investigation-control__title h2 { margin: 0; color: #f1f2f4; font-size: 22px; font-weight: 800; line-height: 1.2; text-transform: uppercase; }
+.op2-investigation-control__panel { padding: 0; border-radius: 6px; background: #0b0d10; overflow: hidden; }
+.op2-investigation-control__agents li { padding: 0; }
+.op2-investigation-control__agent-row {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 4px 8px; border: 0; background: transparent;
+  color: #737a85; font-size: 11px; text-align: left; cursor: pointer;
+}
+.op2-investigation-control__agent-row[aria-pressed="true"] { color: #4db266; }
+.op2-investigation-control__agent-row[aria-pressed="true"] .op2-investigation-control__agent-name { color: #bfc7d1; }
+.op2-investigation-control__agent-row:focus-visible { outline: 2px solid #f1f2f4; outline-offset: -2px; }
+.op2-investigation-control__progress { display: grid; gap: 6px; }
+.op2-investigation-control__progress > div:first-child { display: flex; justify-content: space-between; gap: 8px; color: #a7acb5; font-size: 12px; }
+.op2-investigation-control__progress strong { color: #f1f2f4; }
+.op2-investigation-control__progress-track { height: 6px; border-radius: 3px; background: #0b0d10; overflow: hidden; }
+.op2-investigation-control__progress-track span { display: block; height: 100%; border-radius: 3px; background: #7f252b; }
+.ordemparanormal2.op2-investigation-control .op2-investigation-button--primary { width: 100%; }
+.op2-investigation-control__actions-title { margin: 0; color: #a7acb5; font-size: 11px; text-transform: uppercase; }
+.op2-investigation-control__end { justify-self: center; border: 0; background: transparent; color: #7f252b; font-size: 11px; text-decoration: underline; cursor: pointer; }
+.op2-investigation-control__end:focus-visible { outline: 2px solid #f1f2f4; outline-offset: 2px; }

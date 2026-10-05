@@ -1,33 +1,76 @@
 <section class="op2-inventory" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tabs.Inventory'}}">
-  {{#each agent.equipment}}
-    <article class="op2-equipment-card" data-item-id="{{id}}">
-      <button class="op2-equipment-card__use" type="button" data-action="useEquipment" data-item-id="{{id}}" aria-label="{{name}}"{{#unless @root.editable}} disabled{{/unless}}></button>
-      <div class="op2-equipment-card__identity" aria-hidden="true">
-        <img src="{{img}}" alt="" />
-        <span class="op2-equipment-card__body">
-          <span class="op2-equipment-card__name">{{name}}</span>
-          <span class="op2-equipment-card__category">{{localize categoryLabelKey}}</span>
-        </span>
-      </div>
-      {{#if hasUses}}
-        <div class="op2-equipment-card__uses">
-          <span class="op2-equipment-card__uses-track" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{uses.fillPercentage}}">
-            <span class="op2-equipment-card__uses-fill" style="width: {{uses.fillPercentage}}%;"></span>
-          </span>
-          <span class="op2-equipment-card__uses-controls">
-            {{#if @root.editable}}<button class="op2-equipment-card__uses-adjust" type="button" data-action="decreaseEquipmentUses" data-resource-adjustment="decrease" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.DecreaseUses'}}"{{#unless uses.canDecrease}} disabled{{/unless}}><i class="fa-solid fa-minus"></i></button>{{/if}}
-            <span class="op2-equipment-card__uses-value">{{uses.value}} / {{uses.max}}</span>
-            {{#if @root.editable}}<button class="op2-equipment-card__uses-adjust" type="button" data-action="increaseEquipmentUses" data-resource-adjustment="increase" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.IncreaseUses'}}"{{#unless uses.canIncrease}} disabled{{/unless}}><i class="fa-solid fa-plus"></i></button>{{/if}}
-          </span>
+  {{#if agent.equipmentSections.length}}
+    <div class="op2-inventory__columns">
+      <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Inventory.Columns.Item"}}</span>
+      <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Inventory.Columns.Quantity"}}</span>
+      <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Inventory.Columns.Uses"}}</span>
+    </div>
+    {{#each agent.equipmentSections}}
+      <section class="op2-inventory__section" aria-labelledby="{{@root.applicationId}}-inventory-{{category}}">
+        <h3 class="op2-inventory__section-label" id="{{@root.applicationId}}-inventory-{{category}}">{{localize labelKey}}</h3>
+        <div class="op2-inventory__list">
+          {{#each items}}
+            <article class="op2-equipment-card" data-item-id="{{id}}">
+              <div class="op2-equipment-card__header">
+                <button class="op2-equipment-card__use" type="button" data-action="useEquipment" data-item-id="{{id}}" aria-label="{{name}}"{{#unless @root.editable}} disabled{{/unless}}>
+                  <span class="op2-equipment-card__image">
+                    <img src="{{img}}" alt="" />
+                    <span class="op2-equipment-card__use-label" aria-hidden="true">{{localize "ORDEMPARANORMAL2.AgentSheet.Inventory.Use"}}</span>
+                  </span>
+                  <span class="op2-equipment-card__body">
+                    <span class="op2-equipment-card__name">{{name}}</span>
+                    <span class="op2-equipment-card__category">{{localize categoryLabelKey}}</span>
+                  </span>
+                </button>
+                <div class="op2-equipment-card__quantity">
+                  {{#if quantity}}
+                    <span class="op2-equipment-card__quantity-value" title="{{quantity.value}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Quantity'}}: {{quantity.value}}">{{quantity.value}}</span>
+                    {{#if @root.editable}}
+                      <div class="op2-equipment-card__quantity-controls">
+                        <button class="op2-equipment-card__quantity-adjust" type="button" data-action="decreaseEquipmentQuantity" data-quantity-adjustment="decrease" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.DecreaseQuantity'}}"{{#unless quantity.canDecrease}} disabled{{/unless}}>−</button>
+                        <span class="op2-equipment-card__quantity-value" title="{{quantity.value}}" aria-hidden="true">{{quantity.value}}</span>
+                        <button class="op2-equipment-card__quantity-adjust" type="button" data-action="increaseEquipmentQuantity" data-quantity-adjustment="increase" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.IncreaseQuantity'}}"{{#unless quantity.canIncrease}} disabled{{/unless}}>+</button>
+                      </div>
+                    {{/if}}
+                  {{else}}
+                    <span class="op2-equipment-card__neutral" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.NoQuantity'}}">—</span>
+                  {{/if}}
+                </div>
+                <div class="op2-equipment-card__uses">
+                  {{#if uses}}
+                    <span class="op2-equipment-card__uses-value" title="{{uses.value}} / {{uses.max}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Uses'}}: {{uses.value}} / {{uses.max}}">{{uses.value}} / {{uses.max}}</span>
+                    <span class="op2-equipment-card__uses-track" role="meter" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Uses'}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{uses.fillPercentage}}" aria-valuetext="{{uses.value}} / {{uses.max}}">
+                      <span class="op2-equipment-card__uses-fill" style="width: {{uses.fillPercentage}}%;"></span>
+                    </span>
+                    {{#if @root.editable}}
+                      <div class="op2-equipment-card__uses-controls">
+                        <button class="op2-equipment-card__uses-adjust" type="button" data-action="decreaseEquipmentUses" data-resource-adjustment="decrease" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.DecreaseUses'}}"{{#unless uses.canDecrease}} disabled{{/unless}}>−</button>
+                        <span class="op2-equipment-card__uses-current" aria-hidden="true">
+                          <span class="op2-equipment-card__uses-value" title="{{uses.value}} / {{uses.max}}">{{uses.value}} / {{uses.max}}</span>
+                          <span class="op2-equipment-card__uses-track"><span class="op2-equipment-card__uses-fill" style="width: {{uses.fillPercentage}}%;"></span></span>
+                        </span>
+                        <button class="op2-equipment-card__uses-adjust" type="button" data-action="increaseEquipmentUses" data-resource-adjustment="increase" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.IncreaseUses'}}"{{#unless uses.canIncrease}} disabled{{/unless}}>+</button>
+                      </div>
+                    {{/if}}
+                  {{else}}
+                    <span class="op2-equipment-card__neutral" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.NoUses'}}">—</span>
+                  {{/if}}
+                </div>
+                {{#if @root.canEditStructure}}
+                  <button class="op2-equipment-card__menu-trigger" type="button" data-action="openEquipmentMenu" data-item-id="{{id}}" aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Actions'}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>
+                {{else}}
+                  <button class="op2-equipment-card__expand" type="button" data-action="toggleEquipmentDescription" data-item-id="{{id}}" aria-expanded="{{isExpanded}}" aria-controls="{{detailsId}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.ToggleDescription'}}"><span aria-hidden="true">{{#if isExpanded}}▾{{else}}▸{{/if}}</span></button>
+                {{/if}}
+              </div>
+              <div class="op2-equipment-card__details" id="{{detailsId}}"{{#unless isExpanded}} hidden{{/unless}}>
+                {{#if descriptionHTML}}<div class="op2-equipment-card__description">{{{descriptionHTML}}}</div>{{/if}}
+              </div>
+            </article>
+          {{/each}}
         </div>
-      {{/if}}
-      {{#if @root.canEditStructure}}
-        <button class="op2-equipment-card__menu-trigger" type="button" data-item-id="{{id}}" aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Actions'}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Inventory.Actions'}}">
-          <i class="fa-solid fa-ellipsis-vertical"></i>
-        </button>
-      {{/if}}
-    </article>
+      </section>
+    {{/each}}
   {{else}}
     <p class="op2-empty-state">{{localize "ORDEMPARANORMAL2.AgentSheet.Placeholders.Inventory"}}</p>
-  {{/each}}
+  {{/if}}
 </section>

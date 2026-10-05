@@ -160,6 +160,9 @@
     "styles/poi-region-config.css",
     "styles/poi-actions-menu.css",
     "styles/investigation-application.css",
+    "styles/laboratory-application.css",
+    "styles/investigation-control.css",
+    "styles/poi-scene-panel.css",
     "styles/gm-tools-palette.css",
     "styles/adventure-import.css",
     "styles/equipment-item-sheet.css",
@@ -178,7 +181,8 @@
     "styles/equipment-chat-card.css",
     "styles/license-notice.css",
     "styles/narrative-scene.css",
-    "styles/tile-interaction.css"
+    "styles/tile-interaction.css",
+    "styles/radio-application.css"
   ],
   "languages": [
     {

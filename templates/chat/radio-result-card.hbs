@@ -1,0 +1,8 @@
+<article class="op2-equipment-card">
+  <header><strong>{{equipmentName}} · {{formName}}</strong></header>
+  <p>{{actorName}} · {{outcomeLabel}}</p>
+  <p>{{localize "ORDEMPARANORMAL2.Radio.RemovedLabel"}}: {{removedCount}}</p>
+  <p>{{composition}}</p>
+  {{#if discarded.length}}<p>{{localize "ORDEMPARANORMAL2.Radio.Discarded"}}</p><ul>{{#each discarded}}<li>{{text}}</li>{{/each}}</ul>{{/if}}
+  <p>{{localize "ORDEMPARANORMAL2.Radio.Discoveries"}}: {{newCount}}</p>
+</article>

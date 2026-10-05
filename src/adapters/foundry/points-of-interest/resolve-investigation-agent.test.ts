@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { canUserRollActor } = vi.hoisted(() => ({
   canUserRollActor: vi.fn(),
 }));
 vi.mock("../actors/agent-check-permission", () => ({ canUserRollActor }));
 
-import { resolveInvestigationAgent } from "./resolve-investigation-agent";
+import { resolveInvestigationAgent, resolveSceneInvestigationAgent, resolveSceneInvestigationAgentForUser } from "./resolve-investigation-agent";
 
 const user = { isGM: false, character: null } as foundry.documents.User;
 const agent = (id: string) => ({ id, type: "agent" }) as foundry.documents.Actor;
@@ -15,6 +15,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   canUserRollActor.mockReturnValue(true);
 });
+afterEach(() => vi.unstubAllGlobals());
 
 describe("resolve Investigation Agent", () => {
   it("chooses the single rollable controlled Agent", () => {
@@ -46,4 +47,28 @@ describe("resolve Investigation Agent", () => {
     expect(resolveInvestigationAgent([], characterUser))
       .toEqual({ ok: false, reason: "none" });
   });
+});
+
+it("requires an owned World Agent represented by a linked Token in the Scene", () => {
+  const actor = { id: "a", uuid: "Actor.a", type: "agent", testUserPermission: vi.fn(() => true) };
+  const player = { id: "player", isGM: false, character: actor };
+  const scene = { tokens: [{ actorId: "a", actorLink: true }] };
+  vi.stubGlobal("game", { user: player, scenes: { get: () => scene }, actors: { get: () => actor } });
+  vi.stubGlobal("CONST", { DOCUMENT_OWNERSHIP_LEVELS: { OWNER: 3 } });
+  vi.stubGlobal("canvas", { tokens: { controlled: [] } });
+  expect(resolveSceneInvestigationAgent("scene")).toBe(actor);
+  actor.testUserPermission.mockReturnValue(false);
+  expect(resolveSceneInvestigationAgent("scene")).toBeNull();
+});
+
+it("resolves a remote user's assigned participating Agent for the GM visibility dialog", () => {
+  const actor = { id: "a", uuid: "Actor.a", type: "agent", testUserPermission: () => true };
+  const scene = { tokens: [{ actorId: "a", actorLink: true }] };
+  const player = { id: "player", isGM: false, character: actor };
+  vi.stubGlobal("game", { actors: { get: () => actor } });
+  vi.stubGlobal("CONST", { DOCUMENT_OWNERSHIP_LEVELS: { OWNER: 3 } });
+  expect(resolveSceneInvestigationAgentForUser(scene as unknown as foundry.documents.Scene,
+    player as unknown as foundry.documents.User)).toBe(actor);
+  expect(resolveSceneInvestigationAgentForUser(scene as unknown as foundry.documents.Scene,
+    { ...player, character: null } as unknown as foundry.documents.User)).toBe(actor);
 });

@@ -1,0 +1,9 @@
+<article class="op2-laboratory-card">
+  <h3><i class="fa-solid fa-flask" aria-hidden="true"></i> {{equipmentName}} · {{formName}}</h3>
+  <p>{{actorName}} · Mente d{{mind}} · Exatas d{{ceiling}}</p>
+  <p class="op2-laboratory-card__sequence">{{#each sequence}}<span>d{{die}}: <strong>{{value}}</strong></span>{{/each}}</p>
+  {{#each history}}<p>Rerrolagem{{#unless completed}} interrompida{{/unless}} · {{positions}}: {{results}}</p>{{/each}}
+  <p>Rerrolagens restantes: {{remaining}}</p>
+  <strong>{{outcomeLabel}}</strong>
+  {{#if newCount}}<p>{{newCount}} nova(s) informação(ões) descoberta(s).</p>{{/if}}
+</article>

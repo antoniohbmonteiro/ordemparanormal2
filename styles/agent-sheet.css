@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/inter/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 .ordemparanormal2.agent-sheet {
   --op2-sheet-bg: rgba(18, 20, 24, 0.96);
   --op2-panel-bg: rgba(27, 30, 36, 0.92);
@@ -500,24 +508,60 @@
 }
 
 .ordemparanormal2.agent-sheet .op2-abilities {
+  --op2-panel-bg-hover: #20232a;
+  --op2-ability-separator: rgba(255, 255, 255, 0.051);
+  box-sizing: border-box;
   display: grid;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+  gap: 6px;
+  padding: var(--op2-space-3);
+  overflow: visible;
+}
+.ordemparanormal2.agent-sheet .op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="abilities"].active) {
+  background: #14161b;
+}
+.ordemparanormal2.agent-sheet .op2-abilities__columns {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px 25px;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 13px 8px;
+  border-bottom: 1px solid var(--op2-ability-separator);
+  color: var(--op2-text-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 13px;
+  text-transform: uppercase;
+}
+.ordemparanormal2.agent-sheet .op2-abilities__resource-heading {
+  text-align: center;
+}
+.ordemparanormal2.agent-sheet .op2-abilities__list {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 6px;
+  overflow: visible;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card {
-  position: relative;
-  display: grid;
-  min-height: 54px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: stretch;
-  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  margin: 0;
+  overflow: visible;
   border: 1px solid var(--op2-border);
-  border-radius: 6px;
-  background: rgba(10, 12, 15, 0.28);
-  transition:
-    border-color 120ms ease,
-    background-color 120ms ease,
-    box-shadow 120ms ease;
+  border-radius: var(--op2-radius);
+  background: var(--op2-panel-bg);
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card:hover {
   border-color: var(--op2-border-strong);
@@ -525,12 +569,6 @@
 }
 .ordemparanormal2.agent-sheet .op2-ability-card:focus-within {
   border-color: var(--op2-focus);
-  box-shadow: 0 0 0 1px var(--op2-focus-soft);
-}
-.ordemparanormal2.agent-sheet
-  .op2-ability-card:has(.op2-ability-card__use:not(:disabled):active) {
-  border-color: var(--op2-accent-bright);
-  background: var(--op2-accent-soft);
 }
 
 .ordemparanormal2.agent-sheet-settings {
@@ -601,96 +639,114 @@
   flex: 1;
 }
 
+.ordemparanormal2.agent-sheet .op2-ability-card__header {
+  box-sizing: border-box;
+  display: flex;
+  height: 54px;
+  min-width: 0;
+  align-items: center;
+  padding: 7px 12px;
+}
 .ordemparanormal2.agent-sheet .op2-ability-card__use {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 40px;
+  align-items: center;
+  gap: 10px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: inherit;
+  border-radius: 4px;
   background: transparent;
+  color: var(--op2-text);
   box-shadow: none;
+  text-align: left;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__use:not(:disabled) {
-  cursor: pointer;
-}
-.ordemparanormal2.agent-sheet .op2-ability-card__use:disabled {
-  cursor: default;
-}
-.ordemparanormal2.agent-sheet .op2-ability-card .op2-ability-card__use:focus,
-.ordemparanormal2.agent-sheet
-  .op2-ability-card
-  .op2-ability-card__use:focus-visible {
-  outline: 0;
-  box-shadow: none;
-}
-.ordemparanormal2.agent-sheet .op2-ability-card__identity {
+.ordemparanormal2.agent-sheet .op2-ability-card__image {
   position: relative;
-  z-index: 1;
-  grid-column: 1;
-  grid-row: 1;
+  display: block;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__image img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__use-label {
+  position: absolute;
+  inset: 0;
   display: grid;
-  min-width: 0;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0.55rem;
+  place-items: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--op2-accent-bright) 85%, transparent);
+  color: var(--op2-text);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  opacity: 0;
   pointer-events: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__identity img {
-  width: 38px;
-  height: 38px;
-  border: 0;
-  border-radius: 5px;
-  object-fit: cover;
+.ordemparanormal2.agent-sheet .op2-ability-card__use:hover:not(:disabled) .op2-ability-card__use-label,
+.ordemparanormal2.agent-sheet .op2-ability-card__use:focus-visible .op2-ability-card__use-label {
+  opacity: 1;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__body {
   display: grid;
+  flex: 1 1 0;
   min-width: 0;
-  grid-template-rows: auto auto;
-  gap: 0.1rem;
+  gap: 2px;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__name {
   overflow: hidden;
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1.1;
+  color: var(--op2-text);
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__cost {
-  overflow: hidden;
-  color: var(--op2-accent-bright);
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ordemparanormal2.agent-sheet .op2-ability-card__subtitle {
+  color: var(--op2-accent);
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 13px;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource {
   position: relative;
   z-index: 1;
-  grid-column: 2;
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: 10rem auto;
+  display: flex;
+  flex: 0 0 90px;
+  width: 90px;
+  height: 40px;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0 0.35rem 0 0.25rem;
-  pointer-events: none;
+  justify-content: center;
+  gap: 4px;
+  border-left: 1px solid var(--op2-ability-separator);
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__resource-value {
+  color: var(--op2-text);
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource-track {
   display: block;
-  width: 10rem;
-  height: 0.45rem;
+  width: 70px;
+  height: 6px;
   overflow: hidden;
-  border: 1px solid var(--op2-border-strong);
-  border-radius: 999px;
+  border-radius: 3px;
   background: var(--op2-input-bg);
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource-fill {
@@ -700,71 +756,137 @@
   background: var(--op2-accent-bright);
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource-controls {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
   display: flex;
+  width: 130px;
+  height: 32px;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.2rem;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: 1px solid var(--op2-border-strong);
+  border-radius: 6px;
+  background: var(--op2-panel-bg);
+  box-shadow: 0 2px 4px var(--op2-input-bg);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-value {
-  min-width: 3rem;
-  color: var(--op2-text);
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
+.ordemparanormal2.agent-sheet .op2-ability-card__resource:hover .op2-ability-card__resource-controls,
+.ordemparanormal2.agent-sheet .op2-ability-card__resource:focus-within .op2-ability-card__resource-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__resource-current {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 .ordemparanormal2.agent-sheet .op2-ability-card__resource-adjust {
+  box-sizing: border-box;
   display: grid;
-  width: 1.35rem;
-  height: 1.35rem;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   margin: 0;
   padding: 0;
   place-items: center;
-  border: 1px solid var(--op2-border);
+  border: 0;
   border-radius: 50%;
-  background: transparent;
-  color: var(--op2-text-muted);
+  background: var(--op2-border);
+  color: var(--op2-text);
   box-shadow: none;
-  font-size: 0.58rem;
-  pointer-events: auto;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
 }
-.ordemparanormal2.agent-sheet
-  .op2-ability-card__resource-adjust:not(:disabled):hover {
-  border-color: var(--op2-border-strong);
-  color: var(--op2-text);
-}
-.ordemparanormal2.agent-sheet
-  .op2-ability-card
-  .op2-ability-card__resource-adjust:focus-visible {
-  outline: 0;
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--op2-text);
-}
-.ordemparanormal2.agent-sheet .op2-ability-card__menu-trigger {
-  position: relative;
-  z-index: 2;
-  grid-column: 3;
-  grid-row: 1;
-  align-self: stretch;
-  width: 2.15rem;
-  min-height: 100%;
+.ordemparanormal2.agent-sheet .op2-ability-card__menu-trigger,
+.ordemparanormal2.agent-sheet .op2-ability-card__expand {
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 40px;
   margin: 0;
   padding: 0;
+  place-items: center;
   border: 0;
+  border-left: 1px solid var(--op2-ability-separator);
   border-radius: 0;
   background: transparent;
   color: var(--op2-text-muted);
   box-shadow: none;
-  cursor: pointer;
+  font-size: 16px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__menu-trigger:hover {
-  color: var(--op2-text);
+.ordemparanormal2.agent-sheet .op2-ability-card__details {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
 }
-.ordemparanormal2.agent-sheet
-  .op2-ability-card
-  .op2-ability-card__menu-trigger:focus-visible {
-  outline: 0;
+.ordemparanormal2.agent-sheet .op2-ability-card__details[hidden] {
+  display: none;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__details:has(> *) {
+  margin: 4px 16px 12px 78px;
+  padding-top: 8px;
+  border-top: 1px solid var(--op2-border);
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__description {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--op2-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__description > :first-child {
+  margin-top: 0;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__description > :last-child {
+  margin-bottom: 0;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__description :is(img, video, iframe, table) {
+  max-width: 100%;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__description pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__forms-title {
+  margin: 0;
+  color: var(--op2-accent-bright);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__forms {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__form {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__form-name {
   color: var(--op2-text);
+  font-weight: 600;
+}
+.ordemparanormal2.agent-sheet .op2-ability-card__check-label {
+  color: var(--op2-text-muted);
 }
 
 #context-menu .context-item.op2-ability-action--delete {
@@ -772,128 +894,196 @@
 }
 
 .ordemparanormal2.agent-sheet .op2-inventory {
+  --op2-inventory-columns: minmax(0, 1fr) 52px 90px 25px;
+  --op2-equipment-separator: rgba(255, 255, 255, 0.051);
+  --op2-panel-bg-hover: #20232a;
+  box-sizing: border-box;
   display: grid;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+  gap: 14px;
+  padding: var(--op2-space-3);
+  overflow: visible;
+}
+.ordemparanormal2.agent-sheet .op2-inventory__columns {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--op2-inventory-columns);
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 13px 8px;
+  border-bottom: 1px solid var(--op2-equipment-separator);
+  color: var(--op2-text-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 13px;
+  text-transform: uppercase;
+}
+.ordemparanormal2.agent-sheet .op2-inventory__columns > span:not(:first-child) { text-align: center; }
+.ordemparanormal2.agent-sheet .op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="inventory"].active) {
+  background: #14161b;
+}
+.ordemparanormal2.agent-sheet .op2-inventory__section {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+.ordemparanormal2.agent-sheet .op2-inventory__section-label {
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--op2-accent);
+  color: var(--op2-accent);
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 13px;
+  text-transform: uppercase;
+}
+.ordemparanormal2.agent-sheet .op2-inventory__list {
+  display: grid;
+  min-width: 0;
+  grid-auto-rows: max-content;
+  gap: 6px;
+  overflow: visible;
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card {
-  position: relative;
-  display: grid;
-  min-height: 54px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: stretch;
-  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  margin: 0;
+  overflow: visible;
   border: 1px solid var(--op2-border);
-  border-radius: 6px;
-  background: rgba(10, 12, 15, 0.28);
-  transition:
-    border-color 120ms ease,
-    background-color 120ms ease,
-    box-shadow 120ms ease;
+  border-radius: var(--op2-radius);
+  background: var(--op2-panel-bg);
+  font-family: "Inter", sans-serif;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card:hover {
   border-color: var(--op2-border-strong);
   background: var(--op2-panel-bg-hover);
 }
-.ordemparanormal2.agent-sheet .op2-equipment-card:focus-within {
-  border-color: var(--op2-focus);
-  box-shadow: 0 0 0 1px var(--op2-focus-soft);
-}
-.ordemparanormal2.agent-sheet
-  .op2-equipment-card:has(.op2-equipment-card__use:not(:disabled):active) {
-  border-color: var(--op2-accent-bright);
-  background: var(--op2-accent-soft);
+.ordemparanormal2.agent-sheet .op2-equipment-card:focus-within { border-color: var(--op2-focus); }
+.ordemparanormal2.agent-sheet .op2-equipment-card__header {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--op2-inventory-columns);
+  height: 54px;
+  min-width: 0;
+  align-items: center;
+  padding: 7px 12px;
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card__use {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  height: 40px;
+  align-items: center;
+  gap: 10px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: inherit;
+  border-radius: 4px;
   background: transparent;
+  color: var(--op2-text);
   box-shadow: none;
+  text-align: left;
 }
-.ordemparanormal2.agent-sheet .op2-equipment-card__use:not(:disabled) {
-  cursor: pointer;
-}
-.ordemparanormal2.agent-sheet .op2-equipment-card__use:disabled {
-  cursor: default;
-}
-.ordemparanormal2.agent-sheet .op2-equipment-card .op2-equipment-card__use:focus,
-.ordemparanormal2.agent-sheet
-  .op2-equipment-card
-  .op2-equipment-card__use:focus-visible {
-  outline: 0;
-  box-shadow: none;
-}
-.ordemparanormal2.agent-sheet .op2-equipment-card__identity {
+.ordemparanormal2.agent-sheet .op2-equipment-card__image {
   position: relative;
-  z-index: 1;
-  grid-column: 1;
-  grid-row: 1;
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0.55rem;
-  pointer-events: none;
+  display: block;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
 }
-.ordemparanormal2.agent-sheet .op2-equipment-card__identity img {
-  width: 38px;
-  height: 38px;
+.ordemparanormal2.agent-sheet .op2-equipment-card__image img {
+  display: block;
+  width: 40px;
+  height: 40px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 4px;
   object-fit: cover;
 }
+.ordemparanormal2.agent-sheet .op2-equipment-card__use-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--op2-accent-bright) 85%, transparent);
+  color: var(--op2-text);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+}
+.ordemparanormal2.agent-sheet .op2-equipment-card__use:hover:not(:disabled) .op2-equipment-card__use-label,
+.ordemparanormal2.agent-sheet .op2-equipment-card__use:focus-visible .op2-equipment-card__use-label { opacity: 1; }
 .ordemparanormal2.agent-sheet .op2-equipment-card__body {
   display: grid;
+  flex: 1 1 0;
   min-width: 0;
-  grid-template-rows: auto auto;
-  gap: 0.1rem;
+  gap: 2px;
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card__name {
   overflow: hidden;
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card__category {
   overflow: hidden;
-  color: var(--op2-accent-bright);
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 1.1;
+  color: var(--op2-accent);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity,
 .ordemparanormal2.agent-sheet .op2-equipment-card__uses {
   position: relative;
   z-index: 1;
-  grid-column: 2;
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: 10rem auto;
+  display: flex;
+  box-sizing: border-box;
+  min-width: 0;
+  height: 40px;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0 0.35rem 0 0.25rem;
-  pointer-events: none;
+  justify-content: center;
+  gap: 4px;
+  border-left: 1px solid var(--op2-equipment-separator);
+}
+.ordemparanormal2.agent-sheet .op2-equipment-card__neutral { color: var(--op2-text-muted); }
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity-value,
+.ordemparanormal2.agent-sheet .op2-equipment-card__uses-value {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--op2-text);
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card__uses-track {
   display: block;
-  width: 10rem;
-  height: 0.45rem;
+  flex: 0 0 auto;
+  width: 70px;
+  height: 6px;
   overflow: hidden;
-  border: 1px solid var(--op2-border-strong);
-  border-radius: 999px;
+  border-radius: 3px;
   background: var(--op2-input-bg);
 }
 .ordemparanormal2.agent-sheet .op2-equipment-card__uses-fill {
@@ -902,73 +1092,112 @@
   border-radius: inherit;
   background: var(--op2-accent-bright);
 }
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity-controls,
 .ordemparanormal2.agent-sheet .op2-equipment-card__uses-controls {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
   display: flex;
+  height: 32px;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.2rem;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: 1px solid var(--op2-border-strong);
+  border-radius: 6px;
+  background: var(--op2-panel-bg);
+  box-shadow: 0 2px 4px var(--op2-input-bg);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
 }
-.ordemparanormal2.agent-sheet .op2-equipment-card__uses-value {
-  min-width: 3rem;
-  color: var(--op2-text);
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity-controls { width: 90px; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__uses-controls { width: 130px; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity:hover .op2-equipment-card__quantity-controls,
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity:focus-within .op2-equipment-card__quantity-controls,
+.ordemparanormal2.agent-sheet .op2-equipment-card__uses:hover .op2-equipment-card__uses-controls,
+.ordemparanormal2.agent-sheet .op2-equipment-card__uses:focus-within .op2-equipment-card__uses-controls {
+  opacity: 1;
+  pointer-events: auto;
 }
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity-controls > .op2-equipment-card__quantity-value {
+  flex: 1 1 0;
+}
+.ordemparanormal2.agent-sheet .op2-equipment-card__uses-current {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.ordemparanormal2.agent-sheet .op2-equipment-card__quantity-adjust,
 .ordemparanormal2.agent-sheet .op2-equipment-card__uses-adjust {
+  box-sizing: border-box;
   display: grid;
-  width: 1.35rem;
-  height: 1.35rem;
+  flex: 0 0 20px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
   margin: 0;
   padding: 0;
   place-items: center;
-  border: 1px solid var(--op2-border);
+  border: 0;
   border-radius: 50%;
-  background: transparent;
-  color: var(--op2-text-muted);
+  background: var(--op2-border);
+  color: var(--op2-text);
   box-shadow: none;
-  font-size: 0.58rem;
-  pointer-events: auto;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
 }
-.ordemparanormal2.agent-sheet
-  .op2-equipment-card__uses-adjust:not(:disabled):hover {
-  border-color: var(--op2-border-strong);
-  color: var(--op2-text);
-}
-.ordemparanormal2.agent-sheet
-  .op2-equipment-card
-  .op2-equipment-card__uses-adjust:focus-visible {
-  outline: 0;
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--op2-text);
-}
-.ordemparanormal2.agent-sheet .op2-equipment-card__menu-trigger {
-  position: relative;
-  z-index: 2;
-  grid-column: 3;
-  grid-row: 1;
-  align-self: stretch;
-  width: 2.15rem;
-  min-height: 100%;
+.ordemparanormal2.agent-sheet .op2-equipment-card__menu-trigger,
+.ordemparanormal2.agent-sheet .op2-equipment-card__expand {
+  box-sizing: border-box;
+  display: grid;
+  width: 25px;
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
   margin: 0;
   padding: 0;
+  place-items: center;
   border: 0;
+  border-left: 1px solid var(--op2-equipment-separator);
   border-radius: 0;
   background: transparent;
   color: var(--op2-text-muted);
   box-shadow: none;
-  cursor: pointer;
 }
-.ordemparanormal2.agent-sheet .op2-equipment-card__menu-trigger:hover {
-  color: var(--op2-text);
+.ordemparanormal2.agent-sheet .op2-equipment-card__details {
+  display: grid;
+  min-width: 0;
 }
-.ordemparanormal2.agent-sheet
-  .op2-equipment-card
-  .op2-equipment-card__menu-trigger:focus-visible {
-  outline: 0;
-  color: var(--op2-text);
+.ordemparanormal2.agent-sheet .op2-equipment-card__details[hidden] { display: none; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__details:has(> *) {
+  margin: 4px 16px 12px 78px;
+  padding-top: 8px;
+  border-top: 1px solid var(--op2-border);
 }
+.ordemparanormal2.agent-sheet .op2-equipment-card__description {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ordemparanormal2.agent-sheet .op2-equipment-card__description > :first-child { margin-top: 0; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__description > :last-child { margin-bottom: 0; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__description img,
+.ordemparanormal2.agent-sheet .op2-equipment-card__description svg,
+.ordemparanormal2.agent-sheet .op2-equipment-card__description audio,
+.ordemparanormal2.agent-sheet .op2-equipment-card__description video,
+.ordemparanormal2.agent-sheet .op2-equipment-card__description iframe { max-width: 100%; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__description pre { white-space: pre-wrap; }
+.ordemparanormal2.agent-sheet .op2-equipment-card__description table { width: 100%; table-layout: fixed; }
 
 #context-menu .context-item.op2-equipment-action--delete {
   color: var(--color-level-error, #ff8b8b);

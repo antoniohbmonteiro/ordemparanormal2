@@ -81,7 +81,7 @@ export function createAdventureAgentActorPort(): AdventureAgentActorPort {
         system.resources.health.value = record(resources?.health)?.value as number;
         system.resources.determination.value = record(resources?.determination)?.value as number;
       }
-      const draft = new foundry.documents.Actor.implementation({ name: agent.preset.name, type: "agent", img: agent.img,
+      const draft = new foundry.documents.Actor.implementation({ name: agent.name, type: "agent", img: agent.img,
         system, prototypeToken: { texture: { src: agent.token } } }, { strict: true });
       if (!draft.validate({ strict: true })) throw new Error("Dados de Agent inválidos.");
       for (const item of agent.items) {
@@ -95,7 +95,7 @@ export function createAdventureAgentActorPort(): AdventureAgentActorPort {
       guard();
       const profile = agent.items.find(i => i.type === "profile")!;
       const accent = record(profile.system)?.accentColor ?? SYSTEM_DEFAULT_ACCENT_COLOR;
-      const result = await foundry.documents.Actor.implementation.create({ name: agent.preset.name, type: "agent", img: agent.img as foundry.documents.Actor["img"], folder: folderId,
+      const result = await foundry.documents.Actor.implementation.create({ name: agent.name, type: "agent", img: agent.img as foundry.documents.Actor["img"], folder: folderId,
         system: { ...actorSystem(agent), appearance: { accentColor: accent } }, prototypeToken: { texture: { src: agent.token as foundry.documents.TokenDocument["texture"]["src"] } },
         flags: { [SCOPE]: { [KEY]: agent.flag, adventureImportFolder: folderPlacement } } });
       const persisted = result?.toObject() as unknown as AgentActorSource | undefined;

@@ -1,4 +1,4 @@
-<section class="op2-investigation-body" role="document">
+<section class="op2-investigation-body {{#if isPlayer}}is-player{{else}}is-gm{{/if}}" role="document">
   {{#if isReady}}
     <header class="op2-investigation-summary">
       <figure class="op2-investigation-image">
@@ -12,16 +12,52 @@
         {{/if}}
       </div>
     </header>
+    {{#if feedback}}<p class="op2-investigation-feedback" role="status">{{feedback}}</p>{{/if}}
 
-    <section class="op2-investigation-panel">
-      <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}</h3>
-
-      <div class="op2-investigation-table {{#if isPlayer}}is-player{{else}}is-gm{{/if}}" role="table" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading'}}">
+    {{#if isPlayer}}
+    <section class="op2-investigation-panel op2-investigation-player-panel">
+      <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}</h3>
+      <div class="op2-investigation-table is-player" role="table" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading'}}">
         <div class="op2-investigation-table__header" role="row">
           <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Skill"}}</span>
           <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Action"}}</span>
           <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Difficulty"}}</span>
-          <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Information"}}</span>
+          <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Discovered"}}</span>
+        </div>
+        <div class="op2-investigation-table__body">
+          {{#each skills}}
+            <section class="op2-investigation-skill" role="rowgroup" data-skill="{{key}}" style="--op2-information-count: {{informationCount}}">
+              <div class="op2-investigation-skill-cell" role="rowheader"><strong>{{name}}</strong>{{#if specializationLabel}}<span>{{specializationLabel}}</span>{{/if}}</div>
+              <div class="op2-investigation-action" role="cell">
+                <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="examine" data-skill="{{key}}"{{#if specialization}} data-specialization="{{specialization}}"{{/if}} {{#unless canExamine}}disabled{{/unless}}>
+                  <img src="systems/ordemparanormal2/assets/icons/investigation-d6.svg" alt="" aria-hidden="true" />
+                  {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Examine"}}
+                </button>
+              </div>
+              {{#each rows}}
+                <div class="op2-investigation-row" role="row">
+                  <div class="op2-investigation-difficulty" role="cell">{{#if difficulty}}{{difficulty}}{{else}}—{{/if}}</div>
+                  <div class="op2-investigation-information" role="cell"><span>{{#if content}}{{#if specializationLabel}}<strong>{{specializationLabel}}:</strong> {{/if}}{{content}}{{else}}—{{/if}}</span></div>
+                </div>
+              {{/each}}
+            </section>
+          {{else}}
+            <p class="op2-investigation-empty">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoSkills"}}</p>
+          {{/each}}
+        </div>
+      </div>
+    </section>
+    {{/if}}
+    {{#if isGm}}
+    <section class="op2-investigation-panel">
+      <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}</h3>
+
+      <div class="op2-investigation-table is-gm" role="table" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading'}}">
+        <div class="op2-investigation-table__header" role="row">
+          <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Skill"}}</span>
+          <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Control"}}</span>
+          <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Difficulty"}}</span>
+          <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.CluesInformation"}}</span>
         </div>
 
         <div class="op2-investigation-table__body">
@@ -35,39 +71,27 @@
                     </div>
                   {{/if}}
 
-                  {{#if @root.isPlayer}}
-                    {{#if isFirst}}
-                      <div class="op2-investigation-action" role="cell">
-                        <button type="button" class="op2-investigation-examine" data-action="examine" data-skill="{{../key}}" aria-label="{{../examineLabel}}" title="{{../examineLabel}}"><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></button>
-                      </div>
-                    {{/if}}
-                  {{else}}
-                    <div class="op2-investigation-action" role="cell">
-                      {{#if isRevealed}}
-                        <span class="op2-investigation-revealed"><i class="fa-solid fa-check" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Revealed"}}</span>
-                      {{else}}
-                        <button type="button" class="op2-investigation-reveal" data-action="revealInformation" data-information-id="{{id}}" aria-label="{{revealLabel}}"><i class="fa-solid fa-eye" aria-hidden="true"></i> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"}}</button>
-                      {{/if}}
-                    </div>
-                  {{/if}}
+                  <div class="op2-investigation-action" role="cell">
+                    <button type="button" class="op2-investigation-reveal{{#if knownCount}} is-revealed{{/if}}" data-action="revealInformation" data-information-id="{{id}}" aria-label="{{revealLabel}}">{{#if knownCount}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Revealed"}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"}}{{/if}}</button>
+                    {{#if knownCount}}<span class="op2-investigation-revealed">{{knownCount}} {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.AgentsKnow"}}</span>{{/if}}
+                  </div>
 
                   <div class="op2-investigation-difficulty" role="cell">
-                    {{#if @root.isGm}}
-                      <span>{{difficulty}}</span>
-                      {{#if isDifficultyHidden}}
-                        <span class="op2-investigation-gm-hidden-difficulty" title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficultyToPlayers'}}" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficultyToPlayers'}}"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i></span>
-                      {{/if}}
-                    {{else}}
-                      {{#if isHidden}}
-                        <span title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficulty'}}" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficulty'}}"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i></span>
-                      {{else}}
-                        {{difficulty}}
-                      {{/if}}
+                    <span>{{difficulty}}</span>
+                    {{#if isDifficultyHidden}}
+                      <span class="op2-investigation-gm-hidden-difficulty" title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficultyToPlayers'}}" role="img" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.HiddenDifficultyToPlayers'}}"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i></span>
                     {{/if}}
                   </div>
 
                   <div class="op2-investigation-information" role="cell">
-                    <div class="op2-investigation-information__content">{{#if @root.isGm}}{{content}}{{else}}{{#if isRevealed}}{{content}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.NoInformation"}}{{/if}}{{/if}}</div>
+                    {{#if specializationLabel}}<strong class="op2-investigation-specialization">{{specializationLabel}}</strong>{{/if}}
+                    {{#if isSituational}}
+                      <p class="op2-investigation-situational"><span class="op2-investigation-situational__badge">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Situational"}}</span> <span class="op2-investigation-situational__condition">{{condition}}</span></p>
+                    {{/if}}
+                    {{#if difficultyOverride}}
+                      <p class="op2-investigation-difficulty-override"><span aria-hidden="true">↳</span> {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Difficulty"}} {{difficultyOverride.difficulty}} · {{difficultyOverride.condition}}</p>
+                    {{/if}}
+                    <div class="op2-investigation-information__content">{{content}}</div>
                   </div>
                 </div>
               {{/each}}
@@ -78,14 +102,50 @@
         </div>
       </div>
 
-      {{#if isPlayer}}
-        <button type="button" class="op2-investigation-other" disabled title="{{localize 'ORDEMPARANORMAL2.PointOfInterest.Investigation.UnavailableOtherSkill'}}">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.OtherSkill"}}</button>
-      {{/if}}
     </section>
 
+    {{/if}}
+
     {{#if isGm}}
+      {{#if toolInformation.length}}
+      <section class="op2-investigation-panel">
+        <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.EquipmentUse.ToolsHeading"}}</h3>
+        <div class="op2-investigation-table is-gm op2-investigation-table--tools" role="table" aria-label="{{localize 'ORDEMPARANORMAL2.EquipmentUse.ToolsHeading'}}">
+          <div class="op2-investigation-table__header" role="row">
+            <span role="columnheader">{{localize "ORDEMPARANORMAL2.EquipmentUse.Tool"}}</span>
+            <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Control"}}</span>
+            <span role="columnheader">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.CluesInformation"}}</span>
+          </div>
+          <div class="op2-investigation-table__body">
+            {{#each toolInformation}}
+            <section class="op2-investigation-skill" role="rowgroup" style="--op2-information-count: 1">
+              <div class="op2-investigation-row is-first" role="row">
+                <div class="op2-investigation-skill-cell" role="rowheader">
+                  {{#each approaches}}
+                  <strong>{{equipmentName}} · {{useFormName}}</strong>
+                  {{#if mechanicConfig.sequenceLength}}<span>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}} · {{mechanicConfig.sequenceLength}} dados</span>{{else}}{{#if mechanicConfig}}<span>{{localize "ORDEMPARANORMAL2.Radio.MechanicLabel"}}</span>{{/if}}{{/if}}
+                  {{#unless valid}}<span>{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/unless}}
+                  {{/each}}
+                </div>
+                <div class="op2-investigation-action" role="cell">
+                  <button type="button" class="op2-investigation-reveal{{#if knownCount}} is-revealed{{/if}}" data-action="revealInformation" data-information-id="{{id}}">{{#if knownCount}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Revealed"}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Reveal"}}{{/if}}</button>
+                  {{#if knownCount}}<span class="op2-investigation-revealed">{{knownCount}} {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.AgentsKnow"}}</span>{{/if}}
+                </div>
+                <div class="op2-investigation-information" role="cell">
+                  {{#if condition}}
+                  <p class="op2-investigation-situational"><span class="op2-investigation-situational__badge">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Situational"}}</span> <span class="op2-investigation-situational__condition">{{condition}}</span></p>
+                  {{/if}}
+                  <div class="op2-investigation-information__content">{{content}}</div>
+                </div>
+              </div>
+            </section>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+      {{/if}}
       <aside class="op2-investigation-gm-context">
-        <h3>{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.GmContext"}}</h3>
+        <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.GmContext"}}</h3>
         {{#if gmContext}}
           <div class="op2-investigation-gm-context__content">{{{gmContext}}}</div>
         {{else}}
@@ -96,5 +156,26 @@
   {{else}}
     <h2>{{name}}</h2>
     <p role="status">{{message}}</p>
+  {{/if}}
+  {{#if tools.length}}
+  <section class="op2-investigation-panel op2-investigation-tools">
+    <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.EquipmentUse.ToolsHeading"}}</h3>
+    <ul class="op2-investigation-tool-list">
+      {{#each tools}}
+      <li class="op2-investigation-tool">
+        <img src="{{img}}" alt="" loading="lazy" />
+        <span class="op2-investigation-tool__name">{{name}}</span>
+        {{#if uses}}<span class="op2-investigation-tool__uses" aria-label="{{localize 'ORDEMPARANORMAL2.EquipmentUse.Uses'}}">{{uses.value}} / {{uses.max}}</span>{{/if}}
+        <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="useTool" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.EquipmentUse.Use'}} — {{name}}" {{#unless canUse}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.EquipmentUse.Use"}}</button>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/if}}
+  {{#if discoveries.length}}
+  <section class="op2-investigation-panel op2-investigation-discoveries">
+    <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.EquipmentUse.DiscoveriesHeading"}}</h3>
+    <ul>{{#each discoveries}}<li>{{content}}</li>{{/each}}</ul>
+  </section>
   {{/if}}
 </section>

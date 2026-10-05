@@ -1,0 +1,51 @@
+<section class="op2-investigation-control__body">
+  <header class="op2-investigation-control__title">
+    <p>{{sceneName}} — {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.SkillsHeading"}}</p>
+    <h2>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Title"}}</h2>
+  </header>
+  {{#if loading}}
+    <p role="status">{{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Loading"}}</p>
+  {{else}}
+    {{#if active}}
+      <h3 class="op2-investigation-section-header">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Round"}} {{round}}</h3>
+      <section class="op2-investigation-control__panel">
+        <ul class="op2-investigation-control__agents">
+          {{#each participants}}
+            <li data-agent-uuid="{{uuid}}">
+              <button type="button" class="op2-investigation-control__agent-row" data-action="acted" aria-pressed="{{acted}}" {{#if @root.busy}}disabled{{/if}}>
+                <span class="op2-investigation-control__agent-name">{{#if acted}}✓{{else}}○{{/if}} &nbsp;{{name}}</span>
+                <span>{{#if acted}}{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.ActedStatus"}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.PendingStatus"}}{{/if}}</span>
+              </button>
+            </li>
+          {{else}}
+            <li>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.NoAgents"}}</li>
+          {{/each}}
+        </ul>
+      </section>
+      <div class="op2-investigation-control__progress">
+        <div><span>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Progress"}}</span><strong>{{actedCount}} / {{total}} {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Acted"}}</strong></div>
+        <div class="op2-investigation-control__progress-track"><span style="width: {{progressPercent}}%"></span></div>
+      </div>
+      <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="advance" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.NextRound"}}</button>
+      <section class="op2-investigation-control__status-section" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.InvestigationActions'}}">
+        <h3 class="op2-investigation-control__actions-title">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.InvestigationActions"}}</h3>
+        <dl class="op2-investigation-control__uses">
+          <div><dt>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Recap"}}</dt><dd>{{#if recapUsed}}✓ {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Used"}}{{#if recapUsedBy}} {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.By"}} {{recapUsedBy}}{{/if}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Available"}}{{/if}}</dd></div>
+          <div><dt>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Share"}}</dt><dd>{{#if shareUsed}}✓ {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Used"}}{{#if shareUsedBy}} {{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.By"}} {{shareUsedBy}}{{/if}}{{else}}{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Available"}}{{/if}}</dd></div>
+        </dl>
+        {{#if shareCluePending}}
+          <p class="op2-investigation-control__pending">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.NewCluePending"}}</p>
+          {{#if canGrantShareClue}}<button type="button" class="op2-investigation-button" data-action="grantShareClue" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.GrantClue"}}</button>{{/if}}
+        {{/if}}
+      </section>
+      <section class="op2-investigation-control__master-section" aria-label="{{localize 'ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.MasterControls'}}">
+        <h3 class="op2-investigation-control__actions-title">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.MasterControls"}}</h3>
+        <button type="button" class="op2-investigation-button" data-action="createClue">{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.CreateClue"}}</button>
+        <button type="button" class="op2-investigation-control__end" data-action="end" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.End"}}</button>
+      </section>
+    {{else}}
+      <p>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Inactive"}}</p>
+      <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="start" {{#if busy}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.PointOfInterest.InvestigationControl.Start"}}</button>
+    {{/if}}
+  {{/if}}
+</section>

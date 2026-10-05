@@ -11,7 +11,7 @@ describe("owned Equipment", () => {
       },
       {
         id: "first", type: "equipment", sort: 10, name: "A", img: "a.webp",
-        system: { description: "First", category: "weapon", uses: { value: 3, max: 4 } },
+        system: { description: "First", category: "weapon", quantity: 0, uses: { value: 3, max: 4 } },
       },
       { id: "ability", type: "ability", sort: 0, name: "H", system: {} },
     ] as unknown as foundry.documents.Item[]);
@@ -20,8 +20,9 @@ describe("owned Equipment", () => {
     expect(equipment[0]).toMatchObject({
       category: "weapon",
       uses: { value: 3, max: 4 },
+      quantity: 0,
     });
-    expect(equipment[1]).toMatchObject({ category: "tool", uses: null });
+    expect(equipment[1]).toMatchObject({ category: "tool", quantity: null, uses: null });
   });
 
   it("falls back to the general category for malformed system data", () => {

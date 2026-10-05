@@ -52,15 +52,15 @@ export async function importAdventureAgents(input: ImportAdventureAgentsInput): 
     for (const plan of plans) {
       const actor = plan.actorId ? input.actors.listActors().find(candidate => candidate._id === plan.actorId) : undefined;
       if (actor) hasAdventureFolderPlacement(placementValue(actor), adventureFolderPlacementFlag({ adventureId: plan.flag.adventureId,
-        documentType: "Actor", documentId: plan.flag.documentId, act: plan.preset.act }));
+        documentType: "Actor", documentId: plan.flag.documentId, act: plan.source.act }));
     }
     stage = "confirmation";
     const divergent = plans.filter(p => p.divergent);
     const decision = divergent.length ? await input.decide(divergent) : "restore";
     if (decision === null) return { ...counts, cancelled: true };
     assertAuthorized(input);
-    const folderIds = new Map<PreparedAdventureAgent["preset"]["act"], string>();
-    for (const act of new Set(plans.map(plan => plan.preset.act))) {
+    const folderIds = new Map<PreparedAdventureAgent["source"]["act"], string>();
+    for (const act of new Set(plans.map(plan => plan.source.act))) {
       stage = "folder";
       folderIds.set(act, await ensureAdventureFolder({ adventureId: input.definition.id, documentType: "Actor", act, folders: input.folders }));
     }
@@ -74,7 +74,7 @@ export async function importAdventureAgents(input: ImportAdventureAgentsInput): 
         throw new Error("O estado do agente mudou após a preparação. Execute a importação novamente.");
       }
       const placement = adventureFolderPlacementFlag({ adventureId: agent.flag.adventureId, documentType: "Actor",
-        documentId: agent.flag.documentId, act: agent.preset.act });
+        documentId: agent.flag.documentId, act: agent.source.act });
       if (actor && !hasAdventureFolderPlacement(placementValue(actor), placement)) {
         stage = "folder"; assertAuthorized(input);
         await input.actors.updateFolderPlacement(actor._id, actor.folder ?? null, placement);
@@ -92,7 +92,7 @@ export async function importAdventureAgents(input: ImportAdventureAgentsInput): 
       let id = agent.actorId;
       if (!id) {
         stage = "folder"; assertAuthorized(input);
-        const folder = folderIds.get(agent.preset.act)!;
+        const folder = folderIds.get(agent.source.act)!;
         stage = "actor"; assertAuthorized(input);
         if (input.actors.listActors().some(a => importFlag(a)?.importer === "actor" && importFlag(a)?.adventureId === agent.flag.adventureId && importFlag(a)?.documentId === agent.flag.documentId)) throw new Error("A identidade do agente mudou. Execute novamente.");
         id = await input.actors.createActor(agent, folder, placement);
@@ -121,7 +121,7 @@ export async function importAdventureAgents(input: ImportAdventureAgentsInput): 
       if (agent.removeIds.some(itemId => persisted.items.some(i => i._id === itemId))) throw new Error("Remoção de Item não confirmada.");
       const actorDifferences = [...actorDataDifferences(persisted, agent), ...sourceDifferencePaths(importFlag(persisted), agent.flag, ADVENTURE_ACTOR_FLAG_PATH)];
       if (actorDifferences.length) throw new Error(`Dados persistidos do Actor não confirmados. Campo: ${actorDifferences[0]}.`);
-      const baseline = await buildAgentBaseline(persisted, agent.flag, agent.preset.abilities.map(a => a.uuid));
+      const baseline = await buildAgentBaseline(persisted, agent.flag, agent.preset.abilityUuids);
       stage = "baseline"; assertAuthorized(input);
       const beforeComplete = input.actors.listActors().find(a => a._id === id);
       if (!beforeComplete || relevantAgentState(beforeComplete) !== relevantAgentState(persisted)) throw new Error("O agente mudou antes da conclusão. Execute novamente.");

@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-05
+
+### Added
+
+- Added Scene Investigation runs with GM start/end controls, rounds, participating Agents, and tracking of Agents that have acted.
+- Added persistent Knowledge per Agent and separate Discovery provenance per Agent/run, retained when an Investigation ends.
+- Added passive investigation and resolved Examinar discovery through the normal Check flow, including the confirmed PD cost when the active examination discovers nothing new.
+- Added Agent-targeted manual revelation, narrative clues, and GM-approved Recapitular and Compartilhar workflows with normal Check Requests.
+- Added a Scene POI panel with known clues, visibility controls, drag/drop association, map location, and local name search over each user's permitted POIs.
+- Added Equipment use forms with independent descriptions, optional use consumption, and shared selection/execution from Inventory and Investigation.
+- Added contextual tool approaches to POI information, matching canonical Equipment sources and form IDs and granting automatic responses only to the using Agent.
+- Added the Portable Laboratory challenge with configurable sequences of four to six dice, limited rerolls, contextual discoveries, and historical result cards.
+- Added the Modified Radio puzzle with a normal Technology Check that removes false fragments, message ordering/discarding/restoration, contextual discoveries, and private progress/result cards.
+- Added supported tool interactions to 12 imported Act II POIs from the Agentes v1.1 PDF, including configured Laboratory challenges and Radio puzzles; situational responses and unsupported special interactions retain GM resolution.
+- Added optional Equipment quantity with manual adjustments and grouped Inventory rows with expandable descriptions, use controls, and structural action menus.
+
+### Changed
+
+- Separated Scene association, POI visibility, Agent Knowledge, and run Discovery from optional Region placement, so one World POI can be accessed through the Scene panel or its mapped Regions.
+- Reorganized POI authoring around information entries with multiple skill/tool approaches, situational availability, private conditions, and optional alternative skill difficulties.
+- Reworked Investigation details around the current participating Agent, known information, usable Inventory tools, and a dedicated section for tool-only discoveries.
+- Derive imported POI content and character identities from the user's supplied PDFs; packaged Agent presets retain mechanical data without official character names, and imported GM context is structured for reading.
+- Reimport managed POIs in place, with preserve/restore decisions for GM edits and preservation of Knowledge, Discovery, visibility, and associations; imported POIs are registered with their corresponding Scenes.
+- Refined Ability rows and Inventory presentation, keeping runtime controls available outside Edit Mode and structural actions within it.
+
+### Fixed
+
+- Prevent a successful Compartilhar request from granting an additional clue before the GM chooses its content and recipients.
+- Distinguish tool uses awaiting a contextual GM response from uses that discovered no new information, without exposing private conditions.
+- Avoid false POI reimport conflicts caused by default availability fields and respect user-owned folder placement and images.
+- Improved PDF POI parsing and removed stray table numbers from imported GM context.
+- Corrected Ability row alignment and Edit Mode action menus.
+
 ## [0.4.5] - 2026-09-23
 
 ### Added

@@ -78,7 +78,7 @@ it.each([
   [1, "1 nova informação descoberta."],
   [3, "3 novas informações descobertas."],
 ] as const)("presents %i authoritative new Informations in the existing status", async (newCount, message) => {
-  const f = await fixture({ status: "success", newCount, manual: newCount === 0 });
+  const f = await fixture({ status: "success", newCount, manual: newCount > 0 });
   await f.use();
   const context = await f.prepare();
   expect(context.feedback).toBe(message);
@@ -94,6 +94,26 @@ it.each([
   expect(f.notifications.error).not.toHaveBeenCalled();
   expect(f.button.disabled).toBe(false);
   expect(f.button.removeAttribute).toHaveBeenCalledWith("aria-busy");
+});
+
+it.each([
+  ["Laboratório Portátil", "laboratory", "Armário de Roupas"],
+  ["Rádio Modificado", "radio", "O Ídolo de Pedra"],
+] as const)("keeps the manual feedback for %s (%s) in %s across refreshes", async (name, mechanic, poi) => {
+  const f = await fixture({ status: "success", newCount: 0, manual: true });
+  f.equipment.name = name;
+  state.projection.mockImplementation(async () => ({ view: { audience: "player", itemUuid: "Item.poi",
+    name: poi, description: "", img: "", investigationRunId: "run", tools: [], skills: [], discoveries: [] } }));
+  Object.assign(f.equipment.system.useForms[0], { mechanic });
+  if (mechanic === "radio") f.dispatch.mockResolvedValueOnce(null as never);
+  await f.use();
+  await f.app.refresh();
+  const context = await f.prepare();
+  expect(context.feedback).toBe(messages.Manual);
+  expect(f.render(context)).toContain(`role="status">${messages.Manual}</p>`);
+  expect(context.feedback).not.toContain("Nenhuma informação nova");
+  expect(f.notifications.warn).not.toHaveBeenCalled();
+  expect(context.tools?.[0].uses?.value).toBe(3);
 });
 
 it("refreshes the status, skill table, DESCOBERTAS and remaining uses together after completion", async () => {

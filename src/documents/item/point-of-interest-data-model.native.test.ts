@@ -1,9 +1,24 @@
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { syntheticToolPresets } from "../../qa/playtest-alpha-tools-fixture";
+import { poiSystem } from "../../core/adventure-import/adventure-poi-data";
 
 const commonPath = process.env.FOUNDRY_V14_COMMON_PATH;
 afterEach(() => vi.unstubAllGlobals());
 describe.skipIf(!commonPath)("installed Foundry v14 Point of Interest model (no persistence)", () => {
+  it("constructs and updates every enriched Act II preset without changing legacy or tool serialization", async () => {
+    vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
+    const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");
+    for (const preset of syntheticToolPresets()) {
+      const system = poiSystem(preset);
+      const model = new Model(structuredClone(system) as never, { strict: true } as never);
+      expect(model.toObject()).toEqual(system);
+      const old = { ...system, information: system.information.filter(entry => !entry.id.includes(".tool.")) };
+      const previous = new Model(structuredClone(old) as never, { strict: true } as never);
+      previous.updateSource(structuredClone(system) as never);
+      expect(previous.toObject()).toEqual(system);
+    }
+  });
   it("round trips radio config, normalizes borders, and rejects mixed/conflicting branches", async () => {
     vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
     const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");

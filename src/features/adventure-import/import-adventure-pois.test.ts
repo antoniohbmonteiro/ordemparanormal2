@@ -7,6 +7,8 @@ import { importAdventurePois, managedPoiDigest, type PoiImportFlag, type PoiItem
 import type { AdventureFolderPort, AdventureFolderSnapshot } from "./adventure-folders";
 import type { AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import type { MaterializationResult } from "./materialize-adventure-assets";
+import { syntheticToolPresets } from "../../qa/playtest-alpha-tools-fixture";
+import { isToolApproach } from "../../documents/item/point-of-interest-data";
 
 const SYNTHETIC_POI_PRESETS: readonly AdventurePoiPreset[] = PLAYTEST_ALPHA_POI_SOURCES.map(source => ({
   id: source.id, act: source.act, name: source.heading,
@@ -103,6 +105,56 @@ function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
 }
 
 describe("Adventure Point of Interest import", () => {
+  it("upgrades untouched revision 5 POIs to 6 in place and preserves runtime flags, identity and old Information", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actTwo"], undefined, SYNTHETIC_POI_PRESETS, 5);
+    const ids = world.items.map(item => item.id);
+    const runtimeFlags = { pointOfInterestKnowledge: { agents: [{ actorUuid: "Actor.a", informationIds: ["legacy"] }] },
+      pointOfInterestDiscovery: [{ runId: "run", actorUuid: "Actor.a", informationId: "legacy" }],
+      pointOfInterestVisibility: { mode: "everyone", users: [], notified: [] }, associations: ["Scene.scene.Region.region"] };
+    world.items.forEach(item => Object.assign(item, { runtimeFlags: structuredClone(runtimeFlags) }));
+    const tools = syntheticToolPresets();
+    const enriched = SYNTHETIC_POI_PRESETS.map(preset => ({ ...preset, information: [...preset.information,
+      ...tools.find(tool => tool.id === preset.id)?.information.filter(entry => entry.id.includes(".tool.")) ?? []] }));
+    const decide = vi.fn(async () => "restore" as const);
+    expect(await run(world, ["actTwo"], decide, enriched, 6)).toMatchObject({ updated: 25, preserved: 0 });
+    expect(decide).not.toHaveBeenCalled();
+    expect(world.items.map(item => item.id)).toEqual(ids);
+    expect(world.items.flatMap(item => item.system.information.filter(entry => entry.id.includes(".tool.")))).toHaveLength(34);
+    world.items.forEach(item => {
+      expect((item.flag as PoiImportFlag).presetRevision).toBe(6);
+      expect((item as typeof item & { runtimeFlags: unknown }).runtimeFlags).toEqual(runtimeFlags);
+      const previous = SYNTHETIC_POI_PRESETS.find(preset => preset.id === (item.flag as PoiImportFlag).documentId)!;
+      expect(item.system.information.slice(0, previous.information.length)).toEqual(previous.information);
+    });
+    const writes = world.writes;
+    expect(await run(world, ["actTwo"], decide, enriched, 6)).toMatchObject({ unchanged: 25, updated: 0 });
+    expect(world.writes).toBe(writes);
+    const altarIndex = world.items.findIndex(item => (item.flag as PoiImportFlag).documentId === "actTwo.map.08");
+    const altar = world.items[altarIndex];
+    const edited = { ...altar.system, information: altar.system.information.map(entry => entry.id.endsWith(".tool.radio")
+      ? { ...entry, approaches: entry.approaches.map(approach => isToolApproach(approach) ? ({ ...approach,
+        mechanicConfig: { type: "radio" as const, trueFragments: ["Mensagem revisada pelo mestre."], falseFragments: ["Ruído."] } }) : approach) }
+      : entry) };
+    expect(await managedPoiDigest(edited)).not.toBe((altar.flag as PoiImportFlag).baseline);
+    world.items[altarIndex] = { ...altar, system: edited };
+    expect(await run(world, ["actTwo"], async () => "preserve", enriched, 6)).toMatchObject({ preserved: 1, unchanged: 24 });
+    expect(world.items[altarIndex].system).toEqual(edited);
+    expect(await run(world, ["actTwo"], async () => "restore", enriched, 6)).toMatchObject({ updated: 1, unchanged: 24 });
+    expect(world.items[altarIndex].system).toEqual(altar.system);
+    expect((world.items[altarIndex] as typeof altar & { runtimeFlags: unknown }).runtimeFlags).toEqual(runtimeFlags);
+  });
+  it("blocks every write when an enriched ToolApproach preset contains an invalid config", async () => {
+    const world = new FakeWorld();
+    const enriched = SYNTHETIC_POI_PRESETS.map(preset => preset.id === "actTwo.map.03" ? { ...preset,
+      information: [...preset.information, { id: "actTwo.map.03.tool.laboratory", content: "Resposta.",
+        availability: { mode: "always", condition: "" }, approaches: [{ type: "tool",
+          equipmentUuid: "Compendium.ordemparanormal2.equipment.Item.equipment0000003", useFormId: "analyze",
+          mechanicConfig: { type: "laboratory", sequenceLength: 3 } }] }] } : preset);
+    await expect(run(world, ["actTwo"], undefined, enriched, 6)).rejects.toThrow();
+    expect(world.writes).toBe(0);
+    expect(world.items).toEqual([]);
+  });
   it.each([undefined, { type: "laboratory" as const, sequenceLength: 4 as const }])(
     "treats a manually added ToolApproach/config %j as an edit without changing preset digests", async mechanicConfig => {
     const world = new FakeWorld();

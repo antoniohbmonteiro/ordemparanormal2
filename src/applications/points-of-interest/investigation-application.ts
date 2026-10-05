@@ -512,7 +512,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
         ? result.newCount > 0
           ? game.i18n.format(`${LOCALIZATION_ROOT}.${result.newCount === 1 ? "ToolDiscoverySingle" : "ToolDiscoveryMultiple"}`,
             { count: result.newCount })
-          : game.i18n.localize(`${LOCALIZATION_ROOT}.ToolDiscoveryNone`)
+          : result.manual ? equipmentUseFeedback(result) : game.i18n.localize(`${LOCALIZATION_ROOT}.ToolDiscoveryNone`)
         : equipmentUseFeedback(result);
       if (this.#closed || this.#params.sceneId !== sceneId || this.#params.itemUuid !== itemUuid
         || resolveSceneInvestigationAgent(sceneId)?.uuid !== actor.uuid || abort.signal.aborted || this.#currentRunId !== runId) return;

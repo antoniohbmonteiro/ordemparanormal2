@@ -1,6 +1,8 @@
 import type { RadioPuzzleConfig } from "../../../core/equipment/radio-puzzle";
 import { radioInformationIds, toolInformationIds } from "../../../core/investigation/resolve-information";
-import { isToolApproach, readPointOfInterestInformation, copyToolMechanicConfig, toolMechanicSignature } from "../../../documents/item/point-of-interest-data";
+import { isToolApproach, isPointOfInterestInformationList, isLaboratoryMechanicConfig,
+  readPointOfInterestInformation, copyToolMechanicConfig, toolMechanicSignature } from "../../../documents/item/point-of-interest-data";
+import { isRadioPuzzleConfig } from "../../../core/equipment/radio-puzzle";
 import type { LaboratoryLength } from "../../../core/equipment/laboratory-challenge";
 import { activeEquipmentAuthority, type ResolvedEquipmentUse } from "../equipment/execute-equipment-use";
 import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
@@ -35,29 +37,57 @@ export function authorizedPoiToolContext(context: PoiToolContext, resolved: Reso
     || (runtime?.runId ?? null) !== context.runId) return null;
   return { scene, item, runtime };
 }
-/** Includes known and situational bindings when checking one interaction's configuration. */
-export function laboratoryInteraction(context: PoiToolContext, resolved: ResolvedEquipmentUse,
-  requester: foundry.documents.User): { length: LaboratoryLength; informationIds: readonly string[] } | null {
+/** Server-only preparation outcome; never sent by the contextual query. */
+export interface UnconfiguredPoiToolUse {
+  readonly status: "unconfigured";
+  readonly mechanic: "laboratory" | "radio";
+}
+function specialToolInformation(context: PoiToolContext, resolved: ResolvedEquipmentUse,
+  requester: foundry.documents.User) {
   const authorized = authorizedPoiToolContext(context, resolved, requester);
-  if (!authorized || !resolved.isTool || !resolved.sourceUuid || resolved.use?.mechanic !== "laboratory") return null;
+  if (!authorized || !resolved.isTool || !resolved.sourceUuid || !resolved.use) return null;
+  const source = (authorized.item.system as { information?: unknown }).information;
+  if (!isPointOfInterestInformationList(source)) return null;
   const information = readPointOfInterestInformation(authorized.item.system);
   const approaches = information.flatMap(entry => entry.approaches.filter(isToolApproach))
     .filter(approach => approach.equipmentUuid === resolved.sourceUuid && approach.useFormId === resolved.use!.id);
-  const length = approaches[0]?.mechanicConfig?.sequenceLength;
-  if (!length || approaches.some(approach => approach.mechanicConfig?.type !== "laboratory"
-    || approach.mechanicConfig.sequenceLength !== length)) return null;
-  return { length, informationIds: toolInformationIds(information, new Set<string>(), resolved.sourceUuid, resolved.use.id, length) };
+  return { information, approaches };
+}
+/** Known and situational bindings still configure the interaction. Only a missing pair permits fallback. */
+export function classifyLaboratoryInteraction(context: PoiToolContext, resolved: ResolvedEquipmentUse,
+  requester: foundry.documents.User): { status: "ready"; interaction: { length: LaboratoryLength; informationIds: readonly string[] } }
+    | { status: "absent" | "invalid" } {
+  const data = specialToolInformation(context, resolved, requester);
+  if (!data || resolved.use?.mechanic !== "laboratory") return { status: "invalid" };
+  const { information, approaches } = data;
+  if (!approaches.length) return { status: "absent" };
+  const config = approaches[0].mechanicConfig;
+  if (!isLaboratoryMechanicConfig(config) || approaches.some(approach => !isLaboratoryMechanicConfig(approach.mechanicConfig)
+    || approach.mechanicConfig.sequenceLength !== config.sequenceLength)) return { status: "invalid" };
+  return { status: "ready", interaction: { length: config.sequenceLength,
+    informationIds: toolInformationIds(information, new Set<string>(), resolved.sourceUuid!, resolved.use.id, config.sequenceLength) } };
+}
+export function laboratoryInteraction(context: PoiToolContext, resolved: ResolvedEquipmentUse,
+  requester: foundry.documents.User) {
+  const result = classifyLaboratoryInteraction(context, resolved, requester);
+  return result.status === "ready" ? result.interaction : null;
+}
+export function classifyRadioInteraction(context: PoiToolContext, resolved: ResolvedEquipmentUse,
+  requester: foundry.documents.User): { status: "ready"; interaction: { config: RadioPuzzleConfig; informationIds: readonly string[] } }
+    | { status: "absent" | "invalid" } {
+  const data = specialToolInformation(context, resolved, requester);
+  if (!data || resolved.use?.mechanic !== "radio") return { status: "invalid" };
+  const { information, approaches } = data;
+  if (!approaches.length) return { status: "absent" };
+  const config = approaches[0]?.mechanicConfig;
+  if (!isRadioPuzzleConfig(config) || approaches.some(approach => toolMechanicSignature(approach.mechanicConfig)
+    !== toolMechanicSignature(config))) return { status: "invalid" };
+  return { status: "ready", interaction: { config: copyToolMechanicConfig(config) as RadioPuzzleConfig,
+    informationIds: radioInformationIds(information, new Set<string>(), resolved.sourceUuid!, resolved.use.id, config) } };
 }
 export function radioInteraction(context: PoiToolContext, resolved: ResolvedEquipmentUse, requester: foundry.documents.User) {
-  const authorized = authorizedPoiToolContext(context, resolved, requester);
-  if (!authorized || !resolved.isTool || !resolved.sourceUuid || resolved.use?.mechanic !== "radio") return null;
-  const information = readPointOfInterestInformation(authorized.item.system);
-  const approaches = information.flatMap(entry => entry.approaches.filter(isToolApproach))
-    .filter(approach => approach.equipmentUuid === resolved.sourceUuid && approach.useFormId === resolved.use!.id);
-  const config = approaches[0]?.mechanicConfig;
-  if (config?.type !== "radio" || approaches.some(approach => toolMechanicSignature(approach.mechanicConfig) !== toolMechanicSignature(config))) return null;
-  return { config: copyToolMechanicConfig(config) as RadioPuzzleConfig,
-    informationIds: radioInformationIds(information, new Set<string>(), resolved.sourceUuid, resolved.use.id, config) };
+  const result = classifyRadioInteraction(context, resolved, requester);
+  return result.status === "ready" ? result.interaction : null;
 }
 export interface ToolKnowledgeReceipt { ids?: readonly string[]; newCount?: number }
 export function recoverToolKnowledgeCount(context: PoiToolContext, resolved: ResolvedEquipmentUse,

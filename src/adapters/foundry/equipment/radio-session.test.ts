@@ -3,6 +3,8 @@ import type { RadioCommand, RadioResponse, RadioView } from "../../../applicatio
 import type { PoiToolIntent } from "../points-of-interest/use-poi-tool";
 import { readPoiKnowledge } from "../points-of-interest/poi-runtime-state";
 import { readPoiDiscoveries } from "../points-of-interest/poi-discovery";
+import { syntheticToolPresets } from "../../../qa/playtest-alpha-tools-fixture";
+import { ACT_TWO_TOOL_SOURCES } from "../../../config/adventure-poi-sources/playtest-alpha-act-two-tools";
 const choices = { stepAdjustments: { mind: 0, technology: 0 }, extraDice: [], abilityUses: [] };
 const mocks = vi.hoisted(() => ({ roll: vi.fn(), prepare: vi.fn(), confirm: vi.fn(), equipment: vi.fn(), check: vi.fn(), removal: vi.fn(), result: vi.fn() }));
 vi.mock("../../../features/checks/resolve-agent-check-interaction", async importOriginal => ({
@@ -66,7 +68,7 @@ function fixture(run = true, consumesUse = true) {
   return { flags, sceneFlags, equipment, actors, item: item as unknown as foundry.documents.Item, rawItem: item, runtime,
     scene, requester, other: other as foundry.documents.User, intent, command, remove: () => { exists = false; } };
 }
-function asView(result: RadioResponse | null): RadioView {
+function asView(result: RadioResponse | { status: "unconfigured" } | null): RadioView {
   expect(result?.status).toBe("radio");
   if (!result || result.status !== "radio") throw new Error(JSON.stringify(result));
   return result.view;
@@ -97,6 +99,35 @@ async function solved(f: ReturnType<typeof fixture>, initial: RadioView) {
   return view;
 }
 describe("authoritative radio sessions", () => {
+  it("concludes an imported Computer puzzle through the existing Check, Knowledge and blind-safe protocol", async () => {
+    const f = fixture();
+    const preset = syntheticToolPresets().find(preset => preset.id === "actTwo.map.24")!;
+    Object.assign(f.rawItem.system, { information: structuredClone(preset.information.filter(entry => entry.id.endsWith(".tool.radio"))) });
+    Object.assign(f.equipment._stats, { compendiumSource: ACT_TWO_TOOL_SOURCES.radio.equipmentUuid });
+    f.equipment.system.useForms[0].consumesUse = false;
+    const view = await solved(f, await started(f));
+    expect(view.removedCount).toBe(5);
+    expect(await adapter.resolveRadioCommand(f.command(view, "finish"), f.requester))
+      .toMatchObject({ terminal: { status: "success", newCount: 1 } });
+    expect(readPoiKnowledge(f.item)).toEqual([{ actorUuid: "Actor.a", informationIds: ["actTwo.map.24.tool.radio"] }]);
+    expect(mocks.check).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), "blind");
+    expect(JSON.stringify(view)).not.toMatch(/trueFragments|falseFragments|total|informationIds/);
+    expect(JSON.stringify(mocks.result.mock.calls[0][2])).not.toMatch(/trueFragments|falseFragments|total|informationIds/);
+    expect(f.equipment.update).not.toHaveBeenCalled();
+  });
+  it("keeps an already-known imported Radio configured and removal of config never becomes fallback", async () => {
+    const f = fixture();
+    Object.assign(f.rawItem.system, { information: structuredClone(syntheticToolPresets().find(preset => preset.id === "actTwo.map.24")!.information) });
+    Object.assign(f.equipment._stats, { compendiumSource: ACT_TWO_TOOL_SOURCES.radio.equipmentUuid });
+    f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["actTwo.map.24.tool.radio"] }] };
+    const prepared = asView(await adapter.prepareRadio(f.intent, f.requester));
+    f.rawItem.system.information = [];
+    expect(await adapter.prepareRadio(f.intent, f.requester)).toMatchObject({ status: "radio", view: prepared });
+    expect(await adapter.resolveRadioCommand(f.command(prepared, "start"), f.requester))
+      .toMatchObject({ terminal: { status: "invalid" } });
+    expect(mocks.equipment).not.toHaveBeenCalled();
+    expect(mocks.roll).not.toHaveBeenCalled();
+  });
   it("prepares without effects and never returns Check totals or private configuration", async () => {
     const f = fixture(); const prepared = await adapter.prepareRadio(f.intent, f.requester);
     expect(f.equipment.update).not.toHaveBeenCalled(); expect(mocks.roll).not.toHaveBeenCalled(); expect(mocks.equipment).not.toHaveBeenCalled();
@@ -219,7 +250,7 @@ describe("authoritative radio sessions", () => {
     f.rawItem.system.information[1].approaches[0].mechanicConfig.trueFragments = ["Diferente"];
     expect(await adapter.prepareRadio(f.intent, f.requester)).toEqual({ status: "invalid" });
     f.rawItem.system.information.length = 0;
-    expect(await adapter.prepareRadio(f.intent, f.requester)).toEqual({ status: "invalid" });
+    expect(await adapter.prepareRadio(f.intent, f.requester)).toEqual({ status: "unconfigured", mechanic: "radio" });
     expect(f.equipment.update).not.toHaveBeenCalled(); expect(mocks.roll).not.toHaveBeenCalled();
   });
   it("a new explicit use after failure rolls once again and names do not invalidate the current puzzle", async () => {

@@ -1,4 +1,5 @@
-import { isPointOfInterestInformationList, type PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
+import { isPointOfInterestInformationList, isToolApproach, uniformToolMechanicConfigurations,
+  type PointOfInterestSystemData } from "../../documents/item/point-of-interest-data";
 import type { AdventureDefinition } from "./adventure-definition";
 import type { AdventureAct } from "./recognize-zip-source";
 
@@ -27,15 +28,23 @@ export function validateAdventurePoiData(value: unknown): asserts value is Adven
     || typeof preset.name !== "string" || !preset.name.trim()
     || (preset.imageAssetId !== undefined && (typeof preset.imageAssetId !== "string" || !preset.imageAssetId.trim()))
     || typeof preset.publicDescription !== "string" || typeof preset.gmContext !== "string"
-    || !isPointOfInterestInformationList(preset.information)) throw new Error("Preset de POI inválido.");
+    || !isPointOfInterestInformationList(preset.information)
+    || !uniformToolMechanicConfigurations(preset.information)) throw new Error("Preset de POI inválido.");
   for (const value of preset.information) {
     const entry = record(value)!;
     const availability = record(entry.availability);
     if (!keysAre(entry, ["id", "content", "approaches", "availability"])
       || !availability || !keysAre(availability, ["mode", "condition"])
       || !(entry.content as string).trim()
-      || (entry.approaches as unknown[]).some(value => {
+      || value.approaches.some(value => {
         const approach = record(value);
+        if (approach && isToolApproach(value)) {
+          const config = record(approach.mechanicConfig);
+          return !keysAre(approach, ["type", "equipmentUuid", "useFormId",
+            ...(approach.mechanicConfig === undefined ? [] : ["mechanicConfig"])])
+            || (approach.mechanicConfig !== undefined && (!config || !keysAre(config, config.type === "laboratory"
+              ? ["type", "sequenceLength"] : ["type", "trueFragments", "falseFragments"])));
+        }
         const override = record(approach?.difficultyOverride);
         return !approach || !keysAre(approach, ["skill", "difficulty", "showDifficultyToPlayers",
           ...(approach.skill === "aptitude" ? ["specialization"] : []),

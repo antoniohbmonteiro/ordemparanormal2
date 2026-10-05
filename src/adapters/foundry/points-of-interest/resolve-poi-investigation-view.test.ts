@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { POI_INVESTIGATION_QUERY, registerPoiInvestigationQuery } from "./poi-investigation-query";
 import { resolvePoiInvestigationView } from "./resolve-poi-investigation-view";
+import { syntheticToolPresets } from "../../../qa/playtest-alpha-tools-fixture";
 
 function fixture() {
   const flags: Record<string, unknown> = {
@@ -37,6 +38,19 @@ function fixture() {
   return { flags, item, scene, actors, player };
 }
 afterEach(() => vi.unstubAllGlobals());
+
+it("sanitizes imported Radio/Laboratory presets and reveals only known content to the selected Agent", async () => {
+  const f = fixture();
+  const altar = syntheticToolPresets().find(preset => preset.id === "actTwo.map.08")!;
+  Object.assign(f.item.system, { information: altar.information, gmContext: altar.gmContext });
+  f.flags.pointOfInterestKnowledge = { agents: [{ actorUuid: "Actor.a", informationIds: ["actTwo.map.08.tool.radio"] }] };
+  const result = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.a", requesterUserId: "player" });
+  const view = "view" in result && result.view.audience === "player" ? result.view : null;
+  expect(view?.discoveries).toEqual([{ content: altar.information.find(entry => entry.id.endsWith(".tool.radio"))!.content }]);
+  expect(JSON.stringify(result)).not.toMatch(/trueFragments|falseFragments|Trecho|SEU FILHO|SUA FILHA|sequenceLength|mechanicConfig|equipmentUuid|\.tool\./);
+  const other = await resolvePoiInvestigationView({ sceneId: "scene", itemUuid: "Item.poi", actorUuid: "Actor.b", requesterUserId: "player" });
+  expect("view" in other && other.view.audience === "player" && other.view.discoveries).toEqual([]);
+});
 
 it("projects all inventory tools independently of private matching, and only known tool-only discoveries", async () => {
   const f = fixture();

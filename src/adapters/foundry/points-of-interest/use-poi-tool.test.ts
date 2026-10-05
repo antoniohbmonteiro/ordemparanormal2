@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const publish = vi.hoisted(() => vi.fn());
+const special = vi.hoisted(() => ({ roll: vi.fn(), check: vi.fn(), result: vi.fn(), removal: vi.fn() }));
 vi.mock("../chat/publish-equipment-message", () => ({ publishEquipmentMessage: publish }));
+vi.mock("../dice/execute-laboratory-roll", () => ({ executeLaboratoryRoll: special.roll }));
+vi.mock("../dice/execute-foundry-check", () => ({ executeFoundryCheck: special.check }));
+vi.mock("../chat/publish-laboratory-result", () => ({ publishLaboratoryResult: special.result }));
+vi.mock("../chat/publish-radio-result", () => ({ publishRadioResult: special.result, publishRadioRemoval: special.removal }));
 import { resolvePoiToolUse, type PoiToolIntent } from "./use-poi-tool";
 import { readPoiKnowledge } from "./poi-runtime-state";
 import { readPoiDiscoveries } from "./poi-discovery";
 import { shareCandidates, transferShareClue } from "./investigation-share";
 import { resolvePoiScene } from "./poi-runtime-queries";
 import { useInvestigationTool } from "../../../features/points-of-interest/use-investigation-tool";
+import { syntheticToolPresets } from "../../../qa/playtest-alpha-tools-fixture";
+import { ACT_TWO_TOOL_SOURCES } from "../../../config/adventure-poi-sources/playtest-alpha-act-two-tools";
 
 let sequence = 0;
 function fixture(active = true) {
@@ -53,7 +60,7 @@ function fixture(active = true) {
     scene: scene as unknown as foundry.documents.Scene, requester: requester as foundry.documents.User,
     second: second as foundry.documents.User, intent };
 }
-beforeEach(() => publish.mockReset().mockResolvedValue(undefined));
+beforeEach(() => { publish.mockReset().mockResolvedValue(undefined); Object.values(special).forEach(mock => mock.mockReset()); });
 afterEach(() => vi.unstubAllGlobals());
 
 it("grants all new always answers to only the using Agent, with Discovery but without PD or acted state", async () => {
@@ -152,4 +159,109 @@ it("rejects a requester without OWNER and a forged operation context without lea
   const result = await resolvePoiToolUse({ ...f.intent, context: { ...f.intent.context, itemUuid: "Item.other" } }, f.requester);
   expect(result).toEqual({ status: "invalid" });
   expect(JSON.stringify(result)).not.toMatch(/Privada|Chave secreta|conditional|equipmentUuid/);
+});
+
+function specialFixture(mechanic: "laboratory" | "radio", consumesUse = false) {
+  const f = fixture();
+  Object.assign(f.equipment.system.useForms[0], { mechanic, consumesUse });
+  const system = f.item.system as unknown as { information: unknown[] };
+  system.information = [];
+  const configure = (config: unknown) => { system.information = [{ id: "tool", content: "Pista contextual.", approaches: [{
+    type: "tool", equipmentUuid: "Item.source", useFormId: "scan", ...(config === undefined ? {} : { mechanicConfig: config }),
+  }] }]; };
+  return { ...f, system, configure };
+}
+it.each(["laboratory", "radio"] as const)("completes an unconfigured %s as a manual use without special effects", async mechanic => {
+  const f = specialFixture(mechanic);
+  const expected = { status: "success", newCount: 0, manual: true };
+  expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual(expected);
+  expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual(expected);
+  expect(f.equipment.update).not.toHaveBeenCalled();
+  expect(f.item.update).not.toHaveBeenCalled();
+  expect(f.actors[0].update).not.toHaveBeenCalled();
+  expect(f.sceneFlags.investigationRuntime).toMatchObject({ actedAgentUuids: [] });
+  expect(publish).toHaveBeenCalledOnce();
+  Object.values(special).forEach(mock => expect(mock).not.toHaveBeenCalled());
+  expect(readPoiKnowledge(f.item)).toEqual([]);
+  expect(readPoiDiscoveries(f.item)).toEqual([]);
+});
+it.each(["laboratory", "radio"] as const)("retains the %s fallback receipt after publication failure and later authoring", async mechanic => {
+  const f = specialFixture(mechanic, true);
+  publish.mockRejectedValueOnce(new Error("Chat unavailable"));
+  expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "partial", stage: "publication" });
+  f.configure(mechanic === "laboratory" ? { type: "laboratory", sequenceLength: 4 }
+    : { type: "radio", trueFragments: ["Mensagem"], falseFragments: [] });
+  expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "success", newCount: 0, manual: true });
+  expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "success", newCount: 0, manual: true });
+  expect(f.equipment.update).toHaveBeenCalledOnce();
+  expect(f.equipment.system.uses.value).toBe(2);
+  expect(publish).toHaveBeenCalledTimes(2);
+  expect(f.item.update).not.toHaveBeenCalled();
+  expect(await resolvePoiToolUse({ ...f.intent, context: { ...f.intent.context, runId: null } }, f.requester))
+    .toEqual({ status: "invalid" });
+});
+it.each(["laboratory", "radio"] as const)("rejects present but incompatible %s configuration before use", async mechanic => {
+  for (const config of [undefined, { type: "laboratory", sequenceLength: 3 },
+    { type: "radio", trueFragments: [], falseFragments: [] },
+    mechanic === "radio" ? { type: "laboratory", sequenceLength: 4 }
+      : { type: "radio", trueFragments: ["Mensagem"], falseFragments: [] }]) {
+    const f = specialFixture(mechanic, true);
+    f.configure(config);
+    expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "invalid" });
+    expect(f.equipment.update).not.toHaveBeenCalled();
+  }
+  expect(publish).not.toHaveBeenCalled();
+});
+it.each(["laboratory", "radio"] as const)("revalidates %s absence immediately before payment", async mechanic => {
+  const f = specialFixture(mechanic, true);
+  const uses = f.equipment.system.uses;
+  Object.defineProperty(f.equipment.system, "uses", { get: () => {
+    f.configure(mechanic === "laboratory" ? { type: "laboratory", sequenceLength: 4 }
+      : { type: "radio", trueFragments: ["Mensagem"], falseFragments: [] });
+    return uses;
+  } });
+  expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "invalid" });
+  expect(f.equipment.update).not.toHaveBeenCalled();
+  expect(publish).not.toHaveBeenCalled();
+});
+it.each(["laboratory", "radio"] as const)("does not turn unauthorized or malformed %s contexts into absence", async mechanic => {
+  for (const condition of ["hidden", "stale", "malformed", "no-origin", "not-tool", "not-owner"]) {
+    const f = specialFixture(mechanic);
+    if (condition === "hidden") f.flags.pointOfInterestVisibility = { mode: "hidden" };
+    if (condition === "stale") f.intent = { ...f.intent, context: { ...f.intent.context, runId: "old" } };
+    if (condition === "malformed") f.system.information = [{}];
+    if (condition === "no-origin") f.equipment._stats.duplicateSource = "";
+    if (condition === "not-tool") f.equipment.system.category = "other";
+    const result = await resolvePoiToolUse(f.intent, condition === "not-owner" ? f.second : f.requester);
+    expect(result.status).toBe(condition === "not-owner" ? "forbidden" : "invalid");
+    expect(f.item.update).not.toHaveBeenCalled();
+  }
+  expect(publish).not.toHaveBeenCalled();
+});
+
+it.each([["laboratory", "actTwo.map.23"], ["radio", "actTwo.map.07"]] as const)(
+  "uses the imported %s/%s manual exception without Knowledge or a special session", async (mechanic, poiId) => {
+    const f = specialFixture(mechanic);
+    const source = ACT_TWO_TOOL_SOURCES[mechanic];
+    Object.assign(f.equipment._stats, { compendiumSource: source.equipmentUuid });
+    f.equipment.system.useForms[0].id = source.useFormId;
+    f.intent = { ...f.intent, useFormId: source.useFormId };
+    f.system.information = [...structuredClone(syntheticToolPresets().find(preset => preset.id === poiId)!.information)];
+    expect(await resolvePoiToolUse(f.intent, f.requester)).toEqual({ status: "success", newCount: 0, manual: true });
+    expect(f.item.update).not.toHaveBeenCalled();
+    expect(f.equipment.update).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledOnce();
+    Object.values(special).forEach(mock => expect(mock).not.toHaveBeenCalled());
+  });
+
+it.each(["laboratory", "radio"] as const)("serializes two owners' manual %s use of the last resource", async mechanic => {
+  const f = specialFixture(mechanic, true);
+  f.actors[0].testUserPermission.mockReturnValue(true);
+  f.equipment.system.uses.value = 1;
+  const results = await Promise.all([
+    resolvePoiToolUse(f.intent, f.requester), resolvePoiToolUse({ ...f.intent, operationId: `other-${sequence}` }, f.second),
+  ]);
+  expect(results.map(result => result.status)).toEqual(["success", "insufficient"]);
+  expect(f.equipment.update).toHaveBeenCalledOnce();
+  expect(publish).toHaveBeenCalledOnce();
 });

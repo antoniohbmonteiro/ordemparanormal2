@@ -6,8 +6,8 @@ import type { LaboratoryCommand, LaboratoryResponse, LaboratoryView } from "../.
 import type { LaboratorySnapshot } from "../../../application/equipment/laboratory-snapshot";
 import { executeLaboratoryRoll, type LaboratoryRoll } from "../dice/execute-laboratory-roll";
 import { publishLaboratoryResult } from "../chat/publish-laboratory-result";
-import { grantToolKnowledge, isPoiToolContext, laboratoryInteraction, recoverToolKnowledgeCount,
-  type PoiToolContext, type ToolKnowledgeReceipt } from "../points-of-interest/poi-tool-context";
+import { grantToolKnowledge, isPoiToolContext, laboratoryInteraction, classifyLaboratoryInteraction, recoverToolKnowledgeCount,
+  type PoiToolContext, type ToolKnowledgeReceipt, type UnconfiguredPoiToolUse } from "../points-of-interest/poi-tool-context";
 import { activeEquipmentAuthority, executeEquipmentUse, isEquipmentUseIntent, ownedEquipmentForUser,
   registerEquipmentSessionGuard, equipmentSessionGuardResult, type EquipmentUseIntent, type EquipmentUseResult,
   type ResolvedEquipmentUse } from "./execute-equipment-use";
@@ -83,7 +83,7 @@ function currentResolved(session: Session, requester: foundry.documents.User): R
 }
 
 export async function prepareLaboratory(input: EquipmentUseIntent & { readonly context: PoiToolContext },
-  requester: foundry.documents.User): Promise<LaboratoryResponse> {
+  requester: foundry.documents.User): Promise<LaboratoryResponse | UnconfiguredPoiToolUse> {
   if (!activeEquipmentAuthority(requester)) return { status: "forbidden" };
   if (!isEquipmentUseIntent(input) || !isPoiToolContext(input.context)) return { status: "invalid" };
   return enqueueEquipmentOperation(input.actorUuid, input.equipmentId, async () => {
@@ -115,8 +115,10 @@ export async function prepareLaboratory(input: EquipmentUseIntent & { readonly c
     if (!owned) return { status: "forbidden" };
     if (!use || use.mechanic !== "laboratory") return { status: "invalid" };
     const resolved = { ...owned, use };
-    const interaction = laboratoryInteraction(input.context, resolved, requester);
-    if (!interaction || !resolved.sourceUuid) return { status: "invalid" };
+    const classified = classifyLaboratoryInteraction(input.context, resolved, requester);
+    if (classified.status === "absent") return { status: "unconfigured", mechanic: "laboratory" };
+    if (classified.status !== "ready" || !resolved.sourceUuid) return { status: "invalid" };
+    const interaction = classified.interaction;
     const session: Session = { id: crypto.randomUUID(), authorityId: game.user.id, requesterId: requester.id,
       intent: { actorUuid: input.actorUuid, equipmentId: input.equipmentId, useFormId: input.useFormId, operationId: input.operationId },
       context: { sceneId: input.context.sceneId, itemUuid: input.context.itemUuid, runId: input.context.runId }, binding,

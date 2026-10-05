@@ -1,8 +1,11 @@
 import { PLAYTEST_ALPHA_POI_SOURCES, type AdventurePoiSource } from "../../config/adventure-poi-sources/playtest-alpha";
+import { ACT_TWO_TOOL_BINDINGS, ACT_TWO_TOOL_SOURCES, ACT_TWO_MANUAL_TOOL_RESPONSES,
+  type ActTwoRadioBinding } from "../../config/adventure-poi-sources/playtest-alpha-act-two-tools";
 import { SKILL_DEFINITIONS, type SkillKey, type AptitudeSpecializationKey } from "../../config/skills";
 import { validateAdventurePoiData, type AdventurePoiPreset } from "../../core/adventure-import/adventure-poi-data";
 import { POINT_OF_INTEREST_ALWAYS_AVAILABLE, type PointOfInterestSkillApproach,
-  type PointOfInterestInformation } from "../../documents/item/point-of-interest-data";
+  type PointOfInterestInformation, type ToolMechanicConfig, copyToolMechanicConfig } from "../../documents/item/point-of-interest-data";
+import { isRadioPuzzleConfig, type RadioPuzzleConfig } from "../../core/equipment/radio-puzzle";
 import type { AdventurePdfTextItem, AdventurePdfTextPage } from "../../adapters/files/read-adventure-poi-pages";
 import type { AdventureAct } from "../../core/adventure-import/recognize-zip-source";
 import type { PdfEditionId } from "../../core/adventure-import/known-adventure-sources";
@@ -378,7 +381,10 @@ function labelText(lines: readonly Line[]): string {
 }
 // Tool tables are emitted row by row: the tool's label cell, then its explanation cell. Both cells are
 // vertically centred on the row, which confirms each pairing; anything else stays a plain paragraph.
-function toolsBlock(lines: readonly Line[], start: number, heading: PositionedItem): { readonly block: GmContextBlock; readonly next: number } {
+interface ToolTableRow extends GmContextEntry { readonly label: string; readonly page: number; readonly order: number }
+function toolsBlock(lines: readonly Line[], start: number, heading: PositionedItem): {
+  readonly block: GmContextBlock; readonly next: number; readonly toolRows: readonly ToolTableRow[];
+} {
   const runs: Array<{ readonly label: boolean; readonly lines: Line[] }> = [];
   let labelX: number | undefined;
   let index = start + 1;
@@ -397,29 +403,36 @@ function toolsBlock(lines: readonly Line[], start: number, heading: PositionedIt
   const center = (cell: readonly Line[]) => (cell[0].y + cell.at(-1)!.y) / 2;
   const leading = runs[0] && !runs[0].label ? [{ type: "paragraph" as const, text: joinLines(runs[0].lines) }] : [];
   const rows = runs.slice(leading.length);
-  const entries: GmContextEntry[] = [];
+  const entries: ToolTableRow[] = [];
   for (let row = 0; row < rows.length; row += 2) {
     const [label, text] = [rows[row], rows[row + 1]];
     if (!label?.label || !text || text.label || label.lines[0].page !== text.lines.at(-1)!.page
       || Math.abs(center(label.lines) - center(text.lines)) > 6) {
-      return { next: index, block: { type: "section", title, content: [{ type: "paragraph", text: joinLines(runs.flatMap(run => run.lines)) }] } };
+      return { next: index, toolRows: [], block: { type: "section", title, content: [{ type: "paragraph", text: joinLines(runs.flatMap(run => run.lines)) }] } };
     }
-    entries.push({ label: labelText(label.lines), text: joinLines(text.lines) });
+    entries.push({ label: labelText(label.lines), text: joinLines(text.lines), page: label.lines[0].page,
+      order: label.lines[0].items[0].order });
   }
-  return { next: index, block: { type: "section", title, content: [...leading, ...(entries.length ? [{ type: "entries" as const, entries }] : [])] } };
+  return { next: index, toolRows: entries, block: { type: "section", title, content: [...leading, ...(entries.length ? [{ type: "entries" as const, entries }] : [])] } };
 }
 function opensToolRow(lines: readonly Line[], index: number, heading: PositionedItem): boolean {
   const line = lines[index];
   const next = lines.slice(index + 1).find(candidate => Math.abs(candidate.textX - line.textX) > 3);
   return next !== undefined && isSmallPrint(next, heading) && next.textX > line.textX + 30;
 }
-function gmContextBlocks(items: readonly PositionedItem[], heading: PositionedItem): GmContextBlock[] {
+function gmContextBlocks(items: readonly PositionedItem[], heading: PositionedItem): {
+  readonly blocks: GmContextBlock[]; readonly toolRows: readonly ToolTableRow[];
+} {
   const lines = toLines(items, heading);
   const blocks: GmContextBlock[] = [];
+  const toolRows: ToolTableRow[] = [];
   let index = 0;
   while (index < lines.length) {
     if (isAccessAnchor(lines, index) || isToolsHeading(lines[index])) {
-      const { block, next } = isToolsHeading(lines[index]) ? toolsBlock(lines, index, heading) : accessBlock(lines, index, heading);
+      const parsed: { block: GmContextBlock; next: number; toolRows?: readonly ToolTableRow[] } =
+        isToolsHeading(lines[index]) ? toolsBlock(lines, index, heading) : accessBlock(lines, index, heading);
+      const { block, next } = parsed;
+      toolRows.push(...parsed.toolRows ?? []);
       const previous = blocks.at(-1);
       // A tools table split across pages repeats its heading; keep it as one section.
       if (previous?.type === "section" && block.type === "section" && previous.title === block.title && isToolsHeading(lines[index])) {
@@ -440,7 +453,81 @@ function gmContextBlocks(items: readonly PositionedItem[], heading: PositionedIt
       index = next;
     }
   }
-  return blocks;
+  return { blocks, toolRows };
+}
+
+function radioConfiguration(row: ToolTableRow, binding: ActTwoRadioBinding, poiId: string): RadioPuzzleConfig {
+  const fail = (): never => { throw new Error(`Puzzle do Rádio divergente: ${poiId}; página ${row.page}.`); };
+  const match = /Conjuntos de palavras(?:\s*\([^)]*\))?\s*:\s*([\s\S]+?)\s+Solu[cç][aã]o:\s*([\s\S]+)$/iu.exec(row.text);
+  if (!match) return fail();
+  const fragments = match[1].split(/\s+[–—]\s+/u).map(piece => piece.trim().replace(/^[“"]([\s\S]*)[”"]$/u, "$1").trim());
+  if (fragments.length !== binding.pieceCount || fragments.some(piece => !piece)
+    || new Set(binding.trueOrder).size !== binding.trueOrder.length || !binding.trueOrder.length
+    || binding.trueOrder.some(index => !Number.isInteger(index) || index < 0 || index >= fragments.length)) return fail();
+  if (binding.correction) {
+    const { index, from, to } = binding.correction;
+    if (fragments[index] !== from) return fail();
+    fragments[index] = to;
+  }
+  const solution = match[2].replace(/\b(?:Alan|Gustavo)\s*:/giu, "");
+  const trueFragments = binding.trueOrder.map(index => fragments[index]);
+  if (normalize(trueFragments.join(" ")) !== normalize(solution)) return fail();
+  const config: RadioPuzzleConfig = { type: "radio", trueFragments,
+    falseFragments: fragments.filter((_piece, index) => !binding.trueOrder.includes(index)) };
+  if (!isRadioPuzzleConfig(config)) return fail();
+  return config;
+}
+
+function populateActTwoTools(poiId: string, rows: readonly ToolTableRow[], blocks: readonly GmContextBlock[]): {
+  readonly blocks: GmContextBlock[]; readonly information: readonly PointOfInterestInformation[];
+} {
+  const bindings = ACT_TWO_TOOL_BINDINGS.filter(binding => binding.poiId === poiId);
+  const manual = ACT_TWO_MANUAL_TOOL_RESPONSES.filter(binding => binding.poiId === poiId);
+  const replacements = new Map<GmContextEntry, GmContextEntry | null>();
+  const information: PointOfInterestInformation[] = [];
+  const matching = (tool: keyof typeof ACT_TWO_TOOL_SOURCES): ToolTableRow => {
+    const label = normalize(ACT_TWO_TOOL_SOURCES[tool].label);
+    const matches = rows.filter(row => normalize(row.label).startsWith(label));
+    if (matches.length !== 1) throw new Error(`Linha de ferramenta ausente ou ambígua: ${poiId}; ${tool}.`);
+    return matches[0];
+  };
+  // All configured rows must be consumed exactly once, in the PDF's own table order.
+  const boundRows = bindings.map(binding => ({ binding, row: matching(binding.tool) }))
+    .sort((a, b) => a.row.page - b.row.page || a.row.order - b.row.order);
+  for (const { binding, row } of boundRows) {
+    if (replacements.has(row)) throw new Error(`Vínculo de ferramenta duplicado: ${poiId}; ${binding.tool}.`);
+    let mechanicConfig: ToolMechanicConfig | undefined;
+    if (binding.sequenceLength !== undefined) {
+      const lengths = [...row.label.matchAll(/Sequ[eê]ncia\s+(?:m[ií]nima|exigida)\s*:\s*(\d+)/giu)];
+      if (lengths.length !== 1 || Number(lengths[0][1]) !== binding.sequenceLength)
+        throw new Error(`Comprimento do Laboratório divergente: ${poiId}; página ${row.page}.`);
+      mechanicConfig = { type: "laboratory", sequenceLength: binding.sequenceLength };
+    } else if (binding.radio) mechanicConfig = radioConfiguration(row, binding.radio, poiId);
+    const source = ACT_TWO_TOOL_SOURCES[binding.tool];
+    information.push(...binding.information.map(entry => ({ id: entry.id, content: entry.content,
+      availability: entry.condition ? { mode: "situational" as const, condition: entry.condition }
+        : { ...POINT_OF_INTEREST_ALWAYS_AVAILABLE },
+      approaches: [{ type: "tool" as const, equipmentUuid: source.equipmentUuid, useFormId: source.useFormId,
+        ...(mechanicConfig ? { mechanicConfig: copyToolMechanicConfig(mechanicConfig) } : {}) }],
+    })));
+    // Keep media references as GM directions, never media automation or the original long tool response.
+    const references = [...new Set(row.text.match(/(?<![\p{L}\p{N}_])(?:HANDOUT\s+\d+[A-Z]?|[ÁA]UDIO\s+EMF\s+\d+|(?:PDI|PD|HANDOUT|AUDIO)[_\-][A-Za-z0-9_\-]+)/giu) ?? [])];
+    const guidance = [binding.gmGuidance, ...references.length ? [`Referências de mídia para uso manual: ${references.join(", ")}.`] : []]
+      .filter(Boolean).join(" ");
+    replacements.set(row, guidance ? { label: row.label, text: guidance } : null);
+  }
+  for (const binding of manual) {
+    const row = matching(binding.tool);
+    if (replacements.has(row)) throw new Error(`Vínculo manual de ferramenta duplicado: ${poiId}.`);
+    replacements.set(row, { label: row.label, text: binding.text });
+  }
+  const replaceContent = (content: GmContextContent): GmContextContent => content.type === "entries"
+    ? { ...content, entries: content.entries.flatMap(entry => {
+      const replacement = replacements.has(entry) ? replacements.get(entry) : entry;
+      return replacement ? [replacement] : [];
+    }) } : content;
+  return { information, blocks: blocks.map(block => block.type === "section"
+    ? { ...block, content: block.content.map(replaceContent) } : replaceContent(block)) };
 }
 // Loose GM text after a titled block would read as part of it; group it under the context heading.
 function groupLooseContent(blocks: readonly GmContextBlock[]): GmContextBlock[] {
@@ -522,7 +609,7 @@ function takeDifficultyRule(sourceId: string, blocks: readonly GmContextBlock[],
   const cause = rule.text.replace(new RegExp(`,?\\s*[^,]*${change}[^,]*$`, "u"), "");
   return { blocks: rule.remove(), condition: conditionText([trigger, cause]) };
 }
-function sectionContent(input: Section): AdventurePoiPreset {
+function sectionContent(input: Section, edition?: PdfEditionId): AdventurePoiPreset {
   const heading = input.heading;
   // When the section's table starts on the heading page, it marks the left edge of the section's column there;
   // text further left belongs to a neighbouring column of the page layout, not to this POI.
@@ -561,7 +648,8 @@ function sectionContent(input: Section): AdventurePoiPreset {
   let alwaysCount = 0;
   const gmItems = [...contextItems.filter(item => item.page !== heading.page || item.y < heading.y - 5), ...markers]
     .sort((a, b) => a.page - b.page || a.order - b.order);
-  let gmBlocks = gmContextBlocks(gmItems, heading);
+  const context = gmContextBlocks(gmItems, heading);
+  let gmBlocks = context.blocks;
   // Rows kept out of information[] by the catalog stay as neutral GM context.
   const contextRows: GmContextEntry[] = [];
   for (const [rowIndex, row] of rows.entries()) {
@@ -600,6 +688,11 @@ function sectionContent(input: Section): AdventurePoiPreset {
   if (unbound.length) {
     throw new Error(`Vínculo de informação situacional sem linha correspondente: ${section.source.id} (${unbound.join(", ")}; ${rowSummary()}).`);
   }
+  if (edition === "playtest-alpha-v1.1" && section.source.act === "actTwo") {
+    const tools = populateActTwoTools(section.source.id, context.toolRows, gmBlocks);
+    information.push(...tools.information);
+    gmBlocks = tools.blocks;
+  }
   const gmContext = renderGmContextHtml([
     ...(headingConditional && description ? [{ type: "paragraph" as const, text: description }] : []),
     ...groupLooseContent([...gmBlocks,
@@ -616,7 +709,7 @@ export function parsePlaytestAlphaPois(pages: readonly AdventurePdfTextPage[], a
   const result: AdventurePoiPreset[] = [];
   const issues: string[] = [];
   for (const act of acts) for (const section of sectionStarts(pages, act, edition)) {
-    try { result.push(sectionContent(section)); }
+    try { result.push(sectionContent(section, edition)); }
     catch (error) { issues.push(error instanceof Error ? error.message : String(error)); }
   }
   if (issues.length) throw new Error(issues.join("\n"));
@@ -624,9 +717,10 @@ export function parsePlaytestAlphaPois(pages: readonly AdventurePdfTextPage[], a
 }
 
 export function parsePlaytestAlphaPoiSection(source: AdventurePoiSource, page: AdventurePdfTextPage,
-  ...continuation: readonly AdventurePdfTextPage[]): AdventurePoiPreset {
-  const positioned = [page, ...continuation].flatMap(positionItems);
+  ...continuation: readonly (AdventurePdfTextPage | PdfEditionId)[]): AdventurePoiPreset {
+  const edition = continuation.find(value => typeof value === "string");
+  const positioned = [page, ...continuation.filter((value): value is AdventurePdfTextPage => typeof value !== "string")].flatMap(positionItems);
   const heading = positioned.find(item => normalize(item.text) === normalize(source.heading));
   if (!heading) throw new Error(`Cabeçalho de POI ausente: ${source.id}.`);
-  return sectionContent({ source, heading, items: positioned });
+  return sectionContent({ source, heading, items: positioned }, edition);
 }

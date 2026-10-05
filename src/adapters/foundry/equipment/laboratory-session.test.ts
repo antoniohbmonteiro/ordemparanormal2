@@ -3,6 +3,8 @@ import type { LaboratoryResponse, LaboratoryView } from "../../../application/eq
 import type { PoiToolIntent } from "../points-of-interest/use-poi-tool";
 import { readPoiKnowledge } from "../points-of-interest/poi-runtime-state";
 import { readPoiDiscoveries } from "../points-of-interest/poi-discovery";
+import { syntheticToolPresets } from "../../../qa/playtest-alpha-tools-fixture";
+import { ACT_TWO_TOOL_SOURCES } from "../../../config/adventure-poi-sources/playtest-alpha-act-two-tools";
 const mocks = vi.hoisted(() => ({ roll: vi.fn(), equipment: vi.fn(), result: vi.fn() }));
 vi.mock("../dice/execute-laboratory-roll", () => ({ executeLaboratoryRoll: mocks.roll }));
 vi.mock("../chat/publish-equipment-message", () => ({ publishEquipmentMessage: mocks.equipment }));
@@ -60,7 +62,7 @@ function fixture(run = true, consumesUse = true) {
   return { flags, sceneFlags, equipment, actors, item: item as unknown as foundry.documents.Item, rawItem: item, runtime,
     scene, requester, other: other as foundry.documents.User, intent, command, remove: () => { exists = false; } };
 }
-function asView(result: LaboratoryResponse): LaboratoryView {
+function asView(result: LaboratoryResponse | { status: "unconfigured" }): LaboratoryView {
   expect(result.status).toBe("laboratory");
   if (result.status !== "laboratory") throw new Error(JSON.stringify(result));
   return result.view;
@@ -80,6 +82,30 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("authoritative laboratory sessions", () => {
+  it("uses the imported knife interaction and leaves the three-player blood response manual", async () => {
+    const f = fixture(true, false);
+    const preset = syntheticToolPresets().find(preset => preset.id === "actTwo.map.06")!;
+    Object.assign(f.rawItem.system, { information: structuredClone(preset.information) });
+    Object.assign(f.equipment._stats, { compendiumSource: ACT_TWO_TOOL_SOURCES.laboratory.equipmentUuid });
+    const prepared = asView(await adapter.prepareLaboratory(f.intent, f.requester));
+    const started = asView(await adapter.resolveLaboratoryCommand(f.command(prepared, "start"), f.requester));
+    expect(await adapter.resolveLaboratoryCommand(f.command(started, "finish"), f.requester))
+      .toMatchObject({ terminal: { status: "success", newCount: 1 } });
+    expect(readPoiKnowledge(f.item)).toEqual([{ actorUuid: "Actor.a", informationIds: ["actTwo.map.06.tool.laboratory"] }]);
+    expect(readPoiDiscoveries(f.item)).toHaveLength(1);
+    expect(f.equipment.update).not.toHaveBeenCalled();
+  });
+  it("keeps a situational-only imported Laboratory configured and does not fall back after removing its binding", async () => {
+    const f = fixture(true, false);
+    Object.assign(f.rawItem.system, { information: structuredClone(syntheticToolPresets().find(preset => preset.id === "actTwo.map.07")!.information) });
+    Object.assign(f.equipment._stats, { compendiumSource: ACT_TWO_TOOL_SOURCES.laboratory.equipmentUuid });
+    const prepared = asView(await adapter.prepareLaboratory(f.intent, f.requester));
+    f.rawItem.system.information = [];
+    expect(await adapter.prepareLaboratory(f.intent, f.requester)).toMatchObject({ status: "laboratory", view: prepared });
+    expect(await adapter.resolveLaboratoryCommand(f.command(prepared, "start"), f.requester))
+      .toMatchObject({ terminal: { status: "invalid" } });
+    expect(mocks.equipment).not.toHaveBeenCalled();
+  });
   it("serializes concurrent preparation/start of the last use without another payment or sequence", async () => {
     const f = fixture(); adapter.registerLaboratoryQueries();
     f.equipment.system.uses.value = 1;

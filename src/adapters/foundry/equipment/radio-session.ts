@@ -10,8 +10,8 @@ import { confirmCheckAbilityUses } from "../../../features/checks/check-ability-
 import { executeFoundryCheck, type FoundryCheckExecution } from "../dice/execute-foundry-check";
 import { isRegisteredMessageMode } from "../chat/publish-check-message";
 import { publishRadioCheck, publishRadioRemoval, publishRadioResult } from "../chat/publish-radio-result";
-import { grantToolKnowledge, isPoiToolContext, radioInteraction, recoverToolKnowledgeCount,
-  type ToolKnowledgeReceipt } from "../points-of-interest/poi-tool-context";
+import { grantToolKnowledge, isPoiToolContext, radioInteraction, classifyRadioInteraction, recoverToolKnowledgeCount,
+  type ToolKnowledgeReceipt, type UnconfiguredPoiToolUse } from "../points-of-interest/poi-tool-context";
 import { activeEquipmentAuthority, equipmentSessionGuardResult, executeEquipmentUse, isEquipmentUseIntent,
   ownedEquipmentForUser, type EquipmentUseIntent, type EquipmentUseResult, type ResolvedEquipmentUse } from "./execute-equipment-use";
 import { enqueueEquipmentOperation } from "./equipment-operation-queue";
@@ -98,7 +98,7 @@ export async function resumeRadio(input: RadioResumeIntent, requester: foundry.d
     return response(session);
   });
 }
-export async function prepareRadio(input: RadioResumeIntent, requester: foundry.documents.User): Promise<RadioResponse> {
+export async function prepareRadio(input: RadioResumeIntent, requester: foundry.documents.User): Promise<RadioResponse | UnconfiguredPoiToolUse> {
   if (!activeEquipmentAuthority(requester)) return { status: "forbidden" };
   if (!isEquipmentUseIntent(input) || !isPoiToolContext(input.context)) return { status: "invalid" };
   return enqueueEquipmentOperation(input.actorUuid, input.equipmentId, async () => {
@@ -117,8 +117,10 @@ export async function prepareRadio(input: RadioResumeIntent, requester: foundry.
     const use = readEquipmentUseForms((owned.equipment.system as { useForms?: unknown }).useForms)?.find(form => form.id === input.useFormId);
     if (!use || use.mechanic !== "radio") return { status: "invalid" };
     const resolved = { ...owned, use };
-    const interaction = radioInteraction(input.context, resolved, requester);
-    if (!interaction || !owned.sourceUuid) return { status: "invalid" };
+    const classified = classifyRadioInteraction(input.context, resolved, requester);
+    if (classified.status === "absent") return { status: "unconfigured", mechanic: "radio" };
+    if (classified.status !== "ready" || !owned.sourceUuid) return { status: "invalid" };
+    const interaction = classified.interaction;
     const session: Session = { id: crypto.randomUUID(), authorityId: game.user.id, requesterId: requester.id,
       input: structuredClone(input), binding: bindingOf(input), config: interaction.config,
       informationIds: [...interaction.informationIds], sourceUuid: owned.sourceUuid, consumesUse: use.consumesUse,

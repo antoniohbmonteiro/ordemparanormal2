@@ -4,6 +4,7 @@ import {
   type SkillDieStep,
 } from "../../config/skills";
 import { ATTRIBUTE_DEFINITIONS } from "../../config/attributes";
+import { SYSTEM_ID } from "../../config/system-config";
 import {
   type AttributeKey,
 } from "../../core/actors/agent-attributes";
@@ -76,6 +77,7 @@ export interface DieStepControlViewModel {
   readonly path: string;
   readonly value: DieStep;
   readonly compactLabel: string;
+  readonly iconPath?: string;
   readonly options: readonly DieStepOptionViewModel[];
 }
 
@@ -218,6 +220,9 @@ function createDieStepControl(
     path,
     value,
     compactLabel: `d${value}`,
+    ...(value === 20
+      ? {}
+      : { iconPath: `systems/${SYSTEM_ID}/assets/icons/dice/d${value}.svg` }),
     options: choices.map((choice) => ({
       value: choice,
       ...(includeSkillGrades

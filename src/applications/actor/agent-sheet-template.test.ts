@@ -142,9 +142,19 @@ describe("Agent Sheet main template", () => {
   });
 
   it("keeps die pills informational until structural editing is enabled", () => {
-    expect(dieControlTemplate).toContain("{{#if editable}}");
-    expect(dieControlTemplate).toContain("op2-die-control__chevron");
-    expect(dieControlTemplate).toContain("op2-die-control__select");
+    const editingBlock = dieControlTemplate.match(
+      /\{\{#if editable\}\}\s*<i[\s\S]*?<\/select>\s*\{\{\/if\}\}/,
+    )?.[0];
+
+    expect(editingBlock).toBeDefined();
+    expect(editingBlock).toContain("op2-die-control__chevron");
+    expect(editingBlock).toContain('<select class="op2-die-control__select" name="{{die.path}}">');
+    expect(editingBlock).toContain("{{#each die.options}}");
+    expect(editingBlock).toContain('value="{{value}}"{{#if selected}} selected{{/if}}');
+    expect(editingBlock).toContain("{{localize gradeLabelKey}}");
+    const informationalMarkup = dieControlTemplate.replace(editingBlock!, "");
+    expect(informationalMarkup).not.toContain("<select");
+    expect(informationalMarkup).not.toContain("op2-die-control__chevron");
     expect(dieControlTemplate).not.toContain("is-disabled");
     expect(dieControlTemplate).not.toContain(" disabled");
     expect(dieControlTemplate).toContain(
@@ -153,6 +163,24 @@ describe("Agent Sheet main template", () => {
     expect(identityTemplate).toContain("editable=@root.canEditStructure");
     expect(skillsTemplate).toContain("editable=@root.canEditStructure");
     expect(skillsTemplate).not.toContain("editable=@root.editable");
+    const sharedControl = 'systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs';
+    expect(identityTemplate.split(sharedControl)).toHaveLength(2);
+    expect(skillsTemplate.split(sharedControl)).toHaveLength(3);
+    expect(identityTemplate).not.toContain("op2-die-control__value");
+    expect(skillsTemplate).not.toContain("op2-die-control__value");
+  });
+
+  it("adds only a decorative masked icon next to the accessible die value", () => {
+    expect(dieControlTemplate).toContain(
+      `{{#if die.iconPath}}<span class="op2-die-control__icon" style="-webkit-mask-image: url('{{die.iconPath}}'); mask-image: url('{{die.iconPath}}')" aria-hidden="true"></span>{{/if}}`,
+    );
+    expect(dieControlTemplate).toContain('<span class="op2-die-control__label">{{die.compactLabel}}</span>');
+    expect(dieControlTemplate).not.toContain("assets/icons/dice/");
+    expect(dieControlTemplate).not.toContain("tabindex");
+    expect(styles).toContain("background: var(--op2-accent);");
+    expect(styles).toContain("mask: none center / contain no-repeat;");
+    expect(styles).not.toContain("var(--op2-die-icon)");
+    expect(styles).toContain(".op2-die-control:has(> .op2-die-control__select:focus-visible)");
   });
 
   it("keeps PV and PD governed by Foundry edit permission", () => {

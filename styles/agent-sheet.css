@@ -483,21 +483,40 @@
   display: inline-grid;
   width: 4.25rem;
   height: 1.75rem;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr;
   align-items: center;
   gap: 0.25rem;
-  padding: 0 0.5rem;
+  padding: 0 0.375rem;
   border: 1px solid var(--op2-border-strong);
   border-radius: 999px;
   background: var(--op2-input-bg);
 }
 .ordemparanormal2.agent-sheet .op2-die-control__value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
   font-size: 0.78rem;
   font-weight: 750;
+  line-height: 1;
   text-align: center;
 }
+.ordemparanormal2.agent-sheet .op2-die-control__icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  background: var(--op2-accent);
+  /* Set mask-image inline so relative asset URLs resolve against the page. */
+  -webkit-mask: none center / contain no-repeat;
+  mask: none center / contain no-repeat;
+}
 .ordemparanormal2.agent-sheet .op2-die-control.is-editable {
+  grid-template-columns: 1fr auto;
   cursor: pointer;
+}
+.ordemparanormal2.agent-sheet .op2-die-control:has(> .op2-die-control__select:focus-visible) {
+  outline: 2px solid var(--op2-focus);
+  outline-offset: 2px;
 }
 .ordemparanormal2.agent-sheet .op2-die-control__select {
   position: absolute;

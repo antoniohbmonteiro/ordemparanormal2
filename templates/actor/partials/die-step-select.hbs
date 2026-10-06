@@ -1,5 +1,8 @@
 <div class="op2-die-control{{#if editable}} is-editable{{/if}}">
-  <span class="op2-die-control__value"{{#if editable}} aria-hidden="true"{{/if}}>{{die.compactLabel}}</span>
+  <span class="op2-die-control__value"{{#if editable}} aria-hidden="true"{{/if}}>
+    {{#if die.iconPath}}<span class="op2-die-control__icon" style="-webkit-mask-image: url('{{die.iconPath}}'); mask-image: url('{{die.iconPath}}')" aria-hidden="true"></span>{{/if}}
+    <span class="op2-die-control__label">{{die.compactLabel}}</span>
+  </span>
   {{#if editable}}
     <i class="fa-solid fa-chevron-down op2-die-control__chevron" aria-hidden="true"></i>
     <select class="op2-die-control__select" name="{{die.path}}">

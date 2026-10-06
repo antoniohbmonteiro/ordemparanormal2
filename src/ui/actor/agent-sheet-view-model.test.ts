@@ -147,6 +147,37 @@ describe("Agent Sheet view model", () => {
     ]);
   });
 
+  it.each([
+    [4, "systems/ordemparanormal2/assets/icons/dice/d4.svg"],
+    [6, "systems/ordemparanormal2/assets/icons/dice/d6.svg"],
+    [8, "systems/ordemparanormal2/assets/icons/dice/d8.svg"],
+    [10, "systems/ordemparanormal2/assets/icons/dice/d10.svg"],
+    [12, "systems/ordemparanormal2/assets/icons/dice/d12.svg"],
+    [20, undefined],
+  ] as const)("presents d%s with its existing asset or text alone", (value, iconPath) => {
+    const source = createSource();
+    const { attributes } = buildAgentSheetViewModel({
+      ...source,
+      system: {
+        ...source.system,
+        attributes: { ...source.system.attributes, physical: value },
+      },
+    });
+    const die = attributes[0]?.die;
+
+    expect(die).toMatchObject({
+      path: "system.attributes.physical",
+      value,
+      compactLabel: `d${value}`,
+    });
+    expect(die?.iconPath).toBe(iconPath);
+    if (value === 20) expect(die).not.toHaveProperty("iconPath");
+    expect(die?.options.map(option => option.value)).toEqual([4, 6, 8, 10, 12, 20]);
+    expect(die?.options.filter(option => option.selected)).toEqual([
+      { value, selected: true },
+    ]);
+  });
+
   it("derives clamped visual percentages without changing resource values", () => {
     const resources = [
       { id: "two-thirds", value: 2, max: 3 },
@@ -259,6 +290,8 @@ describe("Agent Sheet view model", () => {
     if (!acrobatics || acrobatics.isSpecialized) return;
 
     expect(acrobatics.die.compactLabel).toBe("d8");
+    expect(acrobatics.die.iconPath).toBe("systems/ordemparanormal2/assets/icons/dice/d8.svg");
+    expect(acrobatics.die.path).toBe("system.skills.acrobatics");
     expect(acrobatics.die.options.map(({ value }) => value)).toEqual([
       4, 6, 8, 10, 12,
     ]);
@@ -310,6 +343,14 @@ describe("Agent Sheet view model", () => {
       "d10",
       "d12",
       "d4",
+    ]);
+    expect(aptitude.specializations.map(({ die }) => die.iconPath)).toEqual([
+      "systems/ordemparanormal2/assets/icons/dice/d4.svg",
+      "systems/ordemparanormal2/assets/icons/dice/d6.svg",
+      "systems/ordemparanormal2/assets/icons/dice/d8.svg",
+      "systems/ordemparanormal2/assets/icons/dice/d10.svg",
+      "systems/ordemparanormal2/assets/icons/dice/d12.svg",
+      "systems/ordemparanormal2/assets/icons/dice/d4.svg",
     ]);
   });
 });

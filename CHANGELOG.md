@@ -4,10 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-06
+
 ### Added
 
 - Optional AS09 v1.0 ZIP input in the Adventure Importer: 39 user-supplied images available through the World FilePicker, including nine local TIF-to-transparent-PNG conversions.
 - Explicit AS09 images for existing POIs and nine canonical World Equipment copies under Act II > Tools, preserving custom images, manual Equipment edits and reimport identity.
+
+### Changed
+
+- Use derived thumbnails for large POI image previews in the Investigation Application while keeping the original image available in ImagePopout.
+- Show the existing d4–d12 SVG icons in Agent Sheet attribute and skill controls, retaining textual d20 and native selects in Edit Mode without changing rules, checks or DataModels.
 
 ### Validation
 

@@ -19,6 +19,14 @@ O AS09 é opcional e não substitui o PDF nem os ZIPs dos atos. Um AS09 inválid
 
 A reimportação preserva imagens personalizadas dos POIs e edições, identidade e localização das ferramentas já gerenciadas pelo importador.
 
+![Importador de Aventura com seleção opcional do ZIP AS09](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.5.1/docs/release-assets/v0.5.1/adventure-import-as09.png)
+
+## Dados na ficha
+
+Os ícones de d4–d12 aparecem junto aos valores dos atributos e das perícias. O d20 continua textual, e o Edit Mode mantém o select nativo.
+
+![Ficha de Agente com ícones de dados nos atributos e nas perícias](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.5.1/docs/release-assets/v0.5.1/agent-sheet-dice.png)
+
 ## Compatibilidade e atualização
 
 - Compatível com **Foundry VTT v14+**, com atualização direta da **v0.5.0**.

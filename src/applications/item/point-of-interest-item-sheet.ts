@@ -18,12 +18,14 @@ import { APTITUDE_OPTIONS, buildInformationViewModels, difficultyOverrideDraftKe
   readDifficultyOverride, readSituationalAvailability, type InformationViewModel } from "./point-of-interest-information-editor";
 import { selectPoiApproach } from "./point-of-interest-approach-dialog";
 import { describeToolApproach } from "../../adapters/foundry/equipment/equipment-source";
+import { resolvePoiImagePreview } from "../../adapters/foundry/points-of-interest/poi-image-preview";
+import type { FormDataExtended } from "@client/applications/ux/_module.mjs";
 
 const POI_SHEET_TEMPLATE = "systems/ordemparanormal2/templates/item/point-of-interest-item-sheet.hbs";
 interface PointOfInterestItemSheetContext extends DocumentSheetRenderContext<foundry.documents.Item> {
   canViewAuthoring: boolean;
   poi?: {
-    readonly name: string; readonly img: string; readonly uuid: string;
+    readonly name: string; readonly img: string; readonly previewImg: string; readonly uuid: string;
     readonly publicDescription: string; readonly enrichedPublicDescription: string;
     readonly gmContext: string; readonly enrichedGmContext: string;
     readonly information: readonly InformationViewModel[];
@@ -54,6 +56,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     main: { template: POI_SHEET_TEMPLATE, scrollable: [".op2-poi-sheet__body"] },
   };
   #updateQueue: Promise<void> = Promise.resolve();
+  #previewImg = "";
   /** Information switched to Situacional here whose condition is not saved yet (never persisted as such). */
   #pendingSituational = new Set<string>();
   /** Approaches given an alternative DT here whose DT and condition are not both saved yet. */
@@ -95,11 +98,20 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
         return { ...approach, toolLabel: source.equipmentName, useFormLabel: source.useFormName,
           invalidSource: !source.valid || !uniformToolInteractionConfiguration(stored, approach) };
       })) })));
+    const img = item.img ?? "icons/svg/item-bag.svg";
+    this.#previewImg = await resolvePoiImagePreview(img);
     return { ...context, canViewAuthoring: true, editable: this.#canAuthor, poi: {
-      name: item.name, img: item.img ?? "icons/svg/item-bag.svg", uuid: item.uuid,
+      name: item.name, img, previewImg: this.#previewImg, uuid: item.uuid,
       publicDescription, enrichedPublicDescription, gmContext, enrichedGmContext,
       information,
     } };
+  }
+  protected override _processFormData(event: SubmitEvent | null, form: HTMLFormElement,
+    formData: FormDataExtended): Record<string, unknown> {
+    const data = super._processFormData(event, form, formData);
+    // Native FormDataExtended reads img[data-edit].src: never submit a derived preview.
+    if (data.img === this.#previewImg) delete data.img;
+    return data;
   }
   #approach(id: string, index: number): PointOfInterestApproach | undefined {
     return readPointOfInterestInformation((this.document as foundry.documents.Item).system)

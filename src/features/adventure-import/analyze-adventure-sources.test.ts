@@ -108,6 +108,7 @@ describe("analyzeAdventureSources", () => {
     });
     expect(result.actOne).toBeNull();
     expect(result.actTwo).toBeNull();
+    expect(result.as09).toBeNull();
   });
 
   it("analyzes the pdf and both acts together when all three are selected", async () => {
@@ -120,5 +121,17 @@ describe("analyzeAdventureSources", () => {
     expect(result.pdf.facts.parseAttempt.status).toBe("success");
     expect(result.actOne?.act).toBe("actOne");
     expect(result.actTwo?.act).toBe("actTwo");
+  });
+
+  it("isolates an invalid optional AS09 without changing PDF/Act compatibility", async () => {
+    mocks.readPdfParsedFacts.mockResolvedValue(SUCCESSFUL_PARSE);
+    const input = { pdf: pdfFile(UNENCRYPTED_PDF), actOne: buildSyntheticZipFile([{ path: "a.png", size: 1, crc32: 1 }]),
+      actTwo: null, password: null };
+    const base = await analyzeAdventureSources(input);
+    const withAs09 = await analyzeAdventureSources({ ...input, as09: new File(["not zip"], "AS09.zip") });
+    expect(withAs09.as09?.status).toBe("invalid");
+    expect(withAs09.acts).toEqual(base.acts);
+    expect(withAs09.actOne).toEqual(base.actOne);
+    expect(withAs09.pdf).toEqual(base.pdf);
   });
 });

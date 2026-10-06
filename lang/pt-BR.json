@@ -76,6 +76,27 @@
       }
     },
     "AdventureImport": {
+      "As09": {
+        "Label": "Imagens suplementares AS09 (opcional)",
+        "Description": "Disponibiliza 39 imagens para uso manual pelo FilePicker, aplica imagens aos Pontos de Interesse confirmados e cria nove ferramentas no Mundo ao importar o Ato II. Não substitui o PDF nem os ZIPs dos atos.",
+        "Remove": "Remover AS09",
+        "Recognized": "AS09 reconhecido: 39 imagens; nove ferramentas disponíveis para o Ato II.",
+        "Ignored": "AS09 não reconhecido ou inválido: os atos serão importados sem estes extras.",
+        "Directory": "Imagens disponíveis no FilePicker em:",
+        "Progress": "AS09: {completed}/{total} imagens confirmadas.",
+        "Failure": "AS09 interrompido; {count} imagens confirmadas. {stage} · {asset}. {detail} Execute novamente para tentar concluir.",
+        "ToolsProgress": "Ferramentas: {completed}/{total} itens confirmados.",
+        "ToolsSummary": "Ferramentas: {created} criadas, {updated} atualizadas, {unchanged} sem alterações.",
+        "ToolsFailure": "Importação de ferramentas interrompida; {count} itens confirmados. {detail} Execute novamente para tentar concluir.",
+        "Stages": {
+          "preflight": "Validação",
+          "directory": "Pasta de arquivos",
+          "extract": "Extração e conteúdo",
+          "convert": "Conversão para PNG",
+          "lookup": "Consulta de arquivos",
+          "upload": "Upload e confirmação"
+        }
+      },
       "Title": "Importar Aventura",
       "Notice": {
         "Ownership": "Este sistema não distribui conteúdo oficial. Se você possui legalmente o material, poderá selecionar seus arquivos locais para preparar a aventura no seu Mundo.",

@@ -1,4 +1,6 @@
 import { sha256Hex } from "../../adapters/files/compute-sha256";
+import { analyzeAs09Source } from "./analyze-as09-source";
+import type { As09SourceAnalysis } from "../../core/adventure-import/recognize-as09-source";
 import { readPdfParsedFacts } from "../../adapters/files/read-pdf-parsed-facts";
 import { readPdfPrePasswordFacts } from "../../adapters/files/read-pdf-pre-password-facts";
 import { readZipCentralDirectory } from "../../adapters/files/read-zip-central-directory";
@@ -21,6 +23,7 @@ import type { ZipPackageId } from "../../core/adventure-import/known-adventure-s
 import { evaluateActCompatibility, type ActCompatibility } from "../../core/adventure-import/adventure-source-compatibility";
 
 export interface AdventureSourceAnalysis {
+  readonly as09?: As09SourceAnalysis | null;
   readonly pdf: PdfSourceAnalysis;
   readonly actOne: ZipSourceAnalysis | null;
   readonly actTwo: ZipSourceAnalysis | null;
@@ -28,6 +31,7 @@ export interface AdventureSourceAnalysis {
 }
 
 export interface AnalyzeAdventureSourcesInput {
+  readonly as09?: File | null;
   readonly pdf: File;
   readonly actOne: File | null;
   readonly actTwo: File | null;
@@ -103,13 +107,14 @@ export async function analyzeZipActSource(file: File, act: AdventureAct): Promis
 export async function analyzeAdventureSources(
   input: AnalyzeAdventureSourcesInput,
 ): Promise<AdventureSourceAnalysis> {
-  const [pdf, actOne, actTwo] = await Promise.all([
+  const [pdf, actOne, actTwo, as09] = await Promise.all([
     analyzePdfSource(input.pdf, input.password),
     input.actOne ? analyzeZipActSource(input.actOne, "actOne") : Promise.resolve(null),
     input.actTwo ? analyzeZipActSource(input.actTwo, "actTwo") : Promise.resolve(null),
+    input.as09 ? analyzeAs09Source(input.as09) : Promise.resolve(null),
   ]);
 
-  return { pdf, actOne, actTwo, acts: {
+  return { pdf, actOne, actTwo, as09, acts: {
     actOne: evaluateActCompatibility("actOne", pdf, actOne),
     actTwo: evaluateActCompatibility("actTwo", pdf, actTwo),
   } };

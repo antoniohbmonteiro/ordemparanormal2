@@ -10,10 +10,14 @@ import { evaluateActCompatibility } from "../../core/adventure-import/adventure-
 import { MaterializationError } from "../../features/adventure-import/materialize-adventure-assets";
 import { HandoutImportError } from "../../features/adventure-import/import-adventure-handouts";
 import { PLAYTEST_ALPHA_POI_SOURCES } from "../../config/adventure-poi-sources/playtest-alpha";
+import { AS09_IMAGES } from "../../config/adventure-definitions/playtest-alpha-as09";
+import { As09MaterializationError } from "../../features/adventure-import/materialize-as09-assets";
 
-type Slot = "pdf" | "actOne" | "actTwo";
+type Slot = "pdf" | "actOne" | "actTwo" | "as09";
 
 const mocks = vi.hoisted(() => ({
+  materializeAs09Assets: vi.fn(),
+  importAdventureTools: vi.fn(),
   importAdventureScenes: vi.fn(),
   importAdventureAgents: vi.fn(),
   importAdventurePois: vi.fn(),
@@ -32,6 +36,15 @@ const mocks = vi.hoisted(() => ({
   prepareAdventurePois: vi.fn(),
 }));
 
+vi.mock("../../features/adventure-import/materialize-as09-assets", async original => ({
+  ...await original<typeof import("../../features/adventure-import/materialize-as09-assets")>(),
+  materializeAs09Assets: mocks.materializeAs09Assets,
+}));
+vi.mock("../../features/adventure-import/import-adventure-tools", async original => ({
+  ...await original<typeof import("../../features/adventure-import/import-adventure-tools")>(),
+  importAdventureTools: mocks.importAdventureTools,
+}));
+vi.mock("../../adapters/foundry/adventure-tool-items", () => ({ createAdventureToolItemPort: () => ({ isAuthorized: () => true }) }));
 vi.mock("../../adapters/files/read-adventure-poi-pages", () => ({ readAdventurePoiPages: mocks.readAdventurePoiPages }));
 vi.mock("../../features/adventure-import/prepare-adventure-pois", () => ({ prepareAdventurePois: mocks.prepareAdventurePois }));
 
@@ -151,11 +164,12 @@ class MockApplicationV2 {
     pdf: new MockFileInput("pdf"),
     actOne: new MockFileInput("actOne"),
     actTwo: new MockFileInput("actTwo"),
+    as09: new MockFileInput("as09"),
   };
   readonly element = {
     querySelector: vi.fn((selector: string) => {
       const slot = selector.match(/data-file-slot='([^']+)'/)?.[1];
-      return slot === "pdf" || slot === "actOne" || slot === "actTwo"
+      return slot === "pdf" || slot === "actOne" || slot === "actTwo" || slot === "as09"
         ? this.inputs[slot]
         : null;
     }),
@@ -265,6 +279,9 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  mocks.materializeAs09Assets.mockReset().mockResolvedValue({ directory: "worlds/test/as09/v1",
+    assets: AS09_IMAGES.map(image => ({ basename: image.basename, sourcePath: image.path, storedPath: `worlds/test/as09/v1/${image.outputBasename}` })) });
+  mocks.importAdventureTools.mockReset().mockResolvedValue({ created: 9, updated: 0, unchanged: 0 });
   mocks.importAdventurePois.mockReset().mockResolvedValue({ created: 54, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
   mocks.createAdventurePoiItemPort.mockReset().mockReturnValue({ isAuthorized: () => true });
   mocks.importAdventureAgents.mockReset().mockResolvedValue({ created: 10, updated: 0, unchanged: 0, preserved: 0, cancelled: false });
@@ -427,7 +444,7 @@ describe("Adventure Import Application", () => {
     await action(app, "analyzeFiles");
 
     expect(mocks.analyzeAdventureSources).toHaveBeenCalledExactlyOnceWith({
-      pdf, actOne: null, actTwo: null, password: null,
+      pdf, actOne: null, actTwo: null, as09: null, password: null,
     });
     const result = await app._prepareContext();
     expect(result.hasAnalysis).toBe(true);
@@ -541,14 +558,14 @@ describe("Adventure Import Application", () => {
     mocks.openAdventureImportPasswordDialog.mockResolvedValueOnce("senha-certa");
     mocks.analyzePdfSource.mockResolvedValueOnce(unencryptedRecognizedPdf({ passwordRequired: false }));
     await action(app, "analyzeFiles");
-    expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(3, { pdf, actOne: null, actTwo: null, password: null });
+    expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(3, { pdf, actOne: null, actTwo: null, as09: null, password: null });
     expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(3);
     expect(mocks.analyzePdfSource).toHaveBeenNthCalledWith(2, pdf, "senha-certa");
     expect((await app._prepareContext()).pdfStatus?.modifier).toBe("recognized");
 
     // 4th click: the now-stored password is reused automatically; the dialog does not reopen.
     await action(app, "analyzeFiles");
-    expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(4, { pdf, actOne: null, actTwo: null, password: "senha-certa" });
+    expect(mocks.analyzeAdventureSources).toHaveBeenNthCalledWith(4, { pdf, actOne: null, actTwo: null, as09: null, password: "senha-certa" });
     expect(mocks.openAdventureImportPasswordDialog).toHaveBeenCalledTimes(3);
   });
 
@@ -934,6 +951,59 @@ describe("Adventure Import Application", () => {
   });
 });
 
+describe("AS09 Adventure Import integration", () => {
+  async function setup(act: "actOne" | "actTwo", status: "recognized" | "invalid" = "recognized") {
+    const app = new Application(); attach(app);
+    app.inputs.pdf.select(file("playtest.pdf")); app.inputs[act].select(file("act.zip")); app.inputs.as09.select(file("AS09 (1).zip"));
+    mocks.analyzeAdventureSources.mockResolvedValue({ pdf: unencryptedRecognizedPdf(), actOne: null, actTwo: null,
+      [act]: { act, status: "recognized", matchMethod: "hash", edition: act === "actOne" ? "ato-i-extras" : "ato-ii-extras", inventory: null, issues: [] },
+      as09: { status, matchMethod: status === "recognized" ? "hash" : "none", issues: [] },
+    });
+    mocks.materializeAdventureAssets.mockResolvedValue({ materializedActs: [act], assets: [] });
+    await action(app, "analyzeFiles"); return app;
+  }
+  it.each(["actOne", "actTwo"] as const)("materializes all manual images for %s and creates tools only for Act II", async act => {
+    const app = await setup(act); await action(app, "importAssets");
+    expect(mocks.materializeAs09Assets).toHaveBeenCalledOnce();
+    expect(mocks.materializeAs09Assets.mock.invocationCallOrder[0]).toBeLessThan(mocks.materializeAdventureAssets.mock.invocationCallOrder[0]);
+    const args = mocks.importAdventurePois.mock.calls[0][0];
+    expect(args.supplementalImages.size).toBe(13);
+    expect(args.supplementalImages.get("actOne.map.06")).toBe("worlds/test/as09/v1/ALTAR.jpg");
+    expect(mocks.importAdventureTools).toHaveBeenCalledTimes(act === "actTwo" ? 1 : 0);
+    expect(await app._prepareContext()).toMatchObject({ as09Directory: "worlds/test/as09/v1" });
+  });
+  it("warns and keeps valid Acts importable with an invalid optional AS09", async () => {
+    const app = await setup("actTwo", "invalid");
+    expect(await app._prepareContext()).toMatchObject({ canImport: true });
+    await action(app, "importAssets");
+    expect(mocks.materializeAs09Assets).not.toHaveBeenCalled(); expect(mocks.importAdventureTools).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalled(); expect(mocks.importAdventurePois).toHaveBeenCalled();
+    expect(mocks.importAdventurePois.mock.calls[0][0].supplementalImages).toBeUndefined();
+  });
+  it("removes the supplemental slot without discarding selected source files and invalidates analysis", async () => {
+    const app = await setup("actOne"); await action(app, "removeAs09");
+    expect(await app._prepareContext()).toMatchObject({ as09Name: "", hasAnalysis: false, canImport: false, actOneName: "act.zip", pdfName: "playtest.pdf" });
+    await action(app, "analyzeFiles"); expect(mocks.analyzeAdventureSources.mock.calls.at(-1)![0].as09).toBeNull();
+  });
+  it("stops all document imports on AS09 failure and lets the same action retry", async () => {
+    const app = await setup("actTwo");
+    mocks.materializeAs09Assets.mockRejectedValueOnce(new As09MaterializationError("upload", "POSTER1.jpg", [], new Error("upload")));
+    await action(app, "importAssets");
+    expect(errorNotification).toHaveBeenCalled();
+    expect(mocks.materializeAdventureAssets).not.toHaveBeenCalled(); expect(mocks.importAdventurePois).not.toHaveBeenCalled();
+    expect(mocks.importAdventureTools).not.toHaveBeenCalled();
+    await action(app, "importAssets"); expect(mocks.importAdventureTools).toHaveBeenCalledOnce();
+  });
+  it("discards an asynchronous analysis if its selected files change", async () => {
+    const app = new Application(); attach(app); app.inputs.pdf.select(file("old.pdf"));
+    let finish!: (value: AdventureSourceAnalysis) => void;
+    mocks.analyzeAdventureSources.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const pending = action(app, "analyzeFiles"); app.inputs.as09.select(file("new.zip"));
+    finish(emptyAnalysis(unencryptedRecognizedPdf())); await pending;
+    expect(await app._prepareContext()).toMatchObject({ hasAnalysis: false, as09Name: "new.zip" });
+  });
+});
+
 describe("Adventure Import prototype template and styles", () => {
   it("renders empty state and real per-source status rows", async () => {
     const template = await readFile(
@@ -946,7 +1016,7 @@ describe("Adventure Import prototype template and styles", () => {
     attach(app);
     const empty = render(await app._prepareContext());
     expect(empty).toContain("AdventureImport.EmptyContent");
-    expect(empty.match(/AdventureImport\.EmptyFile/g)).toHaveLength(3);
+    expect(empty.match(/AdventureImport\.EmptyFile/g)).toHaveLength(4);
     expect(empty).toMatch(/data-action="analyzeFiles"\s+disabled/);
     expect(empty).toMatch(/data-action="importAssets"\s+disabled/);
     expect(empty).not.toContain('data-action="importHandouts"');
@@ -1007,7 +1077,7 @@ describe("Adventure Import prototype template and styles", () => {
     expect(one).toContain("AdventureImport.ActTwo");
   });
 
-  it("uses three local inputs and keeps CSS off native header buttons", async () => {
+  it("uses four local inputs and keeps CSS off native header buttons", async () => {
     const [source, template, css, manifestText, localeText] = await Promise.all([
       readFile(fileURLToPath(new URL("./adventure-import-application.ts", import.meta.url)), "utf8"),
       readFile(fileURLToPath(new URL("../../../templates/applications/adventure-import.hbs", import.meta.url)), "utf8"),
@@ -1016,9 +1086,9 @@ describe("Adventure Import prototype template and styles", () => {
       readFile(fileURLToPath(new URL("../../../lang/pt-BR.json", import.meta.url)), "utf8"),
     ]);
     const inputs = [...template.matchAll(/<input\b[^>]*type="file"[^>]*>/g)].map(match => match[0]);
-    expect(inputs).toHaveLength(3);
+    expect(inputs).toHaveLength(4);
     expect(inputs.every(input => /\bhidden\b/.test(input))).toBe(true);
-    expect(inputs.map(input => input.match(/accept="([^"]+)"/)?.[1])).toEqual([".pdf", ".zip", ".zip"]);
+    expect(inputs.map(input => input.match(/accept="([^"]+)"/)?.[1])).toEqual([".pdf", ".zip", ".zip", ".zip"]);
     expect(template).not.toContain('type="checkbox"');
     expect(template).not.toContain("Handouts.Title");
     expect([...template.matchAll(/data-action="(?:analyzeFiles|importAssets)"/g)]).toHaveLength(2);

@@ -6,6 +6,15 @@ export type PdfDocumentId = "playtest-alpha-v1.0-agents" | "playtest-alpha-v1.1-
 
 export type ZipPackageId = "ato-i-extras" | "ato-ii-extras";
 
+export const KNOWN_AS09_PACKAGE = {
+  id: "as09-extras-v1.0-elite",
+  fingerprintHash: "a41b3bd4c7875335ad5566ad5017f058cc9ccaff980c1c23e25362adc9fe9607",
+  structuralManifestHash: "a41b3bd4c7875335ad5566ad5017f058cc9ccaff980c1c23e25362adc9fe9607",
+  expectedFileCount: 88,
+  expectedImageCount: 39,
+  contentManifestHash: "c5d78db31a4a093b2756163d8cfe05108127ba8eec9c64b69be92cdafad9c6d6",
+} as const;
+
 export const ZIP_PACKAGE_BY_ACT = {
   actOne: "ato-i-extras",
   actTwo: "ato-ii-extras",

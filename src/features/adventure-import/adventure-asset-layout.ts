@@ -3,6 +3,12 @@ import type { AdventureAct } from "../../core/adventure-import/recognize-zip-sou
 
 const ACT_FOLDER: Record<AdventureAct, string> = { actOne: "act-1", actTwo: "act-2" };
 
+export function adventureAs09Root(worldId: string): string {
+  const world = safeZipEntryPath(worldId);
+  if (world.directory || world.isDirectory) throw new Error("Invalid World ID");
+  return `worlds/${world.relativePath}/ordemparanormal2/adventures/playtest-alpha/as09/v1`;
+}
+
 export function adventureActRoot(worldId: string, act: AdventureAct): string {
   return `worlds/${worldId}/ordemparanormal2/adventures/playtest-alpha/${ACT_FOLDER[act]}`;
 }

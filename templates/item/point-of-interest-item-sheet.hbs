@@ -1,7 +1,7 @@
 <section class="op2-poi-sheet">
 {{#if canViewAuthoring}}
   <header class="op2-poi-sheet__header">
-    <img class="op2-poi-sheet__image" src="{{poi.img}}" alt="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Image'}}" data-edit="img" {{#if editable}}data-action="editImage"{{/if}} />
+    <img class="op2-poi-sheet__image" src="{{poi.previewImg}}" alt="{{localize 'ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Image'}}" data-edit="img" {{#if editable}}data-action="editImage"{{/if}} />
     <label class="op2-poi-sheet__name">
       <span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Name"}}</span>
       <input type="text" name="name" value="{{poi.name}}" autocomplete="off"{{#unless editable}} disabled{{/unless}} />

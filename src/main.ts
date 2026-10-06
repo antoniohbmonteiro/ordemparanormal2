@@ -12,6 +12,7 @@ import { registerNarrativeScenes } from "./bootstrap/register-narrative-scenes";
 import { registerPoiSceneControls } from "./bootstrap/register-poi-scene-controls";
 import { registerPoiCanvas } from "./bootstrap/register-poi-canvas";
 import { registerPoiInvestigation } from "./bootstrap/register-poi-investigation";
+import { registerPoiImagePreviews } from "./bootstrap/register-poi-image-previews";
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
 import { registerGmTools } from "./bootstrap/register-gm-tools";
 import { registerOpposedChecks } from "./bootstrap/register-opposed-checks";
@@ -26,6 +27,7 @@ Hooks.once("init", () => {
   });
   registerDataModels();
   registerSheets();
+  registerPoiImagePreviews();
   registerActorDefaults();
   registerUniqueAgentItemHooks();
   registerAgentOccupationCreationHook();

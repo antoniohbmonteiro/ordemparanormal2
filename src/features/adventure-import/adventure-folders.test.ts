@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ensureAdventureFolder, ensureAdventurePoiFolder, preflightAdventureFolders, type AdventureFolderFlag,
+  ensureAdventureFolder, ensureAdventurePoiFolder, ensureAdventureToolsFolder, preflightAdventureFolders, type AdventureFolderFlag,
   type AdventureFolderPort, type AdventureFolderSnapshot,
 } from "./adventure-folders";
 
@@ -29,6 +29,18 @@ const managed = (documentType: "Actor" | "JournalEntry" | "Scene" | "Item",
 });
 
 describe("Adventure folder policy", () => {
+  it("creates the tools folder as a POI sibling, ignores manual homonyms and preserves the typed root", async () => {
+    const folders = new FakeFolders();
+    const poi = await ensureAdventurePoiFolder({ adventureId: "playtest-alpha", act: "actTwo", folders });
+    folders.world.push({ id: "manual-tools", type: "Item", name: "Ferramentas", color: null, parentId: poi.actId, flag: null });
+    const id = await ensureAdventureToolsFolder({ adventureId: "playtest-alpha", folders });
+    expect(folders.world.find(folder => folder.id === id)).toMatchObject({ parentId: poi.actId, name: "Ferramentas", flag: { folderId: "actTwo.tools" } });
+    expect(await ensureAdventureToolsFolder({ adventureId: "playtest-alpha", folders })).toBe(id);
+    const index = folders.world.findIndex(folder => folder.id === id);
+    folders.world[index] = { ...folders.world[index], parentId: poi.poiId };
+    expect(() => preflightAdventureFolders({ adventureId: "playtest-alpha", folders,
+      requirements: [{ documentType: "Item", acts: ["actTwo"], tools: true }] })).toThrow("Parent incompatível");
+  });
   it("creates only the requested typed tree and ignores manual homonyms", async () => {
     const folders = new FakeFolders();
     folders.world.push({ id: "manual", name: "A Maldição do Ídolo de Pedra", color: null, type: "Actor", parentId: null, flag: null });

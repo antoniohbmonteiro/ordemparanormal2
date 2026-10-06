@@ -56,6 +56,7 @@ export class PoiImportError extends Error {
   }
 }
 export interface ImportAdventurePoisInput {
+  readonly supplementalImages?: ReadonlyMap<string, string>;
   readonly definition: AdventureDefinition;
   readonly presets: readonly unknown[];
   readonly revision: number;
@@ -134,6 +135,10 @@ export async function importAdventurePois(input: ImportAdventurePoisInput): Prom
     for (const preset of selected) {
       if (preset.imageAssetId) images.set(preset.id, await resolveAdventureAsset(input.definition, preset.imageAssetId,
         input.assetSource));
+      else {
+        const image = input.supplementalImages?.get(preset.id);
+        if (image) images.set(preset.id, image);
+      }
     }
     const selectedIds = new Set(selected.map(p => p.id));
     const existing = new Map<string, PoiItemSnapshot>();

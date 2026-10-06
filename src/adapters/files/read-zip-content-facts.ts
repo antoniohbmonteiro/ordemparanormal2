@@ -8,12 +8,11 @@ function entryKey(path: string, size: number, crc32: number, directory: boolean)
   return `${path}\u0000${size}\u0000${crc32}\u0000${directory}`;
 }
 
-/** Compare both ZIP readers and hash only canonical payload entries, one at a time. */
-export async function readZipContentFacts(
+/** Compare both readers without decompressing any entries. */
+export function validateZipReaderInventory(
   archive: OpenZipArchive,
   rawEntries: readonly ZipCentralDirectoryEntry[],
-  payload: readonly CanonicalZipPayloadEntry[],
-): Promise<ReadonlyMap<string, string>> {
+): void {
   const rawPaths = rawEntries.map((entry) => safeZipEntryPath(entry.path));
   const archivePaths = archive.entries.map((entry) => safeZipEntryPath(entry.path));
   assertDistinctZipPaths(archivePaths);
@@ -27,7 +26,16 @@ export async function readZipContentFacts(
     throw new Error("ZIP central directory and extraction reader disagree");
   }
   if (archive.entries.some((entry) => entry.symlink)) throw new Error("ZIP contains a symlink");
+}
 
+/** Hash only canonical payload entries, one at a time, after comparing both readers. */
+export async function readZipContentFacts(
+  archive: OpenZipArchive,
+  rawEntries: readonly ZipCentralDirectoryEntry[],
+  payload: readonly CanonicalZipPayloadEntry[],
+): Promise<ReadonlyMap<string, string>> {
+  validateZipReaderInventory(archive, rawEntries);
+  const archivePaths = archive.entries.map((entry) => safeZipEntryPath(entry.path));
   const logicalByRaw = new Map(payload.map((entry) => [safeZipEntryPath(entry.originalPath).relativePath, entry.path]));
   const result = new Map<string, string>();
   for (const [index, entry] of archive.entries.entries()) {

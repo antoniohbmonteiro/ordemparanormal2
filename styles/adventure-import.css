@@ -1,3 +1,11 @@
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__supplemental-note {
+  color: var(--op2-text-muted);
+  font-size: .8rem;
+}
+.ordemparanormal2.op2-adventure-import .op2-adventure-import__asset-directory {
+  overflow-wrap: anywhere;
+  font-size: .8rem;
+}
 .ordemparanormal2.op2-adventure-import {
   --op2-sheet-bg: rgba(18, 20, 24, .96);
   --op2-panel-bg: rgba(27, 30, 36, .92);

@@ -38,6 +38,25 @@
     </div>
   </section>
 
+  <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-as09-heading">
+    <h2 id="op2-adventure-import-as09-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Label"}}</h2>
+    <p class="op2-adventure-import__supplemental-note">{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Description"}}</p>
+    <div class="op2-adventure-import__file-row">
+      <span class="op2-adventure-import__file-label">AS09-Extras-v1.0-Elite.zip</span>
+      <button type="button" data-action="selectZip" data-file-slot="as09" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
+      <input type="file" accept=".zip" data-file-slot="as09" hidden />
+      <span class="op2-adventure-import__file-empty{{#if as09Name}} op2-adventure-import__file-selected{{/if}}">{{#if as09Name}}{{as09Name}}{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}</span>
+    </div>
+    {{#if as09Name}}<button type="button" data-action="removeAs09" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Remove"}}</button>{{/if}}
+    {{#with as09Status}}
+      <div class="op2-adventure-import__status-row op2-adventure-import__status-row--{{modifier}}" role="status">
+        <span class="op2-adventure-import__status-icon" aria-hidden="true"><i class="{{icon}}"></i></span>
+        <span class="op2-adventure-import__status-text"><span class="op2-adventure-import__status-value">{{text}}</span>{{#each issues}}<span class="op2-adventure-import__status-issue">{{this}}</span>{{/each}}</span>
+      </div>
+    {{/with}}
+    {{#if as09Directory}}<p class="op2-adventure-import__asset-directory">{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Directory"}} <code>{{as09Directory}}</code></p>{{/if}}
+  </section>
+
   <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-detected-heading">
     <h2 id="op2-adventure-import-detected-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.DetectedContent"}}</h2>
     {{#if hasAnalysis}}

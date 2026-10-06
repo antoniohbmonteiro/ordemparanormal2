@@ -1,3 +1,8 @@
+import type { As09SourceAnalysis } from "../../core/adventure-import/recognize-as09-source";
+import { materializeAs09Assets, as09PoiImages, As09MaterializationError, type As09MaterializationResult } from "../../features/adventure-import/materialize-as09-assets";
+import { createAs09ToolImagePort } from "../../adapters/files/as09-tool-image";
+import { importAdventureTools, ToolImportError } from "../../features/adventure-import/import-adventure-tools";
+import { createAdventureToolItemPort } from "../../adapters/foundry/adventure-tool-items";
 import type { ApplicationClosingOptions, ApplicationRenderOptions } from "@client/applications/_types.mjs";
 import type {
   HandlebarsRenderOptions,
@@ -52,7 +57,7 @@ import { assertImportableActs, evaluateActCompatibility, type ActCompatibility }
 const ADVENTURE_IMPORT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/adventure-import.hbs";
 
-type FileSlot = "pdf" | "actOne" | "actTwo";
+type FileSlot = "pdf" | "actOne" | "actTwo" | "as09";
 
 type SourceStatusModifier = "recognized" | "password-required" | "unsupported" | "unknown" | "invalid";
 
@@ -86,6 +91,9 @@ interface AdventureImportRenderContext {
   readonly pdfName: string;
   readonly actOneName: string;
   readonly actTwoName: string;
+  readonly as09Name: string;
+  readonly as09Status: SourceStatusViewModel | null;
+  readonly as09Directory: string;
   readonly canAnalyze: boolean;
   readonly hasAnalysis: boolean;
   readonly canImport: boolean;
@@ -137,7 +145,7 @@ function editionLabel(id: PdfEditionId | ZipPackageId): string {
 }
 
 function pdfEditionLabel(analysis: PdfSourceAnalysis): string {
-  const edition = analysis.edition ? editionLabel(analysis.edition) : "";
+  const edition = "edition" in analysis && analysis.edition ? editionLabel(analysis.edition) : "";
   return analysis.variant === "survivors" ? `${edition} · ${localize("Analysis.Pdf.SurvivorsLabel")}` : edition;
 }
 
@@ -189,7 +197,7 @@ function buildPdfStatusViewModel(analysis: PdfSourceAnalysis | null): SourceStat
   }
 }
 
-function buildZipStatusViewModel(label: string, analysis: ZipSourceAnalysis | null): SourceStatusViewModel | null {
+function buildZipStatusViewModel(label: string, analysis: ZipSourceAnalysis | As09SourceAnalysis | null): SourceStatusViewModel | null {
   if (!analysis) return null;
 
   const issues = localizeIssues(analysis.issues);
@@ -202,7 +210,7 @@ function buildZipStatusViewModel(label: string, analysis: ZipSourceAnalysis | nu
         label,
         modifier: "unsupported",
         icon: "fa-solid fa-triangle-exclamation",
-        text: `${format("Analysis.Zip.Unsupported", { edition: analysis.edition ? editionLabel(analysis.edition) : "" })} · ${matchMethodLabel(analysis.matchMethod)}`,
+        text: `${format("Analysis.Zip.Unsupported", { edition: "edition" in analysis && analysis.edition ? editionLabel(analysis.edition) : "" })} · ${matchMethodLabel(analysis.matchMethod)}`,
         issues,
       };
     case "unknown":
@@ -265,6 +273,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     actions: {
       selectPdf: AdventureImportApplication.#onSelectPdf,
       selectZip: AdventureImportApplication.#onSelectZip,
+      removeAs09: AdventureImportApplication.#onRemoveAs09,
       analyzeFiles: AdventureImportApplication.#onAnalyzeFiles,
       importAssets: AdventureImportApplication.#onImportAssets,
       toggleAct: AdventureImportApplication.#onToggleAct,
@@ -289,7 +298,10 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     pdf: null,
     actOne: null,
     actTwo: null,
+    as09: null,
   };
+  #sourceRevision = 0;
+  #as09Directory = "";
   #password: string | null = null;
   #analysis: AdventureSourceAnalysis | null = null;
   readonly #selectedActs = new Set<AdventureAct>();
@@ -305,6 +317,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {
+    this.#sourceRevision++;
+    this.#as09Directory = "";
     this.#password = null;
     this.#analysis = null;
     this.#selectedActs.clear();
@@ -319,6 +333,12 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       pdfName: this.#files.pdf?.name ?? "",
       actOneName: this.#files.actOne?.name ?? "",
       actTwoName: this.#files.actTwo?.name ?? "",
+      as09Name: this.#files.as09?.name ?? "",
+      as09Directory: this.#as09Directory,
+      as09Status: this.#analysis?.as09 ? {
+        ...buildZipStatusViewModel(localize("As09.Label"), this.#analysis.as09)!,
+        text: localize(this.#analysis.as09.status === "recognized" ? "As09.Recognized" : "As09.Ignored"),
+      } : null,
       canAnalyze: this.#files.pdf !== null && !this.#isImporting,
       hasAnalysis: this.#analysis !== null,
       canImport: !this.#isImporting && game.user.isGM && game.users.activeGM?.id === game.user.id
@@ -361,12 +381,14 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       "input[type='file'][data-file-slot]",
     )) {
       const slot = input.dataset.fileSlot;
-      if (slot !== "pdf" && slot !== "actOne" && slot !== "actTwo") continue;
+      if (slot !== "pdf" && slot !== "actOne" && slot !== "actTwo" && slot !== "as09") continue;
       input.addEventListener("change", () => {
         if (this.#isImporting) return;
         const file = input.files?.[0];
         if (!file) return;
         this.#files[slot] = file;
+        this.#sourceRevision++;
+        this.#as09Directory = "";
         this.#analysis = null;
         this.#selectedActs.clear();
         this.#result = null;
@@ -397,7 +419,20 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     target: HTMLElement,
   ): void {
     const slot = target.dataset.fileSlot;
-    if (slot === "actOne" || slot === "actTwo") this.#openFilePicker(slot);
+    if (slot === "actOne" || slot === "actTwo" || slot === "as09") this.#openFilePicker(slot);
+  }
+
+  static async #onRemoveAs09(this: AdventureImportApplication): Promise<void> {
+    if (!game.user.isGM || this.#isImporting) return;
+    this.#files.as09 = null;
+    this.#sourceRevision++;
+    this.#analysis = null;
+    this.#selectedActs.clear();
+    this.#result = null;
+    this.#as09Directory = "";
+    this.#completionWarnings = [];
+    this.#confirmedOnFailure = [];
+    await this.render();
   }
 
   static async #onToggleAct(this: AdventureImportApplication, _event: PointerEvent, target: HTMLElement): Promise<void> {
@@ -413,17 +448,23 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   static async #onAnalyzeFiles(this: AdventureImportApplication): Promise<void> {
     if (!game.user.isGM || !this.#files.pdf || this.#isImporting) return;
 
+    const revision = this.#sourceRevision;
+    const selectedFiles = { ...this.#files };
     let analysis = await analyzeAdventureSources({
-      pdf: this.#files.pdf,
-      actOne: this.#files.actOne,
-      actTwo: this.#files.actTwo,
+      pdf: selectedFiles.pdf!,
+      actOne: selectedFiles.actOne,
+      actTwo: selectedFiles.actTwo,
+      as09: selectedFiles.as09,
       password: this.#password,
     });
 
+    if (this.#sourceRevision !== revision) return;
     if (analysis.pdf.passwordRequired && this.#password === null) {
       const password = await openAdventureImportPasswordDialog();
-      if (password !== null && this.#files.pdf) {
-        const pdfRetry = await analyzePdfSource(this.#files.pdf, password);
+      if (this.#sourceRevision !== revision) return;
+      if (password !== null && selectedFiles.pdf) {
+        const pdfRetry = await analyzePdfSource(selectedFiles.pdf, password);
+        if (this.#sourceRevision !== revision) return;
         if (pdfRetry.facts.parseAttempt.status === "success") this.#password = password;
         analysis = { ...analysis, pdf: pdfRetry, acts: {
           actOne: evaluateActCompatibility("actOne", pdfRetry, analysis.actOne),
@@ -432,6 +473,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       }
     }
 
+    if (this.#sourceRevision !== revision) return;
     this.#analysis = analysis;
     this.#selectedActs.clear();
     for (const act of ["actOne", "actTwo"] as const) if (analysis.acts[act].state === "ready") this.#selectedActs.add(act);
@@ -449,11 +491,12 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
 
     this.#isImporting = true;
     this.#progress = localize("Actions.Preparing");
-    let stage: "preflight" | "assets" | "handouts" | "pois" | "actors" | "scenes" = "preflight";
+    let stage: "preflight" | "as09" | "assets" | "handouts" | "pois" | "tools" | "actors" | "scenes" = "preflight";
     try {
       await this.render();
       this.#result = null;
       this.#completionWarnings = [];
+      this.#as09Directory = "";
       this.#confirmedOnFailure = [];
       const pdfFile = this.#files.pdf;
       if (!pdfFile) throw new Error("PDF ausente.");
@@ -462,6 +505,26 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       if (this.#analysis !== analysis || requestedActs.some(act => !this.#selectedActs.has(act))) {
         throw new Error("As fontes mudaram durante a preparação.");
       }
+      const authorized = () => this.#analysis === analysis && game.user.isGM && game.users.activeGM?.id === game.user.id;
+      let as09: As09MaterializationResult | null = null;
+      if (analysis.as09 && analysis.as09.status !== "recognized") {
+        this.#completionWarnings = [...this.#completionWarnings, localize("As09.Ignored")];
+        ui.notifications.warn(localize("As09.Ignored"));
+      }
+      if (analysis.as09?.status === "recognized") {
+        stage = "as09";
+        const file = this.#files.as09;
+        if (!file) throw new Error("ZIP AS09 ausente.");
+        as09 = await materializeAs09Assets({ file, storage: createAdventureAssetStorage(),
+          images: createAs09ToolImagePort(), isAuthorized: authorized,
+          onProgress: async (completed, total) => {
+            this.#progress = format("As09.Progress", { completed: String(completed), total: String(total) });
+            await this.render();
+          },
+        });
+        this.#as09Directory = as09.directory;
+      }
+      if (!authorized()) throw new Error("As fontes ou o GM ativo mudaram. Execute novamente.");
       stage = "assets";
       this.#result = await materializeAdventureAssets({
         ...files,
@@ -478,6 +541,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
           await this.render();
         },
       });
+      if (!authorized()) throw new Error("As fontes ou o GM ativo mudaram. Execute novamente.");
       const assetSource = { kind: "materialization" as const, result: this.#result };
       const folderPort = createAdventureFolderPort();
       const selectedActs = this.#result.materializedActs;
@@ -489,7 +553,8 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         requirements.push({ documentType: "Actor", acts: selectedActs.filter(act => PLAYTEST_ALPHA_AGENT_SOURCES.some(source => source.act === act)) });
       }
       if (PLAYTEST_ALPHA_POI_SOURCES.some(source => selectedActs.includes(source.act))) {
-        requirements.push({ documentType: "Item", acts: selectedActs.filter(act => PLAYTEST_ALPHA_POI_SOURCES.some(source => source.act === act)) });
+        requirements.push({ documentType: "Item", acts: selectedActs.filter(act => PLAYTEST_ALPHA_POI_SOURCES.some(source => source.act === act)),
+          tools: !!as09 && selectedActs.includes("actTwo") });
       }
       if (PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => selectedActs.includes(preset.act))) {
         requirements.push({ documentType: "Scene", acts: selectedActs.filter(act => PLAYTEST_ALPHA_SCENE_PRESETS.some(preset => preset.act === act)) });
@@ -518,6 +583,7 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         revision: PLAYTEST_ALPHA_POI_REVISION, acts: selectedActs,
         items: { ...poiPort, isAuthorized: () => poiPort.isAuthorized() && this.#analysis === analysis },
         folders: folderPort, assetSource, decide: openAdventureImportPoiConflictDialog,
+        supplementalImages: as09 ? as09PoiImages(as09) : undefined,
         onProgress: async (completed, total) => {
           this.#progress = format("Actions.PoisProgress", { completed: String(completed), total: String(total) });
           await this.render();
@@ -528,6 +594,18 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         created: String(pois.created), updated: String(pois.updated),
         unchanged: String(pois.unchanged), preserved: String(pois.preserved),
       })];
+      if (as09 && selectedActs.includes("actTwo")) {
+        stage = "tools";
+        const toolPort = createAdventureToolItemPort();
+        const tools = await importAdventureTools({ acts: selectedActs, materialization: as09, folders: folderPort,
+          items: { ...toolPort, isAuthorized: () => toolPort.isAuthorized() && authorized() },
+          onProgress: async (completed, total) => {
+            this.#progress = format("As09.ToolsProgress", { completed: String(completed), total: String(total) });
+            await this.render();
+          },
+        });
+        summaries.push(format("As09.ToolsSummary", { created: String(tools.created), updated: String(tools.updated), unchanged: String(tools.unchanged) }));
+      }
       stage = "actors";
       this.#progress = localize("Actions.AgentsPreparing");
       await this.render();
@@ -576,12 +654,28 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         catalogWarnings.push(...await registerImportedPoisInScenes(PLAYTEST_ALPHA_ADVENTURE.id,
           poiPreparation.presets, PLAYTEST_ALPHA_SCENE_PRESETS, this.#result.materializedActs));
       }
-      this.#completionWarnings = [...(this.#result.warnings ?? []).map((warning) => warning.path), ...catalogWarnings];
+      this.#completionWarnings = [...this.#completionWarnings, ...(this.#result.warnings ?? []).map((warning) => warning.path), ...catalogWarnings];
       ui.notifications.info([localize("Actions.ImportSuccess"),
         ...(this.#completionWarnings.length ? [format("Actions.ImportSuccessWithWarnings", {
           count: String(this.#completionWarnings.length),
         })] : []), ...summaries].join(" "));
     } catch (error) {
+      if (stage === "as09") {
+        ui.notifications.error(format("As09.Failure", {
+          count: String(error instanceof As09MaterializationError ? error.confirmedAssets.length : 0),
+          stage: error instanceof As09MaterializationError ? localize(`As09.Stages.${error.stage}`) : "",
+          asset: error instanceof As09MaterializationError ? error.asset ?? "" : "",
+          detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure"),
+        }));
+        console.error("ordemparanormal2 | AS09 materialization failed.", error);
+        return;
+      }
+      if (stage === "tools") {
+        const counts = error instanceof ToolImportError ? error.counts : { created: 0, updated: 0, unchanged: 0 };
+        ui.notifications.error(format("As09.ToolsFailure", { count: String(counts.created + counts.updated + counts.unchanged),
+          detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure") }));
+        return;
+      }
       if (stage === "preflight") {
         ui.notifications.error(format("Actions.PoisImportFailure", {
           detail: error instanceof Error ? error.message : localize("Actions.UnexpectedFailure"),

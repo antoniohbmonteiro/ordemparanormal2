@@ -80,11 +80,13 @@ describe("analyzeAdventureSources integration", () => {
     const result = await analyzeAdventureSources({
       pdf: new File(["%PDF-1.7\n"], "synthetic.pdf"), actOne: one,
       actTwo: two, password: null,
+      as09: new File(["invalid optional source"], "AS09.zip"),
     });
     expect(result.pdf).toMatchObject({ status: "recognized", matchMethod: "content", edition: "playtest-alpha-v1.0" });
     expect(fixtures.readPdfParsedFacts).toHaveBeenCalledWith(expect.any(ArrayBuffer), null,
       { includeContentSignature: true });
     expect(result.actOne).toMatchObject({ status: "recognized", matchMethod: "hash", edition: "ato-i-extras" });
     expect(result.actTwo).toMatchObject({ status: "recognized", matchMethod: "structural", edition: "ato-ii-extras" });
+    expect(result.as09).toMatchObject({ status: "invalid" });
   });
 });

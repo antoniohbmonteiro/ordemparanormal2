@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Optional AS09 v1.0 ZIP input in the Adventure Importer: 39 user-supplied images available through the World FilePicker, including nine local TIF-to-transparent-PNG conversions.
+- Explicit AS09 images for existing POIs and nine canonical World Equipment copies under Act II > Tools, preserving custom images, manual Equipment edits and reimport identity.
+
+### Validation
+
+- Automated AS09 coverage uses synthetic files. Native Foundry v14 smoke scenarios are tracked separately in `docs/AS09_IMPORT_SMOKE_TEST.md`.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added

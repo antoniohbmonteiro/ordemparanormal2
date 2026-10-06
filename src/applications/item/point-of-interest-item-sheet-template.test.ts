@@ -30,6 +30,7 @@ describe("Point of Interest Item Sheet template", () => {
   it("edits identity and rich text through native/ProseMirror bindings", () => {
     expect(template).toContain('<input type="text" name="name"');
     expect(template).toContain('data-edit="img"');
+    expect(template).toContain('src="{{poi.previewImg}}"');
     expect(template).toContain('<prose-mirror name="system.publicDescription"');
     expect(template).toContain('<prose-mirror name="system.gmContext"');
   });

@@ -9,6 +9,7 @@ import type { AdventureAssetResolutionSource } from "./resolve-adventure-asset";
 import type { MaterializationResult } from "./materialize-adventure-assets";
 import { syntheticToolPresets } from "../../qa/playtest-alpha-tools-fixture";
 import { isToolApproach } from "../../documents/item/point-of-interest-data";
+import { AS09_POI_IMAGES } from "../../config/adventure-definitions/playtest-alpha-as09";
 
 const SYNTHETIC_POI_PRESETS: readonly AdventurePoiPreset[] = PLAYTEST_ALPHA_POI_SOURCES.map(source => ({
   id: source.id, act: source.act, name: source.heading,
@@ -105,6 +106,35 @@ function run(world: FakeWorld, acts: readonly ("actOne" | "actTwo")[],
 }
 
 describe("Adventure Point of Interest import", () => {
+  it("applies only supplemental POI mappings, preserves existing references, custom images and runtime state", async () => {
+    const world = new FakeWorld();
+    await run(world, ["actOne", "actTwo"]);
+    const byId = (id: string) => world.items.findIndex(item => (item.flag as PoiImportFlag).documentId === id);
+    const custom = byId("actOne.map.09");
+    world.items[custom] = { ...world.items[custom], img: "custom-cellphone.png" };
+    const altar = byId("actOne.map.06");
+    const runtime = { knowledge: ["Actor.test"], discovery: ["manual"] };
+    Object.assign(world.items[altar], { runtime });
+    const shelfImage = world.items[byId("actOne.map.11")].img;
+    const supplementalImages = new Map(Object.entries(AS09_POI_IMAGES).map(([id, basename]) => [id, `worlds/test/as09/${basename}`]));
+    supplementalImages.set("actOne.map.11", "wrong-shelf.png");
+    const args = { definition: PLAYTEST_ALPHA_ADVENTURE, presets: SYNTHETIC_POI_PRESETS, revision: 3,
+      acts: ["actOne", "actTwo"] as const, items: world, folders: world,
+      assetSource: { kind: "worldStorage" as const, lookup: world.lookup }, supplementalImages, decide: vi.fn(async () => "preserve" as const) };
+    expect(await importAdventurePois(args)).toMatchObject({ updated: 12 });
+    expect(args.decide).not.toHaveBeenCalled();
+    expect(world.items[altar].img).toBe("worlds/test/as09/ALTAR.jpg");
+    expect(world.items[altar]).toMatchObject({ runtime });
+    expect(world.items[custom].img).toBe("custom-cellphone.png");
+    expect(world.items[byId("actOne.map.11")].img).toBe(shelfImage);
+    expect(world.items[byId("actTwo.map.25")].img).toBe("icons/svg/item-bag.svg");
+    expect(await importAdventurePois(args)).toMatchObject({ unchanged: 54 });
+    world.items[altar] = { ...world.items[altar], system: { ...world.items[altar].system, gmContext: "GM edit" } };
+    expect(await importAdventurePois(args)).toMatchObject({ preserved: 1 });
+    expect(world.items[altar]).toMatchObject({ runtime, img: "worlds/test/as09/ALTAR.jpg", system: { gmContext: "GM edit" } });
+    expect(await importAdventurePois({ ...args, decide: async () => "restore" })).toMatchObject({ updated: 1 });
+    expect(world.items[altar]).toMatchObject({ runtime, img: "worlds/test/as09/ALTAR.jpg" });
+  });
   it("upgrades untouched revision 5 POIs to 6 in place and preserves runtime flags, identity and old Information", async () => {
     const world = new FakeWorld();
     await run(world, ["actTwo"], undefined, SYNTHETIC_POI_PRESETS, 5);

@@ -7,7 +7,7 @@ export const ADVENTURE_ROOT_FOLDER_COLOR = "#7a2424";
 export const ADVENTURE_ACT_FOLDER_COLOR = "#4f2525";
 
 export type AdventureFolderDocumentType = "Actor" | "JournalEntry" | "Scene" | "Item";
-export type AdventureFolderId = "root" | AdventureAct | `${AdventureAct}.pointsOfInterest`;
+export type AdventureFolderId = "root" | AdventureAct | `${AdventureAct}.pointsOfInterest` | "actTwo.tools";
 
 export interface AdventureFolderFlag {
   readonly importer: "folder";
@@ -23,7 +23,7 @@ export interface AdventureFolderPlacementFlag {
   readonly documentType: AdventureFolderDocumentType;
   readonly documentId: string;
   readonly act: AdventureAct;
-  readonly folderId?: "pointsOfInterest";
+  readonly folderId?: "pointsOfInterest" | "tools";
 }
 
 export interface AdventureFolderSnapshot {
@@ -55,6 +55,7 @@ export interface AdventureFolderPort {
 export interface AdventureFolderRequirement {
   readonly documentType: AdventureFolderDocumentType;
   readonly acts: readonly AdventureAct[];
+  readonly tools?: boolean;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -72,6 +73,7 @@ function isPoiFolder(value: unknown): value is `${AdventureAct}.pointsOfInterest
 function folderName(folderId: AdventureFolderId): string {
   if (folderId === "root") return ADVENTURE_ROOT_FOLDER_NAME;
   if (isPoiFolder(folderId)) return "Pontos de Interesse";
+  if (folderId === "actTwo.tools") return "Ferramentas";
   return folderId === "actOne" ? "Ato I" : "Ato II";
 }
 
@@ -87,7 +89,7 @@ function readIdentity(snapshot: AdventureFolderSnapshot, adventureId: string): A
     if (flag.adventureId !== adventureId) return null;
     if (flag.version !== 1 || !["Actor", "JournalEntry", "Scene", "Item"].includes(String(flag.documentType))
       || (flag.folderId !== "root" && !isAct(flag.folderId)
-        && !(flag.documentType === "Item" && isPoiFolder(flag.folderId)))) {
+        && !(flag.documentType === "Item" && (isPoiFolder(flag.folderId) || flag.folderId === "actTwo.tools")))) {
       throw new Error(`Provenance de Folder incompatível: ${snapshot.id}.`);
     }
     return flag as unknown as AdventureFolderFlag;
@@ -109,6 +111,8 @@ function identityKey(documentType: AdventureFolderDocumentType, folderId: Advent
 function requiredIdentities(requirements: readonly AdventureFolderRequirement[]): ReadonlySet<string> {
   const keys = new Set<string>();
   for (const requirement of requirements) {
+    if (requirement.tools && (requirement.documentType !== "Item" || !requirement.acts.includes("actTwo"))) throw new Error("Escopo de Folder de ferramentas inválido.");
+    if (requirement.tools) keys.add(identityKey("Item", "actTwo.tools"));
     keys.add(identityKey(requirement.documentType, "root"));
     for (const act of requirement.acts) {
       keys.add(identityKey(requirement.documentType, act));
@@ -145,6 +149,8 @@ export function preflightAdventureFolders(input: {
         throw new Error(`Parent incompatível na Folder ${requirement.documentType}:${act}: ${child.id}.`);
       }
       if (requirement.documentType === "Item") {
+        const tools = requirement.tools && act === "actTwo" ? found.get(identityKey("Item", "actTwo.tools")) : null;
+        if (tools && (!child || tools.parentId !== child.id)) throw new Error(`Parent incompatível na Folder Item:actTwo.tools: ${tools.id}.`);
         const poi = found.get(identityKey("Item", `${act}.pointsOfInterest`));
         if (poi && (!child || poi.parentId !== child.id)) {
           throw new Error(`Parent incompatível na Folder Item:${act}.pointsOfInterest: ${poi.id}.`);
@@ -224,12 +230,21 @@ export async function ensureAdventurePoiFolder(input: {
   return { actId, poiId };
 }
 
+export async function ensureAdventureToolsFolder(input: {
+  readonly adventureId: string;
+  readonly folders: AdventureFolderPort;
+}): Promise<string> {
+  preflightAdventureFolders({ ...input, requirements: [{ documentType: "Item", acts: ["actTwo"], tools: true }] });
+  const actId = await ensureAdventureFolder({ ...input, documentType: "Item", act: "actTwo" });
+  return ensureOne({ ...input, documentType: "Item", folderId: "actTwo.tools", parentId: actId });
+}
+
 export function adventureFolderPlacementFlag(input: {
   readonly adventureId: string;
   readonly documentType: AdventureFolderDocumentType;
   readonly documentId: string;
   readonly act: AdventureAct;
-  readonly folderId?: "pointsOfInterest";
+  readonly folderId?: "pointsOfInterest" | "tools";
 }): AdventureFolderPlacementFlag {
   return { version: 1, ...input };
 }

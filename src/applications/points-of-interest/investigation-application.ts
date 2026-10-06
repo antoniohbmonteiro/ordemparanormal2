@@ -12,6 +12,7 @@ import {
 } from "../../documents/item/point-of-interest-data";
 import { aptitudeSpecializationLabel } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
+import { resolvePoiImagePreview } from "../../adapters/foundry/points-of-interest/poi-image-preview";
 import { mutatePoi, subscribePoiInvalidation } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
 import {
   requestPoiInvestigationView,
@@ -31,6 +32,7 @@ const INVESTIGATION_TEMPLATE =
   "systems/ordemparanormal2/templates/points-of-interest/investigation-application.hbs";
 
 const LOCALIZATION_ROOT = "ORDEMPARANORMAL2.PointOfInterest.Investigation";
+
 
 export interface InvestigationApplicationParams {
   readonly sceneId: string;
@@ -268,7 +270,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
     this.#params = params;
   }
 
-  protected override async _prepareContext(): Promise<InvestigationRenderContext> {
+  protected override async _prepareContext(): Promise<InvestigationRenderContext & { readonly previewImg: string }> {
     const agents = this.#agents().map(actor => ({ uuid: actor.uuid, name: actor.name, selected: actor.uuid === this.#actorUuid }));
     if (!game.user?.isGM && this.#result && this.#resultActorUuid !== this.#actorUuid) {
       this.#result = null;
@@ -279,9 +281,16 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       agents,
       this.#feedback,
     );
+    const revision = this.#loadRevision;
+    const previewImg = context.img ? await resolvePoiImagePreview(context.img) : "";
+    if (this.#closed || revision !== this.#loadRevision) {
+      return { ...buildInvestigationRenderContext(this.#params.name, null, key =>
+        game.i18n.localize(`${LOCALIZATION_ROOT}.${key}`)), previewImg: "" };
+    }
+    const presentation = { ...context, previewImg };
     const actor = !game.user?.isGM ? resolveSceneInvestigationAgent(this.#params.sceneId) : null;
-    return actor ? { ...context, tools: investigationToolInventory(actor).map(tool => ({
-      ...tool, canUse: tool.canUse && !isEquipmentUseInFlight(actor.uuid, tool.id) })) } : context;
+    return actor ? { ...presentation, tools: investigationToolInventory(actor).map(tool => ({
+      ...tool, canUse: tool.canUse && !isEquipmentUseInFlight(actor.uuid, tool.id) })) } : presentation;
   }
 
   #agents(): foundry.documents.Actor[] {

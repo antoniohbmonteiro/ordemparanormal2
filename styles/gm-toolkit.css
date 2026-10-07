@@ -65,32 +65,6 @@
   pointer-events: none;
 }
 
-.op2-gm-toolkit__access-icon {
-  position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  background: rgb(34 84 61 / 35%);
-}
-
-.op2-gm-toolkit__access-icon::before {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 11px;
-  left: 8px;
-  top: 4px;
-  border: 2px solid #22c55e;
-  border-radius: 6px;
-}
-
-.op2-gm-toolkit__access-icon::after {
-  content: "";
-  position: absolute;
-  width: 16px;
-  height: 10px;
-  left: 5px;
-  top: 13px;
-  border-radius: 2px;
-  background: #22c55e;
+.op2-gm-toolkit__toolbar [data-action="accessChallenges"] img {
+  transform: scale(1.3);
 }

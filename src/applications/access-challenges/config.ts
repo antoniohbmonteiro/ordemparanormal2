@@ -15,7 +15,7 @@ export class AccessChallengeConfig extends HandlebarsApplicationMixin(Applicatio
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-access", "op2-access-config"],
     position: { width: 320, height: "auto" as const },
-    window: { title: "Desafio de Acesso", resizable: true },
+    window: { title: "ORDEMPARANORMAL2.AccessChallenges.Titles.Config", resizable: true },
     actions: { submit: AccessChallengeConfig.#submit, cancel: AccessChallengeConfig.#cancel, selectMode: AccessChallengeConfig.#selectMode },
   };
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
@@ -44,7 +44,7 @@ export class AccessChallengeConfig extends HandlebarsApplicationMixin(Applicatio
     const chosen = candidates.find(candidate => encodeAgentCheckParticipantReference(candidate.reference) === this.#participantKey);
     const isUnlock = this.#type === "unlock";
     return { isUnlock, isBreak: !isUnlock, error: this.#error, busy: this.#busy,
-      participantName: chosen?.label ?? "Nenhum agente disponível", participantImg: chosen?.img ?? "icons/svg/mystery-man.svg",
+      participantName: chosen?.label ?? game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Fields.NoAgent"), participantImg: chosen?.img ?? "icons/svg/mystery-man.svg",
       participantOptions: candidates.map(candidate => ({ value: encodeAgentCheckParticipantReference(candidate.reference),
         label: candidate.label, selected: encodeAgentCheckParticipantReference(candidate.reference) === this.#participantKey })),
       canStart: !!chosen && !this.#busy, wide: this.#diceCount > 3, diceCount: this.#diceCount, die: this.#die,
@@ -88,7 +88,7 @@ export class AccessChallengeConfig extends HandlebarsApplicationMixin(Applicatio
     if (this.#busy) return;
     this.#readFields();
     const chosen = listAgentCheckParticipantCandidates().find(candidate => encodeAgentCheckParticipantReference(candidate.reference) === this.#participantKey);
-    if (!chosen) { this.#error = "Selecione um agente participante."; await this.render(); return; }
+    if (!chosen) { this.#error = game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Validation.Participant"); await this.render(); return; }
     this.#busy = true; this.#error = ""; await this.render();
     try {
       const common = { participant: chosen.reference, obstacle: this.#obstacle };
@@ -100,10 +100,11 @@ export class AccessChallengeConfig extends HandlebarsApplicationMixin(Applicatio
       await this.close();
       await openGmChallengeView(session.id);
       try { await presentChallengeToPlayers(session); }
-      catch { ui.notifications.warn("Desafio criado; não foi possível apresentar a janela a todos os jogadores. Use Abrir no gerenciador para tentar novamente."); }
+      catch { ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Warnings.CreatedPartialPresentation")); }
     } catch (error) {
       console.error("ordemparanormal2 | Access Challenge creation failed.", error);
-      this.#error = accessChallengeErrorMessage(error);
+      this.#error = accessChallengeErrorMessage(error, key => game.i18n.localize(key),
+        (key, parameters) => game.i18n.format(key, parameters));
       this.#busy = false; await this.render();
     }
   }

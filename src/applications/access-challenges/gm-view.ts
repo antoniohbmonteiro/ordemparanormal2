@@ -12,7 +12,7 @@ export class AccessChallengeGmView extends HandlebarsApplicationMixin(Applicatio
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-access", "op2-access-gm"],
     position: { width: 340, height: "auto" as const },
-    window: { title: "GM: Monitoramento", resizable: true },
+    window: { title: "ORDEMPARANORMAL2.AccessChallenges.Titles.Gm", resizable: true },
     actions: { advanceRound: AccessChallengeGmView.#advance, cancelChallenge: AccessChallengeGmView.#cancel },
   };
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
@@ -30,8 +30,8 @@ export class AccessChallengeGmView extends HandlebarsApplicationMixin(Applicatio
 
   protected override async _prepareContext(): Promise<ApplicationRenderContext & ReturnType<typeof buildGmChallengeContext>> {
     const session = gmAccessChallenge(this.#id);
-    if (!session) throw new Error("Este desafio não está mais disponível para o Mestre.");
-    return buildGmChallengeContext(session, this.#busy);
+    if (!session) throw new Error(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.GmSessionUnavailable"));
+    return buildGmChallengeContext(session, this.#busy, key => game.i18n.localize(key));
   }
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
@@ -45,8 +45,8 @@ export class AccessChallengeGmView extends HandlebarsApplicationMixin(Applicatio
     try {
       const session = await advanceChallengeRound(this.#id);
       try { await updateChallengeForPlayers(session); }
-      catch { ui.notifications.warn("Rodada avançada; não foi possível atualizar todas as janelas dos jogadores."); }
-    } catch { ui.notifications.error("Não foi possível avançar a rodada."); }
+      catch { ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Warnings.RoundUpdate")); }
+    } catch { ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.AdvanceRound")); }
     finally { this.#busy = false; await this.render(); }
   }
 
@@ -56,9 +56,9 @@ export class AccessChallengeGmView extends HandlebarsApplicationMixin(Applicatio
     try {
       const session = await cancelAccessChallenge(this.#id);
       try { await closeChallengeForPlayers(session); }
-      catch { ui.notifications.warn("Desafio cancelado; não foi possível fechar a janela remota do jogador."); }
+      catch { ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Warnings.CancelRemoteClose")); }
       await this.close();
-    } catch { ui.notifications.error("Não foi possível cancelar o desafio."); this.#busy = false; await this.render(); }
+    } catch { ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.Cancel")); this.#busy = false; await this.render(); }
   }
 
   protected override _onClose(options: object): void {

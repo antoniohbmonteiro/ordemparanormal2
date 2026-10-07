@@ -13,7 +13,7 @@ export class AccessChallengeManager extends HandlebarsApplicationMixin(Applicati
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-access", "op2-access-manager"],
     position: { width: 340, height: "auto" as const },
-    window: { title: "Desafios de Acesso", resizable: true },
+    window: { title: "ORDEMPARANORMAL2.AccessChallenges.Titles.Manager", resizable: true },
     actions: { newChallenge: AccessChallengeManager.#new, openChallenge: AccessChallengeManager.#open },
   };
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
@@ -24,10 +24,12 @@ export class AccessChallengeManager extends HandlebarsApplicationMixin(Applicati
   protected override async _prepareContext(): Promise<ApplicationRenderContext & { challenges: readonly object[]; empty: boolean }> {
     const challenges = activeAccessChallenges().map(session => ({ id: session.id, name: session.participantName,
       img: session.participantImg, obstacle: session.obstacle,
-      typeLabel: session.type === "unlock" ? "DESTRANCAR" : "ARROMBAR",
+      typeLabel: session.type === "unlock" ? game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Actions.Unlock") : game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Break.Type"),
       typeClass: session.type, detail: session.type === "unlock"
-        ? `Rodada ${session.state.round} · ${session.state.attemptsUsed}/${session.state.resistance} tentativas`
-        : `${remainingBreakResistance(session.state)} / ${session.state.pa} restante` }));
+        ? game.i18n.format("ORDEMPARANORMAL2.AccessChallenges.Manager.UnlockSummary", { round: session.state.round,
+          used: session.state.attemptsUsed, total: session.state.resistance })
+        : game.i18n.format("ORDEMPARANORMAL2.AccessChallenges.Manager.BreakSummary", {
+          remaining: remainingBreakResistance(session.state), pa: session.state.pa }) }));
     return { challenges, empty: challenges.length === 0 };
   }
 
@@ -44,7 +46,7 @@ export class AccessChallengeManager extends HandlebarsApplicationMixin(Applicati
     if (!session) return;
     await openGmChallengeView(session.id);
     try { await presentChallengeToPlayers(session); }
-    catch { ui.notifications.warn("Não foi possível apresentar o desafio a todos os jogadores. O desafio permanece ativo."); }
+    catch { ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Warnings.OpenPartialPresentation")); }
   }
 
   protected override _onClose(options: object): void {

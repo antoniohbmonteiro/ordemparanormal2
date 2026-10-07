@@ -1,16 +1,16 @@
 <section class="op2-access__body" data-challenge-type="{{challengeType}}" data-status="{{status}}" data-wide="{{wide}}" data-round-limit="{{unlock.roundLimit}}" data-slot-count="{{unlock.slots.length}}">
   <div class="op2-access__identity">
     <img class="op2-access__portrait" src="{{participantImg}}" alt="" /><strong>{{participantName}}</strong>
-    {{#if succeeded}}<span class="op2-access__outcome op2-access__outcome--success">Sucesso</span>
-    {{else if jammed}}<span class="op2-access__outcome op2-access__outcome--failure">Falha</span>
-    {{else if unlock}}<span class="op2-access__meta"><img src="{{unlock.dieIcon}}" alt="" />{{unlock.attemptsPerRound}} tentativas/rodada</span>{{/if}}
+    {{#if succeeded}}<span class="op2-access__outcome op2-access__outcome--success">{{localize 'ORDEMPARANORMAL2.AccessChallenges.Feedback.Success'}}</span>
+    {{else if jammed}}<span class="op2-access__outcome op2-access__outcome--failure">{{localize 'ORDEMPARANORMAL2.AccessChallenges.Feedback.Failure'}}</span>
+    {{else if unlock}}<span class="op2-access__meta"><img src="{{unlock.dieIcon}}" alt="" />{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.AttemptsPerRound' attempts=unlock.attemptsPerRound}}</span>{{/if}}
   </div>
   {{#if isUnlock}}
     <div class="op2-access__slots" style="--op2-slot-count: {{unlock.slots.length}}">
       {{#each unlock.slots}}
         <div class="op2-access__slot op2-access__slot--{{feedback}}">
           <div class="op2-access__slot-control">
-            <select data-slot="{{index}}" aria-label="Posição {{label}}" {{#if disabled}}disabled{{/if}}>
+            <select data-slot="{{index}}" aria-label="{{localize 'ORDEMPARANORMAL2.AccessChallenges.Fields.Slot' position=label}}" {{#if disabled}}disabled{{/if}}>
               <option value="">—</option>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{value}}</option>{{/each}}
             </select>
             <div class="op2-access__slot-face" aria-hidden="true"><strong>{{value}}</strong>{{#if showChevron}}<img src="systems/ordemparanormal2/assets/icons/access-challenges/chevron.svg" alt="" />{{/if}}</div>
@@ -19,28 +19,28 @@
         </div>
       {{/each}}
     </div>
-    {{#if unlock.roundLimit}}<div class="op2-access__notice op2-access__notice--round"><strong>Tentativas desta rodada esgotadas</strong><span>Aguardando o Mestre iniciar a próxima rodada.</span></div>{{/if}}
-    {{#if unlock.success}}<div class="op2-access__notice op2-access__notice--success"><strong>FECHADURA DESTRANCADA</strong><span>A fechadura foi destrancada. O acesso está livre.</span></div>
-      <p class="op2-access__success-summary">Desafio superado em {{unlock.round}} {{unlock.roundLabel}} ({{unlock.attemptsUsed}}/{{unlock.resistance}} tentativas totais)</p>
+    {{#if unlock.roundLimit}}<div class="op2-access__notice op2-access__notice--round"><strong>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.RoundLimitTitle'}}</strong><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.RoundLimitDescription'}}</span></div>{{/if}}
+    {{#if unlock.success}}<div class="op2-access__notice op2-access__notice--success"><strong>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.SuccessTitle'}}</strong><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.SuccessDescriptionPlayer'}}</span></div>
+      <p class="op2-access__success-summary">{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.SuccessSummary' round=unlock.round roundLabel=unlock.roundLabel attemptsUsed=unlock.attemptsUsed resistance=unlock.resistance}}</p>
     {{else}}
-      {{#if unlock.jammed}}<div class="op2-access__notice op2-access__notice--danger"><strong>FECHADURA DANIFICADA</strong><span>Ela não pode mais ser aberta desta forma.</span></div>{{/if}}
-      {{#if unlock.cancelled}}<div class="op2-access__notice">Este desafio foi cancelado pelo Mestre.</div>{{/if}}
-      <div class="op2-access__counters"><div><small>TENTATIVAS DA RODADA</small><strong>{{unlock.attemptsThisRound}} / {{unlock.attemptsPerRound}}</strong></div>
-        <div><small>TENTATIVAS TOTAIS</small><strong>{{unlock.attemptsUsed}} / {{unlock.resistance}}</strong></div></div>
-      <button class="op2-access__primary" type="button" data-action="attemptUnlock" {{#unless unlock.canAct}}disabled{{/unless}}>{{#if unlock.jammed}}MECANISMO TRAVADO{{else}}<img src="{{unlock.dieIcon}}" alt="" />DESTRANCAR{{/if}}</button>
+      {{#if unlock.jammed}}<div class="op2-access__notice op2-access__notice--danger"><strong>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.JammedTitle'}}</strong><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.JammedDescriptionPlayer'}}</span></div>{{/if}}
+      {{#if unlock.cancelled}}<div class="op2-access__notice">{{localize 'ORDEMPARANORMAL2.AccessChallenges.Messages.Cancelled'}}</div>{{/if}}
+      <div class="op2-access__counters"><div><small>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.RoundAttempts'}}</small><strong>{{unlock.attemptsThisRound}} / {{unlock.attemptsPerRound}}</strong></div>
+        <div><small>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.TotalAttempts'}}</small><strong>{{unlock.attemptsUsed}} / {{unlock.resistance}}</strong></div></div>
+      <button class="op2-access__primary" type="button" data-action="attemptUnlock" {{#unless unlock.canAct}}disabled{{/unless}}>{{#if unlock.jammed}}{{localize 'ORDEMPARANORMAL2.AccessChallenges.Unlock.LockedMechanism'}}{{else}}<img src="{{unlock.dieIcon}}" alt="" />{{localize 'ORDEMPARANORMAL2.AccessChallenges.Actions.Unlock'}}{{/if}}</button>
     {{/if}}
   {{/if}}
   {{#if isBreak}}
-    <div class="op2-access__obstacle"><div class="op2-access__obstacle-heading"><small>OBSTÁCULO</small><strong>{{break.obstacle}}</strong></div>
-      <div class="op2-access__progress"><div class="op2-access__resistance-label"><span>Resistência restante</span><b>{{break.remaining}} / {{break.pa}}</b></div>
+    <div class="op2-access__obstacle"><div class="op2-access__obstacle-heading"><small>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Fields.Obstacle'}}</small><strong>{{break.obstacle}}</strong></div>
+      <div class="op2-access__progress"><div class="op2-access__resistance-label"><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.Remaining'}}</span><b>{{break.remaining}} / {{break.pa}}</b></div>
         <div class="op2-access__bar"><span style="width: {{break.percentage}}%"></span></div></div>
     </div>
-    {{#if break.failed}}<div class="op2-access__attempt-feedback op2-access__attempt-feedback--failure"><strong>FALHA</strong><span>Força insuficiente. RA +0</span></div>{{/if}}
-    {{#if break.progressed}}<div class="op2-access__attempt-feedback op2-access__attempt-feedback--success"><strong>SUCESSO</strong><span>Estrutura cedendo. RA +{{break.latestRA}}</span></div>{{/if}}
-    {{#if break.completed}}<div class="op2-access__notice op2-access__notice--success"><strong>OBSTÁCULO ARROMBADO</strong><span>O obstáculo foi arrombado.</span></div>{{/if}}
-    {{#if break.cancelled}}<div class="op2-access__notice">Este desafio foi cancelado pelo Mestre.</div>{{/if}}
-    {{#unless break.completed}}<div class="op2-access__chips"><span>Atletismo</span><span>DT {{break.difficulty}}</span><span>Custo: 1 PV</span></div>{{/unless}}
-    <button class="op2-access__primary" type="button" data-action="attemptBreak" {{#unless break.canAct}}disabled{{/unless}}>⛏ ARROMBAR</button>
+    {{#if break.failed}}<div class="op2-access__attempt-feedback op2-access__attempt-feedback--failure"><strong>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Feedback.FailureUpper'}}</strong><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.AttemptFailure'}}</span></div>{{/if}}
+    {{#if break.progressed}}<div class="op2-access__attempt-feedback op2-access__attempt-feedback--success"><strong>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Feedback.SuccessUpper'}}</strong><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.AttemptSuccess' ra=break.latestRA}}</span></div>{{/if}}
+    {{#if break.completed}}<div class="op2-access__notice op2-access__notice--success"><strong>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.CompletedTitle'}}</strong><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.CompletedDescription'}}</span></div>{{/if}}
+    {{#if break.cancelled}}<div class="op2-access__notice">{{localize 'ORDEMPARANORMAL2.AccessChallenges.Messages.Cancelled'}}</div>{{/if}}
+    {{#unless break.completed}}<div class="op2-access__chips"><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.Athletics'}}</span><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.DifficultyTag' difficulty=break.difficulty}}</span><span>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Break.CostTagPlayer'}}</span></div>{{/unless}}
+    <button class="op2-access__primary" type="button" data-action="attemptBreak" {{#unless break.canAct}}disabled{{/unless}}>{{localize 'ORDEMPARANORMAL2.AccessChallenges.Actions.Break'}}</button>
   {{/if}}
   {{#if error}}<p class="op2-access__error" role="alert">{{error}}</p>{{/if}}
   {{#if chatWarning}}<p class="op2-access__error" role="status">{{chatWarning}}</p>{{/if}}

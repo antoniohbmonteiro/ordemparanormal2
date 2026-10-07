@@ -7,7 +7,7 @@ class AccessChallengeTypeChooser extends HandlebarsApplicationMixin(ApplicationV
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-access", "op2-access-chooser"],
     position: { width: 320, height: "auto" as const },
-    window: { title: "Novo Desafio de Acesso", resizable: false },
+    window: { title: "ORDEMPARANORMAL2.AccessChallenges.Titles.Chooser", resizable: false },
     actions: { unlock: AccessChallengeTypeChooser.#unlock, break: AccessChallengeTypeChooser.#break,
       cancel: AccessChallengeTypeChooser.#cancel },
   };

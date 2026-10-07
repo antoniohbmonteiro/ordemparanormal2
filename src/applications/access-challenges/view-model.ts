@@ -3,12 +3,13 @@ import type { UnlockFeedback } from "../../core/access-challenges/unlock";
 import { remainingBreakResistance } from "../../core/access-challenges/break";
 
 const feedbackPresentation = {
-  low: { feedbackLabel: "BAIXO", feedbackSymbol: "▼" },
-  exact: { feedbackLabel: "EXATO", feedbackSymbol: "✓" },
-  high: { feedbackLabel: "ALTO", feedbackSymbol: "▲" },
+  low: { feedbackLabel: "ORDEMPARANORMAL2.AccessChallenges.Feedback.Low", feedbackSymbol: "▼" },
+  exact: { feedbackLabel: "ORDEMPARANORMAL2.AccessChallenges.Feedback.Exact", feedbackSymbol: "✓" },
+  high: { feedbackLabel: "ORDEMPARANORMAL2.AccessChallenges.Feedback.High", feedbackSymbol: "▲" },
 } as const;
 
-export function buildPlayerChallengeContext(projection: PlayerProjection, draft: readonly number[], busy: boolean, error: string, chatWarning: string) {
+export function buildPlayerChallengeContext(projection: PlayerProjection, draft: readonly number[], busy: boolean, error: string, chatWarning: string,
+  localize: (key: string) => string) {
   const common = { participantName: projection.participantName, participantImg: projection.participantImg,
     obstacle: projection.obstacle, busy, error, chatWarning, status: projection.status,
     challengeType: projection.type, isUnlock: projection.type === "unlock", isBreak: projection.type === "break",
@@ -17,7 +18,8 @@ export function buildPlayerChallengeContext(projection: PlayerProjection, draft:
     const roundLimit = projection.status === "active" && projection.attemptsThisRound === projection.attemptsPerRound;
     const blocked = projection.status !== "active" || roundLimit;
     return { ...common, wide: projection.diceCount > 3, unlock: { die: projection.die, round: projection.round,
-      roundLabel: projection.round === 1 ? "rodada" : "rodadas",
+      roundLabel: localize(projection.round === 1 ? "ORDEMPARANORMAL2.AccessChallenges.Unlock.RoundSingular"
+        : "ORDEMPARANORMAL2.AccessChallenges.Unlock.RoundPlural"),
       dieIcon: projection.die === 6 ? "systems/ordemparanormal2/assets/icons/access-challenges/d6.svg"
         : `systems/ordemparanormal2/assets/icons/dice/d${projection.die}.svg`,
       attemptsPerRound: projection.attemptsPerRound, attemptsThisRound: projection.attemptsThisRound,
@@ -29,7 +31,8 @@ export function buildPlayerChallengeContext(projection: PlayerProjection, draft:
         const value = draft[index] ?? projection.latest?.guess[index] ?? 0;
         const feedback = projection.latest?.feedback[index];
         return { index, label: index + 1, value: value || "—", feedback: feedback ?? "",
-          ...(feedback ? feedbackPresentation[feedback] : { feedbackLabel: "", feedbackSymbol: "" }), disabled: blocked || busy,
+          ...(feedback ? { ...feedbackPresentation[feedback], feedbackLabel: localize(feedbackPresentation[feedback].feedbackLabel) }
+            : { feedbackLabel: "", feedbackSymbol: "" }), disabled: blocked || busy,
           showChevron: projection.status === "active", options: Array.from({ length: projection.die }, (_, option) => ({ value: option + 1, selected: option + 1 === value })) };
       }) } };
   }
@@ -41,7 +44,7 @@ export function buildPlayerChallengeContext(projection: PlayerProjection, draft:
     progressed: projection.status === "active" && projection.latest?.outcome === "success", latestRA: projection.latest?.addedRA ?? 0 } };
 }
 
-export function buildGmChallengeContext(session: AccessChallengeSession, busy: boolean) {
+export function buildGmChallengeContext(session: AccessChallengeSession, busy: boolean, localize: (key: string) => string) {
   const common = { participantName: session.participantName, participantImg: session.participantImg,
     obstacle: session.obstacle, challengeType: session.type, status: session.state.status,
     isUnlock: session.type === "unlock", isBreak: session.type === "break", busy,
@@ -55,7 +58,7 @@ export function buildGmChallengeContext(session: AccessChallengeSession, busy: b
       success: state.status === "success", jammed: state.status === "jammed",
       history: state.history.map(attempt => ({ ...attempt, slots: attempt.guess.map((value, index) => {
         const feedback: UnlockFeedback = attempt.feedback[index]!;
-        return { value, feedback, ...feedbackPresentation[feedback] };
+        return { value, feedback, ...feedbackPresentation[feedback], feedbackLabel: localize(feedbackPresentation[feedback].feedbackLabel) };
       }) })) } };
   }
   const state = session.state;

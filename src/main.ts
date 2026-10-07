@@ -16,6 +16,7 @@ import { registerPoiImagePreviews } from "./bootstrap/register-poi-image-preview
 import { registerInvestigationMode } from "./bootstrap/register-investigation-mode";
 import { registerGmToolkit } from "./bootstrap/register-gm-toolkit";
 import { registerAccessChallengeQueries } from "./adapters/foundry/access-challenges/queries";
+import { registerAccessChallengePresence } from "./bootstrap/register-access-challenge-presence";
 import { registerOpposedChecks } from "./bootstrap/register-opposed-checks";
 import { registerCheckRequests } from "./bootstrap/register-check-requests";
 import { registerTileInteractions } from "./bootstrap/register-tile-interactions";
@@ -39,6 +40,7 @@ Hooks.once("init", () => {
   registerPoiSceneControls();
   registerGmToolkit();
   registerAccessChallengeQueries();
+  registerAccessChallengePresence();
   registerOpposedChecks();
   registerCheckRequests();
   registerTileInteractions();

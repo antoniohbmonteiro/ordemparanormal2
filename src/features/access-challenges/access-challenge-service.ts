@@ -47,9 +47,9 @@ export function gmAccessChallenge(id: string): AccessChallengeSession | null {
 }
 
 async function validateCreation(participant: AgentCheckParticipantReference): Promise<foundry.documents.Actor> {
-  if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) throw new AccessChallengeError("Somente o Mestre ativo pode criar um desafio.");
+  if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) throw new AccessChallengeError("ORDEMPARANORMAL2.AccessChallenges.Errors.ActiveGmOnly");
   const actor = await resolveAgentCheckParticipant(participant);
-  if (!actor) throw new AccessChallengeError("O agente participante não está mais disponível.");
+  if (!actor) throw new AccessChallengeError("ORDEMPARANORMAL2.AccessChallenges.Errors.ParticipantUnavailable");
   return actor;
 }
 
@@ -70,7 +70,7 @@ export async function createUnlockChallenge(config: UnlockConfig): Promise<Acces
   validateUnlockConfig(config);
   const actor = await validateCreation(config.participant);
   const crime = readAgentCheckSource(actor).skills.crime;
-  if (typeof crime !== "number" || !NORMAL_DIE_STEPS.includes(crime as NormalDieStep)) throw new AccessChallengeError("O agente precisa ter um dado válido em Crime para iniciar o desafio.");
+  if (typeof crime !== "number" || !NORMAL_DIE_STEPS.includes(crime as NormalDieStep)) throw new AccessChallengeError("ORDEMPARANORMAL2.AccessChallenges.Errors.CrimeDie");
   const secret = config.secretMode === "manual" ? config.manualSecret! : generateUnlockSecret(config.diceCount, config.die, randomFace);
   const session: AccessChallengeSession = { ...commonSession(config.participant, actor, config.obstacle),
     type: "unlock", state: createUnlockState(secret, config.die, config.resistance, crime as NormalDieStep) };

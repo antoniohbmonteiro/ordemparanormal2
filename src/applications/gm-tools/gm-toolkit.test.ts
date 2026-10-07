@@ -145,8 +145,8 @@ describe("GmToolkit", () => {
     expect(Object.keys(GmToolkitClass.DEFAULT_OPTIONS.actions)).toEqual([
       "requestCheck",
       "opposedCheck",
-      "importAdventure",
       "accessChallenges",
+      "importAdventure",
     ]);
     await GmToolkitClass.DEFAULT_OPTIONS.actions.requestCheck();
     await GmToolkitClass.DEFAULT_OPTIONS.actions.opposedCheck();
@@ -210,6 +210,7 @@ describe("GM Tools Palette template and assets", () => {
     expect(css).toContain("grid-template-columns: 10px repeat(4, 36px)");
     expect(css).toMatch(/button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
     expect(css).toMatch(/img\s*\{[^}]*width:\s*1\.62rem;[^}]*height:\s*1\.62rem;/s);
+    expect(css).not.toContain("op2-gm-toolkit__access-icon");
   });
 
   it("renders one grip and exactly four accessible actions", async () => {
@@ -219,13 +220,15 @@ describe("GM Tools Palette template and assets", () => {
     );
     const actions = [...template.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]);
 
-    expect(actions).toEqual(["requestCheck", "opposedCheck", "importAdventure", "accessChallenges"]);
+    expect(actions).toEqual(["requestCheck", "opposedCheck", "accessChallenges", "importAdventure"]);
     expect(template.match(/data-drag-handle/g)).toHaveLength(1);
     expect(template).toContain("assets/icons/gm-tools/rolling-dices.svg");
     expect(template).toContain("assets/icons/gm-tools/sword-clash.svg");
     expect(template).toContain("assets/icons/gm-tools/adventure-import.svg");
+    expect(template).toContain("assets/icons/gm-tools/access-challenges.png");
+    expect(template).not.toContain("op2-gm-toolkit__access-icon");
     expect(template.match(/aria-hidden="true"/g)).toHaveLength(5);
-    expect(template.match(/alt=""/g)).toHaveLength(3);
+    expect(template.match(/alt=""/g)).toHaveLength(4);
     expect(template.match(/aria-label=/g)).toHaveLength(5);
     expect(template.match(/title=/g)).toHaveLength(4);
     expect(template).not.toMatch(/fa-(?:solid|regular|brands)|d20|DialogV2|ChatMessage|socket|Actor/i);
@@ -240,6 +243,12 @@ describe("GM Tools Palette template and assets", () => {
     );
     expect(asset.toString()).toContain('viewBox="0 0 512 512"');
     expect(createHash("sha256").update(asset).digest("hex")).toBe(expectedHash);
+  });
+
+  it("uses the exact supplied PNG for Access Challenges", async () => {
+    const asset = await readFile(new URL("../../../assets/icons/gm-tools/access-challenges.png", import.meta.url));
+    expect(asset.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    expect(createHash("sha256").update(asset).digest("hex")).toBe("e9e1227d9c61b93fb27962a5e7e6a939c5d8ae4c085206279af894e23fb9a3db");
   });
 
   it("uses a matching monochrome asset for Adventure Import", async () => {

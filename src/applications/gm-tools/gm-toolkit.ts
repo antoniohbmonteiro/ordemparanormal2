@@ -23,8 +23,8 @@ export class GmToolkit extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       requestCheck: GmToolkit.#onRequestCheck,
       opposedCheck: GmToolkit.#onOpposedCheck,
-      importAdventure: GmToolkit.#onImportAdventure,
       accessChallenges: GmToolkit.#onAccessChallenges,
+      importAdventure: GmToolkit.#onImportAdventure,
     },
     classes: ["ordemparanormal2", "op2-gm-toolkit"],
     position: { top: 80, left: 220, width: "auto" as const, height: "auto" as const },

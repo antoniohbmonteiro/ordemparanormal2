@@ -76,6 +76,154 @@
         "AccessChallenges": "Desafios de Acesso"
       }
     },
+    "AccessChallenges": {
+      "Titles": {
+        "Config": "Desafio de Acesso",
+        "Manager": "Desafios de Acesso",
+        "Chooser": "Novo Desafio de Acesso",
+        "Gm": "GM: Monitoramento",
+        "Unlock": "Desafio: Destrancar",
+        "Break": "Desafio: Arrombar",
+        "Completed": "Desafio: Concluído",
+        "Jammed": "Desafio: Bloqueado"
+      },
+      "Fields": {
+        "Participant": "PARTICIPANTE",
+        "ParticipantAria": "Agente participante",
+        "NoAgent": "Nenhum agente disponível",
+        "Obstacle": "OBSTÁCULO",
+        "OptionalObstacle": "OBSTÁCULO (OPCIONAL)",
+        "ObstaclePlaceholder": "Ex.: Porta do Depósito",
+        "Complexity": "COMPLEXIDADE",
+        "Resistance": "RESISTÊNCIA",
+        "SecretGeneration": "GERAÇÃO DE SENHA",
+        "SecretGenerationAria": "Geração de senha",
+        "Random": "Aleatória",
+        "Manual": "Manual",
+        "ManualSecret": "SENHA SECRETA · {diceCount}D{die}",
+        "Slot": "Posição {position}",
+        "Difficulty": "DT",
+        "Pa": "PA"
+      },
+      "Actions": {
+        "Cancel": "Cancelar",
+        "Start": "Iniciar Desafio",
+        "CancelChallenge": "Cancelar desafio",
+        "Unlock": "DESTRANCAR",
+        "Break": "⛏ ARROMBAR",
+        "AdvanceRound": "Avançar para Rodada {round}",
+        "Open": "Abrir",
+        "New": "+ Novo desafio"
+      },
+      "Feedback": {
+        "Low": "BAIXO",
+        "Exact": "EXATO",
+        "High": "ALTO",
+        "Success": "Sucesso",
+        "Failure": "Falha",
+        "SuccessUpper": "SUCESSO",
+        "FailureUpper": "FALHA"
+      },
+      "Unlock": {
+        "AttemptsPerRound": "{attempts} tentativas/rodada",
+        "RoundAttempts": "TENTATIVAS DA RODADA",
+        "TotalAttempts": "TENTATIVAS TOTAIS",
+        "RoundLimitTitle": "Tentativas desta rodada esgotadas",
+        "RoundLimitDescription": "Aguardando o Mestre iniciar a próxima rodada.",
+        "SuccessTitle": "FECHADURA DESTRANCADA",
+        "SuccessDescriptionPlayer": "A fechadura foi destrancada. O acesso está livre.",
+        "SuccessDescriptionGm": "A combinação correta foi encontrada.",
+        "SuccessSummary": "Desafio superado em {round} {roundLabel} ({attemptsUsed}/{resistance} tentativas totais)",
+        "RoundSingular": "rodada",
+        "RoundPlural": "rodadas",
+        "JammedTitle": "FECHADURA DANIFICADA",
+        "JammedDescriptionPlayer": "Ela não pode mais ser aberta desta forma.",
+        "JammedDescriptionGm": "O limite total de tentativas foi atingido.",
+        "LockedMechanism": "MECANISMO TRAVADO"
+      },
+      "Break": {
+        "Type": "ARROMBAR",
+        "Remaining": "Resistência restante",
+        "RemainingUpper": "RESISTÊNCIA RESTANTE",
+        "Athletics": "Atletismo",
+        "DifficultyTag": "DT {difficulty}",
+        "CostTagPlayer": "Custo: 1 PV",
+        "CostTagGm": "1 PV / tentativa",
+        "SkillHint": "Perícia usada: Atletismo",
+        "CostHint": "Custo por tentativa: 1 PV",
+        "AttemptFailure": "Força insuficiente. RA +0",
+        "AttemptSuccess": "Estrutura cedendo. RA +{ra}",
+        "AddedRA": "RA +{ra}",
+        "CompletedTitle": "OBSTÁCULO ARROMBADO",
+        "CompletedDescription": "O obstáculo foi arrombado."
+      },
+      "Gm": {
+        "Secret": "GABARITO SECRETO (SENHA)",
+        "Crime": "CRIME d{die}",
+        "RoundAttempts": "Tentativas da rodada: {used} / {total}",
+        "TotalAttempts": "Tentativas totais: {used} / {total}",
+        "History": "HISTÓRICO DE TENTATIVAS",
+        "Attempt": "Tentativa #{number}",
+        "Round": "Rodada {round}",
+        "AwaitingFirstAttempt": "Aguardando a primeira tentativa.",
+        "Information": "INFORMAÇÕES DO DESAFIO"
+      },
+      "Manager": {
+        "Active": "DESAFIOS ATIVOS",
+        "Empty": "Nenhum desafio ativo. Crie um novo desafio para começar.",
+        "UnlockSummary": "Rodada {round} · {used}/{total} tentativas",
+        "BreakSummary": "{remaining} / {pa} restante"
+      },
+      "Chooser": {
+        "Introduction": "Escolha o tipo de desafio que deseja iniciar.",
+        "Unlock": "Destrancar",
+        "Break": "Arrombar",
+        "UnlockDescription": "Descubra a sequência correta antes de esgotar as tentativas.",
+        "BreakDescription": "Force a abertura com Atletismo, consumindo PV e reduzindo a resistência."
+      },
+      "Validation": {
+        "Positions": "Escolha de 1 a 6 posições para a senha.",
+        "Die": "Escolha um dado válido: d4, d6, d8, d10 ou d12.",
+        "Resistance": "Informe uma Resistência inteira maior ou igual a 1.",
+        "ManualSecretLength": "Preencha todas as posições da senha manual.",
+        "ManualSecretFaces": "Escolha valores de 1 a {die} para todas as posições da senha.",
+        "SecretMode": "Escolha geração de senha Aleatória ou Manual.",
+        "Obstacle": "Informe o obstáculo a ser arrombado.",
+        "Difficulty": "Informe uma DT inteira maior ou igual a 1.",
+        "Pa": "Informe uma PA inteira maior ou igual a 1.",
+        "Participant": "Selecione um agente participante.",
+        "AllSlots": "Escolha um valor para cada posição."
+      },
+      "Errors": {
+        "Create": "Não foi possível criar o desafio. Confira a configuração e tente novamente.",
+        "ActiveGmOnly": "Somente o Mestre ativo pode criar um desafio.",
+        "ParticipantUnavailable": "O agente participante não está mais disponível.",
+        "CrimeDie": "O agente precisa ter um dado válido em Crime para iniciar o desafio.",
+        "GmSessionUnavailable": "Este desafio não está mais disponível para o Mestre.",
+        "NoOwnership": "Você não tem mais permissão de proprietário sobre este agente.",
+        "InvalidAttempt": "A tentativa não pôde ser validada. Confira os dados e tente novamente.",
+        "Unavailable": "Este desafio não está mais disponível.",
+        "GmUnavailable": "O Mestre deste desafio está indisponível. A janela será fechada.",
+        "GmUnavailableShort": "O Mestre deste desafio está indisponível.",
+        "AgentUnavailable": "O agente não está mais disponível.",
+        "InsufficientHealth": "O agente não possui PV para tentar Arrombar.",
+        "PrepareCheck": "Não foi possível preparar o teste de Atletismo.",
+        "AdvanceRound": "Não foi possível avançar a rodada.",
+        "Cancel": "Não foi possível cancelar o desafio.",
+        "UpdatePlayers": "Não foi possível atualizar todas as janelas dos jogadores.",
+        "ClosePlayers": "Não foi possível fechar todas as janelas dos jogadores."
+      },
+      "Messages": {
+        "Cancelled": "Este desafio foi cancelado pelo Mestre.",
+        "ChatPublicationFailed": "Tentativa registrada; não foi possível publicar o teste no chat."
+      },
+      "Warnings": {
+        "CreatedPartialPresentation": "Desafio criado; não foi possível apresentar a janela a todos os jogadores. Use Abrir no gerenciador para tentar novamente.",
+        "OpenPartialPresentation": "Não foi possível apresentar o desafio a todos os jogadores. O desafio permanece ativo.",
+        "RoundUpdate": "Rodada avançada; não foi possível atualizar todas as janelas dos jogadores.",
+        "CancelRemoteClose": "Desafio cancelado; não foi possível fechar a janela remota do jogador."
+      }
+    },
     "AdventureImport": {
       "As09": {
         "Label": "Imagens suplementares AS09 (opcional)",

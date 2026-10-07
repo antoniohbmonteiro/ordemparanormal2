@@ -2,6 +2,7 @@ import type { ApplicationRenderContext } from "@client/applications/_types.mjs";
 import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 import type { PlayerProjection } from "../../application/access-challenges/session";
 import { resolveAgentCheckParticipant } from "../../adapters/foundry/actors/resolve-agent-check-participant";
+import { readAgentCheckAbilities } from "../../adapters/foundry/abilities/read-agent-check-abilities";
 import { dispatchChallengeAction } from "../../adapters/foundry/access-challenges/query-transport";
 import { getCurrentMessageMode } from "../../adapters/foundry/chat/publish-check-message";
 import { prepareAgentCheckInteraction } from "../../features/checks/resolve-agent-check-interaction";
@@ -15,7 +16,7 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
   static override DEFAULT_OPTIONS = {
     classes: ["ordemparanormal2", "op2-access", "op2-access-player"],
     position: { width: 360, height: "auto" as const },
-    window: { title: "Desafio de Acesso", resizable: true },
+    window: { title: "ORDEMPARANORMAL2.AccessChallenges.Titles.Config", resizable: true },
     actions: { attemptUnlock: AccessChallengePlayerView.#attemptUnlock, attemptBreak: AccessChallengePlayerView.#attemptBreak },
   };
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
@@ -32,15 +33,15 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
   constructor(projection: PlayerProjection) {
     super({ id: `op2-access-player-${projection.id}`, position: { width: projection.type === "unlock"
       ? Math.max(360, 360 + (projection.diceCount - 3) * 60) : 360 },
-      window: { title: projection.type === "unlock" ? "Desafio: Destrancar" : "Desafio: Arrombar" } });
+      window: { title: projection.type === "unlock" ? "ORDEMPARANORMAL2.AccessChallenges.Titles.Unlock" : "ORDEMPARANORMAL2.AccessChallenges.Titles.Break" } });
     this.#projection = projection;
     this.#draft = projection.type === "unlock" ? [...(projection.latest?.guess ?? [])] : [];
   }
 
   override get title(): string {
-    if (this.#projection.status === "success" || this.#projection.status === "completed") return "Desafio: Concluído";
-    if (this.#projection.status === "jammed") return "Desafio: Bloqueado";
-    return this.#projection.type === "unlock" ? "Desafio: Destrancar" : "Desafio: Arrombar";
+    if (this.#projection.status === "success" || this.#projection.status === "completed") return game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Titles.Completed");
+    if (this.#projection.status === "jammed") return game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Titles.Jammed");
+    return game.i18n.localize(this.#projection.type === "unlock" ? "ORDEMPARANORMAL2.AccessChallenges.Titles.Unlock" : "ORDEMPARANORMAL2.AccessChallenges.Titles.Break");
   }
 
   get sessionId(): string { return this.#projection.id; }
@@ -56,7 +57,8 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
   }
 
   protected override async _prepareContext(): Promise<ApplicationRenderContext & ReturnType<typeof buildPlayerChallengeContext>> {
-    return buildPlayerChallengeContext(this.#projection, this.#draft, this.#busy || this.#dialogOpen, this.#error, this.#chatWarning);
+    return buildPlayerChallengeContext(this.#projection, this.#draft, this.#busy || this.#dialogOpen, this.#error, this.#chatWarning,
+      key => game.i18n.localize(key));
   }
 
   protected override _attachPartListeners(partId: string, element: HTMLElement, options: HandlebarsRenderOptions): void {
@@ -77,19 +79,19 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
       const result = await dispatchChallengeAction(this.#projection.gmUserId, action);
       if (result.status === "ok" || result.status === "stale") {
         await this.accept(result.projection);
-        if (result.chatPublished === false) this.#chatWarning = "Tentativa registrada; não foi possível publicar o teste no chat.";
+        if (result.chatPublished === false) this.#chatWarning = game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Messages.ChatPublicationFailed");
       } else {
-        this.#error = result.status === "forbidden" ? "Você não tem mais permissão de proprietário sobre este agente."
-          : result.status === "invalid" ? "A tentativa não pôde ser validada. Confira os dados e tente novamente."
-            : "Este desafio não está mais disponível.";
+        this.#error = result.status === "forbidden" ? game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.NoOwnership")
+          : result.status === "invalid" ? game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.InvalidAttempt")
+            : game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.Unavailable");
         if (result.status === "unavailable") {
-          ui.notifications.warn("O Mestre deste desafio está indisponível. A janela será fechada.");
+          ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.GmUnavailable"));
           await this.close();
           return;
         }
       }
     } catch {
-      ui.notifications.warn("O Mestre deste desafio está indisponível. A janela será fechada.");
+      ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.GmUnavailable"));
       await this.close(); return;
     } finally { this.#busy = false; }
     await this.render();
@@ -100,7 +102,7 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
     const selects = [...this.element.querySelectorAll<HTMLSelectElement>("select[data-slot]")];
     const guess = selects.map(select => Number(select.value));
     if (guess.length !== this.#projection.diceCount || guess.some(value => !Number.isInteger(value) || value < 1 || value > (this.#projection as Extract<PlayerProjection, {type:"unlock"}>).die)) {
-      this.#error = "Escolha um valor para cada posição."; await this.render(); return;
+      this.#error = game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Validation.AllSlots"); await this.render(); return;
     }
     this.#draft = guess;
     await this.#send({ kind: "guess", id: this.#projection.id, revision: this.#projection.revision, guess });
@@ -113,9 +115,9 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
     await this.render();
     try {
       const actor = await resolveAgentCheckParticipant(projection.participant);
-      if (!actor) { this.#error = "O agente não está mais disponível."; await this.render(); return; }
-      const health = (actor.system as unknown as { resources: { health: { value: number } } }).resources.health.value;
-      if (health < 1) { this.#error = "O agente não possui PV para tentar Arrombar."; await this.render(); return; }
+      if (!actor) { this.#error = game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.AgentUnavailable"); await this.render(); return; }
+      const health = readAgentCheckAbilities(actor).health;
+      if (health < 1) { this.#error = game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.InsufficientHealth"); await this.render(); return; }
       const choices = await prepareAgentCheckInteraction(actor, { kind: "skill", key: "athletics" },
         { lockedDifficulty: projection.difficulty, reservedHealth: 1 });
       if (!choices) return;
@@ -124,7 +126,7 @@ export class AccessChallengePlayerView extends HandlebarsApplicationMixin(Applic
         choices, messageMode: getCurrentMessageMode() });
     } catch (error) {
       console.error("ordemparanormal2 | Failed to prepare Break Check.", error);
-      this.#error = "Não foi possível preparar o teste de Atletismo.";
+      this.#error = game.i18n.localize("ORDEMPARANORMAL2.AccessChallenges.Errors.PrepareCheck");
       await this.render();
     } finally {
       if (this.#dialogOpen) { this.#dialogOpen = false; await this.render(); }

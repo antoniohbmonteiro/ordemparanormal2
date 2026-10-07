@@ -1,4 +1,4 @@
-# Ordem Paranormal 2 — v0.5.1
+# Ordem Paranormal 2 — v0.6.0
 
 Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal.
 
@@ -6,32 +6,36 @@ Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ord
 
 ## Destaques
 
-- **Extras do AS09 no Adventure Importer:** pacote opcional com 39 imagens para uso no World/FilePicker, nove conversões locais de TIF para PNG transparente e imagens mapeadas para POIs existentes.
-- **Ferramentas do Ato II prontas para a mesa:** nove equipamentos canônicos criados em `A Maldição do Ídolo de Pedra > Ato II > Ferramentas`, somente ao importar o Ato II com AS09, sem alterar o compêndio.
-- **Previews de POI mais leves:** a Investigation Application usa thumbnails derivadas; a imagem original continua disponível ao ampliar.
-- **Dados mais visuais na ficha:** atributos e perícias exibem os ícones existentes de d4–d12, mantendo d20 textual e o select nativo no Edit Mode.
+- **Desafios de Acesso nas Ferramentas do Mestre:** configure e acompanhe Destrancar e Arrombar para um Agente, com interfaces próprias para o Mestre e os jogadores autorizados.
+- **Destrancar:** sequência secreta manual ou aleatória, feedback por posição e tentativas limitadas por rodada e pela resistência da fechadura.
+- **Arrombar:** Check de Atletismo pelo fluxo normal, custo de 1 PV por tentativa confirmada e redução da resistência do obstáculo por RA em caso de sucesso.
 
-## Arquivos do usuário e reimportação
+## Destrancar
 
-O AS09 é opcional e não substitui o PDF nem os ZIPs dos atos. Um AS09 inválido ou desconhecido gera aviso sem bloquear a importação dos atos válidos.
+O Mestre escolhe o Agente, a quantidade de posições, o dado, a resistência e uma sequência manual ou aleatória. O jogador tenta descobrir a sequência com o feedback **Alto**, **Baixo** e **Exato**, sem receber a solução secreta.
 
-**O sistema não inclui nem distribui o ZIP AS09 ou seus assets oficiais.** O usuário seleciona seus próprios arquivos legalmente obtidos, processados localmente para uso em seu Mundo do Foundry.
+O dado de Crime define as tentativas por rodada. O Mestre avança a rodada quando essas tentativas se esgotam; o limite total continua sendo a resistência configurada. Acertar a sequência conclui o desafio, enquanto esgotar o limite sem acertá-la emperra a fechadura.
 
-A reimportação preserva imagens personalizadas dos POIs e edições, identidade e localização das ferramentas já gerenciadas pelo importador.
+![Desafio de Destrancar com feedback por posição e limites de tentativas](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.6.0/docs/release-assets/v0.6.0/access-challenge-unlock.png)
 
-![Importador de Aventura com seleção opcional do ZIP AS09](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.5.1/docs/release-assets/v0.5.1/adventure-import-as09.png)
+## Arrombar
 
-## Dados na ficha
+O Mestre configura o obstáculo, a DT e sua resistência em PA. Cada tentativa confirmada usa o diálogo normal de Check de Atletismo e custa **1 PV**, inclusive quando o Check falha. Habilidades aplicáveis continuam disponíveis com seus próprios custos.
 
-Os ícones de d4–d12 aparecem junto aos valores dos atributos e das perícias. O d20 continua textual, e o Edit Mode mantém o select nativo.
+Em caso de sucesso contra a DT, o **RA** reduz a resistência restante. Uma falha não reduz a resistência. O desafio termina quando a resistência chega a zero, e cada Check é publicado pelo fluxo normal de chat.
 
-![Ficha de Agente com ícones de dados nos atributos e nas perícias](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.5.1/docs/release-assets/v0.5.1/agent-sheet-dice.png)
+![Desafio de Arrombar com resistência restante, resultado da tentativa e custo de PV](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.6.0/docs/release-assets/v0.6.0/access-challenge-break.png)
+
+## Acompanhamento pelo Mestre
+
+As Ferramentas do Mestre permitem criar, acompanhar, reapresentar e cancelar os desafios. Jogadores com permissão OWNER sobre o participante podem operar sua interface; um jogador autorizado que se conecta recebe os desafios ainda ativos.
+
+**As sessões ficam em memória no cliente do Mestre que as criou e são perdidas ao recarregar esse cliente.** Não são salvas no Mundo para retomada após a recarga.
 
 ## Compatibilidade e atualização
 
-- Compatível com **Foundry VTT v14+**, com atualização direta da **v0.5.0**.
+- Compatível com **Foundry VTT v14+**, com atualização direta da **v0.5.1**.
 - **Não há nova migração de Mundo nesta release.**
-- Os ajustes visuais não alteram regras, checks ou DataModels.
 
 O projeto continua **source-available** sob a PolyForm Strict License 1.0.0. Releases públicas até v0.0.22 permanecem sob os termos MIT aplicáveis às cópias já distribuídas.
 
@@ -39,6 +43,6 @@ O projeto continua **source-available** sob a PolyForm Strict License 1.0.0. Rel
 
 **Manifest estável:** [system.json](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json)
 
-**Pacote:** [ordemparanormal2-v0.5.1.zip](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.5.1/ordemparanormal2-v0.5.1.zip)
+**Pacote:** [ordemparanormal2-v0.6.0.zip](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.6.0/ordemparanormal2-v0.6.0.zip)
 
-**Comparar alterações:** [v0.5.0...v0.5.1](https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.5.0...v0.5.1)
+**Comparar alterações:** [v0.5.1...v0.6.0](https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.5.1...v0.6.0)

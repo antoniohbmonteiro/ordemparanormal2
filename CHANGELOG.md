@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-07
+
+### Added
+
+- Added Access Challenges to GM Tools, with GM configuration and monitoring of independent Destrancar and Arrombar sessions for an Agent or synthetic Token.
+- Added Destrancar with a manual or randomly generated secret sequence, per-position feedback, attempts per round based on the Crime die, GM-controlled round advancement, and a total attempt limit.
+- Added Arrombar through the normal Athletics Check flow, with a fixed cost of 1 PV per confirmed attempt and resistance reduction by RA only on a successful Check.
+- Added separate GM and authorized OWNER views, with player projections that omit the secret sequence and presentation of active sessions when an authorized player connects.
+
+### Changed
+
+- Updated the GM Tools interface and Access Challenges icon.
+
+### Compatibility
+
+- Access Challenge sessions remain in memory on the creating GM client and are lost when that client reloads. This release introduces no new World migration.
+
 ## [0.5.1] - 2026-10-06
 
 ### Added

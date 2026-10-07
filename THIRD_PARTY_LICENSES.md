@@ -6,6 +6,14 @@ The original source code in this repository is made available under the PolyForm
 
 Ability row titles, subtitles, and resource values use the unmodified variable webfont from [The Inter Project](https://github.com/rsms/inter), Copyright (c) 2016 The Inter Project Authors, under the SIL Open Font License 1.1. The font is bundled locally at `assets/fonts/inter/InterVariable.woff2`, with the complete license at [assets/fonts/inter/LICENSE.txt](assets/fonts/inter/LICENSE.txt).
 
+## Geist font
+
+Access Challenge interfaces use the locally bundled variable font from [The Geist Project](https://github.com/vercel/geist-font.git), Copyright 2024 The Geist Project Authors, under the SIL Open Font License 1.1. The font is bundled at `assets/fonts/geist/GeistVariable.ttf`, with the complete license at [assets/fonts/geist/LICENSE.txt](assets/fonts/geist/LICENSE.txt).
+
+## Fragment Mono font
+
+Access Challenge interfaces use the locally bundled font from [The Fragment-Mono Project](https://github.com/weiweihuanghuang/fragment-mono), Copyright 2022 The Fragment-Mono Project Authors, under the SIL Open Font License 1.1. The font is bundled at `assets/fonts/fragment-mono/FragmentMono-Regular.ttf`, with the complete license at [assets/fonts/fragment-mono/LICENSE.txt](assets/fonts/fragment-mono/LICENSE.txt).
+
 ## Game-icons.net glyphs
 
 The following glyphs are available from [Game-icons.net](https://game-icons.net/) under the [Creative Commons Attribution 3.0 Unported license](https://creativecommons.org/licenses/by/3.0/). The Ability and Profile SVG assets combine these glyphs with project-specific white fills, radial gradient backgrounds, colors, and rounded square framing.

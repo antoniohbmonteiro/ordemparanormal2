@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-  Ficha de Agente, Check Engine, Importador de Aventura, ferramentas de Mestre com Testes Opostos e Request de Perícias, investigação em cena e conteúdo reutilizável.
+  Ficha de Agente, Check Engine, Importador de Aventura, ferramentas de Mestre com Testes Opostos, Request de Perícias e Desafios de Acesso, investigação em cena e conteúdo reutilizável.
 </p>
 
 <p align="center">
@@ -50,7 +50,8 @@
 - 🎭 **Ficha de Agente completa** — Perfil, Ocupação, PV/PD, atributos, Perícias, Aptidão, Habilidades e Inventário em uma única ficha.
 - 🎲 **Sistema de Testes** — pré-roll com atributo alternativo para Perícia/Aptidão, passos temporários, dados situacionais d4–d12 e Habilidades compatíveis; DT opcional, RA/RB, críticos e histórico persistente no chat.
 - ⚔️ **Testes Opostos** — cada personagem realiza seu próprio teste, com resultado consolidado em um único card e controle por ownership.
-- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos, Request de Perícias e Importador de Aventura.
+- 🧭 **Ferramentas do Mestre** — acesso rápido a Testes Opostos, Request de Perícias, Importador de Aventura e Desafios de Acesso.
+- 🔐 **Desafios de Acesso** — Destrancar com sequência, feedback e tentativas limitadas; Arrombar com Check de Atletismo, custo de PV e progresso contra a resistência do obstáculo.
 - 📦 **Importador de Aventura** — prepara os Atos I e II a partir dos arquivos oficiais fornecidos pelo próprio usuário, criando Agentes, Handouts, Pontos de Interesse e Scenes no Mundo.
 - 🔎 **Investigação em cena** — Pontos de Interesse integrados a Regions, destaque no canvas, informações distintas para jogador e Mestre e revelação persistente de pistas.
 - 🧩 **Conteúdo reutilizável** — Perfis, Habilidades, Ocupações e Equipamentos como Items integrados à ficha e aos compêndios.

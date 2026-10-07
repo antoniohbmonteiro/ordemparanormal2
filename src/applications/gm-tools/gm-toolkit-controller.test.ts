@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const instances: MockGmToolsPalette[] = [];
-let onRender: ((application: MockGmToolsPalette) => Promise<void>) | null = null;
+const instances: MockGmToolkit[] = [];
+let onRender: ((application: MockGmToolkit) => Promise<void>) | null = null;
 
-class MockGmToolsPalette {
+class MockGmToolkit {
   readonly render = vi.fn(async () => {
     await onRender?.(this);
     return this;
@@ -32,13 +32,13 @@ class MockGmToolsPalette {
   }
 }
 
-vi.mock("./gm-tools-palette", () => ({ GmToolsPalette: MockGmToolsPalette }));
+vi.mock("./gm-toolkit", () => ({ GmToolkit: MockGmToolkit }));
 
-let controller: typeof import("./gm-tools-palette-controller");
+let controller: typeof import("./gm-toolkit-controller");
 
 beforeAll(async () => {
   vi.stubGlobal("game", { user: { isGM: true } });
-  controller = await import("./gm-tools-palette-controller");
+  controller = await import("./gm-toolkit-controller");
 });
 
 beforeEach(() => {
@@ -55,11 +55,11 @@ describe("GM Tools Palette controller", () => {
   it("registers one instance before its first render", async () => {
     let synchronizedAgain = false;
     onRender = async () => {
-      await controller.synchronizeGmToolsPalette();
+      await controller.synchronizeGmToolkit();
       synchronizedAgain = true;
     };
 
-    await controller.synchronizeGmToolsPalette();
+    await controller.synchronizeGmToolkit();
 
     expect(synchronizedAgain).toBe(true);
     expect(instances).toHaveLength(1);
@@ -67,17 +67,17 @@ describe("GM Tools Palette controller", () => {
   });
 
   it("does not duplicate the palette across repeated synchronization", async () => {
-    await controller.synchronizeGmToolsPalette();
-    await controller.synchronizeGmToolsPalette();
+    await controller.synchronizeGmToolkit();
+    await controller.synchronizeGmToolkit();
 
     expect(instances).toHaveLength(1);
     expect(instances[0].render).toHaveBeenCalledOnce();
   });
 
   it("can synchronize again after an external close", async () => {
-    await controller.synchronizeGmToolsPalette();
+    await controller.synchronizeGmToolkit();
     instances[0].emit("close");
-    await controller.synchronizeGmToolsPalette();
+    await controller.synchronizeGmToolkit();
 
     expect(instances).toHaveLength(2);
   });
@@ -85,7 +85,7 @@ describe("GM Tools Palette controller", () => {
   it("is inert for a non-GM", async () => {
     vi.stubGlobal("game", { user: { isGM: false } });
 
-    await controller.synchronizeGmToolsPalette();
+    await controller.synchronizeGmToolkit();
 
     expect(instances).toHaveLength(0);
   });

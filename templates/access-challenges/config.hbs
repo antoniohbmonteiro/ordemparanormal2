@@ -1,0 +1,34 @@
+<section class="op2-access__body op2-access__config-body" data-challenge-type="{{#if isUnlock}}unlock{{else}}break{{/if}}" data-wide="{{wide}}">
+  <label class="op2-access__field"><span>PARTICIPANTE</span>
+    <div class="op2-access__identity op2-access__config-identity"><img class="op2-access__portrait" src="{{participantImg}}" alt="" />
+      <select name="participant" data-config-field aria-label="Agente participante">
+        {{#each participantOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{else}}<option value="">Nenhum agente disponível</option>{{/each}}
+      </select>
+    </div>
+  </label>
+  <label class="op2-access__field"><span>OBSTÁCULO {{#if isUnlock}}(OPCIONAL){{/if}}</span><input name="obstacle" data-config-field type="text" value="{{obstacle}}" {{#if isBreak}}placeholder="Ex.: Porta do Depósito"{{/if}} /></label>
+  {{#if isUnlock}}
+    <div class="op2-access__field-row">
+      <label class="op2-access__field"><span>COMPLEXIDADE</span><div class="op2-access__inline">
+        <select name="diceCount" data-config-field>{{#each diceCountOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{value}}</option>{{/each}}</select>
+        <select name="die" data-config-field>{{#each dieOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+      </div></label>
+      <label class="op2-access__field"><span>RESISTÊNCIA</span><input name="resistance" data-config-field type="number" min="1" step="1" value="{{resistance}}" /></label>
+    </div>
+    <div class="op2-access__field"><span>GERAÇÃO DE SENHA</span><div class="op2-access__mode" role="group" aria-label="Geração de senha">
+      <button type="button" data-action="selectMode" data-mode="random" aria-pressed="{{random}}">Aleatória</button>
+      <button type="button" data-action="selectMode" data-mode="manual" aria-pressed="{{manual}}">Manual</button>
+    </div></div>
+    {{#if manual}}<div class="op2-access__field"><span>SENHA SECRETA · {{diceCount}}D{{die}}</span><div class="op2-access__secret-inputs">
+      {{#each secretSlots}}<select data-secret-slot aria-label="Posição {{label}}"><option value="">—</option>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{value}}</option>{{/each}}</select>{{/each}}
+    </div></div>{{/if}}
+  {{/if}}
+  {{#if isBreak}}
+    <div class="op2-access__field-row"><label class="op2-access__field"><span>DT</span><input name="difficulty" data-config-field type="number" min="1" step="1" value="{{difficulty}}" /></label>
+      <label class="op2-access__field"><span>PA</span><input name="pa" data-config-field type="number" min="1" step="1" value="{{pa}}" /></label></div>
+    <p class="op2-access__hint">Perícia usada: Atletismo<br />Custo por tentativa: 1 PV</p>
+  {{/if}}
+  {{#if error}}<p class="op2-access__error" role="alert">{{error}}</p>{{/if}}
+  <div class="op2-access__config-actions"><button class="op2-access__secondary" type="button" data-action="cancel">Cancelar</button>
+    <button class="op2-access__primary" type="button" data-action="submit" {{#unless canStart}}disabled{{/unless}}>Iniciar Desafio</button></div>
+</section>

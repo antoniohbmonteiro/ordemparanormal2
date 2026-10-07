@@ -48,3 +48,13 @@ export function analyzeCheckRoll(
         : null,
   };
 }
+
+export function getCheckRA(result: {
+  readonly components: readonly { readonly result: number }[];
+  readonly extraDice: readonly { readonly result: number }[];
+}): number {
+  return analyzeCheckRoll([
+    ...result.components.map(component => component.result),
+    ...result.extraDice.map(die => die.result),
+  ]).highestResult;
+}

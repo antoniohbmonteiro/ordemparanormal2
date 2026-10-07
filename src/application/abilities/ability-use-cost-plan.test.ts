@@ -29,4 +29,12 @@ describe("Ability use cost plan", () => {
       status: "insufficient", source: "determination", required: 6, available: 5,
     });
   });
+
+  it("reserves the fixed Arrombar PV together with a selected Ability cost", () => {
+    const claims = [{ abilityId: "a", useId: "a", cost: { source: "health" as const, amount: 2 } }];
+    expect(resolveAbilityUseCostPlan(claims, { health: 2, determination: 0, abilityResources: {} }, 1))
+      .toMatchObject({ status: "insufficient", source: "health", required: 3, available: 2 });
+    expect(resolveAbilityUseCostPlan(claims, { health: 3, determination: 0, abilityResources: {} }, 1))
+      .toMatchObject({ status: "success", plan: { health: { amount: 3, remaining: 0 } } });
+  });
 });

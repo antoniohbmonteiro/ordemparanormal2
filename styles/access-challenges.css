@@ -1,0 +1,271 @@
+@font-face {
+  font-family: "Geist";
+  src: url("../assets/fonts/geist/GeistVariable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fragment Mono";
+  src: url("../assets/fonts/fragment-mono/FragmentMono-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+.ordemparanormal2.op2-access {
+  --header-height: 31px;
+  --op2-access-bg: rgb(14 16 21 / 98%);
+  --op2-access-input: rgb(11 13 16 / 72%);
+  --op2-access-panel: #1e2228;
+  --op2-access-border: rgb(255 255 255 / 10%);
+  --op2-access-control-border: rgb(255 255 255 / 18%);
+  --op2-access-text: #f1f2f4;
+  --op2-access-muted: #a7acb5;
+  --op2-access-red: #7f252b;
+  --op2-access-accent: #8c3b40;
+  --op2-access-font: "Inter", sans-serif;
+  min-width: 320px;
+  color: var(--op2-access-text);
+  background: var(--op2-access-bg);
+  border: 1px solid var(--op2-access-border);
+  border-radius: 12px;
+  font: 400 10px / 1.2 var(--op2-access-font);
+  color-scheme: dark;
+}
+
+.op2-access.op2-access-player { min-width: 360px; --op2-access-bg: rgb(18 20 24 / 96%); }
+.op2-access.op2-access-gm, .op2-access.op2-access-manager { min-width: 340px; }
+.op2-access.op2-access-manager, .op2-access.op2-access-chooser,
+.op2-access.op2-access-gm:has([data-challenge-type="unlock"][data-terminal="true"]) { border-radius: 6px; }
+.op2-access.op2-access-config:has([data-wide="true"]), .op2-access.op2-access-gm:has([data-wide="true"]) { min-width: 480px; }
+.op2-access.op2-access-player:has([data-slot-count="4"]) { min-width: 420px; }
+.op2-access.op2-access-player:has([data-slot-count="5"]) { min-width: 480px; }
+.op2-access.op2-access-player:has([data-slot-count="6"]) { min-width: 540px; }
+.ordemparanormal2.op2-access:is(.minimized, .minimizing, .maximizing) { min-width: unset; }
+.op2-access .window-header { padding: 8px 12px; gap: 6px; background: rgb(27 30 36 / 92%); border-bottom-color: var(--op2-access-border); }
+.op2-access .window-header::before { content: ""; flex: 0 0 3px; height: 12px; border-radius: 2px; background: var(--op2-access-accent); }
+.op2-access .window-header .window-title { color: var(--op2-access-text); font: 700 11px / 13px var(--op2-access-font); letter-spacing: 1px; text-transform: uppercase; }
+.op2-access .window-header button.header-control { --button-size: 15px; color: var(--op2-access-muted); font-size: 12px; }
+.op2-access.op2-access-manager .window-title, .op2-access.op2-access-chooser .window-title,
+.op2-access.op2-access-gm:has([data-terminal="true"]) .window-title { letter-spacing: 0.5px; }
+.op2-access.op2-access-player:has([data-status="success"], [data-status="completed"]) .window-header::before { background: #22c55e; }
+.op2-access.op2-access-gm:has([data-challenge-type="break"]) { --header-height: 41px; }
+.op2-access.op2-access-gm:has([data-challenge-type="break"]) .window-header { padding: 12px 14px; border-bottom: 3px solid var(--op2-access-accent); }
+.op2-access.op2-access-gm:has([data-challenge-type="break"]) .window-header::before { content: none; }
+.op2-access.op2-access-gm:has([data-challenge-type="break"]) .window-title { letter-spacing: 0.5px; }
+.op2-access .window-content { padding: 0; background: var(--op2-access-bg); color: var(--op2-access-text); }
+.op2-access .op2-access__body { display: flex; flex-direction: column; gap: 12px; padding: 14px; min-width: 0; min-height: 0; max-height: min(75vh, 650px); overflow-y: auto; }
+.op2-access .op2-access__body *, .op2-access .op2-access__body *::before, .op2-access .op2-access__body *::after { box-sizing: border-box; }
+.op2-access .op2-access__body p, .op2-access .op2-access__body h3 { margin: 0; }
+.op2-access .op2-access__body button { margin: 0; box-shadow: none; cursor: pointer; font-family: var(--op2-access-font); }
+.op2-access .op2-access__body button:disabled { opacity: 0.4; cursor: default; }
+.op2-access .op2-access__body :is(button, select, input):focus-visible { outline: 2px solid #d05a63; outline-offset: 2px; }
+.op2-access .op2-access__identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.op2-access .op2-access__identity strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__portrait { width: 28px; height: 28px; flex: none; border: 1px solid var(--op2-access-accent); border-radius: 50%; object-fit: cover; background: #13171d; }
+.op2-access .op2-access__meta { display: flex; align-items: center; gap: 4px; margin-left: auto; color: var(--op2-access-muted); white-space: nowrap; font: 600 11px / 14px var(--op2-access-font); }
+.op2-access .op2-access__meta img, .op2-access .op2-access__primary img { flex: none; border: 0; }
+.op2-access .op2-access__meta img[src*="/assets/icons/dice/"], .op2-access .op2-access__primary img[src*="/assets/icons/dice/"] { width: 14px; height: 14px; }
+.op2-access .op2-access__outcome { margin-left: auto; font: 600 11px / 14px var(--op2-access-font); }
+.op2-access .op2-access__outcome--success { color: #22c55e; }
+.op2-access .op2-access__outcome--failure { color: var(--op2-access-accent); }
+.op2-access .op2-access__primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 36px; padding: 0 16px; color: var(--op2-access-text); background: var(--op2-access-red); border: 1px solid var(--op2-access-accent); border-radius: 8px; font: 600 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__primary:not(:disabled):hover { background: #923039; }
+.op2-access .op2-access__secondary { height: 36px; padding: 8px 16px; color: #aaa9a4; background: transparent; border: 1px solid var(--op2-access-control-border); border-radius: 6px; font: 600 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__text-button { align-self: center; width: auto; height: auto; min-height: 0; padding: 4px 0; color: #aaa9a4; background: none; border: 0; font: 600 10px / 12px var(--op2-access-font); text-decoration: underline; }
+.op2-access .op2-access__error { color: #ef8f94; font-size: 11px; line-height: 14px; }
+.op2-access .op2-access__muted { color: #646973; font-size: 11px; line-height: 14px; }
+.op2-access .op2-access__section { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.op2-access .op2-access__section-title { color: var(--op2-access-muted); border: 0; font: 700 10px / 12px var(--op2-access-font); text-transform: uppercase; }
+.op2-access .op2-access__divider { flex: none; width: 100%; height: 1px; margin: 0; border: 0; background: var(--op2-access-border); }
+
+/* Player interaction and status use the same slots at every supported count. */
+.op2-access-player .op2-access__body { gap: 16px; padding: 16px; }
+.op2-access .op2-access__slots { display: grid; grid-template-columns: repeat(var(--op2-slot-count), minmax(0, 1fr)); gap: 12px; padding: 12px 0; width: 100%; }
+.op2-access .op2-access__body[data-wide="true"][data-status="active"] .op2-access__slots { padding: 0; }
+.op2-access .op2-access__slot { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+.op2-access .op2-access__slot-control { display: grid; width: 72px; height: 72px; border: 2px solid var(--op2-access-control-border); border-radius: 10px; background: var(--op2-access-input); }
+.op2-access .op2-access__slot-control > * { grid-area: 1 / 1; min-width: 0; }
+.op2-access .op2-access__slot-control select { z-index: 1; width: 100%; height: 100%; min-height: 0; padding: 0; margin: 0; opacity: 0; cursor: pointer; font: 500 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__slot-control:has(select:focus-visible) { outline: 2px solid #d05a63; outline-offset: 2px; }
+.op2-access .op2-access__slot-control select:disabled { cursor: default; }
+.op2-access .op2-access__slot-face { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px; pointer-events: none; }
+.op2-access .op2-access__slot-face strong { color: var(--op2-access-text); font: 700 28px / 34px var(--op2-access-font); }
+.op2-access .op2-access__slot-face img { flex: none; border: 0; }
+.op2-access .op2-access__slot--low .op2-access__slot-control { border-color: #542429; }
+.op2-access .op2-access__slot--exact .op2-access__slot-control { border-color: rgb(34 197 94 / 30%); }
+.op2-access .op2-access__slot--high .op2-access__slot-control { border-color: rgb(146 64 14 / 30%); }
+.op2-access .op2-access__feedback { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: none; padding: 2px 6px; border: 1px solid #542429; border-radius: 4px; background: #1e1315; color: #aaa9a4; font: 700 9px / 11px var(--op2-access-font); letter-spacing: 0.5px; white-space: nowrap; }
+.op2-access .op2-access__feedback--exact { color: #22c55e; background: #132c1c; border-color: rgb(34 197 94 / 30%); }
+.op2-access .op2-access__feedback--high { color: #f59e0b; background: #241d13; border-color: rgb(146 64 14 / 30%); }
+.op2-access .op2-access__counters { display: flex; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.op2-access .op2-access__counters > div { display: flex; flex-direction: column; gap: 2px; }
+.op2-access .op2-access__counters > div:last-child { text-align: right; }
+.op2-access .op2-access__counters small { color: var(--op2-access-muted); font: 400 10px / 12px var(--op2-access-font); }
+.op2-access .op2-access__counters strong { font: 700 13px / 16px var(--op2-access-font); }
+.op2-access .op2-access__counters > div:last-child strong { color: var(--op2-access-accent); }
+.op2-access-player .op2-access__primary { height: 41px; padding: 12px; font: 700 14px / 17px var(--op2-access-font); letter-spacing: 1px; }
+.op2-access .op2-access__notice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: min(100%, 312px); min-width: 0; align-self: flex-start; padding: 12px; border: 1px solid var(--op2-access-control-border); border-radius: 6px; background: rgb(11 13 16 / 50%); text-align: center; }
+.op2-access .op2-access__notice strong { font: 700 11px / 14px var(--op2-access-font); letter-spacing: 0.8px; }
+.op2-access .op2-access__notice span { color: var(--op2-access-muted); font: 400 10px / 12px var(--op2-access-font); }
+.op2-access .op2-access__notice--success { color: #22c55e; background: #132c1c; border-color: rgb(34 197 94 / 30%); }
+.op2-access .op2-access__notice--danger { color: #ef4444; background: #3c1414; border-color: rgb(239 68 68 / 30%); }
+.op2-access-player .op2-access__notice { width: min(100%, 328px); min-height: 62px; padding: 14px; border-radius: 8px; }
+.op2-access-player .op2-access__notice strong { font-size: 13px; line-height: 16px; letter-spacing: 1px; }
+.op2-access-player .op2-access__notice--round { min-height: 57px; padding: 12px; }
+.op2-access-player .op2-access__notice--round strong { color: #b5474f; font-size: 12px; line-height: 15px; letter-spacing: 0; }
+.op2-access-player .op2-access__body[data-wide="true"] :is(.op2-access__notice, .op2-access__success-summary) { width: 280px; align-self: flex-start; }
+.op2-access .op2-access__success-summary { padding: 4px; color: var(--op2-access-muted); font: 400 11px / 14px var(--op2-access-font); white-space: nowrap; }
+.op2-access-player:has([data-challenge-type="unlock"][data-status="success"]),
+.op2-access-player:has([data-challenge-type="unlock"][data-wide="false"][data-round-limit="true"]),
+.op2-access-player:has([data-challenge-type="unlock"][data-wide="false"][data-status="jammed"]) { --op2-access-font: "Geist", "Inter", sans-serif; }
+.op2-access-player:has([data-challenge-type="unlock"][data-status="success"]) .op2-access__slot-face strong,
+.op2-access-player:has([data-challenge-type="unlock"][data-wide="false"][data-round-limit="true"]) .op2-access__slot-face strong,
+.op2-access-player:has([data-challenge-type="unlock"][data-wide="false"][data-status="jammed"]) .op2-access__slot-face strong { font-family: "Fragment Mono", monospace; font-weight: 400; }
+.op2-access-player:has([data-challenge-type="unlock"][data-wide="false"][data-round-limit="true"]) .op2-access__counters strong,
+.op2-access-player:has([data-challenge-type="unlock"][data-wide="false"][data-status="jammed"]) .op2-access__counters strong { font-family: "Fragment Mono", monospace; font-weight: 400; }
+.op2-access-player [data-status="success"] .op2-access__slot-face strong { color: #22c55e; }
+.op2-access-player [data-round-limit="true"] .op2-access__slot { opacity: 0.5; }
+.op2-access-player [data-status="jammed"] .op2-access__slot { opacity: 0.25; }
+.op2-access-player [data-status="jammed"] .op2-access__slot-control { border-color: #27292d; }
+.op2-access-player [data-status="jammed"] .op2-access__feedback { color: #646973; background: #1e1315; border-color: #542429; }
+.op2-access-player [data-status="jammed"] .op2-access__notice--danger { color: var(--op2-access-accent); background: rgb(127 37 43 / 30%); border-color: var(--op2-access-red); }
+.op2-access-player [data-status="jammed"] .op2-access__counters { opacity: 0.55; }
+.op2-access-player [data-status="jammed"] .op2-access__primary,
+.op2-access-player [data-status="completed"] .op2-access__primary { background: var(--op2-access-input); border-color: var(--op2-access-border); }
+
+/* GM monitoring keeps the history read-only and the secret private. */
+.op2-access .op2-access__crime { margin-left: auto; padding: 2px 6px; color: var(--op2-access-text); background: rgb(127 37 43 / 30%); border-radius: 4px; font: 700 10px / 12px var(--op2-access-font); white-space: nowrap; }
+.op2-access .op2-access__secret { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: rgb(11 13 16 / 50%); border: 1px solid rgb(255 255 255 / 16%); border-radius: 6px; }
+.op2-access .op2-access__secret > small { color: var(--op2-access-muted); font: 700 9px / 11px var(--op2-access-font); letter-spacing: 0.8px; }
+.op2-access .op2-access__secret-row { display: flex; align-items: flex-start; gap: 8px; }
+.op2-access .op2-access__secret-values { display: flex; gap: 8px; flex: none; }
+.op2-access .op2-access__secret-values b { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--op2-access-red); border-radius: 6px; background: var(--op2-access-input); font: 700 16px / 19px var(--op2-access-font); }
+.op2-access .op2-access__secret-counts { display: flex; flex: 1; flex-direction: column; gap: 2px; align-items: flex-end; color: var(--op2-access-muted); font: 400 10px / 12px var(--op2-access-font); white-space: nowrap; }
+.op2-access .op2-access__body[data-wide="true"] .op2-access__secret-row { flex-direction: column; }
+.op2-access .op2-access__body[data-wide="true"] .op2-access__secret-counts { width: 100%; }
+.op2-access .op2-access__history { display: flex; flex-direction: column; gap: 8px; padding: 8px; background: var(--op2-access-input); border: 1px solid rgb(255 255 255 / 16%); border-radius: 6px; }
+.op2-access .op2-access__history-entry { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: rgb(255 255 255 / 3%); border: 1px solid rgb(255 255 255 / 8%); border-radius: 6px; }
+.op2-access .op2-access__history-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.op2-access .op2-access__history-heading strong { font: 600 11px / 13px var(--op2-access-font); }
+.op2-access .op2-access__history-heading > span:not(.op2-access__feedback) { color: var(--op2-access-muted); font: 400 10px / 12px var(--op2-access-font); }
+.op2-access .op2-access__mini-slots { display: flex; gap: 4px; }
+.op2-access .op2-access__mini-slot { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.op2-access .op2-access__mini-slot b { display: grid; place-items: center; width: 40px; height: 40px; color: var(--op2-access-text); background: #0b0d10; border: 1px solid #542429; border-radius: 6px; font: 700 16px / 19px var(--op2-access-font); }
+.op2-access .op2-access__mini-slot--exact b { border-color: #22c55e; }
+.op2-access .op2-access__mini-slot--high b { border-color: #92400e; }
+.op2-access .op2-access__gm-actions { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; }
+.op2-access .op2-access__gm-actions .op2-access__primary { font-size: 13px; line-height: 16px; }
+.op2-access .op2-access__advance-pending { width: 100%; height: 31px; padding: 8px; color: var(--op2-access-muted); background: var(--op2-access-input); border: 1px solid var(--op2-access-border); border-radius: 6px; font: 700 12px / 15px var(--op2-access-font); }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__secret { border: 0; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__secret-values { gap: 6px; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__secret-values b { border: 0; font-weight: 600; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__history { gap: 4px; padding: 6px; border: 0; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__history-entry { padding: 8px 10px; border: 0; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__section-title { font-size: 9px; line-height: 11px; letter-spacing: 0.8px; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__crime { font-size: 9px; line-height: 11px; letter-spacing: 0.5px; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__mini-slot b { font-weight: 600; }
+.op2-access-gm [data-terminal="true"] .op2-access__feedback { letter-spacing: 0; }
+.op2-access-gm [data-challenge-type="unlock"][data-terminal="true"] .op2-access__notice { border: 0; }
+
+/* Arrombar shares progress and feedback presentation across Player and GM. */
+.op2-access-player [data-challenge-type="break"] .op2-access__portrait { width: 43px; height: 43px; }
+.op2-access-player [data-challenge-type="break"] .op2-access__identity strong { font-size: 13px; line-height: 16px; }
+.op2-access .op2-access__obstacle { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: var(--op2-access-input); border: 1px solid var(--op2-access-control-border); border-radius: 8px; }
+.op2-access .op2-access__obstacle-heading { display: flex; flex-direction: column; gap: 4px; }
+.op2-access .op2-access__obstacle-heading small { color: var(--op2-access-muted); font: 700 10px / 12px var(--op2-access-font); }
+.op2-access .op2-access__obstacle-heading strong { font: 600 14px / 17px var(--op2-access-font); overflow-wrap: anywhere; }
+.op2-access .op2-access__progress { display: flex; flex-direction: column; gap: 6px; }
+.op2-access .op2-access__resistance-label { display: flex; justify-content: space-between; gap: 8px; font: 600 11px / 13px var(--op2-access-font); }
+.op2-access .op2-access__resistance-label b { font-weight: 700; }
+.op2-access .op2-access__bar { width: 100%; height: 4px; overflow: hidden; background: rgb(27 30 36 / 92%); border-radius: 2px; }
+.op2-access .op2-access__bar > span { display: block; height: 100%; background: #22c55e; }
+.op2-access .op2-access__attempt-feedback { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid rgb(34 197 94 / 30%); border-radius: 8px; color: #22c55e; background: #132c1c; font: 500 11px / 14px var(--op2-access-font); }
+.op2-access .op2-access__attempt-feedback strong { flex: none; padding: 2px 6px; border-radius: 4px; color: #132c1c; background: #22c55e; font: 700 10px / 12px var(--op2-access-font); }
+.op2-access .op2-access__attempt-feedback--failure { color: var(--op2-access-text); background: #1e1315; border-color: #542429; }
+.op2-access .op2-access__attempt-feedback--failure strong { color: var(--op2-access-text); background: var(--op2-access-red); }
+.op2-access .op2-access__chips { display: flex; gap: 6px; }
+.op2-access .op2-access__chips > span { flex: none; padding: 4px 8px; color: var(--op2-access-muted); background: rgb(27 30 36 / 92%); border: 1px solid var(--op2-access-border); border-radius: 4px; font: 600 10px / 12px var(--op2-access-font); white-space: nowrap; }
+.op2-access-player [data-challenge-type="break"] .op2-access__primary { height: 40px; font-size: 13px; line-height: 16px; }
+.op2-access-player [data-challenge-type="break"] .op2-access__notice { min-height: 60px; }
+.op2-access .op2-access__avatar-dot { flex: none; border: 0; }
+.op2-access-gm [data-challenge-type="break"] .op2-access__identity strong { font-size: 11px; line-height: 13px; }
+.op2-access .op2-access__break-info { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--op2-access-border); border-radius: 6px; background: rgb(11 13 16 / 95%); }
+.op2-access .op2-access__obstacle-name { overflow-wrap: anywhere; font: 700 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__break-info .op2-access__chips { flex-wrap: wrap; }
+.op2-access .op2-access__break-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.op2-access .op2-access__break-actions .op2-access__secondary { border-color: rgb(241 238 229 / 18%); font-size: 13px; line-height: 16px; }
+.op2-access-gm [data-challenge-type="break"] .op2-access__section-title,
+.op2-access-gm [data-challenge-type="break"] .op2-access__resistance-label > span { color: var(--op2-access-muted); font: 700 9px / 11px var(--op2-access-font); letter-spacing: 0.5px; }
+.op2-access-gm [data-challenge-type="break"] .op2-access__progress > .op2-access__bar { height: 6px; border: 1px solid var(--op2-access-border); border-radius: 3px; background: rgb(11 13 16 / 95%); }
+.op2-access-gm [data-challenge-type="break"] .op2-access__history { gap: 6px; border-color: var(--op2-access-border); background: rgb(11 13 16 / 95%); }
+.op2-access .op2-access__break-entry { overflow: hidden; border: 1px solid var(--op2-access-border); border-radius: 6px; background: rgb(255 255 255 / 5%); }
+.op2-access .op2-access__break-entry-content { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-left: 3px solid var(--op2-access-accent); }
+.op2-access .op2-access__break-entry--success .op2-access__break-entry-content { border-left-color: #22c55e; }
+.op2-access .op2-access__break-entry .op2-access__history-heading b { font: 600 10px / 12px var(--op2-access-font); }
+.op2-access .op2-access__break-entry .op2-access__feedback { font-weight: 700; font-size: 9px; line-height: 11px; letter-spacing: 0; }
+.op2-access .op2-access__break-entry > .op2-access__bar { height: 2px; border-radius: 0; background: rgb(0 0 0 / 25%); }
+.op2-access-gm [data-challenge-type="break"] .op2-access__notice { min-height: 47px; padding: 10px; border-color: #22c55e; }
+.op2-access-gm [data-challenge-type="break"] .op2-access__notice strong { letter-spacing: 0.5px; }
+.op2-access-gm [data-challenge-type="break"] > .op2-access__text-button { align-self: flex-start; font-weight: 400; text-decoration: none; }
+
+/* Configuration controls have measured heights, independent of Foundry defaults. */
+.op2-access .op2-access__field { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.op2-access .op2-access__field > span { color: var(--op2-access-muted); font: 700 10px / 12px var(--op2-access-font); letter-spacing: 0.5px; }
+.op2-access .op2-access__field :is(input, select), .op2-access .op2-access__secret-inputs select { width: 100%; height: 27px; min-height: 0; margin: 0; padding: 5px 10px; color: var(--op2-access-text); background-color: var(--op2-access-input); border: 1px solid var(--op2-access-control-border); border-radius: 6px; font: 500 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__field-row, .op2-access .op2-access__inline, .op2-access .op2-access__secret-inputs { display: flex; gap: 8px; min-width: 0; }
+.op2-access .op2-access__inline { gap: 4px; }
+.op2-access .op2-access__inline select:first-child { flex: 0 0 50px; }
+.op2-access .op2-access__secret-inputs select { min-width: 0; flex: 1; }
+.op2-access .op2-access__config-body[data-wide="true"] .op2-access__secret-inputs { gap: 6px; }
+.op2-access .op2-access__config-identity { height: 40px; padding: 5px 6px; border: 1px solid var(--op2-access-control-border); border-radius: 6px; background: var(--op2-access-input); }
+.op2-access .op2-access__config-identity select { height: 28px; padding: 0; font-weight: 600; border: 0; background-color: transparent; }
+.op2-access .op2-access__mode { display: flex; gap: 2px; height: 25px; padding: 2px; border: 1px solid var(--op2-access-control-border); border-radius: 6px; background: var(--op2-access-input); }
+.op2-access .op2-access__mode button { flex: 1; height: 19px; min-height: 0; padding: 0; color: var(--op2-access-muted); border: 1px solid transparent; border-radius: 4px; background: transparent; font: 500 11px / 13px var(--op2-access-font); }
+.op2-access .op2-access__mode button[aria-pressed="true"] { color: var(--op2-access-text); border-color: var(--op2-access-control-border); background: rgb(27 30 36 / 40%); font-weight: 600; }
+.op2-access .op2-access__config-actions { display: flex; gap: 8px; padding-top: 8px; }
+.op2-access .op2-access__config-actions > button { flex: 1; }
+.op2-access .op2-access__config-actions > .op2-access__primary { flex-grow: 1.25; }
+.op2-access .op2-access__hint { color: var(--op2-access-muted); font: 400 9px / 12px var(--op2-access-font); }
+.op2-access .op2-access__config-body[data-challenge-type="break"] .op2-access__field :is(input, select) { height: 25px; font-size: 11px; line-height: 13px; }
+.op2-access .op2-access__config-body[data-challenge-type="break"] .op2-access__config-identity .op2-access__portrait { width: 43px; height: 43px; }
+.op2-access .op2-access__config-body[data-challenge-type="break"] .op2-access__config-identity { height: 55px; }
+.op2-access .op2-access__config-body[data-challenge-type="break"] .op2-access__config-identity select { height: 43px; font-weight: 600; }
+.op2-access .op2-access__config-body[data-challenge-type="break"] .op2-access__config-actions { margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--op2-access-border); }
+.op2-access .op2-access__config-body[data-challenge-type="break"] .op2-access__config-actions > button { font-size: 13px; line-height: 16px; }
+
+/* Manager and type chooser share compact actions, not Player CTAs. */
+.op2-access .op2-access__manager-body { padding: 12px 12px 14px; }
+.op2-access .op2-access__manager-panel { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgb(11 13 16 / 60%); border: 1px solid rgb(127 37 43 / 15%); border-radius: 5px; }
+.op2-access .op2-access__section-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.op2-access .op2-access__section-header h3 { padding-left: 6px; border-left: 2px solid var(--op2-access-accent); color: var(--op2-access-text); font: 700 10px / 12px var(--op2-access-font); letter-spacing: 1px; }
+.op2-access .op2-access__section-header button { flex: none; width: 90px; height: 19px; padding: 4px 10px; color: var(--op2-access-text); background: var(--op2-access-red); border: 0; border-radius: 3px; font: 600 9px / 11px var(--op2-access-font); letter-spacing: 0.3px; }
+.op2-access .op2-access__manager-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
+.op2-access .op2-access__manager-card { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; background: var(--op2-access-panel); border: 1px solid rgb(50 54 62 / 35%); border-radius: 4px; }
+.op2-access .op2-access__manager-top, .op2-access .op2-access__manager-info { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
+.op2-access .op2-access__manager-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.op2-access .op2-access__manager-name .op2-access__portrait { width: 22px; height: 22px; }
+.op2-access .op2-access__manager-name strong { font: 600 12px / 15px var(--op2-access-font); }
+.op2-access .op2-access__manager-name strong, .op2-access .op2-access__manager-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op2-access .op2-access__type { flex: none; padding: 2px 7px; border-radius: 3px; font: 700 9px / 11px var(--op2-access-font); letter-spacing: 0.5px; white-space: nowrap; }
+.op2-access .op2-access__type--unlock { background: #22543d; }
+.op2-access .op2-access__type--break { background: #825014; }
+.op2-access .op2-access__manager-info { color: var(--op2-access-muted); font: 400 11px / 13px var(--op2-access-font); }
+.op2-access .op2-access__manager-info small { color: #646973; font-size: 10px; white-space: nowrap; }
+.op2-access .op2-access__manager-action { align-self: flex-end; }
+.op2-access .op2-access__manager-action button { width: 55px; height: 23px; padding: 5px 14px; color: var(--op2-access-text); background: var(--op2-access-red); border: 0; border-radius: 3px; font: 600 11px / 13px var(--op2-access-font); }
+.op2-access .op2-access__empty { padding: 24px 10px; color: var(--op2-access-muted); text-align: center; font-size: 11px; }
+.op2-access .op2-access__chooser-body { gap: 14px; }
+.op2-access .op2-access__chooser-body > p { color: #646973; font: 400 11px / 14px var(--op2-access-font); }
+.op2-access .op2-access__choice-row { display: flex; gap: 10px; }
+.op2-access .op2-access__choice { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; min-height: 164px; height: auto; padding: 18px 14px 16px; color: var(--op2-access-text); background: var(--op2-access-panel); border: 1px solid rgb(50 54 62 / 30%); border-radius: 5px; }
+.op2-access .op2-access__choice:hover { border-color: rgb(140 59 64 / 70%); background: #23262d; }
+.op2-access .op2-access__choice strong { font: 600 13px / 16px var(--op2-access-font); }
+.op2-access .op2-access__choice small { color: var(--op2-access-muted); font: 400 10px / 14px var(--op2-access-font); text-align: center; white-space: normal; }
+.op2-access .op2-access__lock-icon { display: grid; grid-template-columns: 10px 3px 10px 3px 10px; grid-template-rows: 9px 9px 12px 6px; width: 36px; height: 36px; flex: none; border-radius: 10px; background: #1a372b; }
+.op2-access .op2-access__lock-icon::before { content: ""; grid-column: 3; grid-row: 2 / 4; width: 10px; height: 10px; border: 2px solid #22c55e; border-radius: 5px; }
+.op2-access .op2-access__lock-icon::after { content: ""; grid-column: 2 / 5; grid-row: 3; background: #22c55e; border-radius: 2px; }
+.op2-access .op2-access__break-icon { flex: none; border: 0; }
+.op2-access .op2-access__chooser-body > .op2-access__text-button { font-size: 11px; line-height: 13px; font-weight: 500; text-decoration: none; }

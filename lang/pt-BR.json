@@ -67,12 +67,13 @@
         "ExecutionFailed": "Não foi possível executar a interação deste Tile. Nenhuma alteração foi aplicada."
       }
     },
-    "GmTools": {
+    "GmToolkit": {
       "Label": "Ferramentas do Mestre",
       "Actions": {
         "RequestCheck": "Solicitar teste",
         "OpposedCheck": "Teste oposto",
-        "ImportAdventure": "Importar Aventura"
+        "ImportAdventure": "Importar Aventura",
+        "AccessChallenges": "Desafios de Acesso"
       }
     },
     "AdventureImport": {

@@ -4,13 +4,16 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openOpposedCheckDialogMock, createOpposedCheckMock, openCheckRequestDialogMock, createCheckRequestMock, openAdventureImporterMock } = vi.hoisted(() => ({
+const { openOpposedCheckDialogMock, createOpposedCheckMock, openCheckRequestDialogMock, createCheckRequestMock, openAdventureImporterMock, openAccessChallengeManagerMock } = vi.hoisted(() => ({
   openOpposedCheckDialogMock: vi.fn(),
   createOpposedCheckMock: vi.fn(),
   openCheckRequestDialogMock: vi.fn(),
   createCheckRequestMock: vi.fn(),
   openAdventureImporterMock: vi.fn(),
+  openAccessChallengeManagerMock: vi.fn(),
 }));
+
+vi.mock("../access-challenges/manager", () => ({ openAccessChallengeManager: openAccessChallengeManagerMock }));
 
 vi.mock("../adventure-import/adventure-import-application", () => ({
   openAdventureImporter: openAdventureImporterMock,
@@ -38,7 +41,7 @@ let handle: object;
 let element: { querySelector: ReturnType<typeof vi.fn> };
 let draggableArguments: unknown[] | null;
 let setPosition: ReturnType<typeof vi.fn>;
-let GmToolsPaletteClass: {
+let GmToolkitClass: {
   new (): PaletteInstance;
   DEFAULT_OPTIONS: {
     actions: Record<string, () => void | Promise<void>>;
@@ -83,8 +86,8 @@ beforeAll(async () => {
     },
   });
   vi.stubGlobal("game", { user: { isGM: true } });
-  const module = await import("./gm-tools-palette");
-  GmToolsPaletteClass = module.GmToolsPalette as unknown as typeof GmToolsPaletteClass;
+  const module = await import("./gm-toolkit");
+  GmToolkitClass = module.GmToolkit as unknown as typeof GmToolkitClass;
 });
 
 afterAll(() => vi.unstubAllGlobals());
@@ -95,27 +98,28 @@ beforeEach(() => {
   openCheckRequestDialogMock.mockReset().mockResolvedValue(null);
   createCheckRequestMock.mockReset().mockResolvedValue(undefined);
   openAdventureImporterMock.mockReset().mockResolvedValue(undefined);
+  openAccessChallengeManagerMock.mockReset().mockResolvedValue(undefined);
 });
 
-describe("GmToolsPalette", () => {
+describe("GmToolkit", () => {
   it("uses a compact, positioned frameless application", () => {
-    expect(GmToolsPaletteClass.DEFAULT_OPTIONS.position).toEqual({
+    expect(GmToolkitClass.DEFAULT_OPTIONS.position).toEqual({
       top: 80,
       left: 220,
       width: "auto",
       height: "auto",
     });
-    expect(GmToolsPaletteClass.DEFAULT_OPTIONS.window).toEqual({
+    expect(GmToolkitClass.DEFAULT_OPTIONS.window).toEqual({
       frame: false,
       positioned: true,
       resizable: false,
       minimizable: false,
     });
-    expect(GmToolsPaletteClass.DEFAULT_OPTIONS.window).not.toHaveProperty("title");
+    expect(GmToolkitClass.DEFAULT_OPTIONS.window).not.toHaveProperty("title");
   });
 
   it("allows only a GM to render", () => {
-    const palette = new GmToolsPaletteClass();
+    const palette = new GmToolkitClass();
     expect(palette._canRender({})).toBe(true);
 
     vi.stubGlobal("game", { user: { isGM: false } });
@@ -123,7 +127,7 @@ describe("GmToolsPalette", () => {
   });
 
   it("positions itself and delegates drag activation to Foundry for only the custom grip", async () => {
-    const palette = new GmToolsPaletteClass();
+    const palette = new GmToolkitClass();
 
     await palette._onFirstRender({}, {});
 
@@ -137,18 +141,21 @@ describe("GmToolsPalette", () => {
     ]);
   });
 
-  it("delegates all three GM actions", async () => {
-    expect(Object.keys(GmToolsPaletteClass.DEFAULT_OPTIONS.actions)).toEqual([
+  it("delegates all four GM actions", async () => {
+    expect(Object.keys(GmToolkitClass.DEFAULT_OPTIONS.actions)).toEqual([
       "requestCheck",
       "opposedCheck",
       "importAdventure",
+      "accessChallenges",
     ]);
-    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck();
-    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
-    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.importAdventure();
+    await GmToolkitClass.DEFAULT_OPTIONS.actions.requestCheck();
+    await GmToolkitClass.DEFAULT_OPTIONS.actions.opposedCheck();
+    await GmToolkitClass.DEFAULT_OPTIONS.actions.importAdventure();
+    await GmToolkitClass.DEFAULT_OPTIONS.actions.accessChallenges();
     expect(openCheckRequestDialogMock).toHaveBeenCalledExactlyOnceWith();
     expect(openOpposedCheckDialogMock).toHaveBeenCalledExactlyOnceWith();
     expect(openAdventureImporterMock).toHaveBeenCalledExactlyOnceWith();
+    expect(openAccessChallengeManagerMock).toHaveBeenCalledExactlyOnceWith();
   });
 
   it("creates a Check Request only after confirmation", async () => {
@@ -158,7 +165,7 @@ describe("GmToolsPalette", () => {
       difficulty: 12,
     };
     openCheckRequestDialogMock.mockResolvedValue(result);
-    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.requestCheck();
+    await GmToolkitClass.DEFAULT_OPTIONS.actions.requestCheck();
     expect(createCheckRequestMock).toHaveBeenCalledExactlyOnceWith(result);
   });
 
@@ -180,7 +187,7 @@ describe("GmToolsPalette", () => {
   ])("delegates creation after %s", async (label, result) => {
     openOpposedCheckDialogMock.mockResolvedValue(result);
 
-    await GmToolsPaletteClass.DEFAULT_OPTIONS.actions.opposedCheck();
+    await GmToolkitClass.DEFAULT_OPTIONS.actions.opposedCheck();
 
     expect(openOpposedCheckDialogMock).toHaveBeenCalledOnce();
     if (label === "confirmation") {
@@ -196,31 +203,31 @@ describe("GmToolsPalette", () => {
 describe("GM Tools Palette template and assets", () => {
   it("keeps the frameless palette out of the document layout", async () => {
     const css = await readFile(
-      fileURLToPath(new URL("../../../styles/gm-tools-palette.css", import.meta.url)),
+      fileURLToPath(new URL("../../../styles/gm-toolkit.css", import.meta.url)),
       "utf8",
     );
-    expect(css).toMatch(/\.ordemparanormal2\.op2-gm-tools-palette\s*\{[^}]*position:\s*fixed;/s);
-    expect(css).toContain("grid-template-columns: 10px repeat(3, 36px)");
+    expect(css).toMatch(/\.ordemparanormal2\.op2-gm-toolkit\s*\{[^}]*position:\s*fixed;/s);
+    expect(css).toContain("grid-template-columns: 10px repeat(4, 36px)");
     expect(css).toMatch(/button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
     expect(css).toMatch(/img\s*\{[^}]*width:\s*1\.62rem;[^}]*height:\s*1\.62rem;/s);
   });
 
-  it("renders one grip and exactly three accessible actions", async () => {
+  it("renders one grip and exactly four accessible actions", async () => {
     const template = await readFile(
-      fileURLToPath(new URL("../../../templates/applications/gm-tools-palette.hbs", import.meta.url)),
+      fileURLToPath(new URL("../../../templates/applications/gm-toolkit.hbs", import.meta.url)),
       "utf8",
     );
     const actions = [...template.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]);
 
-    expect(actions).toEqual(["requestCheck", "opposedCheck", "importAdventure"]);
+    expect(actions).toEqual(["requestCheck", "opposedCheck", "importAdventure", "accessChallenges"]);
     expect(template.match(/data-drag-handle/g)).toHaveLength(1);
     expect(template).toContain("assets/icons/gm-tools/rolling-dices.svg");
     expect(template).toContain("assets/icons/gm-tools/sword-clash.svg");
     expect(template).toContain("assets/icons/gm-tools/adventure-import.svg");
-    expect(template.match(/aria-hidden="true"/g)).toHaveLength(4);
+    expect(template.match(/aria-hidden="true"/g)).toHaveLength(5);
     expect(template.match(/alt=""/g)).toHaveLength(3);
-    expect(template.match(/aria-label=/g)).toHaveLength(4);
-    expect(template.match(/title=/g)).toHaveLength(3);
+    expect(template.match(/aria-label=/g)).toHaveLength(5);
+    expect(template.match(/title=/g)).toHaveLength(4);
     expect(template).not.toMatch(/fa-(?:solid|regular|brands)|d20|DialogV2|ChatMessage|socket|Actor/i);
   });
 

@@ -1,0 +1,47 @@
+<section class="op2-access__body" data-challenge-type="{{challengeType}}" data-status="{{status}}" data-wide="{{wide}}" data-round-limit="{{unlock.roundLimit}}" data-slot-count="{{unlock.slots.length}}">
+  <div class="op2-access__identity">
+    <img class="op2-access__portrait" src="{{participantImg}}" alt="" /><strong>{{participantName}}</strong>
+    {{#if succeeded}}<span class="op2-access__outcome op2-access__outcome--success">Sucesso</span>
+    {{else if jammed}}<span class="op2-access__outcome op2-access__outcome--failure">Falha</span>
+    {{else if unlock}}<span class="op2-access__meta"><img src="{{unlock.dieIcon}}" alt="" />{{unlock.attemptsPerRound}} tentativas/rodada</span>{{/if}}
+  </div>
+  {{#if isUnlock}}
+    <div class="op2-access__slots" style="--op2-slot-count: {{unlock.slots.length}}">
+      {{#each unlock.slots}}
+        <div class="op2-access__slot op2-access__slot--{{feedback}}">
+          <div class="op2-access__slot-control">
+            <select data-slot="{{index}}" aria-label="Posição {{label}}" {{#if disabled}}disabled{{/if}}>
+              <option value="">—</option>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{value}}</option>{{/each}}
+            </select>
+            <div class="op2-access__slot-face" aria-hidden="true"><strong>{{value}}</strong>{{#if showChevron}}<img src="systems/ordemparanormal2/assets/icons/access-challenges/chevron.svg" alt="" />{{/if}}</div>
+          </div>
+          {{#if feedback}}<span class="op2-access__feedback op2-access__feedback--{{feedback}}"><span aria-hidden="true">{{feedbackSymbol}}</span>{{feedbackLabel}}</span>{{/if}}
+        </div>
+      {{/each}}
+    </div>
+    {{#if unlock.roundLimit}}<div class="op2-access__notice op2-access__notice--round"><strong>Tentativas desta rodada esgotadas</strong><span>Aguardando o Mestre iniciar a próxima rodada.</span></div>{{/if}}
+    {{#if unlock.success}}<div class="op2-access__notice op2-access__notice--success"><strong>FECHADURA DESTRANCADA</strong><span>A fechadura foi destrancada. O acesso está livre.</span></div>
+      <p class="op2-access__success-summary">Desafio superado em {{unlock.round}} {{unlock.roundLabel}} ({{unlock.attemptsUsed}}/{{unlock.resistance}} tentativas totais)</p>
+    {{else}}
+      {{#if unlock.jammed}}<div class="op2-access__notice op2-access__notice--danger"><strong>FECHADURA DANIFICADA</strong><span>Ela não pode mais ser aberta desta forma.</span></div>{{/if}}
+      {{#if unlock.cancelled}}<div class="op2-access__notice">Este desafio foi cancelado pelo Mestre.</div>{{/if}}
+      <div class="op2-access__counters"><div><small>TENTATIVAS DA RODADA</small><strong>{{unlock.attemptsThisRound}} / {{unlock.attemptsPerRound}}</strong></div>
+        <div><small>TENTATIVAS TOTAIS</small><strong>{{unlock.attemptsUsed}} / {{unlock.resistance}}</strong></div></div>
+      <button class="op2-access__primary" type="button" data-action="attemptUnlock" {{#unless unlock.canAct}}disabled{{/unless}}>{{#if unlock.jammed}}MECANISMO TRAVADO{{else}}<img src="{{unlock.dieIcon}}" alt="" />DESTRANCAR{{/if}}</button>
+    {{/if}}
+  {{/if}}
+  {{#if isBreak}}
+    <div class="op2-access__obstacle"><div class="op2-access__obstacle-heading"><small>OBSTÁCULO</small><strong>{{break.obstacle}}</strong></div>
+      <div class="op2-access__progress"><div class="op2-access__resistance-label"><span>Resistência restante</span><b>{{break.remaining}} / {{break.pa}}</b></div>
+        <div class="op2-access__bar"><span style="width: {{break.percentage}}%"></span></div></div>
+    </div>
+    {{#if break.failed}}<div class="op2-access__attempt-feedback op2-access__attempt-feedback--failure"><strong>FALHA</strong><span>Força insuficiente. RA +0</span></div>{{/if}}
+    {{#if break.progressed}}<div class="op2-access__attempt-feedback op2-access__attempt-feedback--success"><strong>SUCESSO</strong><span>Estrutura cedendo. RA +{{break.latestRA}}</span></div>{{/if}}
+    {{#if break.completed}}<div class="op2-access__notice op2-access__notice--success"><strong>OBSTÁCULO ARROMBADO</strong><span>O obstáculo foi arrombado.</span></div>{{/if}}
+    {{#if break.cancelled}}<div class="op2-access__notice">Este desafio foi cancelado pelo Mestre.</div>{{/if}}
+    {{#unless break.completed}}<div class="op2-access__chips"><span>Atletismo</span><span>DT {{break.difficulty}}</span><span>Custo: 1 PV</span></div>{{/unless}}
+    <button class="op2-access__primary" type="button" data-action="attemptBreak" {{#unless break.canAct}}disabled{{/unless}}>⛏ ARROMBAR</button>
+  {{/if}}
+  {{#if error}}<p class="op2-access__error" role="alert">{{error}}</p>{{/if}}
+  {{#if chatWarning}}<p class="op2-access__error" role="status">{{chatWarning}}</p>{{/if}}
+</section>

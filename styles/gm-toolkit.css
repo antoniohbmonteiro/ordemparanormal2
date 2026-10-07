@@ -1,4 +1,4 @@
-.ordemparanormal2.op2-gm-tools-palette {
+.ordemparanormal2.op2-gm-toolkit {
   position: fixed;
   width: max-content;
   min-width: 0;
@@ -10,14 +10,14 @@
   box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 42%);
 }
 
-.op2-gm-tools-palette__toolbar {
+.op2-gm-toolkit__toolbar {
   display: grid;
-  grid-template-columns: 10px repeat(3, 36px);
+  grid-template-columns: 10px repeat(4, 36px);
   align-items: stretch;
   gap: 0.2rem;
 }
 
-.op2-gm-tools-palette__grip {
+.op2-gm-toolkit__grip {
   width: 10px;
   border-radius: 0.2rem;
   background: radial-gradient(circle, rgb(241 242 244 / 58%) 1px, transparent 1.5px) center / 5px 5px;
@@ -25,11 +25,11 @@
   touch-action: none;
 }
 
-.op2-gm-tools-palette__grip:active {
+.op2-gm-toolkit__grip:active {
   cursor: grabbing;
 }
 
-.op2-gm-tools-palette__toolbar button {
+.op2-gm-toolkit__toolbar button {
   display: grid;
   width: 36px;
   height: 36px;
@@ -44,13 +44,13 @@
   cursor: pointer;
 }
 
-.op2-gm-tools-palette__toolbar button:hover {
+.op2-gm-toolkit__toolbar button:hover {
   border-color: #d05a63;
   background: rgb(127 37 43 / 55%);
   box-shadow: 0 0 0.35rem rgb(181 71 79 / 48%);
 }
 
-.op2-gm-tools-palette__toolbar button:focus-visible {
+.op2-gm-toolkit__toolbar button:focus-visible {
   outline: 2px solid #e36a72;
   outline-offset: 1px;
   border-color: #e36a72;
@@ -58,9 +58,39 @@
   box-shadow: 0 0 0.35rem rgb(181 71 79 / 48%);
 }
 
-.op2-gm-tools-palette__toolbar img {
+.op2-gm-toolkit__toolbar img {
   display: block;
   width: 1.62rem;
   height: 1.62rem;
   pointer-events: none;
+}
+
+.op2-gm-toolkit__access-icon {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: rgb(34 84 61 / 35%);
+}
+
+.op2-gm-toolkit__access-icon::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 11px;
+  left: 8px;
+  top: 4px;
+  border: 2px solid #22c55e;
+  border-radius: 6px;
+}
+
+.op2-gm-toolkit__access-icon::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 10px;
+  left: 5px;
+  top: 13px;
+  border-radius: 2px;
+  background: #22c55e;
 }

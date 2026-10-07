@@ -1,0 +1,16 @@
+<section class="op2-access__body op2-access__manager-body">
+  <div class="op2-access__manager-panel">
+  <div class="op2-access__section-header"><h3>DESAFIOS ATIVOS</h3><button type="button" data-action="newChallenge">+ Novo desafio</button></div>
+  <div class="op2-access__manager-list">
+    {{#each challenges}}
+      <article class="op2-access__manager-card">
+        <div class="op2-access__manager-top"><span class="op2-access__manager-name"><img class="op2-access__portrait" src="{{img}}" alt="" /><strong>{{name}}</strong></span><span class="op2-access__type op2-access__type--{{typeClass}}">{{typeLabel}}</span></div>
+        <div class="op2-access__manager-info"><span>{{obstacle}}</span><small>{{detail}}</small></div>
+        <div class="op2-access__manager-action"><button type="button" data-action="openChallenge" data-session-id="{{id}}">Abrir</button></div>
+      </article>
+    {{else}}
+      <div class="op2-access__empty">Nenhum desafio ativo. Crie um novo desafio para começar.</div>
+    {{/each}}
+  </div>
+  </div>
+</section>

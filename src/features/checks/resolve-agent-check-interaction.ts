@@ -29,6 +29,7 @@ export interface ResolveAgentCheckInteractionOptions {
   readonly allowDifficulty?: boolean;
   readonly lockedDifficulty?: number;
   readonly signal?: AbortSignal;
+  readonly reservedHealth?: number;
 }
 
 export interface ResolvedAgentCheckInteraction {
@@ -47,7 +48,10 @@ export async function prepareAgentCheckInteraction(
   const source = readAgentCheckSource(actor);
   const localize = (key: string): string => game.i18n.localize(key);
   const input = buildAgentCheck(selection, source, localize);
-  const abilitySource = readAgentCheckAbilities(actor);
+  const currentAbilitySource = readAgentCheckAbilities(actor);
+  const reservedHealth = options.reservedHealth ?? 0;
+  if (!Number.isInteger(reservedHealth) || reservedHealth < 0) throw new Error("Reserved health must be non-negative.");
+  const abilitySource = { ...currentAbilitySource, health: Math.max(0, currentAbilitySource.health - reservedHealth) };
   const hasCheckAbilities = abilitySource.abilities.some((ability) =>
     ability.uses.some(({ checkIntegration }) => checkIntegration !== null),
   );

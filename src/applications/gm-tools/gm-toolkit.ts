@@ -10,21 +10,23 @@ import { createOpposedCheck } from "../../features/checks/create-opposed-check";
 import { openCheckRequestDialog } from "../checks/check-request-dialog";
 import { createCheckRequest } from "../../features/checks/create-check-request";
 import { openAdventureImporter } from "../adventure-import/adventure-import-application";
+import { openAccessChallengeManager } from "../access-challenges/manager";
 
-const GM_TOOLS_PALETTE_TEMPLATE =
-  "systems/ordemparanormal2/templates/applications/gm-tools-palette.hbs";
+const GM_TOOLKIT_TEMPLATE =
+  "systems/ordemparanormal2/templates/applications/gm-toolkit.hbs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
+export class GmToolkit extends HandlebarsApplicationMixin(ApplicationV2) {
   static override DEFAULT_OPTIONS = {
-    id: "ordemparanormal2-gm-tools-palette",
+    id: "ordemparanormal2-gm-toolkit",
     actions: {
-      requestCheck: GmToolsPalette.#onRequestCheck,
-      opposedCheck: GmToolsPalette.#onOpposedCheck,
-      importAdventure: GmToolsPalette.#onImportAdventure,
+      requestCheck: GmToolkit.#onRequestCheck,
+      opposedCheck: GmToolkit.#onOpposedCheck,
+      importAdventure: GmToolkit.#onImportAdventure,
+      accessChallenges: GmToolkit.#onAccessChallenges,
     },
-    classes: ["ordemparanormal2", "op2-gm-tools-palette"],
+    classes: ["ordemparanormal2", "op2-gm-toolkit"],
     position: { top: 80, left: 220, width: "auto" as const, height: "auto" as const },
     window: {
       frame: false,
@@ -35,7 +37,7 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
-    main: { template: GM_TOOLS_PALETTE_TEMPLATE },
+    main: { template: GM_TOOLKIT_TEMPLATE },
   };
 
   #draggable: Draggable | null = null;
@@ -52,7 +54,7 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
     await super._onFirstRender(context, options);
     this.setPosition();
     const handle = this.element.querySelector<HTMLElement>("[data-drag-handle]");
-    if (!handle) throw new Error("Missing GM Tools Palette drag handle.");
+    if (!handle) throw new Error("Missing GM Toolkit drag handle.");
 
     const DraggableImplementation = foundry.applications.ux.Draggable.implementation;
     this.#draggable = new DraggableImplementation(
@@ -99,5 +101,9 @@ export class GmToolsPalette extends HandlebarsApplicationMixin(ApplicationV2) {
         game.i18n.localize("ORDEMPARANORMAL2.AdventureImport.Errors.Open"),
       );
     }
+  }
+
+  static async #onAccessChallenges(): Promise<void> {
+    await openAccessChallengeManager();
   }
 }

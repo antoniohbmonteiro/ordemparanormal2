@@ -35,8 +35,10 @@ export type AbilityUseCostPlanResult =
 export function resolveAbilityUseCostPlan(
   claims: readonly AbilityUseCostClaim[],
   balances: AbilityUseCostBalances,
+  fixedHealthCost = 0,
 ): AbilityUseCostPlanResult {
-  const healthAmount = claims
+  if (!Number.isInteger(fixedHealthCost) || fixedHealthCost < 0) throw new Error("Fixed health cost must be non-negative.");
+  const healthAmount = fixedHealthCost + claims
     .filter(({ cost }) => cost.source === "health")
     .reduce((sum, { cost }) => sum + cost.amount, 0);
   const determinationAmount = claims

@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Break Icon">
+<rect width="36" height="36" rx="10" fill="#825014" fill-opacity="0.25"/>
+<line id="Crack 1" x1="13.7075" y1="9.54247" x2="18.4707" y2="12.2925" stroke="#D99132" stroke-width="2.5" stroke-linecap="round"/>
+<line id="Crack 2" x1="17.4575" y1="12.2925" x2="22.2207" y2="9.54247" stroke="#D99132" stroke-width="2.5" stroke-linecap="round"/>
+<line id="Crack 3" x1="13.7075" y1="21.5425" x2="18.4707" y2="24.2925" stroke="#D99132" stroke-width="2.5" stroke-linecap="round"/>
+<line id="Crack 4" x1="17.4575" y1="24.2925" x2="22.2207" y2="21.5425" stroke="#D99132" stroke-width="2.5" stroke-linecap="round"/>
+</g>
+</svg>

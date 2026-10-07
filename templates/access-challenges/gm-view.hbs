@@ -1,0 +1,39 @@
+<section class="op2-access__body" data-challenge-type="{{challengeType}}" data-status="{{status}}" data-wide="{{wide}}" data-terminal="{{terminal}}">
+  <div class="op2-access__identity">{{#if isBreak}}<img class="op2-access__avatar-dot" src="systems/ordemparanormal2/assets/icons/access-challenges/avatar-dot.svg" alt="" />{{else}}<img class="op2-access__portrait" src="{{participantImg}}" alt="" />{{/if}}
+    <strong>{{participantName}}</strong>{{#if isUnlock}}<span class="op2-access__crime">CRIME d{{unlock.crimeDie}}</span>{{/if}}</div>
+  <hr class="op2-access__divider" />
+  {{#if isUnlock}}
+    <div class="op2-access__secret"><small>GABARITO SECRETO (SENHA)</small><div class="op2-access__secret-row">
+      <div class="op2-access__secret-values">{{#each unlock.secret}}<b>{{this}}</b>{{/each}}</div>
+      <div class="op2-access__secret-counts"><span>Tentativas da rodada: {{unlock.attemptsThisRound}} / {{unlock.attemptsPerRound}}</span><span>Tentativas totais: {{unlock.attemptsUsed}} / {{unlock.resistance}}</span></div>
+    </div></div>
+    <div class="op2-access__section"><h3 class="op2-access__section-title">HISTÓRICO DE TENTATIVAS</h3><div class="op2-access__history">
+      {{#each unlock.history}}<article class="op2-access__history-entry"><div class="op2-access__history-heading"><strong>Tentativa #{{number}}</strong><span>Rodada {{round}}</span></div>
+        <div class="op2-access__mini-slots">{{#each slots}}<div class="op2-access__mini-slot op2-access__mini-slot--{{feedback}}"><b>{{value}}</b>
+          <span class="op2-access__feedback op2-access__feedback--{{feedback}}"><span aria-hidden="true">{{feedbackSymbol}}</span>{{feedbackLabel}}</span></div>{{/each}}</div>
+      </article>{{else}}<p class="op2-access__muted">Aguardando a primeira tentativa.</p>{{/each}}
+    </div></div>
+    {{#if unlock.success}}<div class="op2-access__notice op2-access__notice--success"><strong>FECHADURA DESTRANCADA</strong><span>A combinação correta foi encontrada.</span></div>{{/if}}
+    {{#if unlock.jammed}}<div class="op2-access__notice op2-access__notice--danger"><strong>FECHADURA DANIFICADA</strong><span>O limite total de tentativas foi atingido.</span></div>{{/if}}
+    {{#if canCancel}}<div class="op2-access__gm-actions"><button class="{{#if unlock.canAdvance}}op2-access__primary{{else}}op2-access__advance-pending{{/if}}" data-action="advanceRound" type="button" {{#unless unlock.canAdvance}}disabled{{/unless}} {{#if busy}}disabled{{/if}}>Avançar para Rodada {{unlock.nextRound}}</button>
+      <button class="op2-access__text-button" type="button" data-action="cancelChallenge" {{#if busy}}disabled{{/if}}>Cancelar desafio</button></div>{{/if}}
+  {{/if}}
+  {{#if isBreak}}
+    <div class="op2-access__section"><h3 class="op2-access__section-title">INFORMAÇÕES DO DESAFIO</h3><div class="op2-access__break-info">
+      <strong class="op2-access__obstacle-name">{{obstacle}}</strong>
+      <div class="op2-access__chips"><span>Atletismo</span><span>DT {{break.difficulty}}</span><span>1 PV / tentativa</span></div>
+    </div></div>
+    <div class="op2-access__progress"><div class="op2-access__resistance-label"><span>RESISTÊNCIA RESTANTE</span><b>{{break.remaining}} / {{break.pa}}</b></div>
+      <div class="op2-access__bar"><span style="width: {{break.percentage}}%"></span></div></div>
+    {{#if break.completed}}<div class="op2-access__notice op2-access__notice--success"><strong>OBSTÁCULO ARROMBADO</strong><span>O obstáculo foi arrombado.</span></div>{{/if}}
+    <div class="op2-access__section"><h3 class="op2-access__section-title">HISTÓRICO DE TENTATIVAS</h3><div class="op2-access__history">
+      {{#each break.history}}<article class="op2-access__break-entry {{#if success}}op2-access__break-entry--success{{else}}op2-access__break-entry--failure{{/if}}">
+        <div class="op2-access__break-entry-content"><div class="op2-access__history-heading"><strong>Tentativa #{{number}}</strong><b>{{remaining}} / {{../break.pa}}</b></div>
+          <div class="op2-access__history-heading"><span class="op2-access__feedback {{#if success}}op2-access__feedback--exact{{else}}op2-access__feedback--low{{/if}}">{{#if success}}Sucesso{{else}}Falha{{/if}}</span><span>RA +{{addedRA}}</span></div></div>
+        <div class="op2-access__bar"><span style="width: {{percentage}}%"></span></div>
+      </article>{{else}}<p class="op2-access__muted">Aguardando a primeira tentativa.</p>{{/each}}
+    </div></div>
+    {{#if canCancel}}<div class="op2-access__break-actions"><button class="op2-access__secondary" type="button" data-action="cancelChallenge" {{#if busy}}disabled{{/if}}>Cancelar desafio</button></div>
+    {{else}}<button class="op2-access__text-button" type="button" data-action="cancelChallenge" disabled>Cancelar desafio</button>{{/if}}
+  {{/if}}
+</section>

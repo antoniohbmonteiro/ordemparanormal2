@@ -12,7 +12,7 @@ npm run typecheck
 npm run check
 ```
 
-Close Foundry before the production build to release generated LevelDB packs.
+Close Foundry before running `npm run build:packs` if the local compendiums need to be generated.
 
 An optional native-schema test uses a locally installed Foundry v14 common module without database writes, copied Foundry source or distributed adventure artwork. Set the installation path appropriate for the machine:
 

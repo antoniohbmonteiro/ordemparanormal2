@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:packs": "node scripts/build-packs.mjs",
-    "build": "npm run build:packs && vite build",
+    "build": "vite build",
     "check": "npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {

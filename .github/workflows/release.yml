@@ -37,6 +37,9 @@ jobs:
       - name: Check project
         run: npm run check
 
+      - name: Build compendiums
+        run: npm run build:packs
+
       - name: Read and validate release metadata
         shell: bash
         run: |

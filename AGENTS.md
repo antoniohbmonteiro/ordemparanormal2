@@ -531,7 +531,7 @@ focused Vitest test(s)
 → npm run check before completion
 ```
 
-`npm run check` is the project release-quality gate and currently performs type checking, the Vitest suite, and the production build.
+`npm run check` runs type checking, the Vitest suite, and the Vite production build. Release packaging also runs `npm run build:packs`.
 
 Use three validation levels as appropriate:
 
@@ -543,7 +543,7 @@ Do not make browser/UI tests the only validation of game rules.
 
 When changing templates/styles, test the relevant native Foundry states too: hover/focus, window controls, permissions, rerenders, resizing, and scroll behavior.
 
-If the production build touches generated LevelDB packs, close Foundry before the final `npm run check`. An open Foundry process can hold files in `packs/` and cause an `EBUSY`/lock failure that is environmental rather than a code failure.
+Run `npm run build:packs` when pack sources change or generated packs are missing. Close Foundry for that command because it can hold the LevelDB files in `packs/` open.
 
 ## Versioning and releases
 
@@ -618,7 +618,7 @@ Pushing a `v*` tag causes the workflow to:
 1. install dependencies;
 2. run `npm run check`;
 3. validate synchronized versions, tag name, `RELEASE_NOTES.md`, download URL, and stable manifest URL;
-4. build/package `ordemparanormal2-vX.Y.Z.zip`;
+4. package the Vite build and generated compendiums as `ordemparanormal2-vX.Y.Z.zip`;
 5. create or update the GitHub Release and upload the ZIP plus `system.json`;
 6. publish the package version to Foundry when the release token is configured;
 7. announce the release on Discord when the webhook is configured.

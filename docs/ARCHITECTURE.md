@@ -324,7 +324,7 @@ Current Check snapshots are V4. They retain V3's resolved extra dice and add imm
 
 ## Compendium build boundary
 
-Reviewed Item sources live under `packs-src/profiles`, `packs-src/abilities`, and `packs-src/occupations`. The build script validates the three hard-coded source/output pairs, removes only their generated destinations, and invokes the official Foundry CLI to compile LevelDB packs under ignored `packs/` directories. `build` and `dev` compile packs before Vite, while release packaging includes the generated directories and verifies all three `CURRENT` files.
+Reviewed Item sources live under `packs-src/`. The `build:packs` script validates its source and output paths and invokes the official Foundry CLI to regenerate the LevelDB packs under `packs/`. The `build`, `dev` and `check` scripts use Vite for the system code. The release workflow runs `build:packs` before packaging.
 
 The Occupation pack contains only the eight approved names, stable ids, fallback images, and empty system data. It is a reusable selection catalog, not a source of descriptions, grants, bonuses, or automation.
 

@@ -4,7 +4,7 @@ Use Foundry v14 em um World de teste com o sistema atualizado. O teste manual de
 
 ## Preparação
 
-1. Feche o Foundry antes de compilar. Execute `npm run check` no repositório e abra o Foundry novamente.
+1. Execute `npm run check` no repositório e recarregue o Foundry.
 2. Use o World `Teste Import Mundo Ordem 2`, ou outro World descartável de teste, com o sistema `ordemparanormal2`. Entre como GM ativo.
 3. Abra **Importar Aventura** nas Ferramentas do Mestre. Selecione seus arquivos licenciados em `D:/Downloads/import-assets-ordem2/` pelo navegador normal. O PDF e a senha ficam apenas na memória; a senha é solicitada quando necessária.
 4. Faça a sequência abaixo em um World inicialmente sem os agentes importados. Assets e handouts anteriores podem existir.

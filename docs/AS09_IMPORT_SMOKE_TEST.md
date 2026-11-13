@@ -30,7 +30,7 @@ Não havia processo Foundry ativo durante a implementação. Os cenários abaixo
 - [ ] Provocar falha de upload/conversão; conferir contagens parciais e retry sem duplicações/associações incompletas.
 - [ ] Conferir restrições para jogador/GM inativo, troca de autoridade, fechamento/reabertura, rerender, hover/focus, teclado, resize, scroll e controles nativos.
 
-Fechar Foundry antes do gate final, que gera packs LevelDB. ZIP e imagens ficam fora do Git. Versão/tag/publicação exigem tarefa de release separada.
+Fechar Foundry antes de regenerar os compêndios com `npm run build:packs`. ZIP e imagens ficam fora do Git. Versão/tag/publicação exigem tarefa de release separada.
 
 ## Resultado automatizado da implementação em 2026-10-05
 

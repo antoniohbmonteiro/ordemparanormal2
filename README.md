@@ -149,6 +149,10 @@ npm ci
 npm run check
 ```
 
+Use `npm run check` para validar tipos, testes e build do código com o Foundry aberto. Para recompilar a cada alteração, use `npm run dev`.
+
+Gere os compêndios com `npm run build:packs` na primeira instalação local ou depois de alterar `packs-src/`. Feche o Foundry para essa etapa, pois ele mantém os bancos dos compêndios abertos. O workflow de release gera os compêndios antes de montar o ZIP.
+
 Stack principal: **TypeScript · Vite · ES Modules · TypeDataModel · ApplicationV2 · Vitest · Foundry VTT v14+**
 
 ---

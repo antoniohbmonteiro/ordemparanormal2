@@ -1,4 +1,4 @@
-import { ABILITY_CARD_KIND, ABILITY_ITEM_TYPE, CARD_PRESENTATION_FLAG, SYSTEM_ID } from "../../../config/system-config";
+import { ABILITY_CARD_KIND, ABILITY_ITEM_TYPE, CARD_PRESENTATION_FLAG, SYSTEM_ID, THREAT_ACCENT_COLOR, THREAT_ACTOR_TYPE } from "../../../config/system-config";
 import type { AbilityUseResult } from "../../../features/abilities/use-ability";
 import { buildAbilityCardViewModel, type AbilityCardViewModel } from "../../../ui/chat/ability-card-view-model";
 import { localizeAbilityCost } from "../../../ui/abilities/ability-cost-label";
@@ -30,14 +30,20 @@ export async function buildAbilityCardContext(ability: foundry.documents.Item, e
   });
 }
 
-export async function publishAbilityMessage(actor: foundry.documents.Actor, ability: foundry.documents.Item, execution?: AbilityExecution): Promise<void> {
+export async function publishAbilityMessage(
+  actor: foundry.documents.Actor,
+  ability: foundry.documents.Item,
+  execution?: AbilityExecution,
+  context?: { readonly token?: foundry.documents.TokenDocument },
+): Promise<void> {
   if (ability.type !== ABILITY_ITEM_TYPE) return;
-  const accentColor = readAgentAccentColor(actor);
+  const accentColor = actor.type === THREAT_ACTOR_TYPE ? THREAT_ACCENT_COLOR : readAgentAccentColor(actor);
   await ensureSharedPartialsLoaded();
   const content = await foundry.applications.handlebars.renderTemplate(ABILITY_CARD_TEMPLATE, await buildAbilityCardContext(ability, execution));
-  await ChatMessage.create({
+  const message = await ChatMessage.create({
     content,
-    speaker: ChatMessage.getSpeaker({ actor }),
+    speaker: ChatMessage.getSpeaker(context?.token ? { actor, token: context.token } : { actor }),
     flags: { [SYSTEM_ID]: { [CARD_PRESENTATION_FLAG]: { card: ABILITY_CARD_KIND, accentColor } } },
   });
+  if (!message) throw new Error("Ability chat message creation was not confirmed.");
 }

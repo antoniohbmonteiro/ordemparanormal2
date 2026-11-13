@@ -1,0 +1,14 @@
+  {{#if @root.canRoll}}
+    <button type="button" class="op2-threat-check" data-action="useAbilityForm" data-item-id="{{itemId}}" data-use-id="{{id}}"
+      {{#if unavailable}}disabled title="{{unavailable}}"{{/if}} aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.UseAbility'}} {{name}}">
+      {{#if checkPreview}}<span class="op2-threat-check__icon" aria-hidden="true"></span><span>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Check'}}</span> <strong>{{checkPreview}}</strong>
+      {{else}}{{localize 'ORDEMPARANORMAL2.ThreatSheet.UseAbility'}}{{/if}}
+    </button>
+  {{else if checkPreview}}
+    <span class="op2-threat-check"><span class="op2-threat-check__icon" aria-hidden="true"></span><span>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Check'}}</span> <strong>{{checkPreview}}</strong></span>
+  {{/if}}
+  {{#if costLabel}}<span class="op2-threat-muted">{{costLabel}}</span>{{/if}}
+  {{#if unavailable}}<span class="op2-threat-muted">{{unavailable}}</span>{{/if}}
+{{#if damageSummary}}
+  <span class="op2-threat-damage">{{#if checkPreview}}<span class="op2-threat-muted" aria-hidden="true">·</span>{{/if}} <span>{{damageSummary.label}}</span> <strong>{{damageSummary.expression}}</strong></span>
+{{/if}}

@@ -1,0 +1,115 @@
+<div class="op2-threat-layout">
+  <div class="op2-threat-layout__main">
+    <section class="op2-panel op2-threat-identity" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Identity'}}">
+      <header class="op2-threat-identity__header">
+        {{> "systems/ordemparanormal2/templates/actor/partials/portrait.hbs" image=portrait editable=canEditStructure altKey="ORDEMPARANORMAL2.AgentSheet.Fields.Portrait" editKey="ORDEMPARANORMAL2.AgentSheet.Tooltips.EditPortrait"}}
+        <div class="op2-threat-identity__fields">
+          <div class="op2-identity__name-row">
+            {{#if canEditStructure}}
+              <input class="op2-threat-name" type="text" name="name" value="{{name}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.Name'}}" required>
+            {{else}}
+              <h1 class="op2-identity__name">{{name}}</h1>
+            {{/if}}
+            {{#if editable}}
+              <button class="op2-edit-mode-toggle{{#if editMode}} is-active{{/if}}" type="button" data-action="toggleEditMode" aria-pressed="{{editMode}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.EditMode'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.EditMode'}}"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-edit.svg" alt=""></button>
+            {{/if}}
+          </div>
+          <div class="op2-threat-classification">
+            <label class="op2-threat-control">
+              <span>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Category'}}</span>
+              {{#if canEditStructure}}
+                <input name="system.category" type="text" value="{{threat.category}}" list="{{applicationId}}-categories" placeholder="{{localize 'ORDEMPARANORMAL2.ThreatSheet.NotInformed'}}">
+                <datalist id="{{applicationId}}-categories"><option value="{{localize 'ORDEMPARANORMAL2.ThreatSheet.CategoryCreature'}}"></datalist>
+              {{else}}
+                <span class="op2-threat-select-display">{{#if threat.category}}<span class="op2-threat-swatch"></span>{{threat.category}}{{else}}{{localize 'ORDEMPARANORMAL2.ThreatSheet.NotInformed'}}{{/if}}</span>
+              {{/if}}
+            </label>
+            <div class="op2-threat-control">
+              <span>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Element'}}</span>
+              <div class="op2-threat-select-display op2-threat-elements">
+                {{#each threat.elements}}
+                  <span class="op2-threat-element"><span class="op2-threat-swatch"></span>{{this}}
+                    {{#if @root.canEditStructure}}<button type="button" class="op2-threat-icon-button" data-action="removeElement" data-entry-id="{{this}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.RemoveElement'}} {{this}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>{{/if}}
+                  </span>
+                {{else}}
+                  <span>{{localize 'ORDEMPARANORMAL2.ThreatSheet.NoElements'}}</span>
+                {{/each}}
+                {{#if canEditStructure}}<button type="button" class="op2-threat-icon-button" data-action="addElement" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.AddElement'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.AddElement'}}"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-plus.svg" alt=""></button>{{/if}}
+              </div>
+            </div>
+          </div>
+          <section class="op2-resources op2-threat-resources" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Resources'}}">
+            {{> "systems/ordemparanormal2/templates/actor/partials/resource-fields.hbs" resource=threat.health editable=editable showProgress=true}}
+            {{#if editable}}
+              <label class="op2-resource op2-threat-rd">
+                <span class="op2-resource__label"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-shield.svg" alt="">{{localize 'ORDEMPARANORMAL2.ThreatSheet.RD'}}</span>
+                <input type="number" name="system.damageReduction" value="{{#if threat.hasDamageReduction}}{{threat.damageReduction}}{{/if}}" min="0" step="1" placeholder="—">
+              </label>
+            {{else if threat.hasDamageReduction}}
+              <div class="op2-resource op2-threat-rd">
+                <span class="op2-resource__label"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-shield.svg" alt="">{{localize 'ORDEMPARANORMAL2.ThreatSheet.RD'}}</span>
+                <output>{{threat.damageReduction}}</output>
+              </div>
+            {{/if}}
+          </section>
+        </div>
+      </header>
+      <section class="op2-attributes" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Attributes'}}">
+        {{#each threat.attributes}}
+          {{> "systems/ordemparanormal2/templates/actor/partials/attribute-card.hbs" attribute=this canRoll=@root.canRoll editable=@root.canEditStructure}}
+        {{/each}}
+      </section>
+    </section>
+
+    {{> "systems/ordemparanormal2/templates/actor/partials/content-tabs.hbs" tabs=tabs action="selectThreatTab" labelKey="ORDEMPARANORMAL2.AgentSheet.Sections.Content"}}
+
+    <div class="op2-panel op2-threat-content">
+      <section class="op2-tab-panel tab {{tabs.abilities.cssClass}}" data-group="content" data-tab="abilities">
+        {{> "systems/ordemparanormal2/templates/actor/partials/ability-cards.hbs" abilities=threat.abilities abilityToolbar=canEditStructure}}
+        {{> "systems/ordemparanormal2/templates/actor/threat-sheet-properties.hbs"}}
+      </section>
+      {{#if tabs.notes}}
+        <section class="op2-tab-panel tab {{tabs.notes.cssClass}}" data-group="content" data-tab="notes">
+          {{#if tabs.notes.active}}{{> "systems/ordemparanormal2/templates/actor/threat-sheet-notes.hbs"}}{{/if}}
+        </section>
+      {{/if}}
+    </div>
+  </div>
+
+  <aside class="op2-threat-layout__side op2-panel">
+    <section class="op2-threat-side-section" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Skills.Title'}}">
+      <header class="op2-threat-section-header op2-threat-section-header--skills">
+        <h2>{{localize 'ORDEMPARANORMAL2.AgentSheet.Skills.Title'}}</h2>
+        {{#if editable}}<button class="op2-threat-icon-button" type="button" data-action="manageSkills" aria-pressed="{{editMode}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.ManageSkills'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.ManageSkills'}}"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-stats.svg" alt=""></button>{{/if}}
+        <button class="op2-threat-icon-button" type="button" data-action="toggleSkillSearch" aria-pressed="{{showSearch}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.SearchSkills'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.SearchSkills'}}"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-search.svg" alt=""></button>
+      </header>
+      {{#if showSearch}}<input class="op2-threat-search" type="search" data-skill-search value="{{search}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.SearchSkills'}}" placeholder="{{localize 'ORDEMPARANORMAL2.ThreatSheet.SearchSkills'}}">{{/if}}
+      <div class="op2-threat-skill-list">
+        {{#each threat.skills}}
+          <div class="op2-threat-skill" data-skill-search-text="{{searchText}}">
+            {{> "systems/ordemparanormal2/templates/actor/partials/skill-row.hbs" skill=this checkKind=kind canRoll=@root.canRoll editable=@root.canEditStructure}}
+            {{#if @root.canEditStructure}}<button class="op2-threat-icon-button" type="button" data-action="removeSkill" data-entry-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.RemoveSkill'}} {{label}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>{{/if}}
+          </div>
+        {{else}}
+          <p class="op2-threat-empty">{{localize 'ORDEMPARANORMAL2.ThreatSheet.NoSkills'}}</p>
+        {{/each}}
+        <p class="op2-threat-empty" data-skill-search-empty hidden>{{localize 'ORDEMPARANORMAL2.ThreatSheet.NoSkillResults'}}</p>
+      </div>
+      {{#if canEditStructure}}{{#if canAddSkill}}<button class="op2-threat-text-button" type="button" data-action="addSkill"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-plus.svg" alt=""> {{localize 'ORDEMPARANORMAL2.ThreatSheet.AddSkill'}}</button>{{/if}}{{/if}}
+    </section>
+    <section class="op2-threat-side-section" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.Conditions'}}">
+      <header class="op2-threat-section-header">
+        <h2>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Conditions'}}</h2>
+        {{#if editable}}<button class="op2-threat-icon-button op2-threat-icon-button--bordered" type="button" data-action="addCondition" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.AddCondition'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.AddCondition'}}"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-plus.svg" alt=""></button>{{/if}}
+      </header>
+      {{#each threat.conditions}}
+        <div class="op2-threat-condition">
+          <span>{{label}}</span>
+          {{#if @root.editable}}<button class="op2-threat-icon-button" type="button" data-action="removeCondition" data-entry-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.RemoveCondition'}} {{label}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>{{/if}}
+        </div>
+      {{else}}
+        <p class="op2-threat-empty">— &nbsp; {{localize 'ORDEMPARANORMAL2.ThreatSheet.NoConditions'}}</p>
+      {{/each}}
+    </section>
+  </aside>
+</div>

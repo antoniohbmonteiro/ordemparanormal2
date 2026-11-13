@@ -5,8 +5,10 @@ import {
   OCCUPATION_ITEM_TYPE,
   POINT_OF_INTEREST_ITEM_TYPE,
   PROFILE_ITEM_TYPE,
+  THREAT_ACTOR_TYPE,
 } from "../config/system-config";
 import { AgentDataModel } from "../documents/actor/agent-data-model";
+import { ThreatDataModel } from "../documents/actor/threat-data-model";
 import { ProfileDataModel } from "../documents/item/profile-data-model";
 import { AbilityDataModel } from "../documents/item/ability-data-model";
 import { OccupationDataModel } from "../documents/item/occupation-data-model";
@@ -15,6 +17,7 @@ import { EquipmentDataModel } from "../documents/item/equipment-data-model";
 
 export function registerDataModels(): void {
   CONFIG.Actor.dataModels[AGENT_ACTOR_TYPE] = AgentDataModel;
+  CONFIG.Actor.dataModels[THREAT_ACTOR_TYPE] = ThreatDataModel;
   CONFIG.Item.dataModels[PROFILE_ITEM_TYPE] = ProfileDataModel;
   CONFIG.Item.dataModels[OCCUPATION_ITEM_TYPE] = OccupationDataModel;
   CONFIG.Item.dataModels[ABILITY_ITEM_TYPE] = AbilityDataModel;

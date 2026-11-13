@@ -1,6 +1,8 @@
 import {
   CHECK_PRESENTATION_FLAG,
   SYSTEM_ID,
+  THREAT_ACTOR_TYPE,
+  THREAT_ACCENT_COLOR,
 } from "../../../config/system-config";
 import { readAgentAccentColor } from "../actors/read-agent-accent-color";
 import { createCheckSnapshot } from "../../../application/checks/check-snapshot";
@@ -42,8 +44,9 @@ export async function publishCheckMessage(
   difficultyResolution?: CheckDifficultyResolution,
   appliedAbilityUses: readonly AppliedCheckAbilityUse[] = [],
   messageMode?: string,
+  token?: foundry.documents.TokenDocument,
 ): Promise<unknown> {
-  const accentColor = readAgentAccentColor(actor);
+  const accentColor = actor.type === THREAT_ACTOR_TYPE ? THREAT_ACCENT_COLOR : readAgentAccentColor(actor);
   const snapshot = createCheckSnapshot(
     execution.result,
     difficultyResolution,
@@ -53,7 +56,7 @@ export async function publishCheckMessage(
 
   return sendRollToMessage(execution.roll as FoundryRegistryAwareRoll, {
     content,
-    speaker: ChatMessage.getSpeaker({ actor }),
+    speaker: ChatMessage.getSpeaker(token ? { actor, token } : { actor }),
     flags: {
       [SYSTEM_ID]: {
         check: snapshot,

@@ -24,6 +24,7 @@ import { adjustOwnedEquipmentQuantity } from "../../adapters/foundry/equipment/a
 import { enrichEquipmentDescription } from "../../adapters/foundry/equipment/enrich-equipment-description";
 import { canUserRollActor } from "../../adapters/foundry/actors/agent-check-permission";
 import { publishAbilityMessage } from "../../adapters/foundry/chat/publish-ability-message";
+import { executeAbilityForm } from "../../features/abilities/execute-ability-form";
 import { useEquipment, equipmentUseFeedback } from "../../features/equipment/use-equipment";
 import { readAgentAccentColor } from "../../adapters/foundry/actors/read-agent-accent-color";
 import { parseAgentCheckSelection } from "../../application/checks/build-agent-check";
@@ -72,6 +73,7 @@ import {
   OccupationPicker,
 } from "../occupations/occupation-picker";
 import { AgentSheetSettings } from "./agent-sheet-settings";
+import { bindAbilityCardMenu, openAbilityCardMenu } from "./ability-card-menu";
 
 const TEMPLATE_ROOT = "systems/ordemparanormal2/templates/actor";
 const DIE_STEP_PARTIAL = `${TEMPLATE_ROOT}/partials/die-step-select.hbs`;
@@ -163,6 +165,9 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         `${TEMPLATE_ROOT}/agent-sheet-abilities.hbs`,
         `${TEMPLATE_ROOT}/agent-sheet-inventory.hbs`,
         DIE_STEP_PARTIAL,
+        ...["portrait", "resource-fields", "attribute-card", "skill-row", "content-tabs", "ability-cards"].map(
+          (part) => `${TEMPLATE_ROOT}/partials/${part}.hbs`,
+        ),
       ],
       scrollable: [
         ".op2-agent-sheet__active-content",
@@ -334,7 +339,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   ): Promise<void> {
     event.stopPropagation();
     if (event.button !== undefined && event.button !== 0) return;
-    const id = target.dataset.itemId;
+    const id = target.dataset.abilityId ?? target.dataset.itemId;
     if (!id || this.#canEditStructure) return;
     const ability = this.document.getEmbeddedDocument("Item", id) as foundry.documents.Item | null;
     if (ability?.type !== ABILITY_ITEM_TYPE) return;
@@ -355,22 +360,9 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     event: PointerEvent,
     target: HTMLElement,
   ): void {
-    event.stopPropagation();
-    if (event.button !== 0 || !this.#canEditStructure || !this.#abilityContextMenu) return;
-    const surface = target.closest(".op2-ability-card")
-      ?.querySelector<HTMLElement>(".op2-ability-card__use");
-    const id = surface?.dataset.itemId;
-    if (!surface || !id) return;
-    const ability = this.document.getEmbeddedDocument("Item", id) as foundry.documents.Item | null;
-    if (ability?.type !== ABILITY_ITEM_TYPE) return;
-
-    surface.dispatchEvent(new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      button: 2,
-      clientX: event.detail === 0 ? 0 : event.clientX,
-      clientY: event.detail === 0 ? 0 : event.clientY,
-    }));
+    if (!this.#canEditStructure || !this.#abilityContextMenu) return;
+    openAbilityCardMenu(event, target, (id) =>
+      (this.document.getEmbeddedDocument("Item", id) as foundry.documents.Item | null)?.type === ABILITY_ITEM_TYPE);
   }
 
   static async #onSelectAgentTab(
@@ -544,7 +536,6 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static #onEditAbility(
     this: AgentSheet,
-    _event: PointerEvent,
     target: HTMLElement,
   ): void {
     if (!this.isEditable || !target.dataset.itemId) return;
@@ -557,7 +548,6 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static async #onDeleteAbility(
     this: AgentSheet,
-    _event: PointerEvent,
     target: HTMLElement,
   ): Promise<void> {
     if (!this.isEditable || !target.dataset.itemId) return;
@@ -603,34 +593,6 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
   }
 
-  #getAbilityContextOptions(): ContextMenuEntry[] {
-    return [
-      {
-        label: game.i18n.localize(
-          "ORDEMPARANORMAL2.AgentSheet.Abilities.Edit",
-        ),
-        icon: '<i class="fa-solid fa-pen"></i>',
-        visible: () => this.isEditable,
-        onClick: (event, target) => {
-          event.stopPropagation();
-          AgentSheet.#onEditAbility.call(this, event, target);
-        },
-      },
-      {
-        label: game.i18n.localize(
-          "ORDEMPARANORMAL2.AgentSheet.Abilities.Delete",
-        ),
-        icon: '<i class="fa-solid fa-trash"></i>',
-        classes: "op2-ability-action--delete",
-        visible: () => this.isEditable,
-        onClick: async (event, target) => {
-          event.stopPropagation();
-          await AgentSheet.#onDeleteAbility.call(this, event, target);
-        },
-      },
-    ];
-  }
-
   static async #onUseAbility(
     this: AgentSheet,
     _event: PointerEvent,
@@ -651,6 +613,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         "Item",
         abilityId,
       ) as foundry.documents.Item | null;
+      const publication = actor.token ? { token: actor.token } : undefined;
       if (!ability) {
         AgentSheet.#notifyAbilityResult({
           status: "invalid",
@@ -671,22 +634,38 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         }
         const standaloneUses = uses.filter(({ checkIntegration }) => checkIntegration === null);
         if (standaloneUses.length === 0) {
-          await publishAbilityMessage(actor, ability);
+          if (publication) await publishAbilityMessage(actor, ability, undefined, publication);
+          else await publishAbilityMessage(actor, ability);
           return;
         }
 
         const executeUse = async (useId: string): Promise<boolean> => {
           try {
+            if (standaloneUses.find(({ id }) => id === useId)?.combatAction) {
+              const outcome = await executeAbilityForm(actor, ability, useId);
+              if (outcome.status === "publication-failed") {
+                ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.ThreatSheet.PublicationFailed"));
+                return true;
+              }
+              if (outcome.status === "missing-check" || outcome.status === "changed") {
+                ui.notifications.warn(game.i18n.localize("ORDEMPARANORMAL2.ThreatSheet.CheckChanged"));
+              } else if ("source" in outcome || outcome.status === "invalid" || outcome.status === "locked" || outcome.status === "forbidden") {
+                AgentSheet.#notifyAbilityResult(outcome);
+              }
+              return outcome.status === "success";
+            }
             const result = await useAbility(actor, ability, useId);
             AgentSheet.#notifyAbilityResult(result);
             if (result.status !== "success") return false;
             try {
-              await publishAbilityMessage(actor, ability, result);
+              if (publication) await publishAbilityMessage(actor, ability, result, publication);
+              else await publishAbilityMessage(actor, ability, result);
             } catch (error) {
               console.error(
                 "ordemparanormal2 | Failed to post Ability chat card",
                 error,
               );
+              ui.notifications.error(game.i18n.localize("ORDEMPARANORMAL2.ThreatSheet.PublicationFailed"));
             }
             await this.render({ force: true });
             return true;
@@ -812,7 +791,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
     ui.notifications.error(
       game.i18n.localize(
-        result.reason === "missing-resource"
+        result.status === "invalid" && result.reason === "missing-resource"
           ? "ORDEMPARANORMAL2.AgentSheet.AbilityUse.MissingResource"
           : "ORDEMPARANORMAL2.AgentSheet.AbilityUse.Invalid",
       ),
@@ -1141,13 +1120,11 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (partId !== "main") return;
 
     if (this.isEditable) {
-      const Menu = foundry.applications.ux.ContextMenu.implementation;
-      const entries = this.#getAbilityContextOptions();
-      this.#abilityContextMenu = new Menu(
+      this.#abilityContextMenu = bindAbilityCardMenu(
         htmlElement,
-        ".op2-ability-card__use",
-        entries,
-        { eventName: "contextmenu", fixed: true, jQuery: false },
+        () => this.isEditable,
+        (target) => AgentSheet.#onEditAbility.call(this, target),
+        (target) => AgentSheet.#onDeleteAbility.call(this, target),
       );
     }
 

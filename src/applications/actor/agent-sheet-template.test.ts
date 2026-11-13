@@ -9,6 +9,9 @@ let identityTemplate = "";
 let skillsTemplate = "";
 let dieControlTemplate = "";
 let styles = "";
+let attributeCard = "";
+let skillRow = "";
+let resourceFields = "";
 
 beforeAll(async () => {
   const [application, mainTemplate, sheetStyles, identity, skills, dieControl] = await Promise.all([
@@ -60,6 +63,10 @@ beforeAll(async () => {
   skillsTemplate = skills;
   dieControlTemplate = dieControl;
   styles = sheetStyles;
+  [attributeCard, skillRow, resourceFields] = await Promise.all(
+    ["attribute-card", "skill-row", "resource-fields"].map((part) =>
+      readFile(new URL(`../../../templates/actor/partials/${part}.hbs`, import.meta.url), "utf8")),
+  );
 });
 
 describe("Agent Sheet main template", () => {
@@ -148,7 +155,8 @@ describe("Agent Sheet main template", () => {
 
     expect(editingBlock).toBeDefined();
     expect(editingBlock).toContain("op2-die-control__chevron");
-    expect(editingBlock).toContain('<select class="op2-die-control__select" name="{{die.path}}">');
+    expect(editingBlock).toContain('<select class="op2-die-control__select" name="{{die.path}}"');
+    expect(editingBlock).toContain('aria-label="{{label}}"');
     expect(editingBlock).toContain("{{#each die.options}}");
     expect(editingBlock).toContain('value="{{value}}"{{#if selected}} selected{{/if}}');
     expect(editingBlock).toContain("{{localize gradeLabelKey}}");
@@ -164,8 +172,10 @@ describe("Agent Sheet main template", () => {
     expect(skillsTemplate).toContain("editable=@root.canEditStructure");
     expect(skillsTemplate).not.toContain("editable=@root.editable");
     const sharedControl = 'systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs';
-    expect(identityTemplate.split(sharedControl)).toHaveLength(2);
-    expect(skillsTemplate.split(sharedControl)).toHaveLength(3);
+    expect(identityTemplate).toContain("partials/attribute-card.hbs");
+    expect(skillsTemplate.split("partials/skill-row.hbs")).toHaveLength(3);
+    expect(attributeCard.split(sharedControl)).toHaveLength(2);
+    expect(skillRow.split(sharedControl)).toHaveLength(2);
     expect(identityTemplate).not.toContain("op2-die-control__value");
     expect(skillsTemplate).not.toContain("op2-die-control__value");
   });
@@ -188,7 +198,8 @@ describe("Agent Sheet main template", () => {
       /<section class="op2-resources"[\s\S]*?<\/section>/,
     )?.[0];
 
-    expect(resourceBlock).toContain("{{#unless @root.editable}} disabled");
+    expect(resourceBlock).toContain("resource=this editable=@root.editable");
+    expect(resourceFields).toContain("{{#unless editable}} disabled");
     expect(resourceBlock).not.toContain("canEditStructure");
   });
 

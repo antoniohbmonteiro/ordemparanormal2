@@ -1,0 +1,4 @@
+<div class="op2-attribute">
+  <button class="op2-roll-trigger op2-attribute__label" type="button" {{#if canRoll}}data-action="rollCheck" data-check-kind="attribute" data-check-key="{{attribute.key}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.RollCheck'}}"{{else}}disabled title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Errors.NoRollPermission'}}"{{/if}}>{{localize attribute.labelKey}}</button>
+  {{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=attribute.die editable=editable label=(localize attribute.labelKey)}}
+</div>

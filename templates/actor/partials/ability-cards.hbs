@@ -1,0 +1,88 @@
+{{#*inline "abilityDisclosure"}}
+  <button class="op2-ability-card__expand" type="button" data-action="toggleAbilityDescription" data-ability-id="{{id}}" aria-expanded="{{isExpanded}}" aria-controls="{{detailsId}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.ToggleDescription'}}"><span aria-hidden="true">{{#if isExpanded}}▾{{else}}▸{{/if}}</span></button>
+{{/inline}}
+<section class="op2-abilities" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tabs.Abilities'}}">
+  <div class="op2-abilities__columns">
+    <span>{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Subtitle"}}</span>
+    <span class="op2-abilities__resource-heading">{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource"}}</span>
+    {{#if abilityToolbar}}
+      <div class="op2-abilities__toolbar">
+        <button type="button" class="op2-ability-card__menu-trigger" data-action="createAbility" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.CreateAbility'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.CreateAbility'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+        <button type="button" class="op2-ability-card__menu-trigger" data-action="addExistingAbility" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.AddExistingAbility'}}" title="{{localize 'ORDEMPARANORMAL2.ThreatSheet.AddExistingAbility'}}"><i class="fa-solid fa-book" aria-hidden="true"></i></button>
+      </div>
+    {{/if}}
+  </div>
+  <div class="op2-abilities__list">
+    {{#each abilities}}
+      <article class="op2-ability-card{{#if draggable}} draggable{{/if}}"{{#unless legacy}} data-item-id="{{id}}"{{/unless}}>
+        <div class="op2-ability-card__header">
+          <button class="op2-ability-card__use" type="button" data-action="{{#if headerAction}}{{headerAction}}{{else}}useAbility{{/if}}"{{#if legacy}} data-ability-id="{{id}}"{{else}} data-item-id="{{id}}"{{/if}}{{#if primaryUseId}} data-use-id="{{primaryUseId}}"{{/if}}{{#if legacyActionId}} data-entry-id="{{legacyActionId}}" data-check-kind="action"{{/if}} aria-label="{{name}}"{{#unless browseFromHeader}}{{#unless @root.editable}} disabled{{/unless}}{{/unless}}{{#if browseFromHeader}} aria-expanded="{{isExpanded}}" aria-controls="{{detailsId}}"{{/if}}>
+            <span class="op2-ability-card__image">
+              <img src="{{img}}" alt="" />
+              {{#unless browseFromHeader}}<span class="op2-ability-card__use-label" aria-hidden="true">{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Use"}}</span>{{/unless}}
+            </span>
+            <span class="op2-ability-card__body">
+              <span class="op2-ability-card__name">{{name}}</span>
+              {{#if combatSummary}}
+                <span class="op2-ability-card__subtitle op2-ability-card__summary">
+                  {{#if combatSummary.typeLabel}}<span>{{combatSummary.typeLabel}}</span>{{/if}}
+                  {{#if combatSummary.checkPreview}}<span>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Check'}} <strong>{{combatSummary.checkPreview}}</strong></span>{{/if}}
+                  {{#if combatSummary.damageSummary}}<span>{{combatSummary.damageSummary.label}} <strong>{{combatSummary.damageSummary.expression}}</strong></span>{{/if}}
+                </span>
+              {{else}}<span class="op2-ability-card__subtitle">{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.Subtitle"}}</span>{{/if}}
+            </span>
+          </button>
+          {{#if resource}}
+            <div class="op2-ability-card__resource">
+              <span class="op2-ability-card__resource-value">{{resource.value}} / {{resource.max}}</span>
+              <span class="op2-ability-card__resource-track" role="meter" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Resource'}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{resource.fillPercentage}}" aria-valuetext="{{resource.value}} / {{resource.max}}">
+                <span class="op2-ability-card__resource-fill" style="width: {{resource.fillPercentage}}%;"></span>
+              </span>
+              {{#if @root.editable}}
+                <div class="op2-ability-card__resource-controls">
+                  <button class="op2-ability-card__resource-adjust" type="button" data-action="decreaseAbilityResource" data-resource-adjustment="decrease" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.DecreaseResource'}}"{{#unless resource.canDecrease}} disabled{{/unless}}>−</button>
+                  <span class="op2-ability-card__resource-current" aria-hidden="true">
+                    <span class="op2-ability-card__resource-value">{{resource.value}} / {{resource.max}}</span>
+                    <span class="op2-ability-card__resource-track"><span class="op2-ability-card__resource-fill" style="width: {{resource.fillPercentage}}%;"></span></span>
+                  </span>
+                  <button class="op2-ability-card__resource-adjust" type="button" data-action="increaseAbilityResource" data-resource-adjustment="increase" data-item-id="{{id}}" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.IncreaseResource'}}"{{#unless resource.canIncrease}} disabled{{/unless}}>+</button>
+                </div>
+              {{/if}}
+            </div>
+          {{/if}}
+          {{#if @root.canEditStructure}}{{#unless legacy}}
+            <button class="op2-ability-card__menu-trigger" type="button" data-action="openAbilityMenu" data-item-id="{{id}}" aria-haspopup="menu" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Abilities.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>
+          {{/unless}}{{/if}}
+          {{#if showDisclosure}}
+            {{> abilityDisclosure}}
+          {{else unless @root.canEditStructure}}
+            {{> abilityDisclosure}}
+          {{/if}}
+        </div>
+        <div class="op2-ability-card__details" id="{{detailsId}}"{{#unless isExpanded}} hidden{{/unless}}>
+          {{#if descriptionHTML}}<div class="op2-ability-card__description">{{{descriptionHTML}}}</div>{{/if}}
+          {{#if plainDescription}}<p class="op2-ability-card__description op2-threat-pre-line">{{plainDescription}}</p>{{/if}}
+          {{#if requirements}}<p class="op2-ability-card__description"><strong>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Requirements'}}</strong> {{requirements}}</p>{{/if}}
+          {{#if useForms.length}}
+            <h3 class="op2-ability-card__forms-title">{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.UseForms"}}</h3>
+            <ul class="op2-ability-card__forms">
+              {{#each useForms}}
+                <li class="op2-ability-card__form">
+                  <span class="op2-ability-card__form-name">{{name}}</span>
+                  {{#if isCheckIntegrated}}<span class="op2-ability-card__check-label">{{#if checkOnlyLabelKey}}{{localize checkOnlyLabelKey}}{{else}}{{localize "ORDEMPARANORMAL2.AgentSheet.Abilities.CheckOnly"}}{{/if}}</span>{{/if}}
+                  {{#if threatExecutable}}
+                    {{> "systems/ordemparanormal2/templates/actor/partials/threat-ability-use.hbs"}}
+                  {{/if}}
+                  {{#if requirements}}<p class="op2-ability-card__description"><strong>{{localize 'ORDEMPARANORMAL2.ThreatSheet.Requirements'}}</strong> {{requirements}}</p>{{/if}}
+                  {{#if descriptionHTML}}<div class="op2-ability-card__description">{{{descriptionHTML}}}</div>{{/if}}
+                </li>
+              {{/each}}
+            </ul>
+          {{/if}}
+        </div>
+      </article>
+    {{else}}
+      <p class="op2-empty-state">{{localize "ORDEMPARANORMAL2.AgentSheet.Placeholders.Abilities"}}</p>
+    {{/each}}
+  </div>
+</section>

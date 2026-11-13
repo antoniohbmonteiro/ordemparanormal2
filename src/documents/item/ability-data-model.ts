@@ -1,7 +1,7 @@
 import { ABILITY_COST_SOURCES } from "../../core/abilities/ability-cost";
 import { readAbilityCost } from "../../core/abilities/ability-cost";
 import { readAbilityResource } from "../../core/abilities/ability-resource";
-import { readAbilityUses } from "../../core/abilities/ability-use";
+import { ABILITY_CHARACTERISTIC_KINDS, ABILITY_DAMAGE_TIMINGS, readAbilityUses } from "../../core/abilities/ability-use";
 import { AGENT_ATTRIBUTE_KEYS } from "../../core/actors/agent-attributes";
 import { NORMAL_DIE_STEPS } from "../../core/dice/die-step";
 import { SKILL_DEFINITIONS } from "../../config/skills";
@@ -38,6 +38,7 @@ type AbilityUseSchema = {
     true,
     true
   >;
+  combatAction: ReturnType<typeof createCombatActionField>;
   checkIntegration: foundry.data.fields.SchemaField<
     AbilityUseCheckIntegrationSchema,
     foundry.data.fields.SourceFromSchema<AbilityUseCheckIntegrationSchema>,
@@ -72,6 +73,7 @@ type AbilityResourceSchema = {
 
 type AbilitySchema = {
   description: RequiredStringField;
+  characteristic: foundry.data.fields.StringField<string, string, false, true, false>;
   resource: foundry.data.fields.SchemaField<
     AbilityResourceSchema,
     foundry.data.fields.SourceFromSchema<AbilityResourceSchema>,
@@ -89,6 +91,31 @@ type AbilitySchema = {
     true
   >;
 };
+
+function nullableSchema<S extends foundry.abstract.DataSchema>(fields: S) {
+  return new foundry.data.fields.SchemaField<
+    S, foundry.data.fields.SourceFromSchema<S>, foundry.data.fields.ModelPropsFromSchema<S>, false, true, false
+  >(fields, { required: false, nullable: true });
+}
+
+function createCombatActionField() {
+  const { StringField } = foundry.data.fields;
+  return nullableSchema({
+    typeLabel: new StringField({ initial: "", blank: true }),
+    requirements: new StringField({ initial: "", blank: true }),
+    check: nullableSchema({
+      kind: new StringField({ blank: false, choices: ["attribute", "skill", "aptitude"] }),
+      key: new StringField({ blank: false }),
+      attribute: new StringField<string, string, true, true, true>({
+        required: true, nullable: true, initial: null, choices: AGENT_ATTRIBUTE_KEYS,
+      }),
+    }),
+    damage: nullableSchema({
+      expression: new StringField({ blank: false, trim: true }),
+      timing: new StringField({ blank: false, choices: ABILITY_DAMAGE_TIMINGS }),
+    }),
+  });
+}
 
 function createResourceIntegerField(): RequiredIntegerField {
   return new foundry.data.fields.NumberField({
@@ -134,6 +161,9 @@ export class AbilityDataModel extends foundry.abstract.TypeDataModel<
 > {
   static override defineSchema(): AbilitySchema {
     return {
+      characteristic: new foundry.data.fields.StringField({
+        required: false, nullable: true, choices: ABILITY_CHARACTERISTIC_KINDS,
+      }),
       description: new foundry.data.fields.HTMLField({
         required: true,
         nullable: false,
@@ -190,6 +220,7 @@ export class AbilityDataModel extends foundry.abstract.TypeDataModel<
             initial: null,
           }),
           checkIntegration: createCheckIntegrationField(),
+          combatAction: createCombatActionField(),
         }),
         {
           required: true,

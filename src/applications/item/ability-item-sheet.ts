@@ -4,7 +4,7 @@ import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/ap
 
 import { enqueueAbilityMutation } from "../../adapters/foundry/abilities/update-ability-uses";
 import { readAbilityResource, EMPTY_ABILITY_RESOURCE, prepareAbilityResourceRemoval, type AbilityResourceData } from "../../core/abilities/ability-resource";
-import { readAbilityUses, type AbilityUseData } from "../../core/abilities/ability-use";
+import { ABILITY_CHARACTERISTIC_KINDS, readAbilityUses, type AbilityUseData } from "../../core/abilities/ability-use";
 import { localizeAbilityCost } from "../../ui/abilities/ability-cost-label";
 import { AbilityUseEditor } from "./ability-use-editor";
 
@@ -18,16 +18,18 @@ interface AbilityItemSheetContext extends DocumentSheetRenderContext<foundry.doc
     readonly description: string;
     readonly enrichedDescription: string;
     readonly resource: AbilityResourceData | null;
+    readonly characteristics: readonly { value: string; selected: boolean; labelKey: string }[];
     readonly uses: readonly (AbilityUseData & { readonly costLabel: string; readonly hasMinimumLevel: boolean })[] | null;
   };
 }
 
 function readAbilitySystem(item: foundry.documents.Item) {
-  const system = item.system as unknown as { readonly description?: unknown; readonly resource?: unknown; readonly uses?: unknown };
+  const system = item.system as unknown as { readonly description?: unknown; readonly resource?: unknown; readonly uses?: unknown; readonly characteristic?: unknown };
   return {
     description: typeof system.description === "string" ? system.description : "",
     resource: readAbilityResource(system.resource),
     uses: readAbilityUses(system.uses),
+    characteristic: system.characteristic,
   };
 }
 
@@ -88,6 +90,10 @@ export class AbilityItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
         description: system.description,
         enrichedDescription,
         resource: system.resource,
+        characteristics: ABILITY_CHARACTERISTIC_KINDS.map((value) => ({
+          value, selected: (system.characteristic ?? "specialAbility") === value,
+          labelKey: `ORDEMPARANORMAL2.AbilitySheet.CharacteristicKinds.${value}`,
+        })),
         uses: system.uses?.map((use) => ({ ...use, costLabel: localizeAbilityCost(use.cost), hasMinimumLevel: use.minimumLevel !== null })) ?? null,
       },
     };

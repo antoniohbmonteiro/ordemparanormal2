@@ -18,10 +18,14 @@ beforeAll(async () => {
   const handlebars = Handlebars.create();
   handlebars.registerHelper("localize", (key: string) => key.split(".").reduce<unknown>((value, part) => (value as Record<string, unknown>)[part], translations));
   render = handlebars.compile(template);
+  handlebars.registerPartial("systems/ordemparanormal2/templates/actor/partials/ability-cards.hbs",
+    await readFile(new URL("../../../templates/actor/partials/ability-cards.hbs", import.meta.url), "utf8"));
   handlebars.registerPartial("systems/ordemparanormal2/templates/actor/agent-sheet-abilities.hbs", template);
   for (const part of ["identity", "skills", "inventory"]) {
     handlebars.registerPartial(`systems/ordemparanormal2/templates/actor/agent-sheet-${part}.hbs`, "");
   }
+  handlebars.registerPartial("systems/ordemparanormal2/templates/actor/partials/content-tabs.hbs",
+    await readFile(new URL("../../../templates/actor/partials/content-tabs.hbs", import.meta.url), "utf8"));
   renderSheet = handlebars.compile(await readFile(new URL("../../../templates/actor/agent-sheet.hbs", import.meta.url), "utf8"));
 });
 
@@ -150,7 +154,7 @@ describe("Agent Sheet Ability rows", () => {
       expect(rule).toContain("overflow: visible");
       expect(rule).not.toContain("overflow: hidden");
     }
-    expect(styles).toContain('.op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="abilities"].active)');
+    expect(styles).toContain(':is(.op2-agent-sheet__active-content, .op2-threat-content):has(> .op2-tab-panel[data-tab="abilities"].active)');
     expect(styles.match(/\.op2-ability-card__subtitle \{([^}]+)\}/)?.[1]).toContain("color: var(--op2-accent)");
     expect(html()).not.toContain('class="op2-ability-card__resource"');
   });

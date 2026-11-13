@@ -6,7 +6,7 @@
   font-display: swap;
 }
 
-.ordemparanormal2.agent-sheet {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) {
   --op2-sheet-bg: rgba(18, 20, 24, 0.96);
   --op2-panel-bg: rgba(27, 30, 36, 0.92);
   --op2-panel-bg-hover: rgba(35, 39, 46, 0.96);
@@ -25,6 +25,9 @@
   --op2-space-2: 0.5rem;
   --op2-space-3: 0.75rem;
   --op2-space-4: 1rem;
+}
+
+.ordemparanormal2.agent-sheet {
   min-width: 760px;
   min-height: 520px;
 }
@@ -44,14 +47,14 @@
   grid-template-columns: minmax(0, 1fr) minmax(280px, 30%);
   gap: var(--op2-space-3);
 }
-.ordemparanormal2.agent-sheet .op2-agent-layout__main {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) :is(.op2-agent-layout__main, .op2-threat-layout__main) {
   display: grid;
   min-width: 0;
   min-height: 0;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: var(--op2-space-3);
 }
-.ordemparanormal2.agent-sheet .op2-panel {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-panel {
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--op2-border);
@@ -59,11 +62,12 @@
   background: var(--op2-panel-bg);
 }
 .ordemparanormal2.agent-sheet .op2-agent-sheet-content input,
-.ordemparanormal2.agent-sheet .op2-agent-sheet-content button,
+.ordemparanormal2.agent-sheet .op2-agent-sheet-content button:not(:where(.op2-content-tab)),
 .ordemparanormal2.agent-sheet .op2-agent-sheet-content select {
   font: inherit;
 }
-.ordemparanormal2.agent-sheet .op2-agent-sheet-content input {
+.ordemparanormal2.agent-sheet .op2-agent-sheet-content input,
+.ordemparanormal2.threat-sheet :is(.op2-resources input, .op2-threat-rd output, .op2-threat-control input, .op2-threat-search) {
   min-width: 0;
   border: 1px solid var(--op2-border);
   border-radius: 6px;
@@ -81,7 +85,7 @@
   cursor: not-allowed;
   opacity: 0.68;
 }
-.ordemparanormal2.agent-sheet .op2-sr-only {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -105,7 +109,7 @@
   padding: var(--op2-space-4);
 }
 
-.ordemparanormal2.agent-sheet .op2-portrait {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-portrait {
   position: relative;
   width: 100%;
   min-height: 0;
@@ -116,7 +120,7 @@
   background: var(--op2-input-bg);
 }
 
-.ordemparanormal2.agent-sheet .op2-portrait img {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-portrait img {
   position: absolute;
   inset: 0;
   display: block;
@@ -126,10 +130,10 @@
   object-position: center;
 }
 
-.ordemparanormal2.agent-sheet .op2-portrait img[data-action="editImage"] {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-portrait img[data-action="editImage"] {
   cursor: pointer;
 }
-.ordemparanormal2.agent-sheet .op2-portrait__edit {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-portrait__edit {
   position: absolute;
   right: 0.5rem;
   bottom: 0.5rem;
@@ -147,14 +151,14 @@
   flex-direction: column;
   gap: var(--op2-space-2);
 }
-.ordemparanormal2.agent-sheet .op2-identity__name-row {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-identity__name-row {
   display: grid;
   min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--op2-space-2);
 }
-.ordemparanormal2.agent-sheet .op2-identity__name {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-identity__name {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -165,7 +169,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ordemparanormal2.agent-sheet .op2-edit-mode-toggle {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-edit-mode-toggle {
   display: grid;
   width: 2.25rem;
   height: 2.25rem;
@@ -178,11 +182,11 @@
   color: var(--op2-text-muted);
   box-shadow: none;
 }
-.ordemparanormal2.agent-sheet .op2-edit-mode-toggle:hover {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-edit-mode-toggle:hover {
   border-color: var(--op2-border-strong);
   color: var(--op2-text);
 }
-.ordemparanormal2.agent-sheet .op2-edit-mode-toggle.is-active {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-edit-mode-toggle.is-active {
   border-color: var(--op2-accent-bright);
   background: var(--op2-accent-soft);
   color: var(--op2-accent-bright);
@@ -282,7 +286,7 @@
   border-color: var(--color-level-warning, #c98a2c);
   color: var(--color-level-warning, #e9b35c);
 }
-.ordemparanormal2.agent-sheet .op2-resources {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-resources {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--op2-space-2);
@@ -290,31 +294,31 @@
   border: 1px solid var(--op2-border);
   border-radius: var(--op2-radius);
 }
-.ordemparanormal2.agent-sheet .op2-resource {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-resource {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 0.25rem;
 }
-.ordemparanormal2.agent-sheet .op2-resource__label {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-resource__label {
   grid-column: 1/-1;
   color: var(--op2-text-muted);
   font-size: 0.72rem;
   font-weight: 700;
   text-align: center;
 }
-.ordemparanormal2.agent-sheet .op2-resource input {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-resource :is(input, output) {
   width: 100%;
   height: 1.7rem;
   text-align: center;
 }
-.ordemparanormal2.agent-sheet .op2-attributes {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-attributes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--op2-space-2);
   padding: 0 var(--op2-space-4) var(--op2-space-4);
 }
-.ordemparanormal2.agent-sheet .op2-attribute {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-attribute {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -339,21 +343,21 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.ordemparanormal2.agent-sheet .op2-empty-state {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-empty-state {
   margin: 0;
   color: var(--op2-text-muted);
   font-size: 0.78rem;
 }
 
 /* Content tabs */
-.ordemparanormal2.agent-sheet .op2-content-tabs {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tabs {
   display: flex;
   align-items: flex-end;
   border: 0 !important;
   box-shadow: none !important;
 }
 
-.ordemparanormal2.agent-sheet .op2-content-tab {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab {
   position: relative;
   width: auto;
   flex: 1 1 0;
@@ -365,7 +369,9 @@
   background: transparent !important;
   color: var(--op2-text-muted);
   box-shadow: none !important;
-  font-size: 0.72rem;
+  font-family: var(--font-body);
+  font-size: var(--font-size-14);
+  line-height: normal;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-align: center;
@@ -373,9 +379,9 @@
   text-transform: uppercase;
 }
 
-.ordemparanormal2.agent-sheet .op2-content-tab:hover,
-.ordemparanormal2.agent-sheet .op2-content-tab:focus,
-.ordemparanormal2.agent-sheet .op2-content-tab:focus-visible {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab:hover,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab:focus,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab:focus-visible {
   border: 0 !important;
   outline: 0 !important;
   background: transparent !important;
@@ -383,7 +389,7 @@
   text-shadow: none !important;
 }
 
-.ordemparanormal2.agent-sheet .op2-content-tab.active {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab.active {
   border: 0 !important;
   border-bottom: 2px solid var(--op2-accent-bright) !important;
   outline: 0 !important;
@@ -393,17 +399,17 @@
   text-shadow: none !important;
 }
 
-.ordemparanormal2.agent-sheet .op2-agent-sheet__active-content {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) :is(.op2-agent-sheet__active-content, .op2-threat-content) {
   overflow: auto;
 }
-.ordemparanormal2.agent-sheet .op2-tab-panel {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-tab-panel {
   display: none;
   min-height: 100%;
 }
-.ordemparanormal2.agent-sheet .op2-tab-panel.active {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-tab-panel.active {
   display: block;
 }
-.ordemparanormal2.agent-sheet .op2-tab-panel[data-tab="notes"] {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-tab-panel[data-tab="notes"] {
   padding: 1rem;
 }
 .ordemparanormal2.agent-sheet .op2-skills-dock {
@@ -421,7 +427,7 @@
   padding: 0.5rem;
   overflow-y: auto;
 }
-.ordemparanormal2.agent-sheet .op2-skill-row {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 3.75rem 4.25rem;
   align-items: center;
@@ -430,10 +436,10 @@
   padding: 0.25rem 0.35rem 0.25rem 0.75rem;
   border-radius: 6px;
 }
-.ordemparanormal2.agent-sheet .op2-skill-row:hover {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row:hover {
   background: var(--op2-panel-bg-hover);
 }
-.ordemparanormal2.agent-sheet .op2-skill-row__name {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row__name {
   display: flex;
   width: 100%;
   min-width: 0;
@@ -446,13 +452,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ordemparanormal2.agent-sheet .op2-skill-row__attribute {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row__attribute {
   color: var(--op2-text-muted);
   font-size: 0.66rem;
   font-weight: 600;
   text-align: left;
 }
-.ordemparanormal2.agent-sheet .op2-roll-trigger {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-roll-trigger {
   width: auto;
   margin: 0;
   padding: 0;
@@ -461,10 +467,10 @@
   color: inherit;
   box-shadow: none;
 }
-.ordemparanormal2.agent-sheet .op2-skill-row .op2-roll-trigger {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row .op2-roll-trigger {
   justify-content: flex-start;
 }
-.ordemparanormal2.agent-sheet .op2-skill-row--summary {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row--summary {
   grid-template-columns: minmax(0, 1fr) 3.75rem 4.25rem;
   cursor: pointer;
 }
@@ -475,10 +481,10 @@
 .ordemparanormal2.agent-sheet .op2-aptitude__specializations {
   padding-left: 0.75rem;
 }
-.ordemparanormal2.agent-sheet .op2-skill-row--specialization {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row--specialization {
   grid-template-columns: minmax(0, 1fr) 4.25rem;
 }
-.ordemparanormal2.agent-sheet .op2-die-control {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-die-control {
   position: relative;
   display: inline-grid;
   width: 4.25rem;
@@ -491,7 +497,7 @@
   border-radius: 999px;
   background: var(--op2-input-bg);
 }
-.ordemparanormal2.agent-sheet .op2-die-control__value {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-die-control__value {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -501,7 +507,7 @@
   line-height: 1;
   text-align: center;
 }
-.ordemparanormal2.agent-sheet .op2-die-control__icon {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-die-control__icon {
   width: 1rem;
   height: 1rem;
   flex: 0 0 auto;
@@ -510,15 +516,15 @@
   -webkit-mask: none center / contain no-repeat;
   mask: none center / contain no-repeat;
 }
-.ordemparanormal2.agent-sheet .op2-die-control.is-editable {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-die-control.is-editable {
   grid-template-columns: 1fr auto;
   cursor: pointer;
 }
-.ordemparanormal2.agent-sheet .op2-die-control:has(> .op2-die-control__select:focus-visible) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-die-control:has(> .op2-die-control__select:focus-visible) {
   outline: 2px solid var(--op2-focus);
   outline-offset: 2px;
 }
-.ordemparanormal2.agent-sheet .op2-die-control__select {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-die-control__select {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -526,7 +532,7 @@
   opacity: 0;
 }
 
-.ordemparanormal2.agent-sheet .op2-abilities {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities {
   --op2-panel-bg-hover: #20232a;
   --op2-ability-separator: rgba(255, 255, 255, 0.051);
   box-sizing: border-box;
@@ -538,10 +544,10 @@
   padding: var(--op2-space-3);
   overflow: visible;
 }
-.ordemparanormal2.agent-sheet .op2-agent-sheet__active-content:has(> .op2-tab-panel[data-tab="abilities"].active) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) :is(.op2-agent-sheet__active-content, .op2-threat-content):has(> .op2-tab-panel[data-tab="abilities"].active) {
   background: #14161b;
 }
-.ordemparanormal2.agent-sheet .op2-abilities__columns {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities__columns {
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 90px 25px;
@@ -557,10 +563,20 @@
   line-height: 13px;
   text-transform: uppercase;
 }
-.ordemparanormal2.agent-sheet .op2-abilities__resource-heading {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities__resource-heading {
   text-align: center;
 }
-.ordemparanormal2.agent-sheet .op2-abilities__list {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities__columns:has(.op2-abilities__toolbar) {
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+}
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities__toolbar {
+  display: flex;
+}
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities__toolbar .op2-ability-card__menu-trigger {
+  height: 24px;
+  font-size: 12px;
+}
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-abilities__list {
   display: grid;
   width: 100%;
   min-width: 0;
@@ -570,7 +586,7 @@
   gap: 6px;
   overflow: visible;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -582,11 +598,11 @@
   background: var(--op2-panel-bg);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card:hover {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card:hover {
   border-color: var(--op2-border-strong);
   background: var(--op2-panel-bg-hover);
 }
-.ordemparanormal2.agent-sheet .op2-ability-card:focus-within {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card:focus-within {
   border-color: var(--op2-focus);
 }
 
@@ -658,7 +674,7 @@
   flex: 1;
 }
 
-.ordemparanormal2.agent-sheet .op2-ability-card__header {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__header {
   box-sizing: border-box;
   display: flex;
   height: 54px;
@@ -666,7 +682,7 @@
   align-items: center;
   padding: 7px 12px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__use {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__use {
   display: flex;
   flex: 1 1 0;
   min-width: 0;
@@ -682,14 +698,14 @@
   box-shadow: none;
   text-align: left;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__image {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__image {
   position: relative;
   display: block;
   flex: 0 0 40px;
   width: 40px;
   height: 40px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__image img {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__image img {
   display: block;
   width: 40px;
   height: 40px;
@@ -697,7 +713,7 @@
   border-radius: 4px;
   object-fit: cover;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__use-label {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__use-label {
   position: absolute;
   inset: 0;
   display: grid;
@@ -712,17 +728,17 @@
   opacity: 0;
   pointer-events: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__use:hover:not(:disabled) .op2-ability-card__use-label,
-.ordemparanormal2.agent-sheet .op2-ability-card__use:focus-visible .op2-ability-card__use-label {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__use:hover:not(:disabled) .op2-ability-card__use-label,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__use:focus-visible .op2-ability-card__use-label {
   opacity: 1;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__body {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__body {
   display: grid;
   flex: 1 1 0;
   min-width: 0;
   gap: 2px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__name {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__name {
   overflow: hidden;
   color: var(--op2-text);
   font-family: "Inter", sans-serif;
@@ -732,14 +748,24 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__subtitle {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__subtitle {
   color: var(--op2-accent);
   font-family: "Inter", sans-serif;
   font-size: 11px;
   font-weight: 500;
   line-height: 13px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__summary {
+  display: flex;
+  gap: var(--op2-space-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__summary > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource {
   position: relative;
   z-index: 1;
   display: flex;
@@ -752,7 +778,7 @@
   gap: 4px;
   border-left: 1px solid var(--op2-ability-separator);
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-value {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource-value {
   color: var(--op2-text);
   font-family: "Inter", sans-serif;
   font-size: 13px;
@@ -760,7 +786,7 @@
   line-height: 16px;
   white-space: nowrap;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-track {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource-track {
   display: block;
   width: 70px;
   height: 6px;
@@ -768,13 +794,13 @@
   border-radius: 3px;
   background: var(--op2-input-bg);
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-fill {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
   background: var(--op2-accent-bright);
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-controls {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource-controls {
   box-sizing: border-box;
   position: absolute;
   z-index: 2;
@@ -795,12 +821,12 @@
   opacity: 0;
   pointer-events: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource:hover .op2-ability-card__resource-controls,
-.ordemparanormal2.agent-sheet .op2-ability-card__resource:focus-within .op2-ability-card__resource-controls {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource:hover .op2-ability-card__resource-controls,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource:focus-within .op2-ability-card__resource-controls {
   opacity: 1;
   pointer-events: auto;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-current {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource-current {
   display: flex;
   flex: 1 1 0;
   min-width: 0;
@@ -808,7 +834,7 @@
   align-items: center;
   gap: 4px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__resource-adjust {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__resource-adjust {
   box-sizing: border-box;
   display: grid;
   flex: 0 0 20px;
@@ -828,8 +854,8 @@
   font-weight: 700;
   line-height: 1;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__menu-trigger,
-.ordemparanormal2.agent-sheet .op2-ability-card__expand {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__menu-trigger,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__expand {
   display: grid;
   flex: 0 0 25px;
   width: 25px;
@@ -845,47 +871,47 @@
   box-shadow: none;
   font-size: 16px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__details {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__details {
   display: grid;
   min-width: 0;
   gap: 8px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__details[hidden] {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__details[hidden] {
   display: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__details:has(> *) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__details:has(> *) {
   margin: 4px 16px 12px 78px;
   padding-top: 8px;
   border-top: 1px solid var(--op2-border);
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__description {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__description {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--op2-text-muted);
   font-size: 11px;
   line-height: 1.4;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__description > :first-child {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__description > :first-child {
   margin-top: 0;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__description > :last-child {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__description > :last-child {
   margin-bottom: 0;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__description :is(img, video, iframe, table) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__description :is(img, video, iframe, table) {
   max-width: 100%;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__description pre {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__description pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__forms-title {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__forms-title {
   margin: 0;
   color: var(--op2-accent-bright);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__forms {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__forms {
   display: grid;
   min-width: 0;
   gap: 8px;
@@ -893,18 +919,18 @@
   padding: 0;
   list-style: none;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__form {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__form {
   display: grid;
   min-width: 0;
   gap: 2px;
   overflow-wrap: anywhere;
   font-size: 11px;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__form-name {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__form-name {
   color: var(--op2-text);
   font-weight: 600;
 }
-.ordemparanormal2.agent-sheet .op2-ability-card__check-label {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-ability-card__check-label {
   color: var(--op2-text-muted);
 }
 

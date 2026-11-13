@@ -1,8 +1,5 @@
 <header class="op2-identity__header">
-  <div class="op2-portrait">
-    <img src="{{source.img}}" alt="{{localize 'ORDEMPARANORMAL2.AgentSheet.Fields.Portrait'}}"{{#if canEditStructure}} data-edit="img" data-action="editImage" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.EditPortrait'}}"{{/if}} />
-    {{#if canEditStructure}}<button class="op2-portrait__edit" type="button" data-portrait-trigger title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.EditPortrait'}}"><i class="fa-solid fa-camera"></i></button>{{/if}}
-  </div>
+  {{> "systems/ordemparanormal2/templates/actor/partials/portrait.hbs" image=source.img editable=canEditStructure altKey="ORDEMPARANORMAL2.AgentSheet.Fields.Portrait" editKey="ORDEMPARANORMAL2.AgentSheet.Tooltips.EditPortrait"}}
   <div class="op2-identity__fields">
     <div class="op2-identity__name-row">
       {{#if canEditStructure}}
@@ -44,7 +41,7 @@
     </div>
     <section class="op2-resources" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Resources'}}">
       {{#each agent.resources}}
-        <div class="op2-resource"><span class="op2-resource__label">{{localize labelKey}}</span><input type="number" name="{{valuePath}}" value="{{value}}" min="0" step="1"{{#unless @root.editable}} disabled{{/unless}} /><span>/</span><input type="number" name="{{maxPath}}" value="{{max}}" min="0" step="1"{{#unless @root.editable}} disabled{{/unless}} /></div>
+        {{> "systems/ordemparanormal2/templates/actor/partials/resource-fields.hbs" resource=this editable=@root.editable showProgress=false}}
       {{/each}}
     </section>
   </div>
@@ -52,9 +49,6 @@
 
 <section class="op2-attributes" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Attributes'}}">
   {{#each agent.attributes}}
-    <div class="op2-attribute">
-      <button class="op2-roll-trigger op2-attribute__label" type="button" {{#if @root.canRoll}}data-action="rollCheck" data-check-kind="attribute" data-check-key="{{key}}" title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Tooltips.RollCheck'}}"{{else}}disabled title="{{localize 'ORDEMPARANORMAL2.AgentSheet.Errors.NoRollPermission'}}"{{/if}}>{{localize labelKey}}</button>
-      {{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=die editable=@root.canEditStructure}}
-    </div>
+    {{> "systems/ordemparanormal2/templates/actor/partials/attribute-card.hbs" attribute=this canRoll=@root.canRoll editable=@root.canEditStructure}}
   {{/each}}
 </section>

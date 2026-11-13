@@ -1,0 +1,9 @@
+<div class="op2-resource">
+  <span class="op2-resource__label">{{localize resource.labelKey}}</span>
+  <input type="number" name="{{resource.valuePath}}" value="{{resource.value}}" min="0" step="1" aria-label="{{localize resource.labelKey}} — {{localize 'ORDEMPARANORMAL2.ActorSheet.Current'}}"{{#unless editable}} disabled{{/unless}}>
+  <span aria-hidden="true">/</span>
+  <input type="number" name="{{resource.maxPath}}" value="{{resource.max}}" min="0" step="1" aria-label="{{localize resource.labelKey}} — {{localize 'ORDEMPARANORMAL2.ActorSheet.Maximum'}}"{{#unless editable}} disabled{{/unless}}>
+  {{#if showProgress}}
+    <div class="op2-resource__track" aria-hidden="true"><span style="width:{{resource.percent}}%"></span></div>
+  {{/if}}
+</div>

@@ -1,0 +1,457 @@
+.ordemparanormal2.threat-sheet {
+  min-width: 440px;
+  min-height: 460px;
+  font-family: "Inter", sans-serif;
+}
+
+.ordemparanormal2.threat-sheet:not(.minimized) {
+  --header-height: 45px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-sheet-content {
+  container-type: inline-size;
+  min-height: 0;
+  padding: var(--op2-space-3);
+  overflow: hidden;
+  background: var(--op2-sheet-bg);
+  color: var(--op2-text);
+  font: 400 13px/1.4 "Inter", sans-serif;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 33.2%);
+  gap: var(--op2-space-3);
+  height: 100%;
+  min-height: 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-layout__side {
+  padding: var(--op2-space-3);
+  overflow-y: auto;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-identity {
+  padding: 11px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-identity__header {
+  display: grid;
+  grid-template-columns: minmax(90px, 130px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.ordemparanormal2.threat-sheet .op2-portrait {
+  min-height: 193px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-identity__fields {
+  min-width: 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-identity__name,
+.ordemparanormal2.threat-sheet .op2-threat-name {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 2px solid var(--op2-accent);
+  border-radius: 0;
+  background: none;
+  color: var(--op2-text);
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-classification {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-control {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-control > span:first-child {
+  color: var(--op2-text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-select-display, .op2-threat-control input, .op2-threat-search) {
+  min-height: 28px;
+  padding: 3px 8px;
+  font: inherit;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-select-display {
+  border: 1px solid var(--op2-border);
+  border-radius: 6px;
+  background: var(--op2-input-bg);
+  color: var(--op2-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-elements {
+  flex-wrap: wrap;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-element {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-swatch {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 4px;
+  background: var(--op2-accent-soft);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-resources {
+  align-items: start;
+  margin-top: var(--op2-space-4);
+}
+
+.ordemparanormal2.threat-sheet .op2-resources:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-rd {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-rd output {
+  display: grid;
+  place-items: center;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-rd .op2-resource__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--op2-space-1);
+}
+
+.ordemparanormal2.threat-sheet .op2-resource__track {
+  grid-column: 1/-1;
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--op2-input-bg);
+}
+
+.ordemparanormal2.threat-sheet .op2-resource__track span {
+  display: block;
+  height: 100%;
+  background: var(--op2-accent-bright);
+}
+
+.ordemparanormal2.threat-sheet .op2-attributes {
+  gap: 11px;
+  margin-top: 16px;
+  padding: 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-attribute {
+  min-height: 48px;
+  padding-inline: 10px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-section-header,
+.ordemparanormal2.threat-sheet .op2-threat-content-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-section-header {
+  min-height: 28px;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--op2-border);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-section-header--skills {
+  min-height: 24px;
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+  border-bottom: 2px solid var(--op2-accent);
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-section-header, .op2-threat-content-header) > :first-child {
+  flex: 1 1 auto;
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-section-header, .op2-threat-content-header) :is(h2, h3, p) {
+  margin: 0;
+  font-family: inherit;
+  line-height: inherit;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-section-header h2 {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-content-header {
+  margin-bottom: 10px;
+  color: var(--op2-text-muted);
+  font-size: 10px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-content-header h2 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-icon-button, .op2-threat-text-button, .op2-threat-check) {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+  min-height: 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--op2-text-muted);
+  font: inherit;
+  box-shadow: none;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-icon-button {
+  width: 24px;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-icon-button--bordered {
+  border-color: var(--op2-border);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-glyph {
+  display: inline-block;
+  border: 0;
+  vertical-align: middle;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-text-button {
+  padding-inline: 9px;
+  border-color: var(--op2-border-strong);
+  color: var(--op2-text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ordemparanormal2.threat-sheet :is(button.op2-threat-icon-button, button.op2-threat-check, .op2-threat-text-button):hover {
+  color: var(--op2-text);
+  background: var(--op2-panel-bg-hover);
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-sheet-content button, .op2-threat-sheet-content input):focus-visible {
+  outline: 2px solid var(--op2-focus);
+  outline-offset: 2px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-side-section + .op2-threat-side-section {
+  margin-top: 20px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-search {
+  width: 100%;
+  margin: 5px 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-skill {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--op2-space-1);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-skill[hidden],
+.ordemparanormal2.threat-sheet .op2-threat-empty[hidden] {
+  display: none;
+}
+
+.ordemparanormal2.threat-sheet .op2-skill-row {
+  min-height: 45px;
+  grid-column: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(46px, 64px) auto;
+}
+
+.ordemparanormal2.threat-sheet .op2-skill-row .op2-die-control {
+  width: 64px;
+}
+
+.ordemparanormal2.threat-sheet .op2-skill-row .op2-die-control.is-editable {
+  box-sizing: border-box;
+  width: 80px;
+}
+
+.ordemparanormal2.threat-sheet .op2-skill-row .op2-die-control__chevron {
+  color: var(--op2-text-muted);
+  font-size: 0.625rem;
+}
+
+.ordemparanormal2.threat-sheet .op2-skill-row .op2-die-control__select {
+  cursor: pointer;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-condition,
+.ordemparanormal2.threat-sheet .op2-threat-empty {
+  border-radius: 7px;
+  background: var(--op2-input-bg);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-properties {
+  margin: var(--op2-space-2) var(--op2-space-3) var(--op2-space-3);
+  padding: var(--op2-space-2);
+  border-top: 1px solid var(--op2-border);
+  color: var(--op2-text-muted);
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-properties summary {
+  cursor: pointer;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-properties dl {
+  margin: var(--op2-space-2) 0 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-property {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-property dt {
+  font-weight: 600;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-property dd {
+  margin: 0;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-property dd.op2-threat-pre-line {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-muted, .op2-threat-empty, .op2-threat-check, .op2-threat-damage) {
+  color: var(--op2-text-muted);
+  font-size: 11px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-check {
+  padding-inline: 0;
+}
+
+.ordemparanormal2.threat-sheet :is(.op2-threat-check, .op2-threat-damage) strong {
+  color: var(--op2-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-check__icon {
+  width: 14px;
+  height: 14px;
+  background: var(--op2-accent);
+  mask: url("../assets/icons/dice/d8.svg") center / contain no-repeat;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-damage {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-condition {
+  display: flex;
+  align-items: start;
+  gap: 5px;
+  padding: 8px 11px;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-condition > :first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-pre-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-condition + .op2-threat-condition {
+  margin-top: 6px;
+}
+
+.ordemparanormal2.threat-sheet .op2-threat-empty {
+  margin: 0;
+  padding: 12px 11px;
+}
+
+.op2-threat-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.op2-threat-editor label {
+  display: grid;
+  gap: 3px;
+}
+
+.op2-threat-editor :is(input, select, textarea) {
+  width: 100%;
+}
+
+@container (max-width: 685px) {
+  .ordemparanormal2.threat-sheet .op2-threat-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    overflow-y: auto;
+  }
+
+  .ordemparanormal2.threat-sheet .op2-threat-layout__main {
+    grid-template-rows: auto;
+  }
+
+  .ordemparanormal2.threat-sheet :is(.op2-threat-content, .op2-threat-layout__side) {
+    overflow: visible;
+  }
+}
+
+@container (max-width: 490px) {
+  .ordemparanormal2.threat-sheet .op2-attribute {
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .ordemparanormal2.threat-sheet .op2-threat-identity__header {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+}

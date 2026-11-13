@@ -1,0 +1,17 @@
+<div class="op2-threat-editor">
+  {{#each fields}}
+    <label>
+      <span>{{label}}</span>
+      {{#if options}}
+        <select name="{{name}}"{{#if required}} required{{/if}}>
+          {{#each options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+      {{else if multiline}}
+        <textarea name="{{name}}" rows="3"{{#if required}} required{{/if}}>{{value}}</textarea>
+      {{else}}
+        <input type="text" name="{{name}}" value="{{value}}"{{#if required}} required pattern=".*\S.*"{{/if}}{{#if suggestions}} list="op2-threat-suggestions-{{name}}"{{/if}}>
+        {{#if suggestions}}<datalist id="op2-threat-suggestions-{{name}}">{{#each suggestions}}<option value="{{this}}">{{/each}}</datalist>{{/if}}
+      {{/if}}
+    </label>
+  {{/each}}
+</div>

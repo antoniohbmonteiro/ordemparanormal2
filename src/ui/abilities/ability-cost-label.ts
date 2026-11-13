@@ -6,9 +6,9 @@ const PAID_COST_LABEL_KEYS: Record<Exclude<AbilityCostSource, "none">, string> =
   resource: "ORDEMPARANORMAL2.AgentSheet.Abilities.Resource",
 };
 
-export function localizeAbilityCost(cost: AbilityCostData): string {
+export function localizeAbilityCost(cost: AbilityCostData, localize = (key: string) => game.i18n.localize(key)): string {
   if (cost.source === "none") {
-    return game.i18n.localize("ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost");
+    return localize("ORDEMPARANORMAL2.AgentSheet.Abilities.NoCost");
   }
-  return `${cost.amount} ${game.i18n.localize(PAID_COST_LABEL_KEYS[cost.source])}`;
+  return `${cost.amount} ${localize(PAID_COST_LABEL_KEYS[cost.source])}`;
 }

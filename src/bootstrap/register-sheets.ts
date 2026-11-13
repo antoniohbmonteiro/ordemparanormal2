@@ -1,4 +1,5 @@
 import { AgentSheet } from "../applications/actor/agent-sheet";
+import { ThreatSheet } from "../applications/actor/threat-sheet";
 import { ProfileItemSheet } from "../applications/item/profile-item-sheet";
 import { AbilityItemSheet } from "../applications/item/ability-item-sheet";
 import { OccupationItemSheet } from "../applications/item/occupation-item-sheet";
@@ -14,6 +15,7 @@ import {
   POINT_OF_INTEREST_ITEM_TYPE,
   PROFILE_ITEM_TYPE,
   SYSTEM_ID,
+  THREAT_ACTOR_TYPE,
 } from "../config/system-config";
 
 export function registerSheets(): void {
@@ -59,6 +61,18 @@ export function registerSheets(): void {
       types: [PROFILE_ITEM_TYPE],
       makeDefault: true,
       label: "ORDEMPARANORMAL2.Sheets.Profile",
+      themes: null,
+    },
+  );
+
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(
+    foundry.documents.Actor,
+    SYSTEM_ID,
+    ThreatSheet,
+    {
+      types: [THREAT_ACTOR_TYPE],
+      makeDefault: true,
+      label: "ORDEMPARANORMAL2.Sheets.Threat",
       themes: null,
     },
   );

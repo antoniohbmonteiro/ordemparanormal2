@@ -38,6 +38,10 @@ export const COMMUNITY_LICENSE_URL =
 
 export const AGENT_ACTOR_TYPE = "agent" as const;
 
+export const THREAT_ACTOR_TYPE = "threat" as const;
+
+export const THREAT_ACCENT_COLOR = "#8C3B40" as const;
+
 export const PROFILE_ITEM_TYPE = "profile" as const;
 
 export const OCCUPATION_ITEM_TYPE = "occupation" as const;

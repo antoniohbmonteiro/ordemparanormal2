@@ -49,7 +49,7 @@ describe("AbilityDataModel", () => {
       resource: MockSchemaField;
       uses: MockArrayField;
     };
-    expect(Object.keys(schema)).toEqual(["description", "resource", "uses"]);
+    expect(Object.keys(schema)).toEqual(["characteristic", "description", "resource", "uses"]);
     expect(schema.description.options).toMatchObject({ blank: true, initial: "" });
     const use = schema.uses.element as MockSchemaField;
     const cost = use.fields.cost as unknown as MockSchemaField;
@@ -109,17 +109,17 @@ describe("AbilityDataModel", () => {
   it("jointly rejects duplicate ids and resource costs without a resource", () => {
     const use = {
       id: "use", name: "Uso", description: "",
-      cost: { source: "none", amount: 0 }, minimumLevel: null, checkIntegration: null,
+      cost: { source: "none", amount: 0 }, minimumLevel: null, checkIntegration: null, combatAction: undefined,
     };
     expect(() => AbilityDataModel.validateJoint({
-      description: "", resource: null, uses: [use, use],
+      description: "", characteristic: undefined, resource: null, uses: [use, use],
     })).toThrow("Ability uses are invalid");
     expect(() => AbilityDataModel.validateJoint({
-      description: "", resource: null,
+      description: "", characteristic: undefined, resource: null,
       uses: [{ ...use, cost: { source: "resource", amount: 1 } }],
     })).toThrow("require an owned resource");
     expect(() => AbilityDataModel.validateJoint({
-      description: "", resource: null,
+      description: "", characteristic: undefined, resource: null,
       uses: [{ ...use, cost: { source: "health", amount: 1 } }],
     })).not.toThrow();
   });

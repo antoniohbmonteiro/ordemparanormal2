@@ -86,6 +86,13 @@ describe("publishAbilityMessage", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("uses the explicitly supplied synthetic token when resolving the speaker", async () => {
+    const { getSpeaker } = stubFoundry();
+    const token = { id: "source-token" } as foundry.documents.TokenDocument;
+    await publishAbilityMessage(actor, abilityWith(), undefined, { token });
+    expect(getSpeaker).toHaveBeenCalledExactlyOnceWith({ actor, token });
+  });
+
   it("publishes the enriched executed form with its name and cost", async () => {
     const { renderTemplate } = stubFoundry();
     await publishAbilityMessage(actor, abilityWith(), {

@@ -5,6 +5,17 @@ import {
 import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../actors/agent-attributes";
 import { isSkillKey, type SkillKey } from "../../config/skills";
 import { NORMAL_DIE_STEPS, type NormalDieStep } from "../dice/die-step";
+import { parseActorCheckSelection, type ActorCheckSelection } from "../checks/check-selection";
+
+export const ABILITY_CHARACTERISTIC_KINDS = ["passiveEffect", "specialAbility"] as const;
+export const ABILITY_DAMAGE_TIMINGS = ["immediate", "perRound"] as const;
+
+export interface AbilityCombatAction {
+  readonly typeLabel: string;
+  readonly requirements: string;
+  readonly check: (ActorCheckSelection & { readonly attribute: AttributeKey | null }) | null;
+  readonly damage: { readonly expression: string; readonly timing: (typeof ABILITY_DAMAGE_TIMINGS)[number] } | null;
+}
 
 export type AbilityUseCheckApplicability =
   | { readonly type: "any" }
@@ -30,6 +41,7 @@ export interface AbilityUseData {
   readonly cost: AbilityCostData;
   readonly minimumLevel: number | null;
   readonly checkIntegration: AbilityUseCheckIntegration | null;
+  readonly combatAction?: AbilityCombatAction | null;
 }
 
 export type AbilityUsePatch = Partial<{
@@ -38,12 +50,35 @@ export type AbilityUsePatch = Partial<{
   cost: AbilityCostData;
   minimumLevel: number | null;
   checkIntegration: AbilityUseCheckIntegration | null;
+  combatAction: AbilityCombatAction | null;
 }>;
 
 export type AbilityUseMoveDirection = "up" | "down";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+export function readAbilityCombatAction(value: unknown): AbilityCombatAction | null {
+  if (!isRecord(value) || typeof value.typeLabel !== "string" || typeof value.requirements !== "string") return null;
+  let check: AbilityCombatAction["check"] = null;
+  if (value.check != null) {
+    if (!isRecord(value.check) || typeof value.check.kind !== "string" || typeof value.check.key !== "string") return null;
+    const selection = parseActorCheckSelection(value.check.kind, value.check.key);
+    const override = value.check.attribute;
+    const selectedAttribute = AGENT_ATTRIBUTE_KEYS.find((key) => key === override) ?? null;
+    if (!selection || (override != null && (!selectedAttribute || selection.kind === "attribute"))) return null;
+    check = { ...selection, attribute: selectedAttribute };
+  }
+  let damage: AbilityCombatAction["damage"] = null;
+  if (value.damage != null) {
+    if (!isRecord(value.damage) || typeof value.damage.expression !== "string" || !value.damage.expression.trim()) return null;
+    const rawTiming = value.damage.timing;
+    const timing = ABILITY_DAMAGE_TIMINGS.find((candidate) => candidate === rawTiming);
+    if (!timing) return null;
+    damage = { expression: value.damage.expression.trim(), timing };
+  }
+  return { typeLabel: value.typeLabel, requirements: value.requirements, check, damage };
 }
 
 export function readAbilityUseCheckIntegration(
@@ -124,6 +159,8 @@ export function readAbilityUse(value: unknown): AbilityUseData | null {
   const checkIntegration = rawCheckIntegration === undefined || rawCheckIntegration === null
     ? null
     : readAbilityUseCheckIntegration(rawCheckIntegration);
+  const combatAction = use.combatAction == null ? null : readAbilityCombatAction(use.combatAction);
+  if ((use.combatAction != null && !combatAction) || (combatAction && checkIntegration)) return null;
 
   if (
     !id || !name || description === null || !cost ||
@@ -143,6 +180,7 @@ export function readAbilityUse(value: unknown): AbilityUseData | null {
     cost,
     minimumLevel: minimumLevel === null ? null : Number(minimumLevel),
     checkIntegration,
+    ...(combatAction ? { combatAction } : {}),
   };
 }
 
@@ -228,6 +266,9 @@ export function createAbilityUsePatch(
     draft.checkIntegration,
   )) {
     patch.checkIntegration = draft.checkIntegration;
+  }
+  if (JSON.stringify(baseline.combatAction ?? null) !== JSON.stringify(draft.combatAction ?? null)) {
+    patch.combatAction = draft.combatAction ?? null;
   }
   return patch;
 }

@@ -8,6 +8,12 @@
   </nav>
   <div class="op2-ability-sheet__body">
     <section class="tab {{tabs.general.cssClass}}" data-group="sheet" data-tab="general">
+      <label class="op2-ability-sheet__name">
+        <span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Characteristic"}}</span>
+        <select name="system.characteristic"{{#unless editable}} disabled{{/unless}}>
+          {{#each ability.characteristics}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{localize labelKey}}</option>{{/each}}
+        </select>
+      </label>
       <section class="op2-ability-sheet__description"><span>{{localize "ORDEMPARANORMAL2.AbilitySheet.Fields.Description"}}</span><prose-mirror name="system.description" value="{{ability.description}}" toggled="true" document-uuid="{{ability.uuid}}"{{#unless editable}} disabled{{/unless}}>{{{ability.enrichedDescription}}}</prose-mirror></section>
       <section class="op2-ability-sheet__resource-section">
         <header class="op2-ability-sheet__toolbar"><h2>{{localize "ORDEMPARANORMAL2.AbilitySheet.Resource"}}</h2>{{#if editable}}{{#unless ability.resource}}<button type="button" data-action="addResource"><i class="fa-solid fa-plus"></i> {{localize "ORDEMPARANORMAL2.AbilitySheet.Actions.AddResource"}}</button>{{/unless}}{{/if}}</header>

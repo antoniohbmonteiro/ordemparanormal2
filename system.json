@@ -15,7 +15,8 @@
   "secondaryTokenAttribute": "resources.determination",
   "documentTypes": {
     "Actor": {
-      "agent": {}
+      "agent": {},
+      "threat": {}
     },
     "Item": {
       "profile": {},
@@ -161,6 +162,7 @@
   ],
   "styles": [
     "styles/agent-sheet.css",
+    "styles/threat-sheet.css",
     "styles/profile-item-sheet.css",
     "styles/occupation-item-sheet.css",
     "styles/ability-item-sheet.css",

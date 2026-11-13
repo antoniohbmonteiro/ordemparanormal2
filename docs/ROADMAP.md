@@ -489,11 +489,11 @@ Possible future scope remains intentionally uncommitted until confirmed by publi
 - individual discovery;
 - a link to the active Narrative Scene.
 
+## Threat sheet
+
+The Threat Actor sheet covers editable stat blocks, manual conditions, and action and skill checks. Actions and reusable characteristics use the same Ability Items and editors as Agents. The GM can explicitly convert legacy lists in development worlds. GM notes require private storage. Combat automation, damage rolls and application, condition mechanics, threat imports, and a system-wide Beta skill catalog remain follow-up work.
+
 ## Deferred until new playtest material
-
-### Threats
-
-Do not implement a threat Actor based on assumptions from the previous system.
 
 ### Definitive combat engine
 

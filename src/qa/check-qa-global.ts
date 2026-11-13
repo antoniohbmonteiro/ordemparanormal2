@@ -7,8 +7,11 @@ import {
   type CheckQaScenarioKey,
 } from "./check-scenarios";
 import { publishOpposedCheckScenario } from "./opposed-check-scenario";
+import { convertThreatAbilities, previewThreatAbilityConversion } from "./threat-ability-conversion";
 
 interface OrdemParanormal2QaApi {
+  previewThreatAbilityConversion: typeof previewThreatAbilityConversion;
+  convertThreatAbilities: typeof convertThreatAbilities;
   publishCheckScenario(
     actor: foundry.documents.Actor,
     scenarioKey: CheckQaScenarioKey,
@@ -27,6 +30,8 @@ export function registerCheckQaGlobal(): void {
   (globalThis as QaGlobal).ordemparanormal2Qa = Object.freeze({
     publishCheckScenario,
     publishOpposedCheckScenario,
+    previewThreatAbilityConversion,
+    convertThreatAbilities,
   });
 }
 

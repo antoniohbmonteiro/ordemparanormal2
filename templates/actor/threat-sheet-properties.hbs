@@ -1,0 +1,20 @@
+{{#if threat.traitTexts.length}}
+  <details class="op2-threat-properties" data-threat-properties{{#if propertiesOpen}} open{{/if}}>
+    <summary>{{localize "ORDEMPARANORMAL2.ThreatSheet.Properties"}}</summary>
+    <dl>
+      {{#each threat.traitTexts}}
+        <div class="op2-threat-property">
+          <dt>{{localize labelKey}}</dt>
+          {{#if value}}<dd class="op2-threat-pre-line">{{value}}</dd>{{/if}}
+          {{#if @root.canEditStructure}}
+            <dd>
+              <button type="button" class="op2-threat-icon-button" data-action="editTrait" data-field="{{key}}" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.EditTrait'}} {{localize labelKey}}">
+                <i class="fa-solid {{#if value}}fa-pen{{else}}fa-plus{{/if}}" aria-hidden="true"></i>
+              </button>
+            </dd>
+          {{/if}}
+        </div>
+      {{/each}}
+    </dl>
+  </details>
+{{/if}}

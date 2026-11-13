@@ -11,6 +11,7 @@ export interface OwnedAbilityView {
   readonly name: string;
   readonly img: string;
   readonly description: string;
+  readonly characteristic?: "passiveEffect" | "specialAbility";
   readonly useCollection: AbilityUsesView;
   readonly useSummary: {
     readonly isEmpty: boolean;
@@ -77,6 +78,8 @@ export function collectOwnedAbilities(items: Iterable<foundry.documents.Item>): 
         name: item.name,
         img: item.img ?? "icons/svg/item-bag.svg",
         description: readDescription(item.system),
+        ...(item.system && "characteristic" in item.system && item.system.characteristic === "passiveEffect"
+          ? { characteristic: "passiveEffect" as const } : {}),
         useCollection,
         useSummary: createUseSummary(useCollection),
         resource: readAbilityResource((item.system as unknown as { readonly resource?: unknown }).resource),

@@ -6,7 +6,9 @@ import { createAbilityUseId } from "../../adapters/foundry/abilities/create-abil
 import { deleteAbilityUse, moveAbilityUse, saveExistingAbilityUse, saveNewAbilityUse } from "../../adapters/foundry/abilities/update-ability-uses";
 import { ABILITY_COST_SOURCES, normalizeAbilityCost, type AbilityCostSource } from "../../core/abilities/ability-cost";
 import { readAbilityResource } from "../../core/abilities/ability-resource";
-import { readAbilityUses, type AbilityUseCheckIntegration, type AbilityUseData } from "../../core/abilities/ability-use";
+import { ABILITY_DAMAGE_TIMINGS, readAbilityCombatAction, readAbilityUses, type AbilityUseCheckIntegration, type AbilityUseData } from "../../core/abilities/ability-use";
+import { ACTOR_CHECK_SKILLS } from "../../application/checks/build-actor-check";
+import { ATTRIBUTE_DEFINITIONS } from "../../config/attributes";
 import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../../core/actors/agent-attributes";
 import { SKILL_DEFINITIONS, isSkillKey } from "../../config/skills";
 import { NORMAL_DIE_STEPS, type NormalDieStep } from "../../core/dice/die-step";
@@ -25,6 +27,10 @@ interface AbilityUseEditorContext {
   readonly canMoveUp: boolean;
   readonly canMoveDown: boolean;
   readonly modificationEnabled: boolean;
+  readonly combatEnabled: boolean;
+  readonly combatChecks: readonly { value: string; label: string; selected: boolean }[];
+  readonly combatAttributes: readonly { value: string; labelKey: string; selected: boolean }[];
+  readonly damageTimings: readonly { value: string; selected: boolean; labelKey: string }[];
   readonly applicabilityType: "any" | "attribute" | "skill";
   readonly applicabilityIsAny: boolean;
   readonly applicabilityIsAttribute: boolean;
@@ -99,7 +105,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     const cost = normalizeAbilityCost(source, amount);
     if (cost.source === "resource" && !readAbilityResource((this.#ability.system as unknown as { readonly resource?: unknown }).resource)) return null;
     let checkIntegration: AbilityUseCheckIntegration | null = null;
-    const modificationType = object.modificationType ?? (this.#draft.checkIntegration ? "extraDie" : "none");
+    const modificationType = object.modificationType ?? (this.#draft.combatAction ? "combat" : this.#draft.checkIntegration ? "extraDie" : "none");
     if (modificationType === "extraDie") {
       const die = Number(object.modificationDie);
       if (!NORMAL_DIE_STEPS.includes(die as NormalDieStep)) return null;
@@ -111,8 +117,24 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
       } else if (applicabilityType === "skill" && isSkillKey(object.applicabilitySkill) && object.applicabilitySkill !== "aptitude") {
         checkIntegration = { modification: { type: "extraDie", applicability: { type: "skill", skill: object.applicabilitySkill }, die: die as NormalDieStep } };
       } else return null;
-    } else if (modificationType !== "none") return null;
-    return { ...this.#draft, name, description, cost, minimumLevel, checkIntegration };
+    } else if (modificationType !== "none" && modificationType !== "combat") return null;
+    let combatAction = null;
+    if (modificationType === "combat") {
+      const selection = typeof object.combatCheck === "string" ? object.combatCheck : "";
+      const [kind, key] = selection.split(":");
+      const expression = typeof object.damageExpression === "string" ? object.damageExpression.trim() : "";
+      combatAction = readAbilityCombatAction({
+        typeLabel: object.actionType,
+        requirements: object.requirements,
+        check: selection ? { kind, key, attribute: kind === "attribute" ? null : object.combatAttribute || null } : null,
+        damage: expression ? { expression, timing: object.damageTiming } : null,
+      });
+      if (!combatAction) return null;
+    }
+    return {
+      ...this.#draft, name, description, cost, minimumLevel, checkIntegration,
+      ...(combatAction || this.#draft.combatAction ? { combatAction } : {}),
+    };
   }
 
   #captureDraft(): boolean {
@@ -130,6 +152,8 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     const hasResource = readAbilityResource((this.#ability.system as unknown as { readonly resource?: unknown }).resource) !== null;
     const modification = this.#draft.checkIntegration?.modification;
     const applicability = modification?.applicability ?? { type: "any" as const };
+    const combat = this.#draft.combatAction;
+    const selectedCheck = combat?.check ? `${combat.check.kind}:${combat.check.key}` : "";
     return {
       abilityUuid: this.#ability.uuid,
       draft: this.#draft,
@@ -146,6 +170,18 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
       canMoveUp: index > 0,
       canMoveDown: !!uses && index >= 0 && index < uses.length - 1,
       modificationEnabled: modification?.type === "extraDie",
+      combatEnabled: !!combat,
+      combatChecks: [
+        ...ATTRIBUTE_DEFINITIONS.map(({ key, labelKey }) => ({ value: `attribute:${key}`, label: game.i18n.localize(labelKey) })),
+        ...ACTOR_CHECK_SKILLS.map(({ selection, label }) => ({ value: `${selection.kind}:${selection.key}`, label })),
+      ].map((option) => ({ ...option, selected: option.value === selectedCheck })),
+      combatAttributes: ATTRIBUTE_DEFINITIONS.map(({ key, labelKey }) => ({
+        value: key, labelKey, selected: combat?.check?.attribute === key,
+      })),
+      damageTimings: ABILITY_DAMAGE_TIMINGS.map((value) => ({
+        value, selected: (combat?.damage?.timing ?? "immediate") === value,
+        labelKey: `ORDEMPARANORMAL2.ThreatSheet.Timing.${value}`,
+      })),
       applicabilityType: applicability.type,
       applicabilityIsAny: applicability.type === "any",
       applicabilityIsAttribute: applicability.type === "attribute",
@@ -171,8 +207,18 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     const integration = htmlElement.querySelector<HTMLFieldSetElement>("[data-check-integration]");
     const attribute = htmlElement.querySelector<HTMLElement>("[data-applicability-attribute]");
     const skill = htmlElement.querySelector<HTMLElement>("[data-applicability-skill]");
+    const combat = htmlElement.querySelector<HTMLFieldSetElement>("[data-combat-action]");
+    const combatCheck = htmlElement.querySelector<HTMLSelectElement>('[name="combatCheck"]');
+    const combatAttribute = htmlElement.querySelector<HTMLSelectElement>('[name="combatAttribute"]');
     if (!modification || !applicability || !integration || !attribute || !skill) return;
     const update = (): void => {
+      if (combat) {
+        combat.hidden = modification.value !== "combat";
+        combat.disabled = combat.hidden || !canEditAbility(this.#ability);
+      }
+      if (combatAttribute && combatCheck) {
+        combatAttribute.disabled = !combatCheck.value || combatCheck.value.startsWith("attribute:");
+      }
       integration.hidden = modification.value !== "extraDie";
       attribute.hidden = applicability.value !== "attribute";
       skill.hidden = applicability.value !== "skill";
@@ -182,6 +228,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
     };
     modification.addEventListener("change", update);
     applicability.addEventListener("change", update);
+    combatCheck?.addEventListener("change", update);
     update();
   }
 

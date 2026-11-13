@@ -4,11 +4,7 @@
       {{> "systems/ordemparanormal2/templates/actor/agent-sheet-identity.hbs"}}
     </section>
 
-    <nav class="op2-content-tabs tabs" data-group="content" aria-label="{{localize 'ORDEMPARANORMAL2.AgentSheet.Sections.Content'}}">
-      {{#each tabs}}
-        <button class="op2-content-tab {{cssClass}}" type="button" data-action="selectAgentTab" data-group="{{group}}" data-tab="{{id}}" aria-pressed="{{active}}">{{localize label}}</button>
-      {{/each}}
-    </nav>
+    {{> "systems/ordemparanormal2/templates/actor/partials/content-tabs.hbs" tabs=tabs action="selectAgentTab" labelKey="ORDEMPARANORMAL2.AgentSheet.Sections.Content"}}
 
     <main class="op2-agent-sheet__active-content op2-panel">
       <section class="op2-tab-panel tab {{tabs.abilities.cssClass}}" data-group="content" data-tab="abilities">

@@ -1,0 +1,5 @@
+<div class="op2-skill-row{{#if specialized}} op2-skill-row--specialization{{/if}}">
+  <button class="op2-roll-trigger op2-skill-row__name" type="button" {{#if canRoll}}data-action="rollCheck" data-check-kind="{{checkKind}}" data-check-key="{{skill.key}}"{{else}}disabled{{/if}}>{{skill.label}}</button>
+  {{#if skill.attributeLabelKey}}<span class="op2-skill-row__attribute">{{localize skill.attributeLabelKey}}</span>{{/if}}
+  {{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=skill.die editable=editable label=skill.label}}
+</div>

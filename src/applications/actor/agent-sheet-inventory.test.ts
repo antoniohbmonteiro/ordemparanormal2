@@ -206,8 +206,10 @@ beforeAll(async () => {
   Sheet = module.AgentSheet as unknown as typeof Sheet;
   const handlebars = Handlebars.create();
   handlebars.registerHelper("localize", (key: string) => key.split(".").reduce<unknown>((value, part) => (value as Record<string, unknown>)[part], translations));
-  handlebars.registerPartial("systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs",
-    await readFile(new URL("../../../templates/actor/partials/die-step-select.hbs", import.meta.url), "utf8"));
+  for (const part of ["die-step-select", "portrait", "resource-fields", "attribute-card"]) {
+    handlebars.registerPartial(`systems/ordemparanormal2/templates/actor/partials/${part}.hbs`,
+      await readFile(new URL(`../../../templates/actor/partials/${part}.hbs`, import.meta.url), "utf8"));
+  }
   const templates = await Promise.all(["identity", "inventory"].map((part) =>
     readFile(new URL(`../../../templates/actor/agent-sheet-${part}.hbs`, import.meta.url), "utf8")));
   renderView = handlebars.compile(templates.join("\n"));

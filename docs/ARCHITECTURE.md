@@ -177,15 +177,7 @@ They may format already-resolved data, but must not redefine game rules.
 
 ## Actor strategy
 
-The first supported Actor type is:
-
-```text
-agent
-```
-
-No `threat` type will be created until the playtest publishes enough threat rules to define a real model.
-
-The Agent model covers only stable identity, PV/PD, attributes, and skills verified from the public playtest. It uses `TypeDataModel` and has a production `ActorSheetV2`; no custom Actor class exists.
+The system registers `agent` and `threat` with separate `TypeDataModel` and `ActorSheetV2` implementations. Both use Foundry's Actor class and share content tabs, Ability cards and Check composition. Threats use sparse skills and show their embedded Abilities in Habilidades, with combat details supplied by the Threat view model.
 
 See [DOMAIN_MODEL.md](DOMAIN_MODEL.md).
 

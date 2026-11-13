@@ -1,10 +1,12 @@
-import { AGENT_ACTOR_TYPE } from "../config/system-config";
+import { AGENT_ACTOR_TYPE, THREAT_ACTOR_TYPE } from "../config/system-config";
 
 interface ActorCreationData {
   readonly prototypeToken?: {
     readonly actorLink?: boolean | null;
     readonly disposition?: number | null;
     readonly displayBars?: number | null;
+    readonly bar1?: { readonly attribute?: string | null } | null;
+    readonly bar2?: { readonly attribute?: string | null } | null;
     readonly sight?: {
       readonly enabled?: boolean | null;
       readonly range?: number | null;
@@ -47,10 +49,24 @@ function buildPrototypeTokenDefaults(
 export function registerActorDefaults(): void {
   Hooks.on("preCreateActor", (document, data) => {
     const actor = document as foundry.documents.Actor;
+    const creationData = data as ActorCreationData;
+
+    if (actor.type === THREAT_ACTOR_TYPE) {
+      const source = creationData.prototypeToken;
+      const defaults = {
+        ...(source?.actorLink === undefined ? { actorLink: false } : {}),
+        ...(source?.disposition === undefined ? { disposition: CONST.TOKEN_DISPOSITIONS.HOSTILE } : {}),
+        ...(source?.displayBars === undefined ? { displayBars: CONST.TOKEN_DISPLAY_MODES.OWNER_HOVER } : {}),
+        ...(source?.bar1 === undefined || (source.bar1 !== null && source.bar1.attribute === undefined)
+          ? { bar1: { attribute: "resources.health" } } : {}),
+        ...(source?.bar2 === undefined || (source.bar2 !== null && source.bar2.attribute === undefined)
+          ? { bar2: { attribute: null } } : {}),
+      };
+      if (Object.keys(defaults).length > 0) actor.prototypeToken.updateSource(defaults);
+      return;
+    }
 
     if (actor.type !== AGENT_ACTOR_TYPE) return;
-
-    const creationData = data as ActorCreationData;
 
     const defaults = buildPrototypeTokenDefaults(creationData);
     if (Object.keys(defaults).length > 0) {

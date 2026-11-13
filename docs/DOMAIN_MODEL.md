@@ -10,9 +10,11 @@ It is not a copy of the playtest rules. It is an implementation boundary for the
 
 ### `agent`
 
-`agent` is the only Actor type in the first implementation cycle.
+`agent` represents a playable character.
 
-No threat/enemy Actor type is currently defined because the available playtest material does not yet provide a stable threat model.
+### `threat`
+
+`threat` represents a threat stat block managed through its own Actor sheet.
 
 ## Agent identity
 
@@ -294,9 +296,15 @@ Do not import category, load, weapon, armor, or modification assumptions from th
 
 ## Threats
 
-Deferred.
+Threats use Foundry Actor identity, editable PV and optional RD, three attribute dice, and a sparse list of skills from the current registry. All embedded Abilities appear once in Habilidades. A form may define a combat action, including an optional Check selection and descriptive damage with explicit immediate or per-round timing. Ordinary forms are usable from the card, while an Ability with no forms is descriptive. Vulnerabilities, immunities and Enigma de Medo remain on the Threat and appear under the collapsible Propriedades section. Active conditions remain in the sidebar.
 
-No `threat` Actor type, threat Data Model, or threat sheet should be implemented until threat rules are published and reviewed.
+Action Checks use the same dice composition and DT resolution as Agents. Threats can use free forms and pay PV or the embedded Ability's own resource. Forms that require Agent level or PD are unavailable. Synthetic Actors publish using the source token.
+
+Unlinked threat Tokens use Foundry ActorDelta for instance state. GM notes are pending a storage mechanism that keeps their content out of player clients. Damage rolls and application, condition effects, opposed combat resolution, and turn automation are outside this model.
+
+### Development-world conversion
+
+Use a copy of the development world with no concurrent editing. Enable Debug Mode as GM, then run `const preview = ordemparanormal2Qa.previewThreatAbilityConversion()` and inspect `console.table(preview)` in the browser console. Run `await ordemparanormal2Qa.convertThreatAbilities(preview)` with that preview. The result lists completed world Actors and failures by Actor or token UUID. Generate a fresh preview after a failure. The converter creates Items before clearing legacy arrays and reuses copies tagged with the original section and ID. An unlinked token with a local list receives its own ordered copies and suppresses the corresponding inherited converted Items. Other deltas are preserved. Reopen the world and verify the Actors and affected tokens before retiring the transitional read path.
 
 ## Combat
 

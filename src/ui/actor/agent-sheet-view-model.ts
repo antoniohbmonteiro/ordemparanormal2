@@ -210,7 +210,7 @@ export interface AgentSheetViewModel {
   readonly skills: readonly SkillViewModel[];
 }
 
-function createDieStepControl(
+export function createDieStepControl(
   path: string,
   value: DieStep,
   choices: readonly DieStep[],
@@ -233,14 +233,14 @@ function createDieStepControl(
   };
 }
 
-function createSkillDieStepControl(
+export function createSkillDieStepControl(
   path: string,
   value: SkillDieStep,
 ): DieStepControlViewModel {
   return createDieStepControl(path, value, SKILL_DIE_STEPS, true);
 }
 
-function createAbilityCardViewModel(
+export function createAbilityCardViewModel(
   ability: OwnedAbilityView,
 ): AbilityCardViewModel {
   const content = {

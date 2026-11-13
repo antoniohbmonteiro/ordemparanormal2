@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Ficha de Ameaça com PV, RD, atributos, perícias configuráveis e condições manuais. Vulnerabilidades, imunidades e Enigma de Medo ficam na seção recolhível Propriedades.
+- Itens `ability` reutilizáveis em Agentes e Ameaças, com editor compartilhado. Formas de combate podem incluir testes pelo Check Engine e dano descritivo, imediato ou por rodada.
+- Tokens de Ameaça desvinculados por padrão, com PV e condições por token. O chat identifica o token de origem ao usar habilidades com ou sem teste.
+- Conversão opcional para o Mestre, com prévia, de ações e características legadas em Habilidades nos mundos de desenvolvimento. A conversão preserva as listas locais de tokens desvinculados.
+
+### Changed
+
+- Agentes e Ameaças compartilham os componentes de abas e cards. Na Ameaça, todos os itens ficam em Habilidades, inclusive os adicionados por arraste fora do modo de edição.
+- O build e a validação do dia a dia deixam a geração dos compêndios para um comando separado.
+
 ## [0.6.0] - 2026-10-07
 
 ### Added

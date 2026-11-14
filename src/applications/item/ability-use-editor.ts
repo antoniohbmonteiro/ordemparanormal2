@@ -11,7 +11,21 @@ import { ACTOR_CHECK_SKILLS } from "../../application/checks/build-actor-check";
 import { ATTRIBUTE_DEFINITIONS } from "../../config/attributes";
 import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../../core/actors/agent-attributes";
 import { SKILL_DEFINITIONS, isSkillKey } from "../../config/skills";
+import { isCustomSkillKey } from "../../core/actors/custom-skills";
+import { subscribeCustomSkills, worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
 import { NORMAL_DIE_STEPS, type NormalDieStep } from "../../core/dice/die-step";
+
+function customOptions(selected?: string) {
+  const options = worldCustomSkillOptions().filter(option => !option.archived || option.key === selected);
+  const result = options.map(option => ({ value: option.key, label: option.label }));
+  if (isCustomSkillKey(selected) && !options.some(option => option.key === selected))
+    result.push({ value: selected, label: `Perícia indisponível (${selected})` });
+  return result;
+}
+
+function canSelectCustom(value: unknown, selected?: string): boolean {
+  return !isCustomSkillKey(value) || value === selected || worldCustomSkillOptions().some(option => option.key === value && !option.archived);
+}
 
 const TEMPLATE = "systems/ordemparanormal2/templates/item/ability-use-editor.hbs";
 
@@ -56,6 +70,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const { FormDataExtended: FoundryFormDataExtended, TextEditor } = foundry.applications.ux;
 
 export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) {
+  #unsubscribeCustomSkills?: () => void;
   static override DEFAULT_OPTIONS = {
     actions: {
       cancel: AbilityUseEditor.#onCancel,
@@ -114,7 +129,10 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
         checkIntegration = { modification: { type: "extraDie", applicability: { type: "any" }, die: die as NormalDieStep } };
       } else if (applicabilityType === "attribute" && AGENT_ATTRIBUTE_KEYS.includes(object.applicabilityAttribute as AttributeKey)) {
         checkIntegration = { modification: { type: "extraDie", applicability: { type: "attribute", attribute: object.applicabilityAttribute as AttributeKey }, die: die as NormalDieStep } };
-      } else if (applicabilityType === "skill" && isSkillKey(object.applicabilitySkill) && object.applicabilitySkill !== "aptitude") {
+      } else if (applicabilityType === "skill"
+        && (isSkillKey(object.applicabilitySkill) || isCustomSkillKey(object.applicabilitySkill)) && object.applicabilitySkill !== "aptitude"
+        && canSelectCustom(object.applicabilitySkill, this.#baseline?.checkIntegration?.modification.applicability.type === "skill"
+          ? this.#baseline.checkIntegration.modification.applicability.skill : undefined)) {
         checkIntegration = { modification: { type: "extraDie", applicability: { type: "skill", skill: object.applicabilitySkill }, die: die as NormalDieStep } };
       } else return null;
     } else if (modificationType !== "none" && modificationType !== "combat") return null;
@@ -129,7 +147,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
         check: selection ? { kind, key, attribute: kind === "attribute" ? null : object.combatAttribute || null } : null,
         damage: expression ? { expression, timing: object.damageTiming } : null,
       });
-      if (!combatAction) return null;
+      if (!combatAction || !canSelectCustom(combatAction.check?.key, this.#baseline?.combatAction?.check?.key)) return null;
     }
     return {
       ...this.#draft, name, description, cost, minimumLevel, checkIntegration,
@@ -174,6 +192,7 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
       combatChecks: [
         ...ATTRIBUTE_DEFINITIONS.map(({ key, labelKey }) => ({ value: `attribute:${key}`, label: game.i18n.localize(labelKey) })),
         ...ACTOR_CHECK_SKILLS.map(({ selection, label }) => ({ value: `${selection.kind}:${selection.key}`, label })),
+        ...customOptions(combat?.check?.key).map(({ value, label }) => ({ value: `skill:${value}`, label })),
       ].map((option) => ({ ...option, selected: option.value === selectedCheck })),
       combatAttributes: ATTRIBUTE_DEFINITIONS.map(({ key, labelKey }) => ({
         value: key, labelKey, selected: combat?.check?.attribute === key,
@@ -191,17 +210,31 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
         selected: applicability.type === "attribute" && applicability.attribute === value,
         labelKey: `ORDEMPARANORMAL2.AgentSheet.Attributes.${value === "physical" ? "Physical" : value === "mind" ? "Mind" : "Emotion"}`,
       })),
-      skills: SKILL_DEFINITIONS.filter((definition) => !("specializations" in definition)).map((definition) => ({
-        value: definition.key,
-        label: definition.label,
-        selected: applicability.type === "skill" && applicability.skill === definition.key,
-      })),
+      skills: [
+        ...SKILL_DEFINITIONS.filter((definition) => !("specializations" in definition)).map(({ key, label }) => ({ value: key, label })),
+        ...customOptions(applicability.type === "skill" ? applicability.skill : undefined),
+      ].map(option => ({ ...option, selected: applicability.type === "skill" && applicability.skill === option.value })),
       dice: NORMAL_DIE_STEPS.map((value) => ({ value, selected: modification?.die === value })),
     };
   }
 
   protected override _attachPartListeners(partId: string, htmlElement: HTMLElement, options: HandlebarsRenderOptions): void {
     super._attachPartListeners(partId, htmlElement, options);
+    this.#unsubscribeCustomSkills?.();
+    this.#unsubscribeCustomSkills = subscribeCustomSkills(() => {
+      for (const [name, prefix, original] of [
+        ["applicabilitySkill", "", this.#baseline?.checkIntegration?.modification.applicability],
+        ["combatCheck", "skill:", this.#baseline?.combatAction?.check],
+      ] as const) {
+        const select = htmlElement.querySelector<HTMLSelectElement>(`select[name="${name}"]`);
+        if (!select) continue;
+        const previous = select.value;
+        const retained = original && ("skill" in original ? original.skill : "key" in original ? original.key : undefined);
+        for (const option of [...select.options]) if (isCustomSkillKey(option.value.slice(prefix.length))) option.remove();
+        for (const entry of customOptions(retained ?? undefined)) select.add(new Option(entry.label, `${prefix}${entry.value}`));
+        select.value = previous;
+      }
+    });
     const modification = htmlElement.querySelector<HTMLSelectElement>('[name="modificationType"]');
     const applicability = htmlElement.querySelector<HTMLSelectElement>('[name="applicabilityType"]');
     const integration = htmlElement.querySelector<HTMLFieldSetElement>("[data-check-integration]");
@@ -286,6 +319,8 @@ export class AbilityUseEditor extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {
+    this.#unsubscribeCustomSkills?.();
+    this.#unsubscribeCustomSkills = undefined;
     super._onClose(options);
     this.#onClosed();
   }

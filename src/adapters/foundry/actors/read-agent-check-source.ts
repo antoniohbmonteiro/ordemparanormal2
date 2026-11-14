@@ -3,6 +3,7 @@ import { SKILL_DEFINITIONS } from "../../../config/skills";
 import { AGENT_ACTOR_TYPE } from "../../../config/system-config";
 import { AGENT_ATTRIBUTE_KEYS } from "../../../core/actors/agent-attributes";
 import { isDieStep } from "../../../core/dice/die-step";
+import { worldCustomSkillOptions } from "./custom-skill-catalog";
 
 export function readAgentCheckSource(
   actor: foundry.documents.Actor,
@@ -14,6 +15,7 @@ export function readAgentCheckSource(
   const system = actor.system as unknown as {
     readonly attributes: Readonly<Record<string, unknown>>;
     readonly skills: Readonly<Record<string, unknown>>;
+    readonly customSkills?: AgentCheckSource["customSkills"];
   };
   const attributes = Object.fromEntries(
     AGENT_ATTRIBUTE_KEYS.map((key) => {
@@ -67,5 +69,7 @@ export function readAgentCheckSource(
     }),
   ) as AgentCheckSource["skills"];
 
-  return { attributes, skills };
+  return system.customSkills && Object.keys(system.customSkills).length
+    ? { attributes, skills, customSkills: system.customSkills, customSkillOptions: worldCustomSkillOptions() }
+    : { attributes, skills };
 }

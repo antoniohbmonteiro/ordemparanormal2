@@ -1,4 +1,5 @@
 import { parseAgentCheckSelection, type AgentCheckSelection } from "./build-agent-check";
+import { matchesSkillCheckComponents } from "./build-actor-check";
 import { isSupportedCheckSnapshot, type ModernCheckSnapshot } from "./check-snapshot";
 import {
   areOpposedCheckParticipantReferencesEqual,
@@ -91,11 +92,7 @@ export function doesSnapshotMatchSelection(
       snapshot.components[0].key === selection.key
     );
   }
-  if (snapshot.components.length !== 2 || snapshot.components[0]?.kind !== "attribute") return false;
-  const requested = snapshot.components[1];
-  return selection.kind === "skill"
-    ? requested?.kind === "skill" && requested.key === selection.key
-    : requested?.kind === "specialization" && requested.key === selection.key;
+  return matchesSkillCheckComponents(selection, snapshot.components);
 }
 
 function parseSide(value: unknown): OpposedCheckSideStateV1 | null {

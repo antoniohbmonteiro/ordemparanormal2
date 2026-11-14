@@ -68,7 +68,7 @@ describe("AbilityDataModel", () => {
     const extraDie = modification.types.extraDie as { applicability: MockTypedSchemaField; die: MockField };
     expect(extraDie.die.options).toMatchObject({ choices: [4, 6, 8, 10, 12] });
     const skill = extraDie.applicability.types.skill as { skill: MockField };
-    expect(skill.skill.options.choices).not.toContain("aptitude");
+    expect(skill.skill.options.choices).toBeUndefined();
     expect(schema.uses.options).toMatchObject({ required: true, initial: [] });
     expect(schema.resource.options).toMatchObject({
       required: true,

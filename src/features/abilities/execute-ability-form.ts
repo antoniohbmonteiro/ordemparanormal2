@@ -12,6 +12,8 @@ import type { AttributeKey } from "../../core/actors/agent-attributes";
 import { applyCheckExtraDice, applyCheckStepAdjustments, resolveCheckDifficulty } from "../../core/checks/check";
 import type { ThreatDataModel } from "../../documents/actor/threat-data-model";
 import { threatAbilityRestriction, useAbility, type AbilityUseResult } from "./use-ability";
+import { worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
+import { isCustomSkillKey, readSkillDie } from "../../core/actors/custom-skills";
 
 type FormResult = AbilityUseResult | { status: "cancelled" | "missing-check" | "publication-failed" };
 
@@ -24,15 +26,20 @@ export function buildAbilityActionCheck(
   const localize = (key: string) => game.i18n.localize(key);
   let input;
   let attributes: ActorCheckSource["attributes"];
+  const customSkillOptions = worldCustomSkillOptions();
+  if (check.kind === "skill" && isCustomSkillKey(check.key)
+    && !customSkillOptions.some(option => option.key === check.key)) return;
   if (actor.type === THREAT_ACTOR_TYPE) {
-    const system = actor.system as unknown as Pick<ThreatDataModel, "attributes" | "skills">;
+    const system = actor.system as unknown as Pick<ThreatDataModel, "attributes" | "skills" | "customSkills">;
     attributes = system.attributes;
     const getSkillDie: ActorCheckSource["getSkillDie"] = (selection) =>
-      system.skills.find((skill) => skill.kind === selection.kind && skill.key === selection.key)?.die;
+      isCustomSkillKey(selection.key) ? readSkillDie(system.customSkills?.[selection.key])
+        : system.skills.find((skill) => skill.kind === selection.kind && skill.key === selection.key)?.die;
     if (check.kind !== "attribute" && getSkillDie(check) === undefined) return;
-    input = buildActorCheck(check, { attributes, getSkillDie }, localize, attribute ?? check.attribute ?? undefined);
+    input = buildActorCheck(check, { attributes, getSkillDie, customSkillOptions }, localize, attribute ?? check.attribute ?? undefined);
   } else if (actor.type === AGENT_ACTOR_TYPE) {
     const source = readAgentCheckSource(actor);
+    if (check.kind === "skill" && isCustomSkillKey(check.key) && !readSkillDie(source.customSkills?.[check.key])) return;
     attributes = source.attributes;
     input = buildAgentCheck(check, source, localize, attribute ?? check.attribute ?? undefined);
   } else return;

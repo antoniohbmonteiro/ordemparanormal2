@@ -4,6 +4,26 @@ import type { AttributeKey } from "../../core/actors/agent-attributes";
 import { composeAttributeCheck, composeSkillCheck, type CheckInput } from "../../core/checks/check";
 import type { ActorCheckSelection, SkillCheckSelection } from "../../core/checks/check-selection";
 import type { DieStep } from "../../core/dice/die-step";
+import { isCustomSpecializationKey, type CustomSkillOption } from "../../core/actors/custom-skills";
+
+export function skillCheckComponentKind(selection: SkillCheckSelection): "skill" | "specialization" {
+  return selection.kind === "aptitude" || isCustomSpecializationKey(selection.key) ? "specialization" : "skill";
+}
+
+export function matchesSkillCheckComponents(
+  selection: SkillCheckSelection, components: readonly Pick<CheckInput["components"][number], "kind" | "key">[],
+): boolean {
+  const skill = components[1];
+  return components.length === 2 && components[0]?.kind === "attribute"
+    && skill?.kind === skillCheckComponentKind(selection) && skill.key === selection.key;
+}
+
+export class MissingActorSkillError extends Error {
+  constructor(key: string) {
+    super(`O personagem não possui a perícia solicitada ou sua definição está indisponível (${key}).`);
+    this.name = "MissingActorSkillError";
+  }
+}
 
 export { parseActorCheckSelection } from "../../core/checks/check-selection";
 export type { ActorCheckSelection, SkillCheckSelection } from "../../core/checks/check-selection";
@@ -28,13 +48,15 @@ export const ACTOR_CHECK_SKILLS: readonly ActorCheckSkill[] = SKILL_DEFINITIONS.
       }],
 );
 
-export function findActorCheckSkill(kind: string, key: string): ActorCheckSkill | undefined {
-  return ACTOR_CHECK_SKILLS.find(({ selection }) => selection.kind === kind && selection.key === key);
+export function findActorCheckSkill(kind: string, key: string, custom: readonly CustomSkillOption[] = []): ActorCheckSkill | CustomSkillOption | undefined {
+  const canonical = ACTOR_CHECK_SKILLS.find(({ selection }) => selection.kind === kind && selection.key === key);
+  return canonical ?? (kind === "skill" ? custom.find(option => option.key === key) : undefined);
 }
 
 export interface ActorCheckSource {
   readonly attributes: Readonly<Record<AttributeKey, DieStep>>;
   readonly getSkillDie: (selection: SkillCheckSelection) => SkillDieStep | undefined;
+  readonly customSkillOptions?: readonly CustomSkillOption[];
 }
 
 export type Localize = (key: string) => string;
@@ -74,13 +96,14 @@ export function buildActorCheck(
     return composeAttributeCheck(attributeComponent(selection.key));
   }
 
-  const definition = findActorCheckSkill(selection.kind, selection.key);
+  const definition = findActorCheckSkill(selection.kind, selection.key, source.customSkillOptions);
   const die = source.getSkillDie(selection);
-  if (!definition || die === undefined) throw new Error(`Missing skill: ${selection.key}.`);
-  const label = selection.kind === "aptitude" ? aptitudeSpecializationLabel(selection.key) : definition.label;
+  if (!definition || die === undefined) throw new MissingActorSkillError(selection.key);
+  const label = "componentLabel" in definition ? definition.componentLabel
+    : selection.kind === "aptitude" ? aptitudeSpecializationLabel(selection.key) : definition.label;
   return composeSkillCheck(
     { ...selection, name: definition.label },
     attributeComponent(selectedAttribute ?? definition.baseAttribute),
-    { kind: selection.kind === "aptitude" ? "specialization" : "skill", key: selection.key, label, die },
+    { kind: skillCheckComponentKind(selection), key: selection.key, label, die },
   );
 }

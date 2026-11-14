@@ -17,7 +17,8 @@ vi.mock("./poi-runtime-state", () => ({
 vi.mock("./poi-discovery", () => ({ readPoiDiscoveries: () => state.discoveries, POI_DISCOVERY_PATH: "discovery" }));
 vi.mock("./poi-runtime-queries", () => ({ broadcastPoiInvalidation: vi.fn(),
   serializePoiItemMutation: (_key: string, run: () => unknown) => run() }));
-vi.mock("../../../documents/item/point-of-interest-data", () => ({ readPointOfInterestInformation: () => [
+vi.mock("../../../documents/item/point-of-interest-data", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../documents/item/point-of-interest-data")>(), readPointOfInterestInformation: () => [
   { id: "a", availability: { mode: "always" }, approaches: [{ skill: "research", difficulty: 6 }] },
   { id: "b", availability: { mode: "always" }, approaches: [{ skill: "research", difficulty: 10 }] },
   { id: "situational", availability: { mode: "situational" }, approaches: [{ skill: "research", difficulty: 4 }] },

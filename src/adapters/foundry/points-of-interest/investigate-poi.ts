@@ -1,7 +1,9 @@
-import { isSkillKey } from "../../../config/skills";
+import { isCustomSkillId } from "../../../core/actors/custom-skills";
+import { getAgentSkillDie } from "../../../application/checks/build-agent-check";
+import { currentPoiCustomSkillDie } from "./poi-skill";
 import { SYSTEM_ID } from "../../../config/system-config";
 import { reachableInformationIds } from "../../../core/investigation/resolve-information";
-import { isAptitudeSpecializationKey, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { parsePoiSkillSelection, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { readAgentCheckSource } from "../actors/read-agent-check-source";
 import { sceneInvestigationRuntime, investigationParticipants } from "./investigation-runtime";
 import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
@@ -28,9 +30,10 @@ export async function resolveInvestigatePoi(input: InvestigatePoiInput, requeste
     || (game.users as unknown as { get(id: string): foundry.documents.User | undefined }).get(requester.id) !== requester)
     return { ok: false, reason: "forbidden" };
   if (!input || typeof input.sceneId !== "string" || typeof input.runId !== "string"
-    || typeof input.itemUuid !== "string" || typeof input.actorUuid !== "string" || !isSkillKey(input.skill)
-    || (input.skill === "aptitude" ? !isAptitudeSpecializationKey(input.specialization) : input.specialization !== undefined))
+    || typeof input.itemUuid !== "string" || typeof input.actorUuid !== "string")
     return { ok: false, reason: "invalid" };
+  const selection = parsePoiSkillSelection(input.skill, input.specialization);
+  if (!selection) return { ok: false, reason: "invalid" };
   const scene = game.scenes.get(input.sceneId);
   const item = worldPoi(input.itemUuid);
   if (!scene || !item || !isGmControlledPoi(item) || !readScenePoiUuids(scene).includes(input.itemUuid))
@@ -43,10 +46,8 @@ export async function resolveInvestigatePoi(input: InvestigatePoiInput, requeste
   if (!actor || actor.uuid !== input.actorUuid || actor.type !== "agent"
     || !requester.isGM && !actor.testUserPermission(requester, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))
     return { ok: false, reason: "forbidden" };
-  const source = readAgentCheckSource(actor);
-  const value = input.skill === "aptitude"
-    ? source.skills.aptitude[input.specialization as keyof typeof source.skills.aptitude]
-    : source.skills[input.skill];
+  const value = isCustomSkillId(input.skill) ? currentPoiCustomSkillDie(actor, item, input.skill, input.specialization)
+    : getAgentSkillDie(readAgentCheckSource(actor), selection);
   if (typeof value !== "number") return { ok: false, reason: "invalid" };
   const knowledge = readPoiKnowledge(item).map(entry => ({ actorUuid: entry.actorUuid, informationIds: [...entry.informationIds] }));
   const entry = knowledge.find(candidate => candidate.actorUuid === actor.uuid);

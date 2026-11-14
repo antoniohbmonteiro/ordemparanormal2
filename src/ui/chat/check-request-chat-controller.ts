@@ -1,3 +1,4 @@
+import { MissingActorSkillError } from "../../application/checks/build-actor-check";
 import type { CheckRequestStateV1 } from "../../application/checks/check-request-state";
 import { canUserRollActor } from "../../adapters/foundry/actors/agent-check-permission";
 import { resolveAgentCheckParticipant } from "../../adapters/foundry/actors/resolve-agent-check-participant";
@@ -33,6 +34,10 @@ export async function activateCheckRequestChatController(
       if (!message.id) throw new Error("Check Request message has no ID.");
       submitted = await rollCheckRequest(message.id) === "submitted";
     } catch (error) {
+      if (error instanceof MissingActorSkillError) {
+        ui.notifications.warn(error.message);
+        return;
+      }
       console.error(`${SYSTEM_ID} | Failed to roll Check Request.`, error);
       ui.notifications.error(
         game.i18n.localize("ORDEMPARANORMAL2.CheckRequestCard.Errors.Roll"),

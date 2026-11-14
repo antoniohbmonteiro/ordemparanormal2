@@ -1,0 +1,16 @@
+<section class="op2-threat-editor">
+  {{#if valid}}
+    <button type="button" data-action="create">+ Criar perícia</button>
+    {{#each definitions}}
+      <div class="op2-custom-skill-entry">
+        <span>{{name}}{{#if archived}} · Arquivada{{/if}}</span>
+        <button type="button" data-action="edit" data-skill-id="{{id}}">Editar</button>
+        <button type="button" data-action="archive" data-skill-id="{{id}}">{{#if archived}}Reativar{{else}}Arquivar{{/if}}</button>
+      </div>
+    {{else}}
+      <p>Nenhuma perícia personalizada cadastrada.</p>
+    {{/each}}
+  {{else}}
+    <p>O catálogo de perícias personalizadas está inválido.</p>
+  {{/if}}
+</section>

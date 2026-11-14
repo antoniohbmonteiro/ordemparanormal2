@@ -1,7 +1,9 @@
 import { isSupportedCheckSnapshot } from "../../../application/checks/check-snapshot";
-import { isSkillKey } from "../../../config/skills";
+import { isCustomSkillId } from "../../../core/actors/custom-skills";
+import { matchesSkillCheckComponents } from "../../../application/checks/build-actor-check";
+import { currentPoiCustomSkillDie } from "./poi-skill";
 import { SYSTEM_ID } from "../../../config/system-config";
-import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { parsePoiSkillSelection, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { resolveExamination } from "../../../features/points-of-interest/resolve-examination";
 import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
 import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
@@ -37,9 +39,10 @@ export async function resolveExaminePoi(input: ExaminePoiInput, requester: found
     return { ok: false, reason: "forbidden" };
   if (!input || typeof input.sceneId !== "string" || typeof input.runId !== "string"
     || typeof input.itemUuid !== "string" || typeof input.actorUuid !== "string"
-    || typeof input.messageId !== "string" || !input.messageId || !isSkillKey(input.skill)
-    || (input.skill === "aptitude" ? typeof input.specialization !== "string" : input.specialization !== undefined))
+    || typeof input.messageId !== "string" || !input.messageId)
     return { ok: false, reason: "invalid" };
+  const selection = parsePoiSkillSelection(input.skill, input.specialization);
+  if (!selection) return { ok: false, reason: "invalid" };
   const scene = game.scenes.get(input.sceneId);
   const item = worldPoi(input.itemUuid);
   if (!scene || !item || !isGmControlledPoi(item) || !readScenePoiUuids(scene).includes(input.itemUuid))
@@ -56,8 +59,9 @@ export async function resolveExaminePoi(input: ExaminePoiInput, requester: found
   const message = (game as typeof game & { messages?: { get(id: string): ChatMessage | undefined } }).messages?.get(input.messageId);
   const snapshot = message?.getFlag(SYSTEM_ID, "check");
   if (!message || message.speaker.actor !== actor.id || !isSupportedCheckSnapshot(snapshot) || snapshot.schemaVersion !== 4
-    || snapshot.check.kind !== (input.skill === "aptitude" ? "aptitude" : "skill")
-    || snapshot.check.key !== (input.skill === "aptitude" ? input.specialization : input.skill))
+    || snapshot.check.kind !== selection.kind || snapshot.check.key !== selection.key
+    || (isCustomSkillId(input.skill) && (!currentPoiCustomSkillDie(actor, item, input.skill, input.specialization)
+      || !matchesSkillCheckComponents(selection, snapshot.components))))
     return { ok: false, reason: "invalid" };
   const processedItem = messageIds(item.getFlag(SYSTEM_ID, EXAMINATIONS_FLAG));
   const processedActor = messageIds(actor.getFlag(SYSTEM_ID, ACTOR_EXAMINATIONS_FLAG));

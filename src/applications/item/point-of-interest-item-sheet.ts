@@ -1,7 +1,10 @@
 import type { DocumentSheetRenderContext, DocumentSheetRenderOptions } from "@client/applications/api/document-sheet.mjs";
+import type { ApplicationClosingOptions } from "@client/applications/_types.mjs";
 import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 
 import { isSkillKey } from "../../config/skills";
+import { isCustomSkillKey, splitCustomSkillKey } from "../../core/actors/custom-skills";
+import { subscribeCustomSkills, worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
 import { createPointOfInterestInformationId } from "../../adapters/foundry/points-of-interest/create-point-of-interest-information-id";
 import {
   POINT_OF_INTEREST_ALWAYS_AVAILABLE,
@@ -37,6 +40,13 @@ const { ItemSheetV2 } = foundry.applications.sheets as unknown as FoundryApplica
 type InformationMutation = (list: readonly PointOfInterestInformation[]) => readonly PointOfInterestInformation[];
 
 export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+  #unsubscribeCustomSkills?: () => void;
+
+  protected override _onClose(options: ApplicationClosingOptions): void {
+    this.#unsubscribeCustomSkills?.();
+    this.#unsubscribeCustomSkills = undefined;
+    super._onClose(options);
+  }
   static override DEFAULT_OPTIONS = {
     actions: {
       addInformation: PointOfInterestItemSheet.#onAddInformation,
@@ -92,7 +102,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
     ]);
     const stored = readPointOfInterestInformation(item.system);
     const information = await Promise.all(buildInformationViewModels(stored, this.#pendingSituational,
-      this.#pendingOverrides).map(async entry => ({ ...entry, approaches: await Promise.all(entry.approaches.map(async approach => {
+      this.#pendingOverrides, worldCustomSkillOptions()).map(async entry => ({ ...entry, approaches: await Promise.all(entry.approaches.map(async approach => {
         if (!isToolApproach(approach)) return approach;
         const source = await describeToolApproach(approach.equipmentUuid, approach.useFormId, approach.mechanicConfig);
         return { ...approach, toolLabel: source.equipmentName, useFormLabel: source.useFormName,
@@ -164,6 +174,21 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
   }
   protected override _attachPartListeners(partId: string, htmlElement: HTMLElement, options: HandlebarsRenderOptions): void {
     super._attachPartListeners(partId, htmlElement, options);
+    if (partId === "main") {
+      this.#unsubscribeCustomSkills?.();
+      this.#unsubscribeCustomSkills = subscribeCustomSkills(() => {
+        const custom = worldCustomSkillOptions();
+        for (const select of htmlElement.querySelectorAll<HTMLSelectElement>('[data-poi-edit="skill"]')) {
+          const stored = select.dataset.storedSkill;
+          const previous = select.value;
+          for (const option of [...select.options]) if (isCustomSkillKey(option.value)) option.remove();
+          for (const option of custom) if (!option.archived || option.key === stored) select.add(new Option(option.label, option.key));
+          if (isCustomSkillKey(stored) && !custom.some(option => option.key === stored))
+            select.add(new Option(`Perícia indisponível (${stored})`, stored));
+          select.value = [...select.options].some(option => option.value === previous) ? previous : stored ?? "";
+        }
+      });
+    }
     if (partId !== "main" || !this.#canAuthor) return;
     for (const control of htmlElement.querySelectorAll<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>("[data-poi-edit]")) {
       control.addEventListener("change", event => {
@@ -192,7 +217,7 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
           if (!current || !isSkillApproach(current)) throw new Error("Unknown POI skill approach.");
           let next: PointOfInterestApproach;
           if (control.dataset.poiEdit === "skill") {
-            if (!isSkillKey(raw)) throw new Error("Invalid POI skill.");
+            if (!isSkillKey(raw) && !isCustomSkillKey(raw)) throw new Error("Invalid POI skill.");
             // The DTs, including an alternative DT, stay with the approach when its skill changes.
             const difficulties = { difficulty: current.difficulty, showDifficultyToPlayers: current.showDifficultyToPlayers,
               ...(current.difficultyOverride ? { difficultyOverride: current.difficultyOverride } : {}) };
@@ -203,6 +228,12 @@ export class PointOfInterestItemSheet extends HandlebarsApplicationMixin(ItemShe
               const specialization = APTITUDE_OPTIONS.find(option => !used.has(option.value))?.value;
               if (!specialization) throw new Error("No available POI specialization.");
               next = { skill: "aptitude", specialization, ...difficulties };
+            } else if (isCustomSkillKey(raw)) {
+              const reference = splitCustomSkillKey(raw);
+              const unchanged = current.skill === reference.skill && current.specialization === reference.specialization;
+              if (!unchanged && !worldCustomSkillOptions().some(option => option.key === raw && !option.archived))
+                throw new Error("Perícia indisponível.");
+              next = { ...reference, ...difficulties };
             } else next = { skill: raw, ...difficulties };
           } else if (control.dataset.poiEdit === "specialization") {
             if (current.skill !== "aptitude" || !isAptitudeSpecializationKey(raw)) throw new Error("Invalid POI specialization.");

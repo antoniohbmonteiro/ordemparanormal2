@@ -31,6 +31,7 @@ beforeAll(async () => {
     data: {
       fields: {
         NumberField: MockField,
+        TypedObjectField: MockSchemaField,
         SchemaField: MockSchemaField,
         StringField: MockField,
       },

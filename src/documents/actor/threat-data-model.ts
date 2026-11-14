@@ -2,6 +2,8 @@ import { findActorCheckSkill, parseActorCheckSelection } from "../../application
 import { SKILL_DIE_STEPS, type SkillDieStep } from "../../config/skills";
 import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../../core/actors/agent-attributes";
 import { DIE_STEPS, type DieStep } from "../../core/dice/die-step";
+import { createCustomSkillsField } from "./custom-skills-field";
+import { isCustomSkillKey, readSkillDie } from "../../core/actors/custom-skills";
 
 export const THREAT_DAMAGE_TIMINGS = ["immediate", "perRound"] as const;
 export const THREAT_TRAIT_LISTS = ["passiveEffects", "specialAbilities"] as const;
@@ -88,6 +90,7 @@ function createSchema() {
         required: true, nullable: false, integer: true, choices: SKILL_DIE_STEPS, initial: 4,
       }),
     }),
+    customSkills: createCustomSkillsField(),
     actions: entriesField({
       id: requiredText(),
       name: requiredText(),
@@ -143,7 +146,7 @@ export class ThreatDataModel extends foundry.abstract.TypeDataModel<foundry.docu
     const skillKeys = data.skills.map(({ kind, key }) => {
       const skill = kind && key && findActorCheckSkill(kind, key);
       if (!skill) throw new Error("Unknown threat skill.");
-      return threatSkillKey(skill.selection);
+      return threatSkillKey({ kind, key });
     });
     assertUnique(skillKeys);
     for (const entries of [
@@ -152,9 +155,12 @@ export class ThreatDataModel extends foundry.abstract.TypeDataModel<foundry.docu
 
     for (const { check } of data.actions) {
       if (!check) continue;
-      const selection = check.kind && check.key && parseActorCheckSelection(check.kind, check.key);
+      const selection = parseActorCheckSelection(check.kind, check.key);
+      const possessesSkill = selection?.kind === "skill" && isCustomSkillKey(selection.key)
+        ? readSkillDie(data.customSkills?.[selection.key]) !== undefined
+        : selection && skillKeys.includes(threatSkillKey(selection));
       if (!selection || (selection.kind === "attribute" && check.attribute != null)
-        || (selection.kind !== "attribute" && !skillKeys.includes(threatSkillKey(selection)))) {
+        || (selection.kind !== "attribute" && !possessesSkill)) {
         throw new Error("Invalid threat action check.");
       }
     }

@@ -173,7 +173,7 @@ describe("Agent Sheet main template", () => {
     expect(skillsTemplate).not.toContain("editable=@root.editable");
     const sharedControl = 'systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs';
     expect(identityTemplate).toContain("partials/attribute-card.hbs");
-    expect(skillsTemplate.split("partials/skill-row.hbs")).toHaveLength(3);
+    expect(skillsTemplate.split("partials/skill-row.hbs")).toHaveLength(4);
     expect(attributeCard.split(sharedControl)).toHaveLength(2);
     expect(skillRow.split(sharedControl)).toHaveLength(2);
     expect(identityTemplate).not.toContain("op2-die-control__value");

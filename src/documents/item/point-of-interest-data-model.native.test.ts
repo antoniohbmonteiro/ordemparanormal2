@@ -6,6 +6,14 @@ import { poiSystem } from "../../core/adventure-import/adventure-poi-data";
 const commonPath = process.env.FOUNDRY_V14_COMMON_PATH;
 afterEach(() => vi.unstubAllGlobals());
 describe.skipIf(!commonPath)("installed Foundry v14 Point of Interest model (no persistence)", () => {
+  it("round-trips an imported custom specialization independently of the world catalog", async () => {
+    vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
+    const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");
+    const approach = { skill: "custom_1234567890abcdef", specialization: "spec_1234567890abcdef",
+      difficulty: 7, showDifficultyToPlayers: false };
+    const model = new Model({ information: [{ id: "clue", content: "", approaches: [approach] }] } as never, { strict: true });
+    expect(model.toObject().information[0].approaches[0]).toMatchObject(approach);
+  });
   it("constructs and updates every enriched Act II preset without changing legacy or tool serialization", async () => {
     vi.stubGlobal("foundry", await import(/* @vite-ignore */ pathToFileURL(commonPath!).href));
     const { PointOfInterestDataModel: Model } = await import("./point-of-interest-data-model");

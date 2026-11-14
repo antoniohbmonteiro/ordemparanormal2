@@ -11,6 +11,8 @@ import { openCheckRequestDialog } from "../checks/check-request-dialog";
 import { createCheckRequest } from "../../features/checks/create-check-request";
 import { openAdventureImporter } from "../adventure-import/adventure-import-application";
 import { openAccessChallengeManager } from "../access-challenges/manager";
+import { CustomSkillManager } from "../actor/custom-skill-manager";
+import { canManageCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
 
 const GM_TOOLKIT_TEMPLATE =
   "systems/ordemparanormal2/templates/applications/gm-toolkit.hbs";
@@ -25,6 +27,7 @@ export class GmToolkit extends HandlebarsApplicationMixin(ApplicationV2) {
       opposedCheck: GmToolkit.#onOpposedCheck,
       accessChallenges: GmToolkit.#onAccessChallenges,
       importAdventure: GmToolkit.#onImportAdventure,
+      manageCustomSkills: GmToolkit.#onManageCustomSkills,
     },
     classes: ["ordemparanormal2", "op2-gm-toolkit"],
     position: { top: 80, left: 220, width: "auto" as const, height: "auto" as const },
@@ -41,6 +44,18 @@ export class GmToolkit extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   #draggable: Draggable | null = null;
+  #customSkills?: CustomSkillManager;
+
+  static async #onManageCustomSkills(this: GmToolkit): Promise<void> {
+    if (!canManageCustomSkills()) return;
+    this.#customSkills ??= new CustomSkillManager();
+    await this.#customSkills.render({ force: true });
+    this.#customSkills.bringToFront();
+  }
+
+  protected override async _prepareContext() {
+    return { tabs: undefined, canManageCustomSkills: canManageCustomSkills() };
+  }
 
   protected override _canRender(options: ApplicationRenderOptions): boolean | void {
     if (!game.user.isGM) return false;

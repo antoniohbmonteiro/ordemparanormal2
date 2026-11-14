@@ -1,4 +1,4 @@
-.ordemparanormal2.op2-check-dialog {
+.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog) {
   --op2-dialog-bg: rgba(14, 16, 21, 0.98);
   --op2-dialog-panel: rgba(27, 30, 36, 0.82);
   --op2-dialog-panel-hover: rgba(39, 43, 51, 0.96);
@@ -13,7 +13,7 @@
   color: var(--op2-dialog-text);
 }
 
-.ordemparanormal2.op2-check-dialog .window-content {
+.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog) .window-content {
   background: var(--op2-dialog-bg);
   padding: 0.75rem;
 }
@@ -436,13 +436,13 @@
   white-space: nowrap;
 }
 
-.ordemparanormal2.op2-check-dialog .form-footer {
+.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog) .form-footer {
   gap: 0.4rem;
   padding: 0.5rem 0 0;
   border-top: 1px solid var(--op2-dialog-border);
 }
 
-.ordemparanormal2.op2-check-dialog .form-footer button {
+.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog) .form-footer button {
   border: 1px solid var(--op2-dialog-copper);
   background: transparent;
   color: var(--op2-dialog-text);
@@ -455,6 +455,190 @@
 .ordemparanormal2.op2-check-dialog .form-footer button[data-action="roll"] {
   border-color: var(--op2-dialog-accent);
   background: linear-gradient(135deg, var(--op2-dialog-accent-dark), #5e2529);
+}
+
+.ordemparanormal2.op2-skill-dialog {
+  --background: transparent;
+  --op2-select-focus: #8c3b40;
+  --op2-select-chevron: url("../assets/icons/threat-chevron.svg");
+  max-width: calc(100vw - var(--op2-space-4));
+  border-color: var(--op2-dialog-border);
+  font-family: Inter, sans-serif;
+  color-scheme: dark;
+}
+
+.ordemparanormal2.op2-skill-dialog .window-header {
+  background: var(--op2-dialog-bg);
+  border-bottom-color: var(--op2-dialog-border);
+  color: var(--op2-dialog-text);
+}
+
+.ordemparanormal2.op2-skill-dialog .dialog-content {
+  max-height: min(65vh, 32rem);
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.op2-skill-dialog :is(.op2-skill-dialog__body, [data-specialization-list]) {
+  display: grid;
+  gap: var(--op2-space-3);
+}
+
+.op2-skill-dialog .op2-skill-dialog__field {
+  display: grid;
+  gap: var(--op2-space-1);
+  color: var(--op2-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.op2-skill-dialog .op2-skill-dialog__field :is(select, input) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--op2-border);
+  border-radius: 6px;
+  background: var(--op2-input-bg);
+  color: var(--op2-text);
+  box-shadow: none;
+  font: inherit;
+}
+
+.op2-skill-dialog .op2-skill-dialog__field select {
+  appearance: none;
+  height: 30px;
+  padding-inline-end: 24px;
+  border-radius: var(--op2-radius);
+  background: var(--op2-select-chevron) right 8px center / 9px 6px no-repeat var(--op2-input-bg);
+}
+
+.op2-skill-dialog .op2-skill-dialog__field select:has(option[value=""]:checked) {
+  color: var(--op2-text-muted);
+}
+
+.op2-skill-dialog .op2-skill-dialog__field option {
+  background-color: rgb(27 30 36);
+  color: var(--op2-text);
+}
+
+.op2-skill-dialog .op2-skill-dialog__field :is(select, input):enabled:hover:not(:focus-visible) {
+  border-color: var(--op2-border-strong);
+  background-color: var(--op2-panel-bg-hover);
+}
+
+.op2-skill-dialog .op2-skill-dialog__field :is(select, input):focus-visible {
+  background-color: var(--op2-input-bg);
+}
+
+.op2-skill-dialog .op2-skill-dialog__field select:disabled {
+  opacity: 0.4;
+}
+
+.op2-skill-dialog :is(select, input, button):focus-visible {
+  border-color: var(--op2-select-focus);
+  outline: 2px solid var(--op2-select-focus);
+  outline-offset: 1px;
+}
+
+@supports (appearance: base-select) and selector(::picker(select)) {
+  .op2-skill-dialog .op2-skill-dialog__field select,
+  .op2-skill-dialog .op2-skill-dialog__field select::picker(select) {
+    appearance: base-select;
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field select {
+    align-items: center;
+    padding-inline-end: 8px;
+    background-image: none;
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field select::picker-icon {
+    content: "";
+    width: 9px;
+    height: 6px;
+    margin-inline-start: auto;
+    background: var(--op2-select-chevron) center / contain no-repeat;
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field select::picker(select) {
+    margin-block-start: 4px;
+    padding: 4px;
+    border: 1px solid var(--op2-border-strong);
+    border-radius: var(--op2-radius);
+    background: var(--op2-panel-bg);
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field option {
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: transparent;
+    font: 500 12px Inter, sans-serif;
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field option:checked {
+    background: var(--op2-accent-soft);
+  }
+
+  .op2-skill-dialog .op2-skill-dialog__field option:is(:hover, :focus-visible) {
+    background: var(--op2-panel-bg-hover);
+  }
+}
+
+.op2-skill-dialog [data-specializations]:not([hidden]) {
+  display: grid;
+  gap: var(--op2-space-2);
+  min-width: 0;
+  padding: var(--op2-space-2);
+  border: 1px solid var(--op2-dialog-border);
+  border-radius: var(--op2-radius);
+  color: var(--op2-dialog-text);
+}
+
+.op2-skill-dialog .op2-skill-dialog__specialization {
+  display: grid;
+  gap: var(--op2-space-1);
+}
+
+.op2-skill-dialog .op2-skill-dialog__archive {
+  display: flex;
+  align-items: center;
+  gap: var(--op2-space-1);
+  font-size: 12px;
+}
+
+.ordemparanormal2.op2-skill-dialog :is(.form-footer button, .op2-skill-dialog__secondary) {
+  min-height: 36px;
+  border: 1px solid var(--op2-dialog-copper);
+  border-radius: var(--op2-radius);
+  background: var(--op2-dialog-bg);
+  color: var(--op2-dialog-text);
+  box-shadow: none;
+  font: 600 13px Inter, sans-serif;
+}
+
+.ordemparanormal2.op2-skill-dialog :is(.form-footer button, .op2-skill-dialog__secondary):enabled:hover {
+  background: var(--op2-dialog-panel);
+}
+
+.ordemparanormal2.op2-skill-dialog .form-footer .op2-skill-dialog__primary {
+  border-color: var(--op2-dialog-accent);
+  background: var(--op2-dialog-accent-dark);
+}
+
+.ordemparanormal2.op2-skill-dialog .form-footer .op2-skill-dialog__primary:enabled:hover {
+  background: var(--op2-select-focus);
+}
+
+.op2-skill-dialog button:disabled {
+  opacity: 0.4;
 }
 
 @media (max-width: 760px) {

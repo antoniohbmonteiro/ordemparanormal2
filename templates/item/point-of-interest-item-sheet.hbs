@@ -53,7 +53,7 @@
                     <div class="op2-poi-sheet__tool-source"><strong>{{localize "ORDEMPARANORMAL2.EquipmentUse.Tool"}}: {{toolLabel}}</strong><span>{{useFormLabel}}</span>{{#if mechanicConfig.sequenceLength}}<span>{{localize "ORDEMPARANORMAL2.Laboratory.MechanicLabel"}} · {{mechanicConfig.sequenceLength}} dados</span>{{else}}{{#if mechanicConfig}}<span>{{localize "ORDEMPARANORMAL2.Radio.MechanicLabel"}}</span>{{/if}}{{/if}}{{#if invalidSource}}<span role="status">{{localize "ORDEMPARANORMAL2.EquipmentUse.InvalidSource"}}</span>{{/if}}</div>
                   {{else}}
                   <label><span>{{localize "ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill"}}</span>
-                    <select data-poi-edit="skill" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}}>
+                    <select data-poi-edit="skill" data-stored-skill="{{selectedSkill}}" data-information-id="{{../id}}" data-approach-index="{{index}}"{{#unless @root.editable}} disabled{{/unless}}>
                       {{#each skillOptions}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
                     </select>
                   </label>

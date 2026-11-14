@@ -1,4 +1,5 @@
 import {
+  getAgentSkillDie,
   buildAgentAttributeChoices,
   buildAgentCheck,
   type AgentCheckSelection,
@@ -17,6 +18,7 @@ import {
 } from "../../core/checks/check";
 import type { AppliedCheckAbilityUse } from "../../application/checks/check-ability-use-state";
 import { confirmCheckAbilityUses, prepareCheckAbilityUses } from "./check-ability-uses";
+import { isCustomSkillKey } from "../../core/actors/custom-skills";
 
 export class AgentCheckPermissionError extends Error {
   constructor() {
@@ -97,8 +99,19 @@ export function prepareAgentCheckExecution(actor: foundry.documents.Actor, selec
 
 export async function resolveAgentCheckInteraction(actor: foundry.documents.Actor, selection: AgentCheckSelection,
   options: ResolveAgentCheckInteractionOptions = {}): Promise<ResolvedAgentCheckInteraction | null> {
+  const customBaseline = () => {
+    if (selection.kind !== "skill" || !isCustomSkillKey(selection.key)) return;
+    const source = readAgentCheckSource(actor);
+    const definition = source.customSkillOptions?.find(entry => entry.key === selection.key);
+    return JSON.stringify([definition?.baseAttribute, getAgentSkillDie(source, selection)]);
+  };
+  const baseline = customBaseline();
   const dialogResult = await prepareAgentCheckInteraction(actor, selection, options);
   if (!dialogResult) return null;
+  if (baseline !== customBaseline()) {
+    ui.notifications.warn("A perícia mudou. Abra o teste novamente.");
+    return null;
+  }
   const { selectedInput, preparedAbilityUses, effectiveInput } = prepareAgentCheckExecution(actor, selection, dialogResult);
   const execution = await executeFoundryCheck(effectiveInput);
   const appliedAbilityUses = await confirmCheckAbilityUses(actor, selectedInput, dialogResult.extraDice, preparedAbilityUses);

@@ -1,5 +1,6 @@
 import { SYSTEM_ID } from "../../../config/system-config";
-import { isSkillApproach, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { approachIdentity, isSkillApproach, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { isCustomSkillId } from "../../../core/actors/custom-skills";
 import { publishPoiRevealNotice } from "./publish-poi-reveal-notice";
 import { knownNarrativeClues } from "./investigation-clues";
 import { POI_DISCOVERY_PATH, readPoiDiscoveries } from "./poi-discovery";
@@ -19,7 +20,7 @@ export type PoiMutation =
       readonly informationId: string; readonly actorUuids: readonly string[] };
 export type PoiMutationResult = { readonly ok: true } | { readonly ok: false; readonly reason: "forbidden" | "unavailable" | "linked" | "invalid" | "no-gm" };
 export interface PoiSceneKnownClue { readonly text: string; readonly shareReference?: ShareClueReference }
-export interface PoiSceneKnownGroup { readonly skill: string; readonly clues: readonly PoiSceneKnownClue[] }
+export interface PoiSceneKnownGroup { readonly skill: string; readonly specialization?: string; readonly clues: readonly PoiSceneKnownClue[] }
 export interface PoiSceneEntry { readonly itemUuid: string; readonly name: string; readonly img: string; readonly linkedRegionIds: readonly string[];
   readonly knownGroups?: readonly PoiSceneKnownGroup[] }
 export type PoiSceneResult = { readonly entries: readonly PoiSceneEntry[]; readonly runId?: string | null;
@@ -67,17 +68,19 @@ export function resolvePoiScene(sceneId: string, requester: foundry.documents.Us
     }
     if (!isPoiVisibleTo(readPoiVisibility(item), requester.id, requester.isGM)) continue;
     const known = new Set(actor ? readPoiKnowledge(item).find(entry => entry.actorUuid === actor.uuid)?.informationIds ?? [] : []);
-    const groups = new Map<string, PoiSceneKnownClue[]>();
+    const groups = new Map<string, { skill: string; specialization?: string; clues: PoiSceneKnownClue[] }>();
     if (!requester.isGM) for (const info of readPointOfInterestInformation(item.system)) {
       if (!known.has(info.id)) continue;
       const first = info.approaches.find(isSkillApproach);
       const skill = first?.skill ?? "Informações descobertas";
-      const clues = groups.get(skill) ?? [];
-      clues.push({ text: info.content, ...(shareReference(itemUuid, info.id) ? { shareReference: shareReference(itemUuid, info.id) } : {}) });
-      groups.set(skill, clues);
+      const key = first && isCustomSkillId(skill) ? approachIdentity(first) : skill;
+      const group = groups.get(key) ?? { skill, ...(isCustomSkillId(skill) && first?.specialization
+        ? { specialization: first.specialization } : {}), clues: [] };
+      group.clues.push({ text: info.content, ...(shareReference(itemUuid, info.id) ? { shareReference: shareReference(itemUuid, info.id) } : {}) });
+      groups.set(key, group);
     }
     entries.push({ itemUuid, name: item.name, img: item.img ?? "", linkedRegionIds: requester.isGM ? associatedRegionIds(scene, itemUuid) : [],
-      ...(!requester.isGM ? { knownGroups: [...groups].map(([skill, clues]) => ({ skill, clues })) } : {}) });
+      ...(!requester.isGM ? { knownGroups: [...groups.values()] } : {}) });
   }
   if (requester.isGM) return { entries };
   return { entries, runId: runtime?.runId ?? null,

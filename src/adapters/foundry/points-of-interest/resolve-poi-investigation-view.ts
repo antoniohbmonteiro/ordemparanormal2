@@ -1,7 +1,10 @@
-import { skillLabel, type SkillKey } from "../../../config/skills";
+import { isCustomSkillId } from "../../../core/actors/custom-skills";
+import { actorCustomSkills } from "../actors/actor-custom-skills";
+import { worldCustomSkillOptions } from "../actors/custom-skill-catalog";
+import { poiSkillLabel } from "./poi-skill";
 import {
   approachIdentity, isSkillApproach, isToolApproach, playerVisiblePointOfInterestInformation, readPointOfInterestInformation, uniformToolInteractionConfiguration,
-  type PointOfInterestSkillApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
+  parsePoiSkillSelection, type PointOfInterestSkillApproach, type PointOfInterestInformation, type PoiInvestigationViewData,
 } from "../../../documents/item/point-of-interest-data";
 import { isGmControlledPoi, isPoiVisibleTo, readPoiKnowledge, readPoiVisibility, readScenePoiUuids, worldPoi } from "./poi-runtime-state";
 import { investigationParticipants, sceneInvestigationRuntime } from "./investigation-runtime";
@@ -18,13 +21,14 @@ export type PoiInvestigationError = "unavailable" | "forbidden" | "no-gm";
 export type PoiInvestigationResult = { readonly view: PoiInvestigationViewData } | { readonly error: PoiInvestigationError };
 
 interface DerivedRow { readonly entry: PointOfInterestInformation; readonly approach: PointOfInterestSkillApproach }
-function groupApproaches(information: readonly PointOfInterestInformation[]): ReadonlyMap<SkillKey, readonly DerivedRow[]> {
-  const groups = new Map<SkillKey, DerivedRow[]>();
+function groupApproaches(information: readonly PointOfInterestInformation[]): ReadonlyMap<string, readonly DerivedRow[]> {
+  const groups = new Map<string, DerivedRow[]>();
   for (const entry of information) for (const approach of entry.approaches) {
     if (!isSkillApproach(approach)) continue;
-    const rows = groups.get(approach.skill) ?? [];
+    const key = isCustomSkillId(approach.skill) ? approachIdentity(approach) : approach.skill;
+    const rows = groups.get(key) ?? [];
     rows.push({ entry, approach });
-    groups.set(approach.skill, rows);
+    groups.set(key, rows);
   }
   return groups;
 }
@@ -71,6 +75,13 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
   const base = { name: latest.item.name, description, img: latest.item.img ?? "",
     investigationRunId: investigationRuntime?.runId ?? null };
   const groups = groupApproaches(information);
+  const customOptions = worldCustomSkillOptions();
+  const unavailable = (approach: PointOfInterestSkillApproach) => {
+    if (!isCustomSkillId(approach.skill)) return false;
+    const selection = parsePoiSkillSelection(approach.skill, approach.specialization);
+    const option = customOptions.find(entry => entry.key === selection?.key);
+    return !option || typeof actorCustomSkills(actor)[option.key] !== "number";
+  };
   const playerGroups = new Map<string, DerivedRow[]>();
   for (const entry of playerVisiblePointOfInterestInformation(information, known)) for (const approach of entry.approaches) {
     if (!isSkillApproach(approach)) continue;
@@ -89,10 +100,11 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
             return { ...source, valid: source.valid && uniformToolInteractionConfiguration(information, approach) };
           })),
         }))),
-        skills: [...groups].map(([key, rows]) => ({ key, name: skillLabel(key),
+        skills: [...groups.values()].map(rows => ({ key: rows[0].approach.skill, name: poiSkillLabel(rows[0].approach.skill,
+          isCustomSkillId(rows[0].approach.skill) ? rows[0].approach.specialization : undefined),
           information: rows.map(({ entry, approach }) => ({ id: entry.id, content: entry.content,
             difficulty: approach.difficulty, showDifficultyToPlayers: approach.showDifficultyToPlayers,
-            ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
+            ...(approach.specialization ? { specialization: approach.specialization } : {}),
             ...(entry.availability.mode === "situational" ? { condition: entry.availability.condition } : {}),
             ...(approach.difficultyOverride ? { difficultyOverride: { ...approach.difficultyOverride } } : {}),
             knownCount: knowledge.filter(agent => agent.informationIds.includes(entry.id)).length })) })) }
@@ -100,14 +112,16 @@ export async function resolvePoiInvestigationView(request: PoiInvestigationReque
       tools: actor ? investigationToolInventory(actor) : [],
       discoveries: information.filter(entry => known.has(entry.id) && !entry.approaches.some(isSkillApproach))
         .map(entry => ({ content: entry.content })),
-      skills: [...playerGroups.values()].map(rows => ({ key: rows[0].approach.skill, name: skillLabel(rows[0].approach.skill),
-        ...(rows[0].approach.skill === "aptitude" ? { specialization: rows[0].approach.specialization } : {}),
+      skills: [...playerGroups.values()].map(rows => ({ key: rows[0].approach.skill, name: poiSkillLabel(rows[0].approach.skill,
+        isCustomSkillId(rows[0].approach.skill) ? rows[0].approach.specialization : undefined),
+        ...(rows[0].approach.specialization ? { specialization: rows[0].approach.specialization } : {}),
+        ...(unavailable(rows[0].approach) ? { unavailable: true } : {}),
         publicDifficulties: [...new Set(rows.filter(({ entry, approach }) =>
           approach.showDifficultyToPlayers && (entry.availability.mode === "always" || known.has(entry.id)))
           .map(({ approach }) => approach.difficulty))],
         information: rows.filter(({ entry }) => known.has(entry.id)).map(({ entry, approach }) => ({
           ...(approach.showDifficultyToPlayers ? { visibility: "public" as const, difficulty: approach.difficulty } : { visibility: "hidden" as const }),
-          ...(approach.skill === "aptitude" ? { specialization: approach.specialization } : {}),
+          ...(approach.specialization ? { specialization: approach.specialization } : {}),
           content: entry.content,
         })) })) };
   const final = authorized(request);

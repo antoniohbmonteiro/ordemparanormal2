@@ -47,7 +47,7 @@ export function validateAdventurePoiData(value: unknown): asserts value is Adven
         }
         const override = record(approach?.difficultyOverride);
         return !approach || !keysAre(approach, ["skill", "difficulty", "showDifficultyToPlayers",
-          ...(approach.skill === "aptitude" ? ["specialization"] : []),
+          ...(approach.specialization === undefined ? [] : ["specialization"]),
           ...(approach.difficultyOverride === undefined ? [] : ["difficultyOverride"])])
           || (approach.difficultyOverride !== undefined && (!override || !keysAre(override, ["difficulty", "condition"])))
           || typeof approach.showDifficultyToPlayers !== "boolean";

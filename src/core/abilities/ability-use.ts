@@ -4,6 +4,7 @@ import {
 } from "./ability-cost";
 import { AGENT_ATTRIBUTE_KEYS, type AttributeKey } from "../actors/agent-attributes";
 import { isSkillKey, type SkillKey } from "../../config/skills";
+import { isCustomSkillKey, type CustomSkillKey } from "../actors/custom-skills";
 import { NORMAL_DIE_STEPS, type NormalDieStep } from "../dice/die-step";
 import { parseActorCheckSelection, type ActorCheckSelection } from "../checks/check-selection";
 
@@ -20,7 +21,7 @@ export interface AbilityCombatAction {
 export type AbilityUseCheckApplicability =
   | { readonly type: "any" }
   | { readonly type: "attribute"; readonly attribute: AttributeKey }
-  | { readonly type: "skill"; readonly skill: SkillKey };
+  | { readonly type: "skill"; readonly skill: SkillKey | CustomSkillKey };
 
 export interface ExtraDieAbilityUseCheckModification {
   readonly type: "extraDie";
@@ -104,7 +105,7 @@ export function readAbilityUseCheckIntegration(
     };
   } else if (
     applicability.type === "skill" &&
-    isSkillKey(applicability.skill) &&
+    (isSkillKey(applicability.skill) || isCustomSkillKey(applicability.skill)) &&
     applicability.skill !== "aptitude"
   ) {
     parsedApplicability = { type: "skill", skill: applicability.skill };

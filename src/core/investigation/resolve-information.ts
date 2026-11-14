@@ -21,7 +21,7 @@ export function reachableInformationIds(
 ): readonly string[] {
   return information.filter(entry => entry.availability.mode === "always" && !knownIds.has(entry.id)
     && entry.approaches.some(approach => approach.type !== "tool" && approach.skill === skill
-      && (skill !== "aptitude" || approach.specialization === specialization)
+      && approach.specialization === specialization
       && value >= approach.difficulty)).map(entry => entry.id);
 }
 

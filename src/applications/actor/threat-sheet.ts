@@ -1,4 +1,8 @@
 import type { ApplicationClosingOptions } from "@client/applications/_types.mjs";
+import { addCustomSkill, pickActorSkill } from "./custom-skills";
+import { actorCustomSkills, updateActorCustomSkill } from "../../adapters/foundry/actors/actor-custom-skills";
+import { canManageCustomSkills, subscribeCustomSkills, worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
+import { isCustomSkillKey, readSkillDie } from "../../core/actors/custom-skills";
 import type { DocumentSheetRenderContext, DocumentSheetRenderOptions } from "@client/applications/api/document-sheet.mjs";
 import type { HandlebarsRenderOptions, HandlebarsTemplatePart } from "@client/applications/api/handlebars-application.mjs";
 import type ContextMenu from "@client/applications/ux/context-menu.mjs";
@@ -22,12 +26,12 @@ import { performThreatCheck, type ThreatCheckIntent } from "../../features/check
 import { buildThreatSheetViewModel, THREAT_I18N } from "../../ui/actor/threat-sheet-view-model";
 import { bindAbilityCardMenu, openAbilityCardMenu } from "./ability-card-menu";
 import {
-  editThreatFields, localizeThreat, pickThreatSkill, readThreatText, THREAT_TEMPLATE_ROOT,
+  editThreatFields, localizeThreat, readThreatText, THREAT_TEMPLATE_ROOT,
 } from "./threat-editor";
 
 const { ActorSheetV2 } = foundry.applications.sheets as unknown as FoundryApplicationSheetsWithActorSheetV2;
 const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
-const TEMPLATE_PARTIALS = ["portrait", "resource-fields", "attribute-card", "skill-row", "content-tabs", "die-step-select", "ability-cards", "threat-ability-use"];
+const TEMPLATE_PARTIALS = ["portrait", "resource-fields", "attribute-card", "skill-row", "content-tabs", "die-step-select", "ability-cards", "threat-ability-use", "add-skill-button"];
 const ABILITY_CATALOG = {
   itemType: ABILITY_ITEM_TYPE,
   worldLabelKey: "ORDEMPARANORMAL2.Common.World",
@@ -80,6 +84,8 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   readonly #expanded = new Set<string>();
   #abilityMenu: ContextMenu | null = null;
   #propertiesOpen = false;
+  #customSkillPicker?: AbortController;
+  #unsubscribeCustomSkills?: () => void;
 
   get #actor(): foundry.documents.Actor {
     return this.document as foundry.documents.Actor;
@@ -127,7 +133,8 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }));
     const canEditStructure = this.#canEdit && this.#editMode;
     const canRoll = canUserRollActor(this.#actor, game.user);
-    const threat = buildThreatSheetViewModel(this.#system, (key) => game.i18n.localize(key), this.id, this.#expanded, abilities, converted, canRoll, canEditStructure);
+    const customSkillOptions = worldCustomSkillOptions();
+    const threat = buildThreatSheetViewModel(this.#system, (key) => game.i18n.localize(key), this.id, this.#expanded, abilities, converted, canRoll, canEditStructure, customSkillOptions);
     return {
       ...context,
       applicationId: this.id,
@@ -136,7 +143,8 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       editable: this.#canEdit,
       canEditStructure,
       canRoll,
-      canAddSkill: this.#system.skills.length < ACTOR_CHECK_SKILLS.length,
+      canAddSkill: this.#system.skills.length < ACTOR_CHECK_SKILLS.length || canManageCustomSkills()
+        || customSkillOptions.some(option => !option.archived && !readSkillDie(actorCustomSkills(this.#actor)[option.key])),
       editMode: this.#editMode,
       tabs: canViewNotes ? { ...publicTabs, notes } : publicTabs,
       propertiesOpen: this.#propertiesOpen,
@@ -150,6 +158,7 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   protected override async _preRender(context: object, options: DocumentSheetRenderOptions & HandlebarsRenderOptions): Promise<void> {
+    this.#unsubscribeCustomSkills ??= subscribeCustomSkills(() => { if (this.rendered) void this.render(); });
     await super._preRender(context, options);
     await this.#clearAbilityMenu();
   }
@@ -210,6 +219,9 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   protected override async _preClose(options: ApplicationClosingOptions): Promise<void> {
+    this.#customSkillPicker?.abort();
+    this.#unsubscribeCustomSkills?.();
+    this.#unsubscribeCustomSkills = undefined;
     await this.#pendingUpdate;
     await this.#clearAbilityMenu();
     await super._preClose(options);
@@ -243,6 +255,7 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       case "manageSkills":
         if (this.#canEdit) {
           this.#editMode = !this.#editMode;
+          if (!this.#editMode) this.#customSkillPicker?.abort();
           await this.render({ force: true });
         }
         return;
@@ -361,6 +374,11 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return;
     }
     const skillDie = SKILL_DIE_STEPS.find((step) => step === die);
+    const customKey = name.startsWith("system.customSkills.") ? name.slice("system.customSkills.".length) : undefined;
+    if (isCustomSkillKey(customKey) && skillDie !== undefined) {
+      await updateActorCustomSkill(this.#actor, customKey, skillDie, "edit", () => this.#canEdit && this.#editMode);
+      return;
+    }
     if (name.startsWith("skill:") && skillDie !== undefined) {
       await this.#update((system) => ({
         "system.skills": system.skills.map((skill) =>
@@ -393,15 +411,38 @@ export class ThreatSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   async #addSkill(): Promise<void> {
-    const skill = await pickThreatSkill(this.#system.skills);
-    if (!skill) return;
+    if (this.#customSkillPicker) return;
+    const picker = this.#customSkillPicker = new AbortController();
+    const canEdit = () => this.#canEdit && this.#editMode && !picker.signal.aborted;
+    const picked = await pickActorSkill(this.#actor, () => ACTOR_CHECK_SKILLS.filter(({ selection }) =>
+      !this.#system.skills.some(entry => threatSkillKey(entry) === threatSkillKey(selection))), picker.signal)
+      .finally(() => { this.#customSkillPicker = undefined; });
+    if (!picked || !canEdit()) return;
+    if (isCustomSkillKey(picked.selection.key)) {
+      await addCustomSkill(this.#actor, picked.selection, picked.die, canEdit);
+      return;
+    }
+    const skill = { ...picked.selection, die: picked.die };
     await this.#update((system) => {
-      if (system.skills.some((entry) => threatSkillKey(entry) === threatSkillKey(skill))) return;
+      if (!canEdit() || system.skills.some((entry) => threatSkillKey(entry) === threatSkillKey(skill))) return;
       return { "system.skills": [...system.skills, skill] };
     });
   }
 
   async #removeSkill(id: string): Promise<void> {
+    const customKey = id.startsWith("skill:") ? id.slice("skill:".length) : undefined;
+    if (isCustomSkillKey(customKey)) {
+      const canEdit = () => this.#canEdit && this.#editMode;
+      if (this.#system.actions.some(({ check }) => check?.kind === "skill" && check.key === customKey)) {
+        ui.notifications.warn(localizeThreat("SkillInUse"));
+        return;
+      }
+      try { await updateActorCustomSkill(this.#actor, customKey, null, "remove", canEdit); }
+      catch (error) {
+        ui.notifications.warn(error instanceof Error ? error.message : localizeThreat("OperationFailed"));
+      }
+      return;
+    }
     await this.#update((system) => {
       const matches = (check: { kind: string; key: string } | null | undefined) =>
         check && check.kind !== "attribute" && threatSkillKey(check) === id;

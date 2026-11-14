@@ -23,7 +23,8 @@ vi.mock("./poi-discovery", () => ({
 }));
 vi.mock("./poi-runtime-queries", () => ({ broadcastPoiInvalidation: vi.fn(), serializePoiItemMutation: (_key: string, run: () => unknown) => run() }));
 vi.mock("../actors/read-agent-check-source", () => ({ readAgentCheckSource: () => ({ skills: { research: 10 } }) }));
-vi.mock("../../../documents/item/point-of-interest-data", () => ({
+vi.mock("../../../documents/item/point-of-interest-data", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../documents/item/point-of-interest-data")>(),
   isAptitudeSpecializationKey: () => false,
   readPointOfInterestInformation: () => [
     { id: "a", availability: { mode: "always" }, approaches: [{ skill: "research", difficulty: 6 }] },

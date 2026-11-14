@@ -11,6 +11,8 @@ import {
   type PoiInvestigationGmToolInformationView,
 } from "../../documents/item/point-of-interest-data";
 import { aptitudeSpecializationLabel } from "../../config/skills";
+import { isAptitudeSpecializationKey } from "../../documents/item/point-of-interest-data";
+import { subscribeCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
 import { SYSTEM_ID } from "../../config/system-config";
 import { resolvePoiImagePreview } from "../../adapters/foundry/points-of-interest/poi-image-preview";
 import { mutatePoi, subscribePoiInvalidation } from "../../adapters/foundry/points-of-interest/poi-runtime-queries";
@@ -75,6 +77,7 @@ export interface PlayerInvestigationSkillViewModel {
   readonly examineLabel: string;
   readonly canExamine: boolean;
   readonly informationCount: number;
+  readonly unavailableMessage?: string;
   readonly rows: readonly PlayerInvestigationInformationRow[];
 }
 
@@ -166,7 +169,7 @@ export function buildInvestigationRenderContext(
             knownCount: entry.knownCount,
             difficulty: entry.difficulty,
             content: entry.content,
-            ...(entry.specialization ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
+            ...(isAptitudeSpecializationKey(entry.specialization) ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
             revealLabel: `${localize("Reveal")} — ${skill.name}`,
           })),
         })),
@@ -182,7 +185,7 @@ export function buildInvestigationRenderContext(
         const knownRows: PlayerInvestigationInformationRow[] = skill.information.map(entry => ({
           isHidden: entry.visibility === "hidden",
           content: entry.content,
-          ...(entry.specialization ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
+          ...(isAptitudeSpecializationKey(entry.specialization) ? { specializationLabel: aptitudeSpecializationLabel(entry.specialization) } : {}),
           ...(entry.visibility === "public" ? { difficulty: entry.difficulty } : {}),
         }));
         const knownPublicDifficulties = new Set(knownRows.map(row => row.difficulty));
@@ -192,11 +195,12 @@ export function buildInvestigationRenderContext(
         return {
           key: skill.key,
           name: skill.name,
-          ...(skill.specialization ? { specialization: skill.specialization,
-            specializationLabel: aptitudeSpecializationLabel(skill.specialization) } : {}),
+          ...(skill.specialization ? { specialization: skill.specialization } : {}),
+          ...(isAptitudeSpecializationKey(skill.specialization) ? { specializationLabel: aptitudeSpecializationLabel(skill.specialization) } : {}),
           publicDifficulties: skill.publicDifficulties,
           examineLabel: `${localize("ExamineWith")} ${skill.name}`,
-          canExamine: !!result.view.investigationRunId && agents.some(agent => agent.selected),
+          canExamine: !skill.unavailable && !!result.view.investigationRunId && agents.some(agent => agent.selected),
+          ...(skill.unavailable ? { unavailableMessage: "A perícia está indisponível ou o agente não a possui." } : {}),
           informationCount: Math.max(1, rows.length),
           rows: rows.length ? rows : [{ isHidden: true }],
         };
@@ -228,6 +232,7 @@ export function releaseInvestigationApplication(itemUuid: string): void {
 }
 
 export class InvestigationApplication extends HandlebarsApplicationMixin(ApplicationV2) {
+  #stopCustomSkills?: () => void;
   static override DEFAULT_OPTIONS = {
     actions: {
       enlargeImage: InvestigationApplication.#onEnlargeImage,
@@ -313,6 +318,7 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
     await super._onFirstRender(context, options as never);
     this.#stopInvalidation = subscribePoiInvalidation(() => { void this.refresh(); });
+    this.#stopCustomSkills = subscribeCustomSkills(() => { void this.refresh(); });
     if (!game.user?.isGM) {
       this.#stopEquipmentUse = subscribeEquipmentUse(actorUuid => {
         if (actorUuid === this.#actorUuid) void this.render();
@@ -396,6 +402,10 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
       && (specialization ?? "") === (target.dataset.specialization ?? ""));
     const actionKey = `${skill?.key}:${skill?.specialization ?? ""}`;
     if (!skill || this.#pendingExaminations.has(actionKey)) return;
+    if (skill.unavailable) {
+      ui.notifications.warn("A perícia está indisponível ou o agente não a possui.");
+      return;
+    }
     const { sceneId, itemUuid } = this.#params;
 
     const actor = this.#agents().find(candidate => candidate.uuid === this.#actorUuid);
@@ -426,7 +436,8 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
         if (!check) return;
         pending = { sceneId, runId: view.investigationRunId,
           itemUuid, actorUuid: actor.uuid, skill: skill.key,
-          ...(skill.key === "aptitude" ? { specialization: selection.key } : {}), messageId: check.messageId };
+          ...(skill.key === "aptitude" ? { specialization: selection.key }
+            : skill.specialization ? { specialization: skill.specialization } : {}), messageId: check.messageId };
         this.#uncommittedExaminations.set(commitKey, pending);
       }
       if (this.#params.sceneId !== sceneId || this.#params.itemUuid !== itemUuid
@@ -536,6 +547,8 @@ export class InvestigationApplication extends HandlebarsApplicationMixin(Applica
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {
+    this.#stopCustomSkills?.();
+    this.#stopCustomSkills = undefined;
     this.#closed = true;
     this.#cancelTools();
     this.#stopInvalidation?.();

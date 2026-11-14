@@ -12,4 +12,9 @@
   <button type="button" data-action="importAdventure" title="{{localize 'ORDEMPARANORMAL2.GmToolkit.Actions.ImportAdventure'}}" aria-label="{{localize 'ORDEMPARANORMAL2.GmToolkit.Actions.ImportAdventure'}}">
     <img src="systems/ordemparanormal2/assets/icons/gm-tools/adventure-import.svg" alt="" aria-hidden="true" />
   </button>
+  {{#if canManageCustomSkills}}
+    <button type="button" data-action="manageCustomSkills" title="Perícias" aria-label="Perícias">
+      <img src="systems/ordemparanormal2/assets/icons/threat-stats.svg" alt="" aria-hidden="true" />
+    </button>
+  {{/if}}
 </nav>

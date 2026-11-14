@@ -9,24 +9,30 @@ import type { OwnedAbilityView } from "../../adapters/foundry/abilities/owned-ab
 import { threatAbilityRestriction } from "../../features/abilities/use-ability";
 import type { AbilityCombatAction } from "../../core/abilities/ability-use";
 import { localizeAbilityCost } from "../abilities/ability-cost-label";
+import { isCustomSkillKey, readSkillDie, type CustomSkillOption } from "../../core/actors/custom-skills";
+import { buildCustomSkillRows } from "./custom-skill-rows";
 
 export const THREAT_I18N = "ORDEMPARANORMAL2.ThreatSheet";
 
 type ThreatSheetSource = Pick<ThreatDataModel,
   "category" | "elements" | "damageReduction" | "resources" | "attributes" | "skills" | "actions" | "conditions" | "characteristics"
->;
+> & Partial<Pick<ThreatDataModel, "customSkills">>;
 
 function actionCheckPreview(
   action: Pick<ThreatAction, "check"> | Pick<AbilityCombatAction, "check">,
-  system: Pick<ThreatSheetSource, "attributes" | "skills">, localize: Localize,
+  system: Pick<ThreatSheetSource, "attributes" | "skills" | "customSkills">, localize: Localize,
+  customSkillOptions: readonly CustomSkillOption[],
 ): string {
   if (!action.check) return "";
   const selection = parseActorCheckSelection(action.check.kind, action.check.key);
   if (!selection) return "";
   const getSkillDie = ({ kind, key }: { kind: string; key: string }) =>
-    system.skills.find((entry) => entry.kind === kind && entry.key === key)?.die;
+    isCustomSkillKey(key) ? readSkillDie(system.customSkills?.[key])
+      : system.skills.find((entry) => entry.kind === kind && entry.key === key)?.die;
   if (selection.kind !== "attribute" && getSkillDie(selection) === undefined) return "";
-  return buildActorCheck(selection, { attributes: system.attributes, getSkillDie }, localize,
+  if (selection.kind === "skill" && isCustomSkillKey(selection.key)
+    && !customSkillOptions.some(entry => entry.key === selection.key)) return "";
+  return buildActorCheck(selection, { attributes: system.attributes, getSkillDie, customSkillOptions }, localize,
     action.check.attribute ?? undefined).components.map(({ die }) => `d${die}`).join(" + ");
 }
 
@@ -39,12 +45,13 @@ export function buildThreatSheetViewModel(
   converted: ReadonlySet<string> = new Set<string>(),
   canRoll = false,
   canEditStructure = false,
+  customSkillOptions: readonly CustomSkillOption[] = [],
 ) {
   const { value, max } = system.resources.health;
   const cards = abilities.map((item) => {
     const uses = item.useCollection.uses.map((use) => {
       const action = use.combatAction;
-      const checkPreview = action ? actionCheckPreview(action, system, localize) : "";
+      const checkPreview = action ? actionCheckPreview(action, system, localize, customSkillOptions) : "";
       const blocked = threatAbilityRestriction(use);
       const reason = blocked === "minimum-level" ? "NeedsAgentLevel"
         : blocked === "determination" ? "NeedsDetermination"
@@ -93,7 +100,7 @@ export function buildThreatSheetViewModel(
   };
   const legacyCards = [
     ...system.actions.filter(({ id }) => !converted.has(`actions:${id}`)).map((action) => {
-      const checkPreview = actionCheckPreview(action, system, localize);
+      const checkPreview = actionCheckPreview(action, system, localize, customSkillOptions);
       const damageSummary = action.damage ? {
         label: localize(`${THREAT_I18N}.Damage.${action.damage.timing}`), expression: action.damage.expression,
       } : null;
@@ -123,7 +130,7 @@ export function buildThreatSheetViewModel(
     attributes: ATTRIBUTE_DEFINITIONS.map(({ key, labelKey }) => ({
       key, labelKey, die: createDieStepControl(`system.attributes.${key}`, system.attributes[key], DIE_STEPS, false),
     })),
-    skills: system.skills.flatMap((skill) => {
+    skills: [...system.skills.flatMap((skill) => {
       const definition = findActorCheckSkill(skill.kind, skill.key);
       if (!definition) return [];
       const id = threatSkillKey(skill);
@@ -133,7 +140,9 @@ export function buildThreatSheetViewModel(
         searchText: `${definition.label} ${localize(attributeLabelKey)}`,
         die: createSkillDieStepControl(`skill:${id}`, skill.die),
       }];
-    }),
+    }), ...buildCustomSkillRows(system.customSkills ?? {}, customSkillOptions).map(row => ({
+      ...row, searchText: `${row.label} ${row.attributeLabelKey ? localize(row.attributeLabelKey) : ""}`,
+    }))],
     abilities: [...cards, ...legacyCards],
     conditions: system.conditions,
     traitTexts: THREAT_TRAIT_TEXTS.map((key) => ({

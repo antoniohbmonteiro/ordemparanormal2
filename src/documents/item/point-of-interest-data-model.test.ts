@@ -83,7 +83,10 @@ describe("PointOfInterestDataModel", () => {
     expect(entry.fields.content.options).toMatchObject({ blank: true });
     const approaches = entry.fields.approaches as unknown as MockArrayField;
     expect(approaches.options).toMatchObject({ min: 1 });
-    expect(approaches.element.fields.skill.options.choices).toEqual([...SKILL_KEYS]);
+    const validateSkill = approaches.element.fields.skill.options.validate as (value: unknown) => boolean;
+    expect(SKILL_KEYS.every(validateSkill)).toBe(true);
+    expect(validateSkill("custom_1234567890abcdef")).toBe(true);
+    expect(validateSkill("custom_unknown")).toBe(false);
     expect(approaches.element.fields.difficulty.options).toMatchObject({
       integer: true,
       min: 1,

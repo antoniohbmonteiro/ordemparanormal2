@@ -6,18 +6,21 @@ import { approachIdentity, isSkillApproach, isAptitudeSpecializationKey, POINT_O
   type PointOfInterestApproach, type PointOfInterestSkillApproach } from "../../documents/item/point-of-interest-data";
 import { loadToolSources, describeToolApproach } from "../../adapters/foundry/equipment/equipment-source";
 import { APTITUDE_OPTIONS } from "./point-of-interest-information-editor";
+import { isCustomSkillKey, splitCustomSkillKey, type CustomSkillKey } from "../../core/actors/custom-skills";
+import { subscribeCustomSkills, worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
+import { parsePoiSkillSelection } from "../../documents/item/point-of-interest-data";
 
 interface ApproachDraft {
-  readonly skill: SkillKey;
+  readonly skill: SkillKey | CustomSkillKey;
   readonly specialization: AptitudeSpecializationKey | null;
 }
 
-export function changeApproachDraftSkill(draft: ApproachDraft, skill: SkillKey): ApproachDraft {
+export function changeApproachDraftSkill(draft: ApproachDraft, skill: ApproachDraft["skill"]): ApproachDraft {
   return { skill, specialization: skill === "aptitude" && draft.skill === "aptitude" ? draft.specialization : null };
 }
 
 export function approachFromDraft(
-  draft: ApproachDraft, used: ReadonlySet<string>, availableSkills: ReadonlySet<SkillKey>,
+  draft: ApproachDraft, used: ReadonlySet<string>, availableSkills: ReadonlySet<ApproachDraft["skill"]>,
 ): PointOfInterestSkillApproach | null {
   if (!availableSkills.has(draft.skill)) return null;
   const base = { difficulty: POINT_OF_INTEREST_DIFFICULTY_MIN, showDifficultyToPlayers: true };
@@ -26,11 +29,12 @@ export function approachFromDraft(
       || used.has(`aptitude:${draft.specialization}`)) return null;
     return { ...base, skill: "aptitude", specialization: draft.specialization };
   }
-  return used.has(draft.skill) ? null : { ...base, skill: draft.skill };
+  const approach = isCustomSkillKey(draft.skill) ? { ...base, ...splitCustomSkillKey(draft.skill) } : { ...base, skill: draft.skill };
+  return used.has(approachIdentity(approach)) ? null : approach;
 }
 
 export function specializationFieldMarkup(
-  skill: SkillKey, used: ReadonlySet<string>, localize: (key: string) => string,
+  skill: ApproachDraft["skill"], used: ReadonlySet<string>, localize: (key: string) => string,
 ): string {
   if (skill !== "aptitude") return "";
   const options = APTITUDE_OPTIONS.filter(option => !used.has(`aptitude:${option.value}`))
@@ -43,12 +47,23 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
   const used = new Set(existing.map(approachIdentity));
   const sources = await loadToolSources();
   const unusedSpecializations = APTITUDE_OPTIONS.filter(option => !used.has(`aptitude:${option.value}`));
-  const skills = SKILL_DEFINITIONS.filter(definition => definition.key === "aptitude"
+  const canonical = SKILL_DEFINITIONS.filter(definition => definition.key === "aptitude"
     ? unusedSpecializations.length > 0 : !used.has(definition.key));
+  const initialSelection = initial && isSkillApproach(initial) ? parsePoiSkillSelection(initial.skill, initial.specialization) : undefined;
+  const initialCustomKey = initialSelection?.kind === "skill" && isCustomSkillKey(initialSelection.key) ? initialSelection.key : undefined;
+  const choices = () => {
+    const custom = worldCustomSkillOptions().filter(entry => (!entry.archived || entry.key === initialCustomKey)
+      && !used.has(approachIdentity({ ...splitCustomSkillKey(entry.key), difficulty: 1, showDifficultyToPlayers: true })));
+    const options: { key: ApproachDraft["skill"]; label: string }[] = [...canonical, ...custom];
+    if (initialCustomKey && !custom.some(entry => entry.key === initialCustomKey))
+      options.push({ key: initialCustomKey, label: `Perícia indisponível (${initialCustomKey})` });
+    return options;
+  };
+  const skills = choices();
   if (!skills.length && !sources.length) return null;
-  const availableSkills = new Set(skills.map(({ key }) => key));
   let draft: ApproachDraft = initial && isSkillApproach(initial)
-    ? { skill: initial.skill, specialization: initial.skill === "aptitude" ? initial.specialization : null }
+    ? { skill: initialCustomKey ?? (isSkillKey(initial.skill) ? initial.skill : "acrobatics"),
+      specialization: initial.skill === "aptitude" ? initial.specialization : null }
     : { skill: skills[0]?.key ?? "acrobatics", specialization: null };
   let kind: "skill" | "tool" = initial?.type === "tool" || !skills.length ? "tool" : "skill";
   let equipmentUuid = initial?.equipmentUuid ?? "";
@@ -68,7 +83,8 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
       ? shared[0]?.mechanicConfig?.sequenceLength ?? null : null;
   };
   const localize = (key: string) => game.i18n.localize(key);
-  const skillOptions = skills.map(({ key, label }) => `<option value="${key}"${key === draft.skill ? " selected" : ""}>${label}</option>`).join("");
+  const skillOptions = () => choices().map(({ key, label }) =>
+    `<option value="${key}"${key === draft.skill ? " selected" : ""}>${foundry.utils.escapeHTML(label)}</option>`).join("");
   const toolOptions = sources.map(source => `<option value="${foundry.utils.escapeHTML(source.uuid)}"${source.uuid === equipmentUuid ? " selected" : ""}>${foundry.utils.escapeHTML(`${source.name} — ${source.origin}`)}</option>`).join("");
   const resolve = (): PointOfInterestApproach | null => {
     if (kind === "tool") {
@@ -81,14 +97,15 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
           : currentForm()?.mechanic === "radio" && radioConfig ? { mechanicConfig: copyToolMechanicConfig(radioConfig) } : {}) };
       return used.has(approachIdentity(approach)) ? null : approach;
     }
-    const approach = approachFromDraft(draft, used, availableSkills);
+    const approach = approachFromDraft(draft, used, new Set(choices().map(({ key }) => key)));
     return approach && initial && isSkillApproach(initial) ? { ...approach, difficulty: initial.difficulty,
       showDifficultyToPlayers: initial.showDifficultyToPlayers,
       ...(initial.difficultyOverride ? { difficultyOverride: { ...initial.difficultyOverride } } : {}) } : approach;
   };
+  let unsubscribe: (() => void) | undefined;
   return foundry.applications.api.DialogV2.input<PointOfInterestApproach | null>({
     classes: ["ordemparanormal2"], modal: true, rejectClose: false,
-    content: `<div class="op2-poi-approach-dialog"><label>${localize("ORDEMPARANORMAL2.EquipmentUse.ApproachType")}<select name="approachType"><option value="skill"${kind === "skill" ? " selected" : ""}>${localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}</option><option value="tool"${kind === "tool" ? " selected" : ""}>${localize("ORDEMPARANORMAL2.EquipmentUse.Tool")}</option></select></label><fieldset data-skill-fields><label>${localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}<select name="skill">${skillOptions}</select></label>${specializationFieldMarkup(draft.skill, used, localize)}</fieldset><fieldset data-tool-fields><label>${localize("ORDEMPARANORMAL2.EquipmentUse.Tool")}<select name="equipmentUuid"><option value="" disabled selected>—</option>${toolOptions}</select></label><label>${localize("ORDEMPARANORMAL2.EquipmentUse.SelectForm")}<select name="useFormId"></select></label></fieldset></div>`,
+    content: `<div class="op2-poi-approach-dialog"><label>${localize("ORDEMPARANORMAL2.EquipmentUse.ApproachType")}<select name="approachType"><option value="skill"${kind === "skill" ? " selected" : ""}>${localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}</option><option value="tool"${kind === "tool" ? " selected" : ""}>${localize("ORDEMPARANORMAL2.EquipmentUse.Tool")}</option></select></label><fieldset data-skill-fields><label>${localize("ORDEMPARANORMAL2.PointOfInterestSheet.Fields.Skill")}<select name="skill">${skillOptions()}</select></label>${specializationFieldMarkup(draft.skill, used, localize)}</fieldset><fieldset data-tool-fields><label>${localize("ORDEMPARANORMAL2.EquipmentUse.Tool")}<select name="equipmentUuid"><option value="" disabled selected>—</option>${toolOptions}</select></label><label>${localize("ORDEMPARANORMAL2.EquipmentUse.SelectForm")}<select name="useFormId"></select></label></fieldset></div>`,
     render: (_event, dialog) => {
       const content = dialog.element.querySelector<HTMLElement>(".op2-poi-approach-dialog");
       const skill = content?.querySelector<HTMLSelectElement>('select[name="skill"]');
@@ -131,7 +148,7 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
       const specialization = content.querySelector<HTMLSelectElement>('select[name="specialization"]');
       if (specialization && draft.specialization) specialization.value = draft.specialization;
       skill.addEventListener("change", () => {
-        if (!isSkillKey(skill.value) || !availableSkills.has(skill.value)) return;
+        if ((!isSkillKey(skill.value) && !isCustomSkillKey(skill.value)) || !choices().some(entry => entry.key === skill.value)) return;
         draft = changeApproachDraftSkill(draft, skill.value);
         content.querySelector("[data-poi-specialization]")?.remove();
         if (draft.skill === "aptitude") {
@@ -152,6 +169,8 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
         sync();
       });
       sync();
+      unsubscribe?.();
+      unsubscribe = subscribeCustomSkills(() => { skill.innerHTML = skillOptions(); skill.value = draft.skill; sync(); });
     },
     ok: {
       action: "add", label: "ORDEMPARANORMAL2.PointOfInterestSheet.Actions.AddApproach",
@@ -172,5 +191,5 @@ export async function selectPoiApproach(existing: readonly PointOfInterestApproa
     },
     position: { width: 360 },
     window: { title: localize("ORDEMPARANORMAL2.PointOfInterestSheet.SelectApproachTitle") },
-  });
+  }).finally(() => unsubscribe?.());
 }

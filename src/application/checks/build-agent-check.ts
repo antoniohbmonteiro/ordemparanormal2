@@ -3,6 +3,7 @@ import type { CheckAbilityUseReference } from "./check-ability-use-state";
 import type { SkillDieStep } from "../../config/skills";
 import type { AttributeKey } from "../../core/actors/agent-attributes";
 import type { DieStep } from "../../core/dice/die-step";
+import { isCustomSkillKey, readSkillDie, type CustomSkillOption, type CustomSkillValues } from "../../core/actors/custom-skills";
 import {
   buildActorAttributeChoices,
   buildActorCheck,
@@ -26,9 +27,18 @@ export interface AgentCheckChoices {
 
 export interface AgentCheckSource {
   readonly attributes: Readonly<Record<AttributeKey, DieStep>>;
+  readonly customSkills?: CustomSkillValues;
+  readonly customSkillOptions?: readonly CustomSkillOption[];
   readonly skills: Readonly<
     Record<string, SkillDieStep | Readonly<Record<string, SkillDieStep>>>
   >;
+}
+
+export function getAgentSkillDie(source: AgentCheckSource, selection: Exclude<AgentCheckSelection, { kind: "attribute" }>): SkillDieStep | undefined {
+  if (selection.kind === "skill") return readSkillDie(isCustomSkillKey(selection.key)
+    ? source.customSkills?.[selection.key] : source.skills[selection.key]);
+  const aptitude = source.skills.aptitude;
+  return typeof aptitude === "object" ? aptitude[selection.key] : undefined;
 }
 
 export function parseAgentCheckSelection(
@@ -56,13 +66,7 @@ export function buildAgentCheck(
 ): CheckInput {
   return buildActorCheck(selection, {
     attributes: source.attributes,
-    getSkillDie: ({ kind, key }) => {
-      if (kind === "skill") {
-        const die = source.skills[key];
-        return typeof die === "number" ? die : undefined;
-      }
-      const aptitude = source.skills.aptitude;
-      return typeof aptitude === "object" ? aptitude[key] : undefined;
-    },
+    customSkillOptions: source.customSkillOptions,
+    getSkillDie: skill => getAgentSkillDie(source, skill),
   }, localize, selectedAttribute);
 }

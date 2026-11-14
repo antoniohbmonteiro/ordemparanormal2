@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 - Itens `ability` reutilizáveis em Agentes e Ameaças, com editor compartilhado. Formas de combate podem incluir testes pelo Check Engine e dano descritivo, imediato ou por rodada.
 - Tokens de Ameaça desvinculados por padrão, com PV e condições por token. O chat identifica o token de origem ao usar habilidades com ou sem teste.
 - Conversão opcional para o Mestre, com prévia, de ações e características legadas em Habilidades nos mundos de desenvolvimento. A conversão preserva as listas locais de tokens desvinculados.
+- Catálogo de perícias personalizadas salvo no mundo e gerenciado nas Ferramentas do Mestre. É possível criar, editar, arquivar e reativar perícias simples ou com especializações independentes. O arquivamento preserva as referências existentes.
+- Adição, edição e remoção de perícias personalizadas por Agente ou Ameaça, com criação rápida pelo diálogo **Adicionar perícia**. Cada especialização tem seu próprio dado, e tokens desvinculados preservam seus valores e remoções locais.
+- Uso de perícias personalizadas em testes de ficha, Solicitar Teste, Testes Opostos, ações e bônus de Habilidades, e abordagens de Pontos de Interesse na Investigação.
+- Funções reutilizáveis de consulta, correspondência por ID e revisão de nomes para futura integração de perícias com o Importador de Aventura.
 
 ### Changed
 

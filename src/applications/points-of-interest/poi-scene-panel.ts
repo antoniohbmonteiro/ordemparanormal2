@@ -13,7 +13,8 @@ import { filterPoiSceneEntries, poiSceneRowView } from "./poi-scene-panel-view";
 import { listenPoiScenePanelDrop } from "./poi-scene-panel-drop";
 import { resolveSceneInvestigationAgent } from "../../adapters/foundry/points-of-interest/resolve-investigation-agent";
 import { requestInvestigationAction } from "../../adapters/foundry/points-of-interest/investigation-requests";
-import { skillLabel, isSkillKey } from "../../config/skills";
+import { poiSkillLabel } from "../../adapters/foundry/points-of-interest/poi-skill";
+import { subscribeCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
 import type { ShareClueReference } from "../../adapters/foundry/points-of-interest/investigation-share";
 
 const ROOT = "ORDEMPARANORMAL2.PointOfInterest.ScenePanel";
@@ -77,7 +78,7 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
       return { ...poiSceneRowView(entry, item ? readPoiVisibility(item) : null, count, key => game.i18n.localize(key), isGM ? "gm" : "player"),
         matchesSearch: matches.has(entry.itemUuid),
         expanded: this.#expanded.has(entry.itemUuid),
-        knownGroups: entry.knownGroups?.map(group => ({ ...group, label: isSkillKey(group.skill) ? skillLabel(group.skill) : group.skill,
+        knownGroups: entry.knownGroups?.map(group => ({ ...group, label: poiSkillLabel(group.skill, group.specialization),
           clues: group.clues.map(clue => ({ ...clue, index: clueIndex++ })) })) ?? [] };
     });
     return {
@@ -135,7 +136,9 @@ export class PoiScenePanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   protected override async _onFirstRender(context: object, options: object): Promise<void> {
     await super._onFirstRender(context, options as never);
-    this.#stop = subscribePoiInvalidation(() => { void this.refresh(); });
+    const stopInvalidation = subscribePoiInvalidation(() => { void this.refresh(); });
+    const stopCustomSkills = subscribeCustomSkills(() => { if (this.rendered) void this.render(); });
+    this.#stop = () => { stopInvalidation(); stopCustomSkills(); };
     if (!game.user?.isGM) {
       this.#controlTokenHook = Hooks.on("controlToken", () => { void this.refresh(); });
       this.#updateUserHook = Hooks.on("updateUser", (user: unknown) => {

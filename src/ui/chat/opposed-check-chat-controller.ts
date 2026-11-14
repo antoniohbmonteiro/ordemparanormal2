@@ -1,3 +1,4 @@
+import { MissingActorSkillError } from "../../application/checks/build-actor-check";
 import {
   parseOpposedCheckState,
   type OpposedCheckSide,
@@ -41,6 +42,10 @@ async function projectSideControl(
       if (!message.id) throw new Error("Opposed Check message has no ID.");
       submitted = await rollOpposedCheckSide(message.id, side) === "submitted";
     } catch (error) {
+      if (error instanceof MissingActorSkillError) {
+        ui.notifications.warn(error.message);
+        return;
+      }
       console.error(`${SYSTEM_ID} | Failed to roll Opposed Check side.`, error);
       ui.notifications.error(
         game.i18n.localize("ORDEMPARANORMAL2.OpposedCheckCard.Errors.Roll"),

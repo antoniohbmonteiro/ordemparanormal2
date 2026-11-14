@@ -1,8 +1,12 @@
 import { isRadioPuzzleConfig, type RadioPuzzleConfig } from "../../core/equipment/radio-puzzle";
 import { SKILL_DEFINITIONS, isSkillKey, type AptitudeSpecializationKey, type SkillKey } from "../../config/skills";
+import { customSkillKey, isCustomSkillId, isCustomSpecializationId, type CustomSkillId, type CustomSpecializationId } from "../../core/actors/custom-skills";
+import { parseActorCheckSelection, type SkillCheckSelection } from "../../core/checks/check-selection";
 
 export const POINT_OF_INTEREST_DIFFICULTY_MIN = 1;
 export type OrdinaryPoiSkillKey = Exclude<SkillKey, "aptitude">;
+export type PoiSkillKey = SkillKey | CustomSkillId;
+export type PoiSpecialization = AptitudeSpecializationKey | CustomSpecializationId;
 /**
  * One alternative DT for an approach and the GM-facing situation in which it replaces the base DT. The system never
  * interprets the condition: the GM chooses which DT applies. It is GM-private and never part of a player projection.
@@ -13,11 +17,17 @@ export interface PointOfInterestDifficultyOverride {
 }
 export type PointOfInterestSkillApproach = ({
   readonly skill: OrdinaryPoiSkillKey;
+  readonly specialization?: never;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
 } | {
   readonly skill: "aptitude";
   readonly specialization: AptitudeSpecializationKey;
+  readonly difficulty: number;
+  readonly showDifficultyToPlayers: boolean;
+} | {
+  readonly skill: CustomSkillId;
+  readonly specialization?: CustomSpecializationId;
   readonly difficulty: number;
   readonly showDifficultyToPlayers: boolean;
 }) & { readonly type?: never; readonly equipmentUuid?: never; readonly useFormId?: never; readonly mechanicConfig?: never;
@@ -142,19 +152,29 @@ export function isPointOfInterestApproach(value: unknown): value is PointOfInter
       .every(key => candidate[key] === undefined);
   if (candidate.type !== undefined || candidate.equipmentUuid !== undefined || candidate.useFormId !== undefined
     || candidate.mechanicConfig !== undefined) return false;
-  if (!isSkillKey(candidate.skill) || !Number.isInteger(candidate.difficulty)
+  if (!parsePoiSkillSelection(candidate.skill, candidate.specialization) || !Number.isInteger(candidate.difficulty)
     || (candidate.difficulty as number) < POINT_OF_INTEREST_DIFFICULTY_MIN
     || typeof candidate.showDifficultyToPlayers !== "boolean"
     || (candidate.difficultyOverride !== undefined && !isPointOfInterestDifficultyOverride(candidate.difficultyOverride))) {
     return false;
   }
-  return candidate.skill === "aptitude"
-    ? isAptitudeSpecializationKey(candidate.specialization)
-    : candidate.specialization === undefined;
+  return true;
+}
+
+export function parsePoiSkillSelection(skill: unknown, specialization?: unknown): SkillCheckSelection | undefined {
+  if (isCustomSkillId(skill)) {
+    if (specialization !== undefined && !isCustomSpecializationId(specialization)) return;
+    return { kind: "skill", key: customSkillKey(skill, specialization) };
+  }
+  if (skill === "aptitude") return isAptitudeSpecializationKey(specialization) ? { kind: "aptitude", key: specialization } : undefined;
+  if (specialization === undefined && isSkillKey(skill)) {
+    const selection = parseActorCheckSelection("skill", skill);
+    return selection?.kind === "skill" ? selection : undefined;
+  }
 }
 export function approachIdentity(approach: PointOfInterestApproach): string {
   if (isToolApproach(approach)) return `tool:${JSON.stringify([approach.equipmentUuid, approach.useFormId])}`;
-  return approach.skill === "aptitude" ? `${approach.skill}:${approach.specialization}` : approach.skill;
+  return approach.specialization ? `${approach.skill}:${approach.specialization}` : approach.skill;
 }
 /**
  * Normalizes a stored availability. Information persisted before availability existed has none and is always
@@ -212,6 +232,8 @@ function readApproach(approach: PointOfInterestApproach): PointOfInterestApproac
       condition: approach.difficultyOverride.condition } } : {}) };
   return approach.skill === "aptitude"
     ? { skill: approach.skill, specialization: approach.specialization, ...base }
+    : isCustomSkillId(approach.skill) ? { skill: approach.skill,
+      ...(isCustomSpecializationId(approach.specialization) ? { specialization: approach.specialization } : {}), ...base }
     : { skill: approach.skill, ...base };
 }
 function assertValidInformation(list: readonly PointOfInterestInformation[]): void {
@@ -293,11 +315,12 @@ export function removePointOfInterestApproach(
 export type PoiInvestigationPlayerInformationView = (
   | { readonly visibility: "public"; readonly difficulty: number }
   | { readonly visibility: "hidden" }
-) & { readonly content: string; readonly specialization?: AptitudeSpecializationKey };
+) & { readonly content: string; readonly specialization?: PoiSpecialization };
 export interface PoiInvestigationPlayerSkillView {
-  readonly key: SkillKey;
+  readonly key: PoiSkillKey;
   readonly name: string;
-  readonly specialization?: AptitudeSpecializationKey;
+  readonly specialization?: PoiSpecialization;
+  readonly unavailable?: boolean;
   /** Distinct public base DTs; carries no information IDs or hidden row counts. */
   readonly publicDifficulties: readonly number[];
   readonly information: readonly PoiInvestigationPlayerInformationView[];
@@ -308,14 +331,14 @@ export interface PoiInvestigationGmInformationView {
   readonly content: string;
   readonly showDifficultyToPlayers: boolean;
   readonly knownCount: number;
-  readonly specialization?: AptitudeSpecializationKey;
+  readonly specialization?: PoiSpecialization;
   /** Present only for situational information; GM-private. */
   readonly condition?: string;
   /** Present only when this approach has an alternative DT; GM-private. */
   readonly difficultyOverride?: PointOfInterestDifficultyOverride;
 }
 export interface PoiInvestigationGmSkillView {
-  readonly key: SkillKey;
+  readonly key: PoiSkillKey;
   readonly name: string;
   readonly information: readonly PoiInvestigationGmInformationView[];
 }

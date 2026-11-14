@@ -29,7 +29,7 @@
             <section class="op2-investigation-skill" role="rowgroup" data-skill="{{key}}" style="--op2-information-count: {{informationCount}}">
               <div class="op2-investigation-skill-cell" role="rowheader"><strong>{{name}}</strong>{{#if specializationLabel}}<span>{{specializationLabel}}</span>{{/if}}</div>
               <div class="op2-investigation-action" role="cell">
-                <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="examine" data-skill="{{key}}"{{#if specialization}} data-specialization="{{specialization}}"{{/if}} {{#unless canExamine}}disabled{{/unless}}>
+                <button type="button" class="op2-investigation-button op2-investigation-button--primary" data-action="examine" data-skill="{{key}}"{{#if specialization}} data-specialization="{{specialization}}"{{/if}} {{#unless canExamine}}disabled{{/unless}}{{#if unavailableMessage}} title="{{unavailableMessage}}"{{/if}}>
                   <img src="systems/ordemparanormal2/assets/icons/investigation-d6.svg" alt="" aria-hidden="true" />
                   {{localize "ORDEMPARANORMAL2.PointOfInterest.Investigation.Examine"}}
                 </button>

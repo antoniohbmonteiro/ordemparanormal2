@@ -16,6 +16,8 @@ import {
   type AccentColor,
 } from "../../core/actors/agent-accent-color";
 
+import { createCustomSkillsField } from "./custom-skills-field";
+
 const RESOURCE_KEYS = ["health", "determination"] as const;
 
 type ResourceKey = (typeof RESOURCE_KEYS)[number];
@@ -97,6 +99,7 @@ type AgentSchema = {
   resources: foundry.data.fields.SchemaField<ResourcesSchema>;
   attributes: foundry.data.fields.SchemaField<AttributesSchema>;
   skills: foundry.data.fields.SchemaField<SkillsSchema>;
+  customSkills: ReturnType<typeof createCustomSkillsField>;
 };
 
 function createResourceValueField(): RequiredIntegerField {
@@ -209,6 +212,7 @@ export class AgentDataModel extends foundry.abstract.TypeDataModel<
       resources: new foundry.data.fields.SchemaField(createResourcesSchema()),
       attributes: new foundry.data.fields.SchemaField(createAttributesSchema()),
       skills: new foundry.data.fields.SchemaField(createSkillsSchema()),
+      customSkills: createCustomSkillsField(),
     };
   }
 }

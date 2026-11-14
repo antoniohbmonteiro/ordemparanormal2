@@ -95,7 +95,7 @@
         {{/each}}
         <p class="op2-threat-empty" data-skill-search-empty hidden>{{localize 'ORDEMPARANORMAL2.ThreatSheet.NoSkillResults'}}</p>
       </div>
-      {{#if canEditStructure}}{{#if canAddSkill}}<button class="op2-threat-text-button" type="button" data-action="addSkill"><img class="op2-threat-glyph" src="systems/ordemparanormal2/assets/icons/threat-plus.svg" alt=""> {{localize 'ORDEMPARANORMAL2.ThreatSheet.AddSkill'}}</button>{{/if}}{{/if}}
+      {{#if canEditStructure}}{{#if canAddSkill}}{{> "systems/ordemparanormal2/templates/actor/partials/add-skill-button.hbs"}}{{/if}}{{/if}}
     </section>
     <section class="op2-threat-side-section" aria-label="{{localize 'ORDEMPARANORMAL2.ThreatSheet.Conditions'}}">
       <header class="op2-threat-section-header">

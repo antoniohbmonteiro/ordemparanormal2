@@ -6,7 +6,7 @@
   font-display: swap;
 }
 
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-skill-dialog) {
   --op2-sheet-bg: rgba(18, 20, 24, 0.96);
   --op2-panel-bg: rgba(27, 30, 36, 0.92);
   --op2-panel-bg-hover: rgba(35, 39, 46, 0.96);
@@ -438,6 +438,9 @@
 }
 .ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row:hover {
   background: var(--op2-panel-bg-hover);
+}
+.ordemparanormal2.agent-sheet .op2-skill-row--removable {
+  grid-template-columns: minmax(0, 1fr) 3.75rem 4.25rem 1.5rem;
 }
 .ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-skill-row__name {
   display: flex;

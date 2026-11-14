@@ -47,4 +47,33 @@ describe.skipIf(!commonPath)("installed Foundry v14 Threat model", () => {
       actions: [{ id: "bad", name: "Ação", check: { kind: "skill", key: "fighting" } }],
     }, { strict: true })).toThrow();
   });
+
+  it("round-trips custom dice and suppression with the native ActorDelta model", async () => {
+    const Model = await loadModel();
+    const { AgentDataModel } = await import("./agent-data-model");
+    const inherited = "custom_1234567890abcdef";
+    const own = "custom_9876543210abcdef";
+    const base = new Model({ customSkills: { [inherited]: 6 } }, { strict: true });
+    expect(new AgentDataModel({ customSkills: { [inherited]: null } }, { strict: true }).customSkills[inherited]).toBeNull();
+    expect(() => new Model({ customSkills: { [inherited]: 20 } }, { strict: true })).toThrow();
+    expect(() => new Model({
+      customSkills: { [inherited]: null },
+      actions: [{ id: "uses-skill", name: "Ação", check: { kind: "skill", key: inherited } }],
+    }, { strict: true })).toThrow("Invalid threat action check");
+
+    const native = foundry as typeof foundry & {
+      documents: { BaseActorDelta: typeof foundry.documents.ActorDelta };
+    };
+    vi.stubGlobal("CONFIG", {});
+    vi.stubGlobal("logger", { warn: vi.fn() });
+    const delta = new native.documents.BaseActorDelta({ system: { customSkills: { [inherited]: 8, [own]: 10 } } });
+    const readSynthetic = () => new Model(foundry.utils.mergeObject(base.toObject(),
+      JSON.parse(JSON.stringify(delta.toObject().system))), { strict: true });
+    delta.updateSource({ [`system.customSkills.${inherited}`]: null,
+      [`system.customSkills.${own}`]: new foundry.data.operators.ForcedDeletion() });
+    expect(readSynthetic().customSkills).toEqual({ [inherited]: null });
+    expect(base.customSkills).toEqual({ [inherited]: 6 });
+    delta.updateSource({ [`system.customSkills.${inherited}`]: 6 });
+    expect(readSynthetic().customSkills).toEqual({ [inherited]: 6 });
+  });
 });

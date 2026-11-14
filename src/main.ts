@@ -21,6 +21,7 @@ import { registerOpposedChecks } from "./bootstrap/register-opposed-checks";
 import { registerCheckRequests } from "./bootstrap/register-check-requests";
 import { registerTileInteractions } from "./bootstrap/register-tile-interactions";
 import { SYSTEM_ID } from "./config/system-config";
+import { registerCustomSkillCatalog } from "./adapters/foundry/actors/custom-skill-catalog";
 
 Hooks.once("init", () => {
   registerChatMessageDocument();
@@ -28,6 +29,7 @@ Hooks.once("init", () => {
     console.error(`${SYSTEM_ID} | Failed to preload chat card partials`, error);
   });
   registerDataModels();
+  registerCustomSkillCatalog();
   registerSheets();
   registerPoiImagePreviews();
   registerActorDefaults();

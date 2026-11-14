@@ -1,10 +1,12 @@
-import { SKILL_KEYS, type SkillKey } from "../../config/skills";
+import { isSkillKey } from "../../config/skills";
+import { isCustomSkillId } from "../../core/actors/custom-skills";
 import {
   POINT_OF_INTEREST_AVAILABILITY_MODES,
   POINT_OF_INTEREST_DIFFICULTY_MIN,
   isPointOfInterestInformationList,
   uniformToolMechanicConfigurations,
   type PointOfInterestAvailabilityMode,
+  type PoiSkillKey,
 } from "./point-of-interest-data";
 
 export type {
@@ -16,7 +18,7 @@ export type {
 
 type RequiredStringField = foundry.data.fields.StringField<string, string, true, false, true>;
 type NonBlankStringField = foundry.data.fields.StringField<string, string, true, false, false>;
-type SkillKeyField = foundry.data.fields.StringField<SkillKey, SkillKey, false, false, false>;
+type SkillKeyField = foundry.data.fields.StringField<PoiSkillKey, PoiSkillKey, false, false, false>;
 type RequiredIntegerField = foundry.data.fields.NumberField<number, number, false, false, false>;
 type RequiredBooleanField = foundry.data.fields.BooleanField<boolean, boolean, false, false, false>;
 type OptionalSpecializationField = foundry.data.fields.StringField<string, string, false, false, false>;
@@ -123,8 +125,8 @@ export class PointOfInterestDataModel extends foundry.abstract.TypeDataModel<
                 trueFragments: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, trim: true }), { required: false, nullable: false, initial: undefined }),
                 falseFragments: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField({ required: true, nullable: false, blank: false, trim: true }), { required: false, nullable: false, initial: undefined }),
               }, { required: false, nullable: false }),
-              skill: new foundry.data.fields.StringField<SkillKey, SkillKey, false, false, false>({
-                required: false, nullable: false, blank: false, choices: [...SKILL_KEYS],
+              skill: new foundry.data.fields.StringField<PoiSkillKey, PoiSkillKey, false, false, false>({
+                required: false, nullable: false, blank: false, validate: value => isSkillKey(value) || isCustomSkillId(value),
               }),
               specialization: new foundry.data.fields.StringField({ required: false, nullable: false, blank: false }),
               difficulty: new foundry.data.fields.NumberField<number, number, false, false, false>({

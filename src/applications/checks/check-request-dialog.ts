@@ -13,6 +13,8 @@ import {
   type AgentCheckParticipantGroup,
 } from "../../adapters/foundry/actors/agent-check-participant-catalog";
 import { SKILL_DEFINITIONS } from "../../config/skills";
+import { availableActorCustomSkills } from "../../adapters/foundry/actors/actor-custom-skills";
+import { subscribeCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
 import { readAgentCheckSource } from "../../adapters/foundry/actors/read-agent-check-source";
 import { ensureSharedPartialsLoaded } from "../../adapters/foundry/templates/ensure-shared-partials-loaded";
 
@@ -95,7 +97,7 @@ function readDialogResult(
 function attachControls(
   root: HTMLElement,
   candidatesByValue: ReadonlyMap<string, AgentCheckParticipantCandidate>,
-): void {
+): () => void {
   const participant = root.querySelector<HTMLSelectElement>("[data-participant-select]");
   const skill = root.querySelector<HTMLSelectElement>("[data-skill-select]");
   const difficulty = root.querySelector<HTMLInputElement>("input[name='difficulty']");
@@ -111,6 +113,15 @@ function attachControls(
 
   const update = (): void => {
     const candidate = candidatesByValue.get(participant.value);
+    const previous = skill.value;
+    for (const option of [...skill.options]) if (option.dataset?.customSkill) option.remove();
+    const custom = candidate ? availableActorCustomSkills(candidate.effectiveActor) : [];
+    for (const entry of custom) {
+      const option = new Option(entry.label, entry.key);
+      option.dataset.customSkill = "true";
+      skill.add(option);
+    }
+    skill.value = [...skill.options].some(option => option.value === previous) ? previous : "";
     skill.disabled = !candidate;
     if (!candidate) skill.value = "";
     const displayedActorName = candidate?.effectiveActor.name ?? localize("Preview.NoParticipant");
@@ -122,7 +133,7 @@ function attachControls(
     portrait.title = displayedActorName;
     const definition = SKILL_DEFINITIONS.find(
       (entry) => !("specializations" in entry) && entry.key === skill.value,
-    );
+    ) ?? custom.find(entry => entry.key === skill.value);
     if (candidate && definition) {
       const check = buildAgentCheck(
         parseRequestedSkill(definition.key),
@@ -144,6 +155,7 @@ function attachControls(
   skill.addEventListener("change", update);
   difficulty.addEventListener("input", update);
   update();
+  return subscribeCustomSkills(update);
 }
 
 export async function openCheckRequestDialog(): Promise<CheckRequestDialogResult | null> {
@@ -159,6 +171,7 @@ export async function openCheckRequestDialog(): Promise<CheckRequestDialogResult
     TEMPLATE,
     buildViewModel(candidates),
   );
+  let unsubscribe: (() => void) | undefined;
   const result = await foundry.applications.api.DialogV2.input<
     CheckRequestDialogResult | "cancel"
   >({
@@ -175,9 +188,12 @@ export async function openCheckRequestDialog(): Promise<CheckRequestDialogResult
       callback: (_event, button) => readDialogResult(button, candidatesByValue),
     },
     position: { width: 480 },
-    render: (_event, dialog) => attachControls(dialog.element, candidatesByValue),
+    render: (_event, dialog) => {
+      unsubscribe?.();
+      unsubscribe = attachControls(dialog.element, candidatesByValue);
+    },
     rejectClose: false,
     window: { title: localize("Title"), resizable: false },
-  });
+  }).finally(() => unsubscribe?.());
   return result === "cancel" ? null : result;
 }

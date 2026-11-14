@@ -4,7 +4,6 @@ import { readAbilityResource } from "../../core/abilities/ability-resource";
 import { ABILITY_CHARACTERISTIC_KINDS, ABILITY_DAMAGE_TIMINGS, readAbilityUses } from "../../core/abilities/ability-use";
 import { AGENT_ATTRIBUTE_KEYS } from "../../core/actors/agent-attributes";
 import { NORMAL_DIE_STEPS } from "../../core/dice/die-step";
-import { SKILL_DEFINITIONS } from "../../config/skills";
 
 type RequiredStringField = foundry.data.fields.StringField<
   string,
@@ -128,9 +127,6 @@ function createResourceIntegerField(): RequiredIntegerField {
 }
 
 function createCheckIntegrationField(): AbilityUseSchema["checkIntegration"] {
-  const applicableSkillKeys = SKILL_DEFINITIONS
-    .filter((definition) => !("specializations" in definition))
-    .map(({ key }) => key);
   return new foundry.data.fields.SchemaField({
     modification: new foundry.data.fields.TypedSchemaField({
       extraDie: {
@@ -143,7 +139,7 @@ function createCheckIntegrationField(): AbilityUseSchema["checkIntegration"] {
           },
           skill: {
             skill: new foundry.data.fields.StringField({
-              required: true, nullable: false, blank: false, choices: applicableSkillKeys,
+              required: true, nullable: false, blank: false,
             }),
           },
         }),

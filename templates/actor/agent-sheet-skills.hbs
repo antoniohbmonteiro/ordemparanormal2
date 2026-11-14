@@ -15,5 +15,11 @@
         {{> "systems/ordemparanormal2/templates/actor/partials/skill-row.hbs" skill=this checkKind="skill" canRoll=@root.canRoll editable=@root.canEditStructure}}
       {{/if}}
     {{/each}}
+    {{#each customSkillRows}}
+      {{> "systems/ordemparanormal2/templates/actor/partials/skill-row.hbs" skill=this checkKind="skill" canRoll=@root.canRoll editable=@root.canEditStructure removeAction="removeCustomSkill"}}
+    {{/each}}
+    {{#if canEditStructure}}
+      {{#if canAddCustomSkill}}{{> "systems/ordemparanormal2/templates/actor/partials/add-skill-button.hbs"}}{{/if}}
+    {{/if}}
   </div>
 </section>

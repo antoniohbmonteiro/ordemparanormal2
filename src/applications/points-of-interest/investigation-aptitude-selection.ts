@@ -1,9 +1,9 @@
 import {
   SKILL_DEFINITIONS,
   type AptitudeSpecializationKey,
-  type SkillKey,
 } from "../../config/skills";
 import type { AgentCheckSelection } from "../../application/checks/build-agent-check";
+import { parsePoiSkillSelection, type PoiSkillKey, type PoiSpecialization } from "../../documents/item/point-of-interest-data";
 
 const LOCALIZATION_ROOT = "ORDEMPARANORMAL2.PointOfInterest.Investigation";
 
@@ -18,12 +18,12 @@ if (!aptitude || !("specializations" in aptitude)) {
 const specializations = aptitude.specializations;
 
 export async function selectInvestigationApproachCheck(
-  approach: { readonly key: SkillKey; readonly specialization?: AptitudeSpecializationKey },
+  approach: { readonly key: PoiSkillKey; readonly specialization?: PoiSpecialization },
   selectAptitude: typeof selectInvestigationAptitudeSpecialization = selectInvestigationAptitudeSpecialization,
 ): Promise<AgentCheckSelection | null> {
-  if (approach.key !== "aptitude") return { kind: "skill", key: approach.key };
+  if (approach.key !== "aptitude") return parsePoiSkillSelection(approach.key, approach.specialization) ?? null;
   const specialization = approach.specialization ?? await selectAptitude(specializations.map(candidate => candidate.key));
-  return specialization ? { kind: "aptitude", key: specialization } : null;
+  return parsePoiSkillSelection(approach.key, specialization) ?? null;
 }
 
 /** Opens the small prerequisite choice used before the regular Check Dialog. */

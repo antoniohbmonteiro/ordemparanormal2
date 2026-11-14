@@ -7,6 +7,7 @@ import {
   type ModernCheckSnapshot,
 } from "../../../application/checks/check-snapshot";
 import { resolveCheckDifficulty } from "../../../core/checks/check";
+import { matchesSkillCheckComponents } from "../../../application/checks/build-actor-check";
 import { CHECK_REQUEST_STATE_FLAG, SYSTEM_ID } from "../../../config/system-config";
 
 export type CheckRequestMessageLifecycle =
@@ -23,10 +24,7 @@ export function doesSnapshotMatchCheckRequest(
   if (
     snapshot.check.kind !== "skill" ||
     snapshot.check.key !== state.selection.key ||
-    snapshot.components.length !== 2 ||
-    snapshot.components[0]?.kind !== "attribute" ||
-    snapshot.components[1]?.kind !== "skill" ||
-    snapshot.components[1].key !== state.selection.key
+    !matchesSkillCheckComponents(state.selection, snapshot.components)
   ) return false;
 
   if (state.difficulty === undefined) {

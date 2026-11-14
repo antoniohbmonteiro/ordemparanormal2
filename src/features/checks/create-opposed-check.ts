@@ -7,12 +7,17 @@ import type { OpposedCheckSideStateV1, OpposedCheckStateV1 } from "../../applica
 import { resolveOpposedCheckParticipant } from "../../adapters/foundry/actors/resolve-opposed-check-participant";
 import { readAgentCheckSource } from "../../adapters/foundry/actors/read-agent-check-source";
 import { createOpposedCheckMessage } from "../../adapters/foundry/chat/create-opposed-check-message";
+import { isCustomSkillKey } from "../../core/actors/custom-skills";
+import { availableActorCustomSkills } from "../../adapters/foundry/actors/actor-custom-skills";
 
 async function buildSide(
   configuration: OpposedCheckDialogResult["left"],
 ): Promise<OpposedCheckSideStateV1> {
   const actor = await resolveOpposedCheckParticipant(configuration.participant);
   if (!actor) throw new Error("Opposed Check participant is no longer available.");
+  if (configuration.selection.kind === "skill" && isCustomSkillKey(configuration.selection.key)
+    && !availableActorCustomSkills(actor).some(option => option.key === configuration.selection.key))
+    throw new Error("A perícia selecionada está indisponível.");
   const check = buildAgentCheck(
     configuration.selection,
     readAgentCheckSource(actor),

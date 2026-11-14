@@ -4,14 +4,16 @@ import {
   POINT_OF_INTEREST_DIFFICULTY_MIN,
   approachIdentity,
   isSkillApproach,
+  parsePoiSkillSelection,
   type PointOfInterestApproach,
   type PointOfInterestAvailabilityMode,
   type PointOfInterestDifficultyOverride,
   type PointOfInterestInformation,
   type PointOfInterestInformationAvailability,
 } from "../../documents/item/point-of-interest-data";
+import { isCustomSkillKey, type CustomSkillOption, type CustomSkillKey } from "../../core/actors/custom-skills";
 
-export interface SkillOptionViewModel { readonly value: SkillKey; readonly label: string }
+export interface SkillOptionViewModel { readonly value: SkillKey | CustomSkillKey; readonly label: string }
 export const SKILL_OPTION_VIEW_MODELS: readonly SkillOptionViewModel[] =
   SKILL_DEFINITIONS.map(({ key, label }) => ({ value: key, label }));
 export const APTITUDE_OPTIONS = SKILL_DEFINITIONS.find(definition => definition.key === "aptitude")!
@@ -24,6 +26,7 @@ export type ApproachViewModel = PointOfInterestApproach & {
   readonly invalidSource?: boolean;
   readonly index: number;
   readonly skillOptions: readonly (SkillOptionViewModel & { readonly selected: boolean })[];
+  readonly selectedSkill?: SkillOptionViewModel["value"];
   readonly specializationOptions: readonly { readonly value: AptitudeSpecializationKey; readonly label: string; readonly selected: boolean }[];
   readonly isAptitude: boolean;
   readonly showDifficultyOverride: boolean;
@@ -61,6 +64,7 @@ export function buildInformationViewModels(
   information: readonly PointOfInterestInformation[],
   pendingSituational: ReadonlySet<string> = new Set<string>(),
   pendingOverrides: ReadonlySet<string> = new Set<string>(),
+  customSkillOptions: readonly CustomSkillOption[] = [],
 ): readonly InformationViewModel[] {
   return information.map((entry, informationIndex) => {
     const mode = pendingSituational.has(entry.id) ? "situational" : entry.availability.mode;
@@ -74,19 +78,28 @@ export function buildInformationViewModels(
       condition: entry.availability.condition,
       canAddApproach: true,
       canRemoveApproach: entry.approaches.length > 1,
-      approaches: entry.approaches.map((approach, index) => ({
-        ...approach,
-        index,
-        isTool: !isSkillApproach(approach),
-        isAptitude: approach.skill === "aptitude",
-        skillOptions: SKILL_OPTION_VIEW_MODELS.map(option => ({ ...option, selected: option.value === approach.skill })),
-        specializationOptions: APTITUDE_OPTIONS.map(option => ({ ...option,
-          selected: approach.skill === "aptitude" && option.value === approach.specialization })),
-        showDifficultyOverride: !!approach.difficultyOverride
-          || pendingOverrides.has(difficultyOverrideDraftKey(entry.id, approach)),
-        overrideDifficulty: approach.difficultyOverride ? String(approach.difficultyOverride.difficulty) : "",
-        overrideCondition: approach.difficultyOverride?.condition ?? "",
-      })),
+      approaches: entry.approaches.map((approach, index) => {
+        const selected = parsePoiSkillSelection(approach.skill, approach.specialization);
+        const customKey = selected?.kind === "skill" && isCustomSkillKey(selected.key) ? selected.key : undefined;
+        const custom = customSkillOptions.filter(entry => !entry.archived || entry.key === customKey)
+          .map(({ key: value, label }) => ({ value, label }));
+        if (customKey && !custom.some(entry => entry.value === customKey))
+          custom.push({ value: customKey, label: `Perícia indisponível (${customKey})` });
+        return {
+          ...approach,
+          index,
+          isTool: !isSkillApproach(approach),
+          isAptitude: approach.skill === "aptitude",
+          selectedSkill: customKey ?? approach.skill,
+          skillOptions: [...SKILL_OPTION_VIEW_MODELS, ...custom].map(option => ({ ...option, selected: option.value === (customKey ?? approach.skill) })),
+          specializationOptions: APTITUDE_OPTIONS.map(option => ({ ...option,
+            selected: approach.skill === "aptitude" && option.value === approach.specialization })),
+          showDifficultyOverride: !!approach.difficultyOverride
+            || pendingOverrides.has(difficultyOverrideDraftKey(entry.id, approach)),
+          overrideDifficulty: approach.difficultyOverride ? String(approach.difficultyOverride.difficulty) : "",
+          overrideCondition: approach.difficultyOverride?.condition ?? "",
+        };
+      }),
     };
   });
 }

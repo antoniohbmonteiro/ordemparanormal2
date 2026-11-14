@@ -1,5 +1,6 @@
-<div class="op2-skill-row{{#if specialized}} op2-skill-row--specialization{{/if}}">
-  <button class="op2-roll-trigger op2-skill-row__name" type="button" {{#if canRoll}}data-action="rollCheck" data-check-kind="{{checkKind}}" data-check-key="{{skill.key}}"{{else}}disabled{{/if}}>{{skill.label}}</button>
-  {{#if skill.attributeLabelKey}}<span class="op2-skill-row__attribute">{{localize skill.attributeLabelKey}}</span>{{/if}}
+<div class="op2-skill-row{{#if specialized}} op2-skill-row--specialization{{/if}}{{#if removeAction}}{{#if editable}} op2-skill-row--removable{{/if}}{{/if}}">
+  <button class="op2-roll-trigger op2-skill-row__name" type="button" {{#if canRoll}}{{#unless skill.unavailable}}data-action="rollCheck" data-check-kind="{{checkKind}}" data-check-key="{{skill.key}}"{{else}}disabled{{/unless}}{{else}}disabled{{/if}}>{{skill.label}}</button>
+  <span class="op2-skill-row__attribute">{{#if skill.attributeLabelKey}}{{localize skill.attributeLabelKey}}{{/if}}</span>
   {{> "systems/ordemparanormal2/templates/actor/partials/die-step-select.hbs" die=skill.die editable=editable label=skill.label}}
+  {{#if removeAction}}{{#if editable}}<button class="op2-threat-icon-button" type="button" data-action="{{removeAction}}" data-entry-id="{{skill.id}}" data-check-key="{{skill.key}}" aria-label="Remover perícia {{skill.label}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>{{/if}}{{/if}}
 </div>

@@ -147,6 +147,7 @@ describe("GmToolkit", () => {
       "opposedCheck",
       "accessChallenges",
       "importAdventure",
+      "manageCustomSkills",
     ]);
     await GmToolkitClass.DEFAULT_OPTIONS.actions.requestCheck();
     await GmToolkitClass.DEFAULT_OPTIONS.actions.opposedCheck();
@@ -213,24 +214,24 @@ describe("GM Tools Palette template and assets", () => {
     expect(css).not.toContain("op2-gm-toolkit__access-icon");
   });
 
-  it("renders one grip and exactly four accessible actions", async () => {
+  it("renders one grip and five accessible actions", async () => {
     const template = await readFile(
       fileURLToPath(new URL("../../../templates/applications/gm-toolkit.hbs", import.meta.url)),
       "utf8",
     );
     const actions = [...template.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]);
 
-    expect(actions).toEqual(["requestCheck", "opposedCheck", "accessChallenges", "importAdventure"]);
+    expect(actions).toEqual(["requestCheck", "opposedCheck", "accessChallenges", "importAdventure", "manageCustomSkills"]);
     expect(template.match(/data-drag-handle/g)).toHaveLength(1);
     expect(template).toContain("assets/icons/gm-tools/rolling-dices.svg");
     expect(template).toContain("assets/icons/gm-tools/sword-clash.svg");
     expect(template).toContain("assets/icons/gm-tools/adventure-import.svg");
     expect(template).toContain("assets/icons/gm-tools/access-challenges.png");
     expect(template).not.toContain("op2-gm-toolkit__access-icon");
-    expect(template.match(/aria-hidden="true"/g)).toHaveLength(5);
-    expect(template.match(/alt=""/g)).toHaveLength(4);
-    expect(template.match(/aria-label=/g)).toHaveLength(5);
-    expect(template.match(/title=/g)).toHaveLength(4);
+    expect(template.match(/aria-hidden="true"/g)).toHaveLength(6);
+    expect(template.match(/alt=""/g)).toHaveLength(5);
+    expect(template.match(/aria-label=/g)).toHaveLength(6);
+    expect(template.match(/title=/g)).toHaveLength(5);
     expect(template).not.toMatch(/fa-(?:solid|regular|brands)|d20|DialogV2|ChatMessage|socket|Actor/i);
   });
 

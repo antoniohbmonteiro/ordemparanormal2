@@ -1,7 +1,4 @@
-import { ACTOR_CHECK_SKILLS } from "../../application/checks/build-actor-check";
-import { DEFAULT_SKILL_DIE } from "../../config/skills";
 import { SYSTEM_ID } from "../../config/system-config";
-import { threatSkillKey, type ThreatSkill } from "../../documents/actor/threat-data-model";
 import { THREAT_I18N } from "../../ui/actor/threat-sheet-view-model";
 
 export const THREAT_TEMPLATE_ROOT = `systems/${SYSTEM_ID}/templates/actor`;
@@ -52,17 +49,4 @@ export async function editThreatFields<T>(
 export function readThreatText(data: FormData, key: string): string {
   const value = data.get(key);
   return typeof value === "string" ? value.trim() : "";
-}
-
-export function pickThreatSkill(skills: readonly ThreatSkill[]): Promise<ThreatSkill | null> {
-  const available = ACTOR_CHECK_SKILLS.filter(({ selection }) =>
-    !skills.some((skill) => threatSkillKey(skill) === threatSkillKey(selection)));
-  if (!available.length) return Promise.resolve(null);
-  return editThreatFields(localizeThreat("AddSkill"), [{
-    name: "skill", label: localizeThreat("Skill"), value: "",
-    options: available.map(({ selection, label }) => ({ value: threatSkillKey(selection), label })),
-  }], (data) => {
-    const selected = available.find(({ selection }) => threatSkillKey(selection) === readThreatText(data, "skill"));
-    return selected ? { ...selected.selection, die: DEFAULT_SKILL_DIE } : null;
-  });
 }

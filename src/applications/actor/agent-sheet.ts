@@ -1,3 +1,8 @@
+import { addCustomSkill, pickActorSkill } from "./custom-skills";
+import { actorCustomSkills, updateActorCustomSkill } from "../../adapters/foundry/actors/actor-custom-skills";
+import { canManageCustomSkills, subscribeCustomSkills, worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
+import { buildCustomSkillRows } from "../../ui/actor/custom-skill-rows";
+import { isCustomSkillKey, readSkillDie } from "../../core/actors/custom-skills";
 import type {
   ApplicationClosingOptions,
   ApplicationHeaderControlsEntry,
@@ -86,6 +91,8 @@ interface AgentSheetRenderContext
   aptitudeExpanded: boolean;
   canEditStructure: boolean;
   canRoll: boolean;
+  customSkillRows: ReturnType<typeof buildCustomSkillRows>;
+  canAddCustomSkill: boolean;
   editMode: boolean;
   profileConflict: boolean;
   occupationConflict: boolean;
@@ -130,6 +137,8 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       openSheetSettings: AgentSheet.#onOpenSheetSettings,
       openAbilityMenu: AgentSheet.#onOpenAbilityMenu,
       rollCheck: AgentSheet.#onRollCheck,
+      addSkill: AgentSheet.#onAddSkill,
+      removeCustomSkill: AgentSheet.#onRemoveCustomSkill,
       selectAgentTab: AgentSheet.#onSelectAgentTab,
       toggleEditMode: AgentSheet.#onToggleEditMode,
       toggleAbilityDescription: AgentSheet.#onToggleAbilityDescription,
@@ -165,7 +174,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         `${TEMPLATE_ROOT}/agent-sheet-abilities.hbs`,
         `${TEMPLATE_ROOT}/agent-sheet-inventory.hbs`,
         DIE_STEP_PARTIAL,
-        ...["portrait", "resource-fields", "attribute-card", "skill-row", "content-tabs", "ability-cards"].map(
+        ...["portrait", "resource-fields", "attribute-card", "skill-row", "content-tabs", "ability-cards", "add-skill-button"].map(
           (part) => `${TEMPLATE_ROOT}/partials/${part}.hbs`,
         ),
       ],
@@ -177,6 +186,8 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   };
 
   private aptitudeExpanded = false;
+  #customSkillPicker?: AbortController;
+  #unsubscribeCustomSkills?: () => void;
   private editMode = false;
   #documentUpdateQueue: Promise<void> = Promise.resolve();
   #occupationPicker: OccupationPicker | null = null;
@@ -302,6 +313,9 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       aptitudeExpanded: this.aptitudeExpanded,
       canEditStructure: this.#canEditStructure,
       canRoll: canUserRollActor(actor, game.user),
+      customSkillRows: buildCustomSkillRows(actorCustomSkills(actor), worldCustomSkillOptions()),
+      canAddCustomSkill: canManageCustomSkills() || worldCustomSkillOptions().some(option =>
+        !option.archived && readSkillDie(actorCustomSkills(actor)[option.key]) === undefined),
       editMode: this.editMode,
       profileConflict,
       occupationConflict,
@@ -323,6 +337,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     options: DocumentSheetRenderOptions & HandlebarsRenderOptions,
   ): Promise<void> {
     await super._onRender(context, options);
+    this.#unsubscribeCustomSkills ??= subscribeCustomSkills(() => { if (this.rendered) void this.render(); });
     const accentColor = (context as AgentSheetRenderContext).accentColor;
     this.element.style.setProperty("--op2-accent", accentColor);
   }
@@ -383,6 +398,7 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   async #closeStructuralPickers(): Promise<void> {
+    this.#customSkillPicker?.abort();
     const profilePicker = this.#profilePicker;
     const occupationPicker = this.#occupationPicker;
     const results = await Promise.allSettled([
@@ -1097,6 +1113,31 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
   }
 
+  static async #onAddSkill(this: AgentSheet): Promise<void> {
+    if (!this.#canEditStructure || this.#customSkillPicker) return;
+    const actor = this.document as foundry.documents.Actor;
+    const picker = this.#customSkillPicker = new AbortController();
+    try {
+      const selected = await pickActorSkill(actor, () => [], picker.signal);
+      if (selected) await addCustomSkill(actor, selected.selection, selected.die, () => this.#canEditStructure && !picker.signal.aborted);
+    } catch (error) {
+      console.error(error);
+      ui.notifications.error("Não foi possível adicionar a perícia.");
+    } finally { this.#customSkillPicker = undefined; }
+  }
+
+  static async #onRemoveCustomSkill(this: AgentSheet, _event: PointerEvent, target: HTMLElement): Promise<void> {
+    const key = target.dataset.checkKey;
+    if (!this.#canEditStructure || !isCustomSkillKey(key)) return;
+    try {
+      await this.#submitPendingChanges();
+      await updateActorCustomSkill(this.document as foundry.documents.Actor, key, null, "remove", () => this.#canEditStructure);
+    } catch (error) {
+      console.error(error);
+      ui.notifications.error(error instanceof Error ? error.message : "Não foi possível remover a perícia.");
+    }
+  }
+
   protected override _processFormData(
     event: SubmitEvent | null,
     form: HTMLFormElement,
@@ -1104,6 +1145,10 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   ): Record<string, unknown> {
     const submitData = super._processFormData(event, form, formData);
     const actor = this.document as foundry.documents.Actor;
+    const system = submitData.system;
+    if (system && typeof system === "object" && "customSkills" in system) {
+      delete system.customSkills;
+    }
     if (restoreEmptyActorName(submitData, actor.name)) {
       const input = form.querySelector<HTMLInputElement>('input[name="name"]');
       if (input) input.value = actor.name;
@@ -1119,6 +1164,18 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     super._attachPartListeners(partId, htmlElement, options);
     if (partId !== "main") return;
 
+    htmlElement.addEventListener("change", event => {
+      const field = event.target;
+      if (!(field instanceof HTMLSelectElement) || !field.name.startsWith("system.customSkills.")) return;
+      const key = field.name.slice("system.customSkills.".length);
+      const die = readSkillDie(Number(field.value));
+      if (!this.#canEditStructure || !isCustomSkillKey(key) || !die) return;
+      void updateActorCustomSkill(this.document as foundry.documents.Actor, key, die, "edit", () => this.#canEditStructure)
+        .catch((error: unknown) => {
+          console.error(error);
+          ui.notifications.error("Não foi possível editar a perícia.");
+        });
+    });
     if (this.isEditable) {
       this.#abilityContextMenu = bindAbilityCardMenu(
         htmlElement,
@@ -1163,6 +1220,8 @@ export class AgentSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {
+    this.#unsubscribeCustomSkills?.();
+    this.#unsubscribeCustomSkills = undefined;
     super._onClose(options);
     this.tabGroups.content = "abilities";
     this.aptitudeExpanded = false;

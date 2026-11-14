@@ -1,8 +1,11 @@
 import { isSupportedCheckSnapshot } from "../../../application/checks/check-snapshot";
 import { SYSTEM_ID } from "../../../config/system-config";
-import { aptitudeSpecializationLabel, isSkillKey, skillLabel } from "../../../config/skills";
+import { isCustomSkillId } from "../../../core/actors/custom-skills";
+import { getAgentSkillDie } from "../../../application/checks/build-agent-check";
+import { matchesSkillCheckComponents } from "../../../application/checks/build-actor-check";
+import { currentPoiCustomSkillDie, poiSkillLabel } from "./poi-skill";
 import { reachableInformationIds } from "../../../core/investigation/resolve-information";
-import { readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
+import { parsePoiSkillSelection, readPointOfInterestInformation } from "../../../documents/item/point-of-interest-data";
 import { resolveExamination } from "../../../features/points-of-interest/resolve-examination";
 import { readAgentCheckSource } from "../actors/read-agent-check-source";
 import { ensureSharedPartialsLoaded } from "../templates/ensure-shared-partials-loaded";
@@ -47,9 +50,7 @@ async function publishExaminationResult(plan: ExaminationPlan, input: ExaminePoi
       passive: contentFor(plan.passiveIds), examined: contentFor(plan.examinationIds),
       passiveCount: plan.passiveIds.length, examinedCount: plan.examinationIds.length,
       passivePlural: plan.passiveIds.length !== 1, examinedPlural: plan.examinationIds.length !== 1,
-      skillName: input.skill === "aptitude" && input.specialization
-        ? aptitudeSpecializationLabel(input.specialization as Parameters<typeof aptitudeSpecializationLabel>[0])
-        : skillLabel(input.skill as Parameters<typeof skillLabel>[0]), lostPd: plan.lostPd,
+      skillName: poiSkillLabel(input.skill, input.specialization), lostPd: plan.lostPd,
       noExaminationFindings: plan.examinationIds.length === 0,
     });
   const whisper = (game.users as unknown as { contents: foundry.documents.User[] }).contents
@@ -66,8 +67,11 @@ export type CommitPoiExaminationResult =
 export async function resolveCommitPoiExamination(
   input: ExaminePoiInput, requester: foundry.documents.User,
 ): Promise<CommitPoiExaminationResult> {
-  if (!input || !isSkillKey(input.skill) || typeof input.messageId !== "string")
+  if (!input || typeof input.messageId !== "string" || typeof input.sceneId !== "string"
+    || typeof input.itemUuid !== "string" || typeof input.actorUuid !== "string" || typeof input.runId !== "string")
     return { ok: false, reason: "invalid" };
+  const selection = parsePoiSkillSelection(input.skill, input.specialization);
+  if (!selection) return { ok: false, reason: "invalid" };
   if (!game.user?.isGM || game.users.activeGM?.id !== game.user.id
     || (game.users as unknown as { get(id: string): foundry.documents.User | undefined }).get(requester.id) !== requester)
     return { ok: false, reason: "forbidden" };
@@ -87,8 +91,9 @@ export async function resolveCommitPoiExamination(
   if (!message || !isSupportedCheckSnapshot(snapshot) || snapshot.schemaVersion !== 4
     || message.speaker.actor !== input.actorUuid?.slice(6)
     || !requester.isGM && message.author?.id !== requester.id
-    || snapshot.check.kind !== (input.skill === "aptitude" ? "aptitude" : "skill")
-    || snapshot.check.key !== (input.skill === "aptitude" ? input.specialization : input.skill))
+    || snapshot.check.kind !== selection.kind || snapshot.check.key !== selection.key
+    || (isCustomSkillId(input.skill) && (!currentPoiCustomSkillDie(actor, item, input.skill, input.specialization)
+      || !matchesSkillCheckComponents(selection, snapshot.components))))
     return { ok: false, reason: "invalid" };
   const binding = { schemaVersion: 1, sceneId: input.sceneId, runId: input.runId,
     itemUuid: input.itemUuid, actorUuid: input.actorUuid, skill: input.skill,
@@ -106,10 +111,7 @@ export async function resolveCommitPoiExamination(
   if (!plan) {
     const information = readPointOfInterestInformation(item.system);
     const known = new Set(readPoiKnowledge(item).find(entry => entry.actorUuid === actor.uuid)?.informationIds ?? []);
-    const source = readAgentCheckSource(actor);
-    const value = input.skill === "aptitude"
-      ? source.skills.aptitude[input.specialization as keyof typeof source.skills.aptitude]
-      : source.skills[input.skill];
+    const value = getAgentSkillDie(readAgentCheckSource(actor), selection);
     if (typeof value !== "number") return { ok: false, reason: "invalid" };
     const passiveIds = reachableInformationIds(information, known, input.skill, input.specialization, value);
     const examinationIds = resolveExamination(information, new Set([...known, ...passiveIds]),

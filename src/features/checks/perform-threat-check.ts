@@ -8,6 +8,8 @@ import { openCheckDialog } from "../../applications/checks/check-dialog";
 import type { AttributeKey } from "../../core/actors/agent-attributes";
 import { applyCheckExtraDice, applyCheckStepAdjustments, resolveCheckDifficulty } from "../../core/checks/check";
 import { ThreatDataModel } from "../../documents/actor/threat-data-model";
+import { worldCustomSkillOptions } from "../../adapters/foundry/actors/custom-skill-catalog";
+import { isCustomSkillKey, readSkillDie } from "../../core/actors/custom-skills";
 
 export type ThreatCheckIntent = ActorCheckSelection | { readonly kind: "action"; readonly id: string };
 export type ThreatCheckOutcome = "published" | "cancelled" | "changed" | "forbidden";
@@ -22,9 +24,13 @@ function prepareCheck(actor: foundry.documents.Actor, intent: ThreatCheckIntent,
   if (!selection) return;
   const localize = (key: string) => game.i18n.localize(key);
   const getSkillDie = ({ kind, key }: Exclude<ActorCheckSelection, { kind: "attribute" }>) =>
-    system.skills.find((entry) => entry.kind === kind && entry.key === key)?.die;
+    isCustomSkillKey(key) ? readSkillDie(system.customSkills?.[key])
+      : system.skills.find((entry) => entry.kind === kind && entry.key === key)?.die;
   if (selection.kind !== "attribute" && getSkillDie(selection) === undefined) return;
-  const check = buildActorCheck(selection, { attributes: system.attributes, getSkillDie }, localize,
+  const customSkillOptions = worldCustomSkillOptions();
+  if (selection.kind === "skill" && isCustomSkillKey(selection.key)
+    && !customSkillOptions.some(option => option.key === selection.key)) return;
+  const check = buildActorCheck(selection, { attributes: system.attributes, getSkillDie, customSkillOptions }, localize,
     attribute ?? action?.check?.attribute ?? undefined);
   const input = action ? { ...check, check: { ...check.check, name: action.name } } : check;
   const attributeChoices = selection.kind === "attribute" ? undefined

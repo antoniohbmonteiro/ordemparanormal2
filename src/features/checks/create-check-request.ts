@@ -5,6 +5,8 @@ import { readAgentAccentColor } from "../../adapters/foundry/actors/read-agent-a
 import { readAgentCheckSource } from "../../adapters/foundry/actors/read-agent-check-source";
 import { resolveAgentCheckParticipant } from "../../adapters/foundry/actors/resolve-agent-check-participant";
 import { createCheckRequestMessage } from "../../adapters/foundry/chat/create-check-request-message";
+import { isCustomSkillKey } from "../../core/actors/custom-skills";
+import { availableActorCustomSkills } from "../../adapters/foundry/actors/actor-custom-skills";
 
 export async function createCheckRequest(
   configuration: CheckRequestDialogResult,
@@ -22,6 +24,9 @@ export async function createCheckRequest(
 
   const actor = await resolveAgentCheckParticipant(configuration.participant);
   if (!actor) throw new Error("Check Request participant is no longer available.");
+  if (isCustomSkillKey(configuration.selection.key)
+    && !availableActorCustomSkills(actor).some(option => option.key === configuration.selection.key))
+    throw new Error("A perícia selecionada está indisponível.");
   const check = buildAgentCheck(
     configuration.selection,
     readAgentCheckSource(actor),

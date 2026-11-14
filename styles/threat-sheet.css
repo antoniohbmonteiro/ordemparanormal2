@@ -223,7 +223,7 @@
   text-transform: uppercase;
 }
 
-.ordemparanormal2.threat-sheet :is(.op2-threat-icon-button, .op2-threat-text-button, .op2-threat-check) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) :is(.op2-threat-icon-button, .op2-threat-text-button, .op2-threat-check) {
   display: inline-flex;
   width: auto;
   min-width: 0;
@@ -241,7 +241,7 @@
   box-shadow: none;
 }
 
-.ordemparanormal2.threat-sheet .op2-threat-icon-button {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-threat-icon-button {
   width: 24px;
   flex: 0 0 auto;
   padding: 0;
@@ -251,13 +251,13 @@
   border-color: var(--op2-border);
 }
 
-.ordemparanormal2.threat-sheet .op2-threat-glyph {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-threat-glyph {
   display: inline-block;
   border: 0;
   vertical-align: middle;
 }
 
-.ordemparanormal2.threat-sheet .op2-threat-text-button {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-threat-text-button {
   padding-inline: 9px;
   border-color: var(--op2-border-strong);
   color: var(--op2-text);
@@ -265,7 +265,7 @@
   font-weight: 500;
 }
 
-.ordemparanormal2.threat-sheet :is(button.op2-threat-icon-button, button.op2-threat-check, .op2-threat-text-button):hover {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet) :is(button.op2-threat-icon-button, button.op2-threat-check, .op2-threat-text-button):hover {
   color: var(--op2-text);
   background: var(--op2-panel-bg-hover);
 }

@@ -1,3 +1,5 @@
+import { isCustomSkillKey } from "../../core/actors/custom-skills";
+import { resolveOwnedCustomSkill } from "../../adapters/foundry/actors/actor-custom-skills";
 import {
   doesSnapshotMatchSelection,
   parseOpposedCheckState,
@@ -80,6 +82,9 @@ async function persist(
   if (!canUserRollActor(actor, canonicalSender)) {
     throw new Error("The querying User cannot roll this participant.");
   }
+  if (sideState.selection.kind === "skill" && isCustomSkillKey(sideState.selection.key)
+    && !resolveOwnedCustomSkill(actor, sideState.selection.key))
+    throw new Error("A perícia solicitada está indisponível.");
   if (!doesSnapshotMatchSelection(data.result, sideState.selection)) {
     throw new Error("Submitted result does not match the requested Check.");
   }

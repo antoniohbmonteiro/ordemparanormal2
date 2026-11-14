@@ -80,7 +80,7 @@ describe("Point of Interest approach dialog", () => {
     let config: DialogConfig | null = null;
     vi.stubGlobal("HTMLSelectElement", FakeSelect);
     vi.stubGlobal("game", { i18n: { localize } });
-    vi.stubGlobal("foundry", { applications: { api: { DialogV2: {
+    vi.stubGlobal("foundry", { utils: { escapeHTML: (value: string) => value }, applications: { api: { DialogV2: {
       input: vi.fn(async (value: DialogConfig) => { config = value; return null; }),
     } } } });
     await selectPoiApproach([]);

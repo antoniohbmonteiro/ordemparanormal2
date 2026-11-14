@@ -17,6 +17,8 @@ import { readAgentCheckSource } from "../../adapters/foundry/actors/read-agent-c
 import { ensureSharedPartialsLoaded } from "../../adapters/foundry/templates/ensure-shared-partials-loaded";
 import { ATTRIBUTE_DEFINITIONS } from "../../config/attributes";
 import { SKILL_DEFINITIONS } from "../../config/skills";
+import { availableActorCustomSkills } from "../../adapters/foundry/actors/actor-custom-skills";
+import { subscribeCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
 
 const OPPOSED_CHECK_DIALOG_TEMPLATE =
   "systems/ordemparanormal2/templates/checks/opposed-check-dialog.hbs";
@@ -196,7 +198,7 @@ function readDialogResult(
 function attachDialogControls(
   root: HTMLElement,
   candidatesByValue: ReadonlyMap<string, OpposedCheckParticipantCandidate>,
-): void {
+): () => void {
   const getParticipantSelect = (side: DialogSide) =>
     root.querySelector<HTMLSelectElement>(
       `[data-participant-select="${side}"]`,
@@ -234,6 +236,14 @@ function attachDialogControls(
     const participantSelect = getParticipantSelect(side) as HTMLSelectElement;
     const checkSelect = getCheckSelect(side) as HTMLSelectElement;
     const candidate = candidatesByValue.get(participantSelect.value);
+    const previous = checkSelect.value;
+    for (const option of [...checkSelect.options]) if (option.dataset?.customSkill) option.remove();
+    for (const entry of candidate ? availableActorCustomSkills(candidate.effectiveActor) : []) {
+      const option = new Option(entry.label, `skill|${entry.key}`);
+      option.dataset.customSkill = "true";
+      checkSelect.add(option);
+    }
+    checkSelect.value = [...checkSelect.options].some(option => option.value === previous) ? previous : "";
     const portrait = root.querySelector<HTMLDivElement>(
       `[data-participant-portrait="${side}"]`,
     );
@@ -330,6 +340,7 @@ function attachDialogControls(
 
   updateParticipantOptions();
   updateValidity();
+  return subscribeCustomSkills(() => { updateSide("left"); updateSide("right"); updateValidity(); });
 }
 
 export async function openOpposedCheckDialog(): Promise<OpposedCheckDialogResult | null> {
@@ -345,6 +356,7 @@ export async function openOpposedCheckDialog(): Promise<OpposedCheckDialogResult
     OPPOSED_CHECK_DIALOG_TEMPLATE,
     buildDialogViewModel(candidates),
   );
+  let unsubscribe: (() => void) | undefined;
   const result = await foundry.applications.api.DialogV2.input<
     OpposedCheckDialogResult | "cancel"
   >({
@@ -367,14 +379,15 @@ export async function openOpposedCheckDialog(): Promise<OpposedCheckDialogResult
     },
     position: { width: 600 },
     render: (_event, dialog) => {
-      attachDialogControls(dialog.element, candidatesByValue);
+      unsubscribe?.();
+      unsubscribe = attachDialogControls(dialog.element, candidatesByValue);
     },
     rejectClose: false,
     window: {
       title: localize("Title"),
       resizable: false,
     },
-  });
+  }).finally(() => unsubscribe?.());
 
   return result === "cancel" ? null : result;
 }

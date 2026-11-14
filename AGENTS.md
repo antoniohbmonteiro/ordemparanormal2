@@ -14,7 +14,7 @@ The project is built incrementally while the public playtest evolves. Coding age
 - Keep game-rule logic out of sheets, click handlers, templates, and Foundry-specific adapters when it can be expressed as typed domain logic.
 - Prefer small incremental changes over broad rewrites.
 - Preserve healthy existing code and established boundaries.
-- For any UI change, inspect existing visual components, Handlebars partials, styles, icons, and view-model helpers **before** creating new markup or assets. Reuse is the default; unreviewed visual duplication is not acceptable.
+- For every UI change, follow [UI design and component reuse](#ui-design-and-component-reuse) before implementation.
 - Player- and GM-facing text is **Portuguese (Brazil)**.
 - Code identifiers, files, classes, functions, types, tests, architecture names, and commits are **English**.
 - Code comments are English and only when they add useful context.
@@ -108,18 +108,25 @@ Avoid:
 - generic repositories/services/effect engines without a concrete need;
 - dependence on Foundry's internal HTML structure when a public API or scoped presentation solution exists.
 
-## UI component reuse
+## UI design and component reuse
 
-**Reuse existing UI components by default.** Before implementing a visual element, inspect the repository for components, Handlebars partials, styles, icons, assets, and presentation helpers that already serve the same responsibility. Search beyond the current feature and inspect existing consumers.
+The [Ordem Paranormal 2 Design System in Figma](https://www.figma.com/design/WfdDkZdcZZZ7kcOh0z7SCX/Ordem-Paranormal-2-%E2%80%94-Design-System) is the project's required visual reference. This applies to every new or changed interface, including small dialogs, forms, dropdowns and selects, inputs, buttons, menus, cards, modals, ApplicationV2 windows, messages and visual states, and full screens.
 
-- **Reuse, do not reimplement.** When an existing component meets the need, consume its actual implementation instead of recreating equivalent markup, CSS, SVGs, or behavior.
+1. **Inspect Figma before implementation.** Identify the relevant components, styles, variants, and states. If Figma is inaccessible, use verified repository components and styles as provisional references. Refer only to Figma components and node IDs you have verified.
+2. **Inspect the repository.** Search beyond the current feature for existing components, Handlebars partials, CSS, icons, assets, and presentation helpers that serve the same responsibility. Review their consumers and interaction patterns. When the project has a component catalog, consult it alongside the code and keep its Figma and implementation references current as components evolve.
+3. **Choose a reuse strategy.** Decide whether to reuse, adapt, or create a component using the rules below.
+4. **Implement the smallest maintainable change.** Follow the project's visual patterns and preserve the Foundry integration described below.
+5. **Validate the result.** Compare the UI with the inspected visual references, including its states and interactions. Check affected consumers, relevant permissions, hover and focus, keyboard navigation, rerenders, resizing, scrolling, and native Foundry controls as applicable. In the implementation summary, name the Figma references consulted or disclose the access limitation, identify the components reused or adapted, and explain why any new component was necessary.
+
+- **Reuse the actual implementation.** Use the existing component when it meets the need. Share its implementation across consumers with the same responsibility, including select and button behavior, dialog structure, input labels and validation, or card components where applicable.
 - **Prefer small adaptations or variants.** If the same component needs a compact version, another visual state, or a minor behavior difference, extend its existing implementation with a focused, compatible change or explicit variant. Preserve its current consumers.
 - **Generalize only when useful.** If a reusable component has feature-specific naming or ownership, consider extracting or generalizing the smallest shared responsibility and updating its consumers. Avoid broad refactors just to make everything generic.
-- **Create a separate component when justified.** Different responsibilities, incompatible interactions, or excessive complexity in the existing component may justify a new implementation. Similar appearance alone does not require reuse; convenience alone does not justify duplication.
-- **Share the complete presentation contract.** Keep common markup, styling, assets, visual states, accessibility, and interaction behavior in the shared implementation where practical. Use explicit variants for legitimate differences instead of reproducing its core presentation in feature-local CSS.
-- **Validate shared changes.** Check affected consumers, relevant permissions and UI states, rerenders, resizing, keyboard behavior, and native Foundry controls as applicable. In the implementation summary, identify what was reused or adapted and explain any intentional new component.
+- **Create a separate component only when no suitable implementation can be reused or adapted.** Base the decision on the component's responsibility, interaction requirements, and the complexity of adapting existing code.
+- **Share the complete presentation contract.** Keep common HTML or Handlebars markup, scoped CSS, assets, visual states, accessibility, and interaction behavior in the shared implementation where practical. Use Handlebars partials where appropriate and explicit variants to keep the presentation consistent across Agent sheets, Threat sheets, and GM tools where they share a responsibility.
 
-Do not introduce a new UI framework, a speculative design system, or unused abstractions solely to enforce reuse. Choose the smallest maintainable solution that avoids duplicate implementations.
+Use public Foundry v14 APIs for window structure and behavior, including the ApplicationV2 family where appropriate. Apply the project's design system to window content and reuse project form components and patterns. Retain native controls when they fit the design and support accessibility, keyboard navigation, and Foundry compatibility. Preserve those behaviors when adapting a control.
+
+Do not introduce a new UI framework, a second visual library, a speculative design system, or abstractions without a concrete reusable responsibility.
 
 ## Current source organization
 
@@ -671,6 +678,6 @@ Before adding or expanding a subsystem, ask:
 5. Does this preserve historical data and provenance correctly?
 6. Will this make the next playtest change easier or harder to absorb?
 7. Is there a smaller reversible change that satisfies the requirement?
-8. For UI work, did I find and reuse or appropriately extend existing semantic components before creating new presentation code or assets?
+8. For UI work, did I follow [UI design and component reuse](#ui-design-and-component-reuse)?
 
 When uncertain, prefer the smaller correct design and surface the unresolved rule or architectural decision instead of inventing it.

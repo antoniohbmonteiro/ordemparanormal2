@@ -14,7 +14,7 @@ export interface AdventureFolderFlag {
   readonly version: 1;
   readonly adventureId: string;
   readonly documentType: AdventureFolderDocumentType;
-  readonly folderId: AdventureFolderId;
+  readonly folderId: string;
 }
 
 export interface AdventureFolderPlacementFlag {
@@ -46,8 +46,8 @@ export interface AdventureFolderPort {
     readonly flag: AdventureFolderFlag;
   }): Promise<string>;
   updateFolder(id: string, data: {
-    readonly name: string;
-    readonly color: string;
+    readonly name?: string;
+    readonly color?: string;
     readonly flag: AdventureFolderFlag;
   }): Promise<void>;
 }
@@ -104,7 +104,7 @@ function readIdentity(snapshot: AdventureFolderSnapshot, adventureId: string): A
   return { importer: "folder", version: 1, adventureId, documentType: legacyType, folderId: flag.folderId };
 }
 
-function identityKey(documentType: AdventureFolderDocumentType, folderId: AdventureFolderId): string {
+function identityKey(documentType: AdventureFolderDocumentType, folderId: string): string {
   return `${documentType}:${folderId}`;
 }
 
@@ -160,27 +160,34 @@ export function preflightAdventureFolders(input: {
   }
 }
 
+type ReadFolderIdentity = (snapshot: AdventureFolderSnapshot, adventureId: string) => AdventureFolderFlag | null;
+
 async function ensureOne(input: {
   readonly adventureId: string;
   readonly documentType: AdventureFolderDocumentType;
-  readonly folderId: AdventureFolderId;
+  readonly folderId: string;
   readonly parentId: string | null;
   readonly folders: AdventureFolderPort;
+  readonly name: string;
+  readonly color: string;
+  readonly read?: ReadFolderIdentity;
+  readonly preserveAppearance?: boolean;
 }): Promise<string> {
+  const read = input.read ?? readIdentity;
   const expected: AdventureFolderFlag = { importer: "folder", version: 1, adventureId: input.adventureId,
     documentType: input.documentType, folderId: input.folderId };
   const matches = input.folders.listFolders().filter(snapshot => {
-    const identity = readIdentity(snapshot, input.adventureId);
+    const identity = read(snapshot, input.adventureId);
     return identity?.documentType === input.documentType && identity.folderId === input.folderId;
   });
   if (matches.length > 1) throw new Error(`Identidade duplicada de Folder ${input.documentType}:${input.folderId}.`);
   const existing = matches[0];
   if (!existing) {
     if (!input.folders.isAuthorized()) throw new Error("O GM ativo mudou. Execute a importação novamente.");
-    const id = await input.folders.createFolder({ name: folderName(input.folderId), color: folderColor(input.folderId),
+    const id = await input.folders.createFolder({ name: input.name, color: input.color,
       documentType: input.documentType, parentId: input.parentId, flag: expected });
     const persisted = input.folders.listFolders().find(folder => folder.id === id);
-    const identity = persisted ? readIdentity(persisted, input.adventureId) : null;
+    const identity = persisted ? read(persisted, input.adventureId) : null;
     if (!persisted || identity?.documentType !== input.documentType || identity.folderId !== input.folderId
       || persisted.type !== input.documentType || persisted.parentId !== input.parentId) {
       throw new Error(`Criação de Folder não confirmada: ${input.documentType}:${input.folderId}.`);
@@ -191,20 +198,92 @@ async function ensureOne(input: {
     throw new Error(`Estrutura incompatível na Folder ${existing.id}.`);
   }
   const current = record(existing.flag);
-  const needsUpdate = existing.name !== folderName(input.folderId) || existing.color?.toLowerCase() !== folderColor(input.folderId)
-    || current?.importer !== "folder" || current.version !== 1 || current.adventureId !== input.adventureId
+  const appearance = input.preserveAppearance ? {} : { name: input.name, color: input.color };
+  const appearanceChanged = !input.preserveAppearance
+    && (existing.name !== input.name || existing.color?.toLowerCase() !== input.color);
+  const needsUpdate = appearanceChanged || current?.importer !== "folder" || current.version !== 1 || current.adventureId !== input.adventureId
     || current.documentType !== input.documentType || current.folderId !== input.folderId;
   if (needsUpdate) {
     if (!input.folders.isAuthorized()) throw new Error("O GM ativo mudou. Execute a importação novamente.");
-    await input.folders.updateFolder(existing.id, { name: folderName(input.folderId), color: folderColor(input.folderId), flag: expected });
+    await input.folders.updateFolder(existing.id, { ...appearance, flag: expected });
     const persisted = input.folders.listFolders().find(folder => folder.id === existing.id);
-    const identity = persisted ? readIdentity(persisted, input.adventureId) : null;
-    if (!persisted || persisted.name !== folderName(input.folderId) || persisted.color?.toLowerCase() !== folderColor(input.folderId)
+    const identity = persisted ? read(persisted, input.adventureId) : null;
+    if (!persisted || (!input.preserveAppearance && (persisted.name !== input.name || persisted.color?.toLowerCase() !== input.color))
       || identity?.documentType !== input.documentType || identity.folderId !== input.folderId) {
       throw new Error(`Atualização de Folder não confirmada: ${existing.id}.`);
     }
   }
   return existing.id;
+}
+
+function ensureAlphaFolder(input: Omit<Parameters<typeof ensureOne>[0], "name" | "color" | "folderId"> & { folderId: AdventureFolderId }) {
+  return ensureOne({ ...input, name: folderName(input.folderId), color: folderColor(input.folderId) });
+}
+
+export interface AdventureFolderNode {
+  readonly documentType: AdventureFolderDocumentType;
+  readonly id: string;
+  readonly parent?: string;
+  readonly name: string;
+}
+
+export function prepareAdventureFolderTree(input: {
+  readonly adventureId: string;
+  readonly folders: AdventureFolderPort;
+  readonly nodes: readonly AdventureFolderNode[];
+  readonly legacyIdentity: ReadFolderIdentity;
+}) {
+  const { adventureId, folders, nodes, legacyIdentity } = input;
+  const requested = new Map(nodes.map(node => [identityKey(node.documentType, node.id), node]));
+  if (requested.size !== nodes.length) throw new Error("O plano contém pastas duplicadas.");
+  function read(snapshot: AdventureFolderSnapshot, id: string): AdventureFolderFlag | null {
+    const flag = record(snapshot.flag);
+    if (flag?.adventureId !== id || flag.importer !== "folder") return legacyIdentity(snapshot, id);
+    const key = identityKey(flag.documentType as AdventureFolderDocumentType, String(flag.folderId));
+    const node = requested.get(key);
+    if (!node) return null;
+    if (flag.version !== 1 || flag.documentType !== node.documentType || flag.folderId !== node.id)
+      throw new Error("Proveniência de pasta incompatível: " + snapshot.id + ".");
+    return { importer: "folder", version: 1, adventureId: id, documentType: node.documentType, folderId: node.id };
+  }
+
+  function inspect() {
+    if (!folders.isAuthorized()) throw new Error("Somente o GM ativo pode organizar as pastas da aventura.");
+    const found = new Map<string, AdventureFolderSnapshot>();
+    for (const snapshot of folders.listFolders()) {
+      const identity = read(snapshot, adventureId);
+      if (!identity) continue;
+      const key = identityKey(identity.documentType, identity.folderId);
+      if (!requested.has(key)) continue;
+      if (snapshot.type !== identity.documentType || found.has(key))
+        throw new Error("Identidade de pasta incompatível ou duplicada: " + key + ".");
+      found.set(key, snapshot);
+    }
+
+    const earlier = new Set<string>();
+    for (const [key, node] of requested) {
+      const parentKey = node.parent && identityKey(node.documentType, node.parent);
+      if (parentKey && !earlier.has(parentKey)) throw new Error("Pasta pai ausente no plano: " + key + ".");
+      earlier.add(key);
+      const current = found.get(key);
+      const expected = parentKey ? found.get(parentKey)?.id : null;
+      if (current && current.parentId !== expected) throw new Error("Pasta gerenciada em nível incompatível: " + node.name + ".");
+    }
+    return found;
+  }
+
+  inspect();
+  return async () => {
+    inspect();
+    const ids = new Map<string, string>();
+    for (const [key, node] of requested) {
+      const parentId = node.parent ? ids.get(identityKey(node.documentType, node.parent))! : null;
+      ids.set(key, await ensureOne({ adventureId, folders, documentType: node.documentType, folderId: node.id,
+        name: node.name, color: node.parent ? ADVENTURE_ACT_FOLDER_COLOR : ADVENTURE_ROOT_FOLDER_COLOR,
+        parentId, read, preserveAppearance: true }));
+    }
+    return ids;
+  };
 }
 
 export async function ensureAdventureFolder(input: {
@@ -215,8 +294,8 @@ export async function ensureAdventureFolder(input: {
 }): Promise<string> {
   preflightAdventureFolders({ adventureId: input.adventureId,
     requirements: [{ documentType: input.documentType, acts: [input.act] }], folders: input.folders });
-  const rootId = await ensureOne({ ...input, folderId: "root", parentId: null });
-  return ensureOne({ ...input, folderId: input.act, parentId: rootId });
+  const rootId = await ensureAlphaFolder({ ...input, folderId: "root", parentId: null });
+  return ensureAlphaFolder({ ...input, folderId: input.act, parentId: rootId });
 }
 
 export async function ensureAdventurePoiFolder(input: {
@@ -225,7 +304,7 @@ export async function ensureAdventurePoiFolder(input: {
   readonly folders: AdventureFolderPort;
 }): Promise<{ readonly actId: string; readonly poiId: string }> {
   const actId = await ensureAdventureFolder({ ...input, documentType: "Item" });
-  const poiId = await ensureOne({ ...input, documentType: "Item",
+  const poiId = await ensureAlphaFolder({ ...input, documentType: "Item",
     folderId: `${input.act}.pointsOfInterest`, parentId: actId });
   return { actId, poiId };
 }
@@ -236,7 +315,7 @@ export async function ensureAdventureToolsFolder(input: {
 }): Promise<string> {
   preflightAdventureFolders({ ...input, requirements: [{ documentType: "Item", acts: ["actTwo"], tools: true }] });
   const actId = await ensureAdventureFolder({ ...input, documentType: "Item", act: "actTwo" });
-  return ensureOne({ ...input, documentType: "Item", folderId: "actTwo.tools", parentId: actId });
+  return ensureAlphaFolder({ ...input, documentType: "Item", folderId: "actTwo.tools", parentId: actId });
 }
 
 export function adventureFolderPlacementFlag(input: {

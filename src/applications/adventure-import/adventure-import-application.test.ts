@@ -1011,6 +1011,10 @@ describe("Adventure Import prototype template and styles", () => {
     );
     const hb = Handlebars.create();
     hb.registerHelper("localize", (key: string) => key);
+    for (const partial of ["actor/partials/content-tabs.hbs", "applications/adventure-import-beta.hbs", "applications/adventure-import-file-row.hbs"]) {
+      hb.registerPartial("systems/ordemparanormal2/templates/" + partial,
+        await readFile(fileURLToPath(new URL("../../../templates/" + partial, import.meta.url)), "utf8"));
+    }
     const render = hb.compile(template);
     const app = new Application();
     attach(app);
@@ -1046,6 +1050,10 @@ describe("Adventure Import prototype template and styles", () => {
     ]);
     const hb = Handlebars.create();
     hb.registerHelper("localize", (key: string) => key);
+    for (const partial of ["actor/partials/content-tabs.hbs", "applications/adventure-import-beta.hbs", "applications/adventure-import-file-row.hbs"]) {
+      hb.registerPartial("systems/ordemparanormal2/templates/" + partial,
+        await readFile(fileURLToPath(new URL("../../../templates/" + partial, import.meta.url)), "utf8"));
+    }
     const render = hb.compile(template);
     const app = new Application(); attach(app);
     app.inputs.pdf.select(file("playtest.pdf"));
@@ -1085,7 +1093,14 @@ describe("Adventure Import prototype template and styles", () => {
       readFile(fileURLToPath(new URL("../../../system.json", import.meta.url)), "utf8"),
       readFile(fileURLToPath(new URL("../../../lang/pt-BR.json", import.meta.url)), "utf8"),
     ]);
-    const inputs = [...template.matchAll(/<input\b[^>]*type="file"[^>]*>/g)].map(match => match[0]);
+    const hb = Handlebars.create();
+    hb.registerHelper("localize", (key: string) => key);
+    for (const partial of ["actor/partials/content-tabs.hbs", "applications/adventure-import-file-row.hbs"]) {
+      hb.registerPartial("systems/ordemparanormal2/templates/" + partial,
+        await readFile(fileURLToPath(new URL("../../../templates/" + partial, import.meta.url)), "utf8"));
+    }
+    const markup = hb.compile(template)(await new Application()._prepareContext());
+    const inputs = [...markup.matchAll(/<input\b[^>]*type="file"[^>]*>/g)].map(match => match[0]);
     expect(inputs).toHaveLength(4);
     expect(inputs.every(input => /\bhidden\b/.test(input))).toBe(true);
     expect(inputs.map(input => input.match(/accept="([^"]+)"/)?.[1])).toEqual([".pdf", ".zip", ".zip", ".zip"]);

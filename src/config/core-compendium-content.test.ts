@@ -48,9 +48,55 @@ const ABILITY_DEFINITIONS = [
   ["Varredura Ampla", "varredura-ampla", "abilityfldoccp01"],
   ["Foco Mental (Aprimorado)", "foco-mental", "abilityfldoccp01"],
   ["Ímpeto (Aprimorado)", "impeto", "abilityfldexec01"],
+  ["Análise", "avaliacao", "abilityfldanly01"],
+  ["Leitura de Combate", "avaliacao", "abilityfldanly01"],
+  ["Segredo do Aço", "conhecimento-tecnico", "abilityfldoccp01"],
+  ["Prontidão (Beta)", "prontidao", "abilityfldvigi01"],
+  ["Esquiva", "prontidao", "abilityfldvigi01"],
+  ["Espectro, o Lobo", "olhar-infalivel", "abilityfldoccp01"],
+  ["Ímpeto (Beta)", "impeto", "abilityfldexec01"],
+  ["Arsenal de Herborista", "tecnica-medicinal", "abilityfldoccp01"],
+  ["Curandeiro", "tecnica-medicinal", "abilityfldoccp01"],
+  ["Ímpeto Fervilhante", "impeto", "abilityfldexec01"],
+  ["Antecipação Tática", "prontidao", "abilityfldvigi01"],
+  ["Sorrateiro", "olhar-infalivel", "abilityfldvigi01"],
+  ["Guardiã", "prontidao", "abilityfldvigi01"],
+  ["Instinto de Sobrevivência", "esforco-e-suor", "abilityfldoccp01"],
+  ["Herança", "amor-pela-descoberta", "abilityfldoccp01"],
+  ["Plano Estratégico", "mentoria", "abilityfldoccp01"],
 ] as const;
 
 const ABILITY_USE_DEFINITIONS = {
+  "Análise": [
+    ["analysis-gain", "Registrar análise", "none", 0, null],
+    ["analysis-adjust", "Ajustar resultado", "resource", 1, null],
+  ],
+  "Prontidão (Beta)": [
+    ["beta-readiness-reroll", "Rerrolar dado", "determination", 2, null],
+  ],
+  "Esquiva": [
+    ["beta-dodge", "Tentar esquivar", "none", 0, null],
+  ],
+  "Ímpeto (Beta)": [
+    ["beta-impetus-d4", "Adicionar d4", "resource", 1, null],
+    ["beta-impetus-attribute", "Elevar atributo", "resource", 3, null],
+    ["beta-impetus-action", "Ação extra", "resource", 3, null],
+  ],
+  "Curandeiro": [
+    ["beta-healer", "Tratar aliado", "determination", 2, null],
+  ],
+  "Antecipação Tática": [
+    ["beta-anticipation", "Agir antes", "determination", 2, null],
+  ],
+  "Sorrateiro": [
+    ["beta-stealth-d8", "Adicionar d8", "determination", 3, null],
+  ],
+  "Guardiã": [
+    ["beta-guardian", "Interpor-se", "determination", 2, null],
+  ],
+  "Plano Estratégico": [
+    ["beta-strategic-plan", "Elaborar plano", "determination", 3, null],
+  ],
   "Avaliação": [
     ["evaluation-assess", "Avaliar", "determination", 2, null],
   ],
@@ -100,6 +146,13 @@ const PASSIVE_ABILITY_NAMES = [
   "Estoico",
   "Para Bellum",
   "Técnica Medicinal",
+  "Leitura de Combate",
+  "Segredo do Aço",
+  "Espectro, o Lobo",
+  "Arsenal de Herborista",
+  "Ímpeto Fervilhante",
+  "Instinto de Sobrevivência",
+  "Herança",
 ] as const;
 
 const FOLDER_DEFINITIONS = [
@@ -181,7 +234,7 @@ describe("core compendium sources", () => {
       .filter(isItemSource)
       .sort((left, right) => left._id.localeCompare(right._id));
 
-    expect(entries).toHaveLength(22);
+    expect(entries).toHaveLength(ABILITY_DEFINITIONS.length + FOLDER_DEFINITIONS.length);
     expect(abilities).toHaveLength(ABILITY_DEFINITIONS.length);
 
     for (const [index, ability] of abilities.entries()) {
@@ -242,6 +295,10 @@ describe("core compendium sources", () => {
       ])).toEqual(expected);
     }
 
+    expect(abilities.find(({ name }) => name === "Análise")?.system.resource)
+      .toEqual({ value: 0, max: 4 });
+    expect(abilities.find(({ name }) => name === "Ímpeto (Beta)")?.system.resource)
+      .toEqual({ value: 0, max: 5 });
     const integrations = Object.fromEntries(abilities.map((ability) => [
       ability.name,
       readAbilityUses(ability.system.uses)?.filter(({ checkIntegration }) => checkIntegration !== null)
@@ -263,7 +320,10 @@ describe("core compendium sources", () => {
       ["impetus-add-d4", { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } }],
       ["impetus-add-d10", { modification: { type: "extraDie", applicability: { type: "any" }, die: 10 } }],
     ]);
-    expect(Object.entries(integrations).filter(([name]) => !["Foco Mental", "Foco Mental (Aprimorado)", "Foco Emocional", "Ímpeto", "Ímpeto (Aprimorado)"].includes(name)).every(([, values]) => (values as unknown[]).length === 0)).toBe(true);
+    expect(integrations["Ímpeto (Beta)"]).toEqual([
+      ["beta-impetus-d4", { modification: { type: "extraDie", applicability: { type: "any" }, die: 4 } }],
+    ]);
+    expect(Object.entries(integrations).filter(([name]) => !["Foco Mental", "Foco Mental (Aprimorado)", "Foco Emocional", "Ímpeto", "Ímpeto (Aprimorado)", "Ímpeto (Beta)"].includes(name)).every(([, values]) => (values as unknown[]).length === 0)).toBe(true);
     expect(
       abilities.filter(({ system }) => readAbilityUses(system.uses)?.length === 0)
         .map(({ name }) => name),

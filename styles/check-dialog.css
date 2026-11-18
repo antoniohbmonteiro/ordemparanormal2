@@ -1,4 +1,4 @@
-.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog) {
+.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog, .op2-custom-skill-manager) {
   --op2-dialog-bg: rgba(14, 16, 21, 0.98);
   --op2-dialog-panel: rgba(27, 30, 36, 0.82);
   --op2-dialog-panel-hover: rgba(39, 43, 51, 0.96);
@@ -13,7 +13,7 @@
   color: var(--op2-dialog-text);
 }
 
-.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog) .window-content {
+.ordemparanormal2:is(.op2-check-dialog, .op2-skill-dialog, .op2-custom-skill-manager) .window-content {
   background: var(--op2-dialog-bg);
   padding: 0.75rem;
 }
@@ -457,7 +457,7 @@
   background: linear-gradient(135deg, var(--op2-dialog-accent-dark), #5e2529);
 }
 
-.ordemparanormal2.op2-skill-dialog {
+.ordemparanormal2:is(.op2-skill-dialog, .op2-custom-skill-manager) {
   --background: transparent;
   --op2-select-focus: #8c3b40;
   --op2-select-chevron: url("../assets/icons/threat-chevron.svg");
@@ -467,7 +467,7 @@
   color-scheme: dark;
 }
 
-.ordemparanormal2.op2-skill-dialog .window-header {
+.ordemparanormal2:is(.op2-skill-dialog, .op2-custom-skill-manager) .window-header {
   background: var(--op2-dialog-bg);
   border-bottom-color: var(--op2-dialog-border);
   color: var(--op2-dialog-text);
@@ -537,7 +537,8 @@
   opacity: 0.4;
 }
 
-.op2-skill-dialog :is(select, input, button):focus-visible {
+.op2-skill-dialog :is(select, input, button):focus-visible,
+.op2-custom-skill-manager__body button:focus-visible {
   border-color: var(--op2-select-focus);
   outline: 2px solid var(--op2-select-focus);
   outline-offset: 1px;
@@ -614,7 +615,7 @@
   font-size: 12px;
 }
 
-.ordemparanormal2.op2-skill-dialog :is(.form-footer button, .op2-skill-dialog__secondary) {
+.ordemparanormal2:is(.op2-skill-dialog, .op2-custom-skill-manager) :is(.form-footer button, .op2-skill-dialog__secondary, .op2-custom-skill-manager__toolbar button) {
   min-height: 36px;
   border: 1px solid var(--op2-dialog-copper);
   border-radius: var(--op2-radius);
@@ -624,21 +625,112 @@
   font: 600 13px Inter, sans-serif;
 }
 
-.ordemparanormal2.op2-skill-dialog :is(.form-footer button, .op2-skill-dialog__secondary):enabled:hover {
+.ordemparanormal2:is(.op2-skill-dialog, .op2-custom-skill-manager) :is(.form-footer button, .op2-skill-dialog__secondary, .op2-custom-skill-manager__toolbar button):enabled:hover {
   background: var(--op2-dialog-panel);
 }
 
-.ordemparanormal2.op2-skill-dialog .form-footer .op2-skill-dialog__primary {
+.ordemparanormal2:is(.op2-skill-dialog, .op2-custom-skill-manager) :is(.form-footer, .op2-custom-skill-manager__toolbar) .op2-skill-dialog__primary {
   border-color: var(--op2-dialog-accent);
   background: var(--op2-dialog-accent-dark);
 }
 
-.ordemparanormal2.op2-skill-dialog .form-footer .op2-skill-dialog__primary:enabled:hover {
+.ordemparanormal2:is(.op2-skill-dialog, .op2-custom-skill-manager) :is(.form-footer, .op2-custom-skill-manager__toolbar) .op2-skill-dialog__primary:enabled:hover {
   background: var(--op2-select-focus);
 }
 
 .op2-skill-dialog button:disabled {
   opacity: 0.4;
+}
+
+.op2-custom-skill-manager__body {
+  display: grid;
+  gap: var(--op2-space-3);
+  min-width: 0;
+  min-height: 0;
+  max-height: min(75dvh, 34rem);
+  overflow: auto;
+  padding: 2px;
+}
+
+.op2-custom-skill-manager__toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.op2-custom-skill-manager__toolbar button {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--op2-space-2);
+}
+
+.op2-custom-skill-manager__list,
+.op2-custom-skill-manager__notice {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--op2-dialog-border);
+  border-radius: var(--op2-radius);
+  background: var(--op2-dialog-panel);
+}
+
+.op2-custom-skill-manager__list {
+  list-style: none;
+}
+
+.op2-custom-skill-manager__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--op2-space-2) var(--op2-space-3);
+  padding: var(--op2-space-3);
+}
+
+.op2-custom-skill-manager__row + .op2-custom-skill-manager__row {
+  border-top: 1px solid var(--op2-dialog-border);
+}
+
+.op2-custom-skill-manager__identity {
+  flex: 1 1 min(100%, 9rem);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.op2-custom-skill-manager__metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--op2-space-1) var(--op2-space-2);
+  margin-top: var(--op2-space-1);
+  color: var(--op2-dialog-muted);
+  font-size: .75rem;
+}
+
+.op2-custom-skill-manager__badge {
+  padding: .125rem .375rem;
+  border: 1px solid var(--op2-dialog-border);
+  border-radius: 4px;
+  background: var(--op2-dialog-bg);
+}
+
+.op2-custom-skill-manager__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--op2-space-2);
+  margin-inline-start: auto;
+}
+
+.ordemparanormal2.op2-custom-skill-manager .op2-custom-skill-manager__actions button {
+  width: auto;
+  min-height: 28px;
+  padding-inline: var(--op2-space-2);
+  font-size: .75rem;
+}
+
+.op2-custom-skill-manager__notice {
+  padding: var(--op2-space-4);
+  color: var(--op2-dialog-muted);
+  text-align: center;
 }
 
 @media (max-width: 760px) {

@@ -29,10 +29,12 @@ export function createAdventureFolderPort(): AdventureFolderPort {
       guard();
       const folder = game.folders.get(id);
       if (!folder) throw new Error(`Folder gerenciada não encontrada: ${id}.`);
-      await folder.update({ name: data.name, color: data.color, [ADVENTURE_FOLDER_FLAG_PATH]: data.flag });
+      const { flag: identity, ...appearance } = data;
+      await folder.update({ ...appearance, [ADVENTURE_FOLDER_FLAG_PATH]: identity });
       const persisted = snapshot(folder);
       const flag = persisted.flag as AdventureFolderFlag;
-      if (persisted.name !== data.name || persisted.color?.toLowerCase() !== data.color
+      if ((data.name !== undefined && persisted.name !== data.name)
+        || (data.color !== undefined && persisted.color?.toLowerCase() !== data.color)
         || flag?.importer !== "folder" || flag.documentType !== data.flag.documentType || flag.folderId !== data.flag.folderId) {
         throw new Error(`Atualização de Folder não confirmada: ${id}.`);
       }

@@ -208,7 +208,7 @@ describe("GM Tools Palette template and assets", () => {
       "utf8",
     );
     expect(css).toMatch(/\.ordemparanormal2\.op2-gm-toolkit\s*\{[^}]*position:\s*fixed;/s);
-    expect(css).toContain("grid-template-columns: 10px repeat(4, 36px)");
+    expect(css).toMatch(/\.op2-gm-toolkit__toolbar\s*\{[^}]*grid-template-columns:\s*10px;[^}]*grid-auto-flow:\s*column;[^}]*grid-auto-columns:\s*36px;/);
     expect(css).toMatch(/button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
     expect(css).toMatch(/img\s*\{[^}]*width:\s*1\.62rem;[^}]*height:\s*1\.62rem;/s);
     expect(css).not.toContain("op2-gm-toolkit__access-icon");

@@ -104,6 +104,20 @@
       "ConfirmRemoval": "Remover este registro da ficha?",
       "OperationFailed": "Não foi possível concluir a operação na ficha de ameaça."
     },
+    "CustomSkills": {
+      "Title": "Perícias personalizadas",
+      "Create": "Criar perícia",
+      "Edit": "Editar",
+      "EditNamed": "Editar {name}",
+      "Archive": "Arquivar",
+      "ArchiveNamed": "Arquivar {name}",
+      "Reactivate": "Reativar",
+      "ReactivateNamed": "Reativar {name}",
+      "Archived": "Arquivada",
+      "Specialized": "Com especializações",
+      "Empty": "Nenhuma perícia personalizada cadastrada.",
+      "Invalid": "O catálogo de perícias personalizadas está inválido."
+    },
     "Common": {
       "World": "Mundo"
     },
@@ -318,6 +332,8 @@
       }
     },
     "AdventureImport": {
+      "Alpha": "Alpha",
+      "Beta": "Beta",
       "As09": {
         "Label": "Imagens suplementares AS09 (opcional)",
         "Description": "Disponibiliza 39 imagens para uso manual pelo FilePicker, aplica imagens aos Pontos de Interesse confirmados e cria nove ferramentas no Mundo ao importar o Ato II. Não substitui o PDF nem os ZIPs dos atos.",
@@ -347,6 +363,17 @@
       "MainMaterial": "Material principal",
       "PlaytestPdf": "PDF do Playtest",
       "ExtrasByAct": "Extras por ato",
+      "ExtrasByMission": "Extras por missão",
+      "MissionOne": "Missão 1",
+      "MissionTwo": "Missão 2",
+      "BetaDetection": {
+        "PdfReady": "Playtest Beta v1.0 reconhecido",
+        "ZipMissing": "ZIP desta missão não fornecido.",
+        "ZipInvalid": "O ZIP desta missão é incompatível.",
+        "SelectMission": "Selecionar esta missão",
+        "DeselectMission": "Missão selecionada — remover da importação",
+        "Threats": "Ameaças"
+      },
       "ActOne": "Ato I",
       "ActTwo": "Ato II",
       "DetectedContent": "Conteúdo detectado",

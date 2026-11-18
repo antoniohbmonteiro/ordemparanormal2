@@ -6,7 +6,7 @@
   font-display: swap;
 }
 
-.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-skill-dialog) {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-skill-dialog, .op2-custom-skill-manager) {
   --op2-sheet-bg: rgba(18, 20, 24, 0.96);
   --op2-panel-bg: rgba(27, 30, 36, 0.92);
   --op2-panel-bg-hover: rgba(35, 39, 46, 0.96);
@@ -350,14 +350,14 @@
 }
 
 /* Content tabs */
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tabs {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-adventure-import) .op2-content-tabs {
   display: flex;
   align-items: flex-end;
   border: 0 !important;
   box-shadow: none !important;
 }
 
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-adventure-import) .op2-content-tab {
   position: relative;
   width: auto;
   flex: 1 1 0;
@@ -379,9 +379,9 @@
   text-transform: uppercase;
 }
 
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab:hover,
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab:focus,
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab:focus-visible {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-adventure-import) .op2-content-tab:hover,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-adventure-import) .op2-content-tab:focus,
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-adventure-import) .op2-content-tab:focus-visible {
   border: 0 !important;
   outline: 0 !important;
   background: transparent !important;
@@ -389,7 +389,7 @@
   text-shadow: none !important;
 }
 
-.ordemparanormal2:is(.agent-sheet, .threat-sheet) .op2-content-tab.active {
+.ordemparanormal2:is(.agent-sheet, .threat-sheet, .op2-adventure-import) .op2-content-tab.active {
   border: 0 !important;
   border-bottom: 2px solid var(--op2-accent-bright) !important;
   outline: 0 !important;

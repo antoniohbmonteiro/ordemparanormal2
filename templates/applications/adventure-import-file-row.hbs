@@ -1,0 +1,9 @@
+
+<div class="op2-adventure-import__file-row">
+  <span class="op2-adventure-import__file-label">{{#if labelKey}}{{localize labelKey}}{{else}}{{label}}{{/if}}</span>
+  <button type="button" data-action="{{action}}" {{#if beta}}data-beta-file="{{slot}}"{{else}}data-file-slot="{{slot}}"{{/if}} {{#if busy}}disabled{{/if}}>{{localize buttonKey}}</button>
+  <input type="file" accept="{{accept}}" {{#if beta}}data-beta-file="{{slot}}"{{else}}data-file-slot="{{slot}}"{{/if}} hidden />
+  <span class="op2-adventure-import__file-empty{{#if name}} op2-adventure-import__file-selected{{/if}}">
+    {{#if name}}{{#if compact}}{{name}}{{else}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{name}}</span>{{/if}}{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
+  </span>
+</div>

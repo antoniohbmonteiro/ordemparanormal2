@@ -1,52 +1,30 @@
 <div class="op2-adventure-import__body">
+  {{> "systems/ordemparanormal2/templates/actor/partials/content-tabs.hbs" tabs=editionTabs action="changeEdition" labelKey="ORDEMPARANORMAL2.AdventureImport.Title"}}
   <aside class="op2-adventure-import__notice">
     <p>{{localize "ORDEMPARANORMAL2.AdventureImport.Notice.Ownership"}}</p>
     <p>{{localize "ORDEMPARANORMAL2.AdventureImport.Notice.LocalProcessing"}}</p>
   </aside>
 
+  {{#if showBeta}}
+    {{> "systems/ordemparanormal2/templates/applications/adventure-import-beta.hbs" beta}}
+  {{else}}
   <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-main-heading">
     <h2 id="op2-adventure-import-main-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.MainMaterial"}}</h2>
-    <div class="op2-adventure-import__file-row">
-      <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.PlaytestPdf"}}</span>
-      <button type="button" data-action="selectPdf" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf"}}</button>
-      <input type="file" accept=".pdf" data-file-slot="pdf" hidden />
-      <span class="op2-adventure-import__file-empty{{#if pdfName}} op2-adventure-import__file-selected{{/if}}">
-        {{#if pdfName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{pdfName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
-      </span>
-    </div>
+    {{> "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs" name=pdfName labelKey="ORDEMPARANORMAL2.AdventureImport.PlaytestPdf" slot="pdf" action="selectPdf" buttonKey="ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf" accept=".pdf" busy=isImporting}}
   </section>
 
   <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-extras-heading">
     <h2 id="op2-adventure-import-extras-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.ExtrasByAct"}}</h2>
     <div class="op2-adventure-import__file-list">
-      <div class="op2-adventure-import__file-row">
-        <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.ActOne"}}</span>
-        <button type="button" data-action="selectZip" data-file-slot="actOne" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
-        <input type="file" accept=".zip" data-file-slot="actOne" hidden />
-        <span class="op2-adventure-import__file-empty{{#if actOneName}} op2-adventure-import__file-selected{{/if}}">
-          {{#if actOneName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{actOneName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
-        </span>
-      </div>
-      <div class="op2-adventure-import__file-row">
-        <span class="op2-adventure-import__file-label">{{localize "ORDEMPARANORMAL2.AdventureImport.ActTwo"}}</span>
-        <button type="button" data-action="selectZip" data-file-slot="actTwo" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
-        <input type="file" accept=".zip" data-file-slot="actTwo" hidden />
-        <span class="op2-adventure-import__file-empty{{#if actTwoName}} op2-adventure-import__file-selected{{/if}}">
-          {{#if actTwoName}}<span class="op2-adventure-import__selection-check" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span class="op2-adventure-import__file-name">{{actTwoName}}</span>{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}
-        </span>
-      </div>
+      {{> "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs" name=actOneName labelKey="ORDEMPARANORMAL2.AdventureImport.ActOne" slot="actOne" action="selectZip" buttonKey="ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip" accept=".zip" busy=isImporting}}
+      {{> "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs" name=actTwoName labelKey="ORDEMPARANORMAL2.AdventureImport.ActTwo" slot="actTwo" action="selectZip" buttonKey="ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip" accept=".zip" busy=isImporting}}
     </div>
   </section>
 
   <section class="op2-adventure-import__section" aria-labelledby="op2-adventure-import-as09-heading">
     <h2 id="op2-adventure-import-as09-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Label"}}</h2>
     <p class="op2-adventure-import__supplemental-note">{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Description"}}</p>
-    <div class="op2-adventure-import__file-row">
-      <span class="op2-adventure-import__file-label">AS09-Extras-v1.0-Elite.zip</span>
-      <button type="button" data-action="selectZip" data-file-slot="as09" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip"}}</button>
-      <input type="file" accept=".zip" data-file-slot="as09" hidden />
-      <span class="op2-adventure-import__file-empty{{#if as09Name}} op2-adventure-import__file-selected{{/if}}">{{#if as09Name}}{{as09Name}}{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyFile"}}{{/if}}</span>
-    </div>
+    {{> "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs" name=as09Name label="AS09-Extras-v1.0-Elite.zip" compact=true slot="as09" action="selectZip" buttonKey="ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip" accept=".zip" busy=isImporting}}
     {{#if as09Name}}<button type="button" data-action="removeAs09" {{#if isImporting}}disabled{{/if}}>{{localize "ORDEMPARANORMAL2.AdventureImport.As09.Remove"}}</button>{{/if}}
     {{#with as09Status}}
       <div class="op2-adventure-import__status-row op2-adventure-import__status-row--{{modifier}}" role="status">
@@ -122,4 +100,5 @@
     <button type="button" data-action="analyzeFiles" {{#unless canAnalyze}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
     <button type="button" data-action="importAssets" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
   </footer>
+  {{/if}}
 </div>

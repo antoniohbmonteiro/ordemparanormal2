@@ -1,5 +1,6 @@
 import type { ApplicationClosingOptions } from "@client/applications/_types.mjs";
 import { canManageCustomSkills, readWorldCustomSkillCatalog, saveWorldCustomSkill, subscribeCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
+import { getAttributeDefinition } from "../../config/attributes";
 import { editDefinition } from "./custom-skills";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -8,13 +9,13 @@ const ROOT = "systems/ordemparanormal2/templates/actor";
 export class CustomSkillManager extends HandlebarsApplicationMixin(ApplicationV2) {
   static override DEFAULT_OPTIONS = {
     id: "ordemparanormal2-custom-skills",
-    classes: ["ordemparanormal2"],
+    classes: ["ordemparanormal2", "op2-custom-skill-manager"],
     position: { width: 470, height: "auto" as const },
-    window: { title: "Perícias personalizadas", resizable: true },
+    window: { title: "ORDEMPARANORMAL2.CustomSkills.Title", resizable: true },
     actions: { create: CustomSkillManager.#create, edit: CustomSkillManager.#edit, archive: CustomSkillManager.#archive },
   };
 
-  static override PARTS = { main: { template: `${ROOT}/custom-skill-manager.hbs`, scrollable: [".op2-threat-editor"] } };
+  static override PARTS = { main: { template: `${ROOT}/custom-skill-manager.hbs`, scrollable: [".op2-custom-skill-manager__body"] } };
   #unsubscribe?: () => void;
   #editor = new AbortController();
   #editing = false;
@@ -24,7 +25,14 @@ export class CustomSkillManager extends HandlebarsApplicationMixin(ApplicationV2
   protected override async _prepareContext() {
     this.#unsubscribe ??= subscribeCustomSkills(() => { if (this.rendered) void this.render(); });
     const catalog = readWorldCustomSkillCatalog();
-    return { tabs: undefined, valid: !!catalog, definitions: catalog?.definitions ?? [] };
+    const definitions = catalog?.definitions.map(definition => ({
+      id: definition.id, name: definition.name, archived: definition.archived,
+      attributeLabelKey: getAttributeDefinition(definition.baseAttribute).labelKey,
+      specialized: definition.kind === "specialized",
+      archiveActionKey: definition.archived ? "ORDEMPARANORMAL2.CustomSkills.Reactivate" : "ORDEMPARANORMAL2.CustomSkills.Archive",
+      archiveLabelKey: definition.archived ? "ORDEMPARANORMAL2.CustomSkills.ReactivateNamed" : "ORDEMPARANORMAL2.CustomSkills.ArchiveNamed",
+    })) ?? [];
+    return { tabs: undefined, valid: !!catalog, definitions };
   }
 
   protected override _onClose(options: ApplicationClosingOptions): void {

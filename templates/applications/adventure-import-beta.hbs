@@ -1,0 +1,95 @@
+<section class="op2-adventure-import__section" aria-labelledby="op2-beta-main-heading">
+  <h2 id="op2-beta-main-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.MainMaterial"}}</h2>
+  {{> "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs" name=pdfName labelKey="ORDEMPARANORMAL2.AdventureImport.PlaytestPdf" slot="beta-pdf" action="selectBetaFile" buttonKey="ORDEMPARANORMAL2.AdventureImport.Actions.SelectPdf" accept=".pdf" busy=busy beta=true}}
+</section>
+
+<section class="op2-adventure-import__section" aria-labelledby="op2-beta-extras-heading">
+  <h2 id="op2-beta-extras-heading">{{localize "ORDEMPARANORMAL2.AdventureImport.ExtrasByMission"}}</h2>
+  <div class="op2-adventure-import__file-list">
+    {{#each extrasFiles}}
+      {{> "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs" name=name labelKey=labelKey slot=slot action="selectBetaFile" buttonKey="ORDEMPARANORMAL2.AdventureImport.Actions.SelectZip" accept=".zip" busy=../busy beta=true}}
+    {{/each}}
+  </div>
+</section>
+
+<section class="op2-adventure-import__section" aria-labelledby="op2-beta-detected">
+  <h2 id="op2-beta-detected">{{localize "ORDEMPARANORMAL2.AdventureImport.DetectedContent"}}</h2>
+  {{#if hasAnalysis}}
+    <div class="op2-adventure-import__analysis">
+      <div class="op2-adventure-import__status-row op2-adventure-import__status-row--recognized">
+        <span class="op2-adventure-import__status-icon" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+        <span class="op2-adventure-import__status-value">{{localize "ORDEMPARANORMAL2.AdventureImport.BetaDetection.PdfReady"}}</span>
+      </div>
+      <div class="op2-adventure-import__act-cards">
+        {{#each missions}}
+          <article class="op2-adventure-import__act-card{{#if selected}} op2-adventure-import__act-card--selected{{/if}}" aria-label="{{name}}">
+            <h3 class="op2-adventure-import__act-title">{{name}}</h3>
+            <p class="op2-adventure-import__act-status"><i class="fa-solid {{#if ready}}fa-check{{else}}fa-circle-info{{/if}}" aria-hidden="true"></i>{{status}}</p>
+            {{#if issue}}<p class="op2-adventure-import__status-issue">{{issue}}</p>{{/if}}
+            {{#if ready}}
+              <button type="button" data-action="toggleBetaMission" data-beta-mission="{{id}}" aria-pressed="{{selected}}" {{#if ../busy}}disabled{{/if}}>{{selectionLabel}}</button>
+              <div class="op2-adventure-import__act-content">
+                {{#each content}}
+                  <div class="op2-adventure-import__act-content-row">
+                    <i class="op2-adventure-import__act-content-icon {{icon}}" aria-hidden="true"></i>
+                    <span class="op2-adventure-import__act-content-label">{{label}}</span>
+                    <span class="op2-adventure-import__act-content-count">{{count}}</span>
+                  </div>
+                {{/each}}
+              </div>
+              {{#if selected}}
+                <label>Mapa
+                  <select data-beta-map="{{id}}" {{#if ../busy}}disabled{{/if}}>
+                    {{#each maps}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{value}}</option>{{/each}}
+                  </select>
+                </label>
+              {{/if}}
+            {{/if}}
+          </article>
+        {{/each}}
+      </div>
+    </div>
+  {{else}}
+    <div class="op2-adventure-import__empty-content">{{localize "ORDEMPARANORMAL2.AdventureImport.EmptyContent"}}</div>
+  {{/if}}
+</section>
+
+{{#if conflicts.length}}
+  <section class="op2-adventure-import__section" aria-labelledby="op2-beta-conflicts">
+    <h2 id="op2-beta-conflicts">Documentos editados desde a última importação</h2>
+    <ul>{{#each conflicts}}<li>{{this}}</li>{{/each}}</ul>
+  </section>
+{{/if}}
+
+{{#with skills}}
+  <section class="op2-adventure-import__section" aria-labelledby="op2-beta-skills">
+    <h2 id="op2-beta-skills">Perícias do Beta</h2>
+    {{#if canonical}}<p><strong>Canônicas</strong> · {{canonical}}</p>{{/if}}
+    {{#if reused}}<p><strong>Personalizadas reaproveitadas</strong> · {{reused}}</p>{{/if}}
+    {{#if created}}<p><strong>Novas</strong> · {{created}}</p>{{/if}}
+    {{#if conflicts.length}}
+      <p>As referências em conflito ficam pendentes. Você pode revisar o catálogo ou importar o restante.</p>
+      <ul>
+        {{#each conflicts}}<li><strong>{{name}}</strong> · {{reason}}</li>{{/each}}
+      </ul>
+      {{#if ../canManage}}<button type="button" data-action="manageBetaSkills">Revisar catálogo de perícias</button>{{/if}}
+    {{/if}}
+    {{#if pending.length}}
+      <details>
+        <summary>Pendências ({{pending.length}})</summary>
+        <ul>
+          {{#each pending}}
+            <li>{{document}} · {{source}}, p. {{page}} · {{label}} ({{printed}})</li>
+          {{/each}}
+        </ul>
+      </details>
+    {{/if}}
+  </section>
+{{/with}}
+
+<footer class="op2-adventure-import__actions">
+  {{#if error}}<p class="op2-adventure-import__progress" role="alert">{{error}}</p>{{/if}}
+  {{#if status}}<p class="op2-adventure-import__progress" role="status" aria-live="polite">{{status}}</p>{{/if}}
+  <button type="button" data-action="analyzeBeta" {{#unless canAnalyze}}disabled{{/unless}}>{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Analyze"}}</button>
+  <button type="button" data-action="importBeta" {{#unless canImport}}disabled{{/unless}}>{{#if skills.conflicts.length}}Importar restante{{else}}{{localize "ORDEMPARANORMAL2.AdventureImport.Actions.Import"}}{{/if}}</button>
+</footer>

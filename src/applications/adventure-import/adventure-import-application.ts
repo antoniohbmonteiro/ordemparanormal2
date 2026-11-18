@@ -1,3 +1,6 @@
+import { PlaytestBetaPanel } from "./playtest-beta-panel";
+import { CustomSkillManager } from "../actor/custom-skill-manager";
+import { subscribeCustomSkills } from "../../adapters/foundry/actors/custom-skill-catalog";
 import type { As09SourceAnalysis } from "../../core/adventure-import/recognize-as09-source";
 import { materializeAs09Assets, as09PoiImages, As09MaterializationError, type As09MaterializationResult } from "../../features/adventure-import/materialize-as09-assets";
 import { createAs09ToolImagePort } from "../../adapters/files/as09-tool-image";
@@ -88,6 +91,9 @@ interface DetectedActViewModel {
 
 interface AdventureImportRenderContext {
   readonly tabs?: never;
+  readonly showBeta: boolean;
+  readonly beta?: ReturnType<PlaytestBetaPanel["context"]>;
+  readonly editionTabs: readonly { id: string; label: string; cssClass: string; active: boolean; group: string }[];
   readonly pdfName: string;
   readonly actOneName: string;
   readonly actTwoName: string;
@@ -277,6 +283,12 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
       analyzeFiles: AdventureImportApplication.#onAnalyzeFiles,
       importAssets: AdventureImportApplication.#onImportAssets,
       toggleAct: AdventureImportApplication.#onToggleAct,
+      changeEdition: AdventureImportApplication.#changeEdition,
+      selectBetaFile: AdventureImportApplication.#selectBetaFile,
+      analyzeBeta: AdventureImportApplication.#analyzeBeta,
+      toggleBetaMission: AdventureImportApplication.#toggleBetaMission,
+      importBeta: AdventureImportApplication.#importBeta,
+      manageBetaSkills: AdventureImportApplication.#manageBetaSkills,
     },
     classes: ["ordemparanormal2", "op2-adventure-import"],
     position: { width: 800, height: "auto" as const },
@@ -290,6 +302,11 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   static override PARTS: Record<string, HandlebarsTemplatePart> = {
     main: {
       template: ADVENTURE_IMPORT_TEMPLATE,
+      templates: [
+        "systems/ordemparanormal2/templates/applications/adventure-import-beta.hbs",
+        "systems/ordemparanormal2/templates/applications/adventure-import-file-row.hbs",
+        "systems/ordemparanormal2/templates/actor/partials/content-tabs.hbs",
+      ],
       scrollable: [".op2-adventure-import__body"],
     },
   };
@@ -300,6 +317,10 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     actTwo: null,
     as09: null,
   };
+  #edition: "alpha" | "beta" = "alpha";
+  readonly #beta = new PlaytestBetaPanel();
+  #unsubscribeBetaSkills?: () => void;
+  #betaSkillManager?: CustomSkillManager;
   #sourceRevision = 0;
   #as09Directory = "";
   #password: string | null = null;
@@ -325,11 +346,21 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
     this.#result = null;
     this.#completionWarnings = [];
     this.#confirmedOnFailure = [];
+    this.#unsubscribeBetaSkills?.();
+    this.#unsubscribeBetaSkills = undefined;
+    void this.#betaSkillManager?.close();
+    this.#betaSkillManager = undefined;
     super._onClose(options);
   }
 
   protected override async _prepareContext(): Promise<AdventureImportRenderContext> {
     return {
+      showBeta: this.#edition === "beta",
+      beta: this.#edition === "beta" ? this.#beta.context() : undefined,
+      editionTabs: (["alpha", "beta"] as const).map(id => ({
+        id, label: id === "alpha" ? "ORDEMPARANORMAL2.AdventureImport.Alpha" : "ORDEMPARANORMAL2.AdventureImport.Beta",
+        group: "edition", cssClass: this.#edition === id ? "active" : "", active: this.#edition === id,
+      })),
       pdfName: this.#files.pdf?.name ?? "",
       actOneName: this.#files.actOne?.name ?? "",
       actTwoName: this.#files.actTwo?.name ?? "",
@@ -376,6 +407,10 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
   ): void {
     super._attachPartListeners(partId, htmlElement, options);
     if (partId !== "main") return;
+    if (this.#edition === "beta") {
+      this.#beta.attach(htmlElement, () => this.render());
+      return;
+    }
 
     for (const input of htmlElement.querySelectorAll<HTMLInputElement>(
       "input[type='file'][data-file-slot]",
@@ -400,6 +435,55 @@ export class AdventureImportApplication extends HandlebarsApplicationMixin(Appli
         });
       });
     }
+  }
+
+
+  static async #changeEdition(this: AdventureImportApplication, _event: PointerEvent, target: HTMLElement) {
+    const edition = target.dataset.tab;
+    if (this.#isImporting || this.#beta.busy || (edition !== "alpha" && edition !== "beta")) return;
+    this.#edition = edition;
+    if (edition === "beta") this.#unsubscribeBetaSkills ??= subscribeCustomSkills(() => {
+      if (this.rendered && this.#edition === "beta" && !this.#beta.busy) void this.render();
+    });
+    await this.render();
+  }
+
+  static #selectBetaFile(this: AdventureImportApplication, _event: PointerEvent, target: HTMLElement) {
+    const slot = target.dataset.betaFile;
+    if (this.#edition !== "beta" || this.#beta.busy || (slot !== "beta-pdf" && slot !== "mission1" && slot !== "mission2")) return;
+    this.element.querySelector<HTMLInputElement>("input[type=file][data-beta-file=" + slot + "]")?.click();
+  }
+
+  static async #toggleBetaMission(this: AdventureImportApplication, _event: PointerEvent, target: HTMLElement) {
+    if (this.#edition === "beta") await this.#beta.toggleMission(target.dataset.betaMission, () => this.render());
+  }
+
+  static async #analyzeBeta(this: AdventureImportApplication) {
+    if (this.#edition === "beta") await this.#beta.run("analyze", () => this.render(), async () => "cancel");
+  }
+
+  static async #importBeta(this: AdventureImportApplication) {
+    if (this.#edition !== "beta") return;
+    await this.#beta.run("import", () => this.render(), async name => {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = name + " foi alterado desde a última importação. Como deseja continuar?";
+      const choice = await foundry.applications.api.DialogV2.wait({
+        window: { title: "Conflito de importação Beta" }, content: paragraph.outerHTML,
+        modal: true, rejectClose: false,
+        buttons: [
+          { action: "preserve", label: "Preservar", default: true, callback: () => "preserve" },
+          { action: "restore", label: "Restaurar campos importados", callback: () => "restore" },
+          { action: "cancel", label: "Cancelar", callback: () => "cancel" },
+        ],
+      });
+      return choice === "preserve" || choice === "restore" ? choice : "cancel";
+    });
+  }
+
+  static async #manageBetaSkills(this: AdventureImportApplication) {
+    if (this.#edition !== "beta" || this.#beta.busy) return;
+    this.#betaSkillManager ??= new CustomSkillManager();
+    await this.#betaSkillManager.render({ force: true });
   }
 
   #openFilePicker(slot: FileSlot): void {

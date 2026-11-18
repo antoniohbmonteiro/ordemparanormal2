@@ -1,16 +1,37 @@
-<section class="op2-threat-editor">
+
+<section class="op2-custom-skill-manager__body">
   {{#if valid}}
-    <button type="button" data-action="create">+ Criar perícia</button>
-    {{#each definitions}}
-      <div class="op2-custom-skill-entry">
-        <span>{{name}}{{#if archived}} · Arquivada{{/if}}</span>
-        <button type="button" data-action="edit" data-skill-id="{{id}}">Editar</button>
-        <button type="button" data-action="archive" data-skill-id="{{id}}">{{#if archived}}Reativar{{else}}Arquivar{{/if}}</button>
-      </div>
+    <div class="op2-custom-skill-manager__toolbar">
+      <button class="op2-skill-dialog__primary" type="button" data-action="create">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        {{localize "ORDEMPARANORMAL2.CustomSkills.Create"}}
+      </button>
+    </div>
+    {{#if definitions.length}}
+      <ul class="op2-custom-skill-manager__list" aria-label="{{localize 'ORDEMPARANORMAL2.CustomSkills.Title'}}">
+        {{#each definitions}}
+          <li class="op2-custom-skill-manager__row">
+            <div class="op2-custom-skill-manager__identity">
+              <strong>{{name}}</strong>
+              <div class="op2-custom-skill-manager__metadata">
+                <span>{{localize attributeLabelKey}}</span>
+                {{#if specialized}}<span>· {{localize "ORDEMPARANORMAL2.CustomSkills.Specialized"}}</span>{{/if}}
+                {{#if archived}}<span class="op2-custom-skill-manager__badge">{{localize "ORDEMPARANORMAL2.CustomSkills.Archived"}}</span>{{/if}}
+              </div>
+            </div>
+            <div class="op2-custom-skill-manager__actions">
+              <button class="op2-skill-dialog__secondary" type="button" data-action="edit" data-skill-id="{{id}}"
+                aria-label="{{localize 'ORDEMPARANORMAL2.CustomSkills.EditNamed' name=name}}">{{localize "ORDEMPARANORMAL2.CustomSkills.Edit"}}</button>
+              <button class="op2-skill-dialog__secondary" type="button" data-action="archive" data-skill-id="{{id}}"
+                aria-label="{{localize archiveLabelKey name=name}}">{{localize archiveActionKey}}</button>
+            </div>
+          </li>
+        {{/each}}
+      </ul>
     {{else}}
-      <p>Nenhuma perícia personalizada cadastrada.</p>
-    {{/each}}
+      <p class="op2-custom-skill-manager__notice">{{localize "ORDEMPARANORMAL2.CustomSkills.Empty"}}</p>
+    {{/if}}
   {{else}}
-    <p>O catálogo de perícias personalizadas está inválido.</p>
+    <p class="op2-custom-skill-manager__notice" role="alert">{{localize "ORDEMPARANORMAL2.CustomSkills.Invalid"}}</p>
   {{/if}}
 </section>

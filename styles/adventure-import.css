@@ -397,3 +397,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.ordemparanormal2.op2-adventure-import .op2-content-tabs {
+  --op2-accent-bright: #a64950;
+}
+.ordemparanormal2.op2-adventure-import .op2-content-tab:focus-visible {
+  outline: 1px solid var(--op2-text-muted) !important;
+  outline-offset: -2px;
+}

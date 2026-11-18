@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-18
+
 ### Added
 
 - Ficha de Ameaça com PV, RD, atributos, perícias configuráveis e condições manuais. Vulnerabilidades, imunidades e Enigma de Medo ficam na seção recolhível Propriedades.
@@ -13,7 +15,9 @@ All notable changes to this project will be documented in this file.
 - Catálogo de perícias personalizadas salvo no mundo e gerenciado nas Ferramentas do Mestre. É possível criar, editar, arquivar e reativar perícias simples ou com especializações independentes. O arquivamento preserva as referências existentes.
 - Adição, edição e remoção de perícias personalizadas por Agente ou Ameaça, com criação rápida pelo diálogo **Adicionar perícia**. Cada especialização tem seu próprio dado, e tokens desvinculados preservam seus valores e remoções locais.
 - Uso de perícias personalizadas em testes de ficha, Solicitar Teste, Testes Opostos, ações e bônus de Habilidades, e abordagens de Pontos de Interesse na Investigação.
-- Funções reutilizáveis de consulta, correspondência por ID e revisão de nomes para futura integração de perícias com o Importador de Aventura.
+- Importação da Missão 1, da Missão 2 ou de ambas de Contos da Vigília a partir do PDF e dos ZIPs locais. Inclui Agentes, Ameaças, Pontos de Interesse, cenas, diários, handouts e músicas.
+- Organização do conteúdo Beta por missão e categoria, com Agentes compartilhados em uma única pasta, reimportação por proveniência e preservação de movimentações manuais.
+- Integração do importador Beta com as perícias do mundo, com revisão das referências que ficam sem vínculo.
 
 ### Changed
 

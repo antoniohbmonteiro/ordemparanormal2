@@ -1,4 +1,4 @@
-# Ordem Paranormal 2 — v0.6.0
+# Ordem Paranormal 2 — v0.7.0
 
 Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal.
 
@@ -6,43 +6,52 @@ Este é um conteúdo não oficial, publicado sob a Licença da Comunidade de Ord
 
 ## Destaques
 
-- **Desafios de Acesso nas Ferramentas do Mestre:** configure e acompanhe Destrancar e Arrombar para um Agente, com interfaces próprias para o Mestre e os jogadores autorizados.
-- **Destrancar:** sequência secreta manual ou aleatória, feedback por posição e tentativas limitadas por rodada e pela resistência da fechadura.
-- **Arrombar:** Check de Atletismo pelo fluxo normal, custo de 1 PV por tentativa confirmada e redução da resistência do obstáculo por RA em caso de sucesso.
+- **Ficha de Ameaça:** organize PV, RD, atributos, perícias, condições e habilidades em uma ficha própria.
+- **Habilidades reutilizáveis:** Agentes e Ameaças usam o mesmo tipo de item e compartilham o editor de habilidades.
+- **Perícias personalizadas:** o Mestre pode criar perícias simples ou com especializações, com dados definidos por personagem.
+- **Importador de Aventuras Beta:** importe a Missão 1, a Missão 2 ou ambas de Contos da Vigília a partir dos seus arquivos locais.
 
-## Destrancar
+## Ficha de Ameaça
 
-O Mestre escolhe o Agente, a quantidade de posições, o dado, a resistência e uma sequência manual ou aleatória. O jogador tenta descobrir a sequência com o feedback **Alto**, **Baixo** e **Exato**, sem receber a solução secreta.
+O Mestre pode cadastrar Ameaças com categoria, elementos, PV, RD, atributos, perícias e condições ativas. A ficha reúne as habilidades e notas da Ameaça, e a seção **Propriedades** dá acesso a vulnerabilidades, imunidades e Enigma de Medo.
 
-O dado de Crime define as tentativas por rodada. O Mestre avança a rodada quando essas tentativas se esgotam; o limite total continua sendo a resistência configurada. Acertar a sequência conclui o desafio, enquanto esgotar o limite sem acertá-la emperra a fechadura.
+Os tokens de Ameaça são desvinculados por padrão. Cada token mantém seus próprios PV e condições, e o chat identifica o token que usou a habilidade.
 
-![Desafio de Destrancar com feedback por posição e limites de tentativas](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.6.0/docs/release-assets/v0.6.0/access-challenge-unlock.png)
+![Ficha de Ameaça no Foundry VTT mostrando PV, RD, atributos, perícias e habilidades](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.7.0/docs/release-assets/v0.7.0/threat-sheet.png)
 
-## Arrombar
+## Perícias personalizadas
 
-O Mestre configura o obstáculo, a DT e sua resistência em PA. Cada tentativa confirmada usa o diálogo normal de Check de Atletismo e custa **1 PV**, inclusive quando o Check falha. Habilidades aplicáveis continuam disponíveis com seus próprios custos.
+Nas Ferramentas do Mestre, é possível criar, editar, arquivar e reativar perícias do mundo. Agentes e Ameaças recebem suas próprias perícias e dados. Em uma perícia especializada, cada especialização tem seu dado independente. O arquivamento preserva as referências existentes.
 
-Em caso de sucesso contra a DT, o **RA** reduz a resistência restante. Uma falha não reduz a resistência. O desafio termina quando a resistência chega a zero, e cada Check é publicado pelo fluxo normal de chat.
+As perícias personalizadas podem ser usadas em testes pela ficha, solicitações de teste, testes opostos, usos de habilidades e abordagens de Pontos de Interesse.
 
-![Desafio de Arrombar com resistência restante, resultado da tentativa e custo de PV](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.6.0/docs/release-assets/v0.6.0/access-challenge-break.png)
+![Gerenciador de perícias personalizadas com atributos-base e indicação de especializações](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.7.0/docs/release-assets/v0.7.0/custom-skills.png)
 
-## Acompanhamento pelo Mestre
+## Importador de Aventuras Beta
 
-As Ferramentas do Mestre permitem criar, acompanhar, reapresentar e cancelar os desafios. Jogadores com permissão OWNER sobre o participante podem operar sua interface; um jogador autorizado que se conecta recebe os desafios ainda ativos.
+Na aba **Beta**, o Mestre pode analisar o PDF do Playtest e importar **O Pântano dos Afogados** (Missão 1), **A Caverna de Cruachan** (Missão 2) ou ambas. O importador usa os extras ZIP das missões selecionadas para preparar Agentes, Ameaças, Pontos de Interesse, cenas, diários, handouts e músicas.
 
-**As sessões ficam em memória no cliente do Mestre que as criou e são perdidas ao recarregar esse cliente.** Não são salvas no Mundo para retomada após a recarga.
+Os Agentes comuns ficam em uma pasta compartilhada. Ameaças, Agentes exclusivos e Pontos de Interesse ficam nas pastas de suas missões. A reimportação reconhece documentos já gerenciados, permite revisar conflitos de conteúdo e preserva movimentações manuais. A aba **Alpha** segue disponível para o material anterior.
+
+O Mestre precisa fornecer o PDF e os ZIPs oficiais. Esses materiais são processados localmente e ficam fora do pacote do sistema.
+
+![Aba Beta do Importador de Aventuras com o PDF principal e os extras das Missões 1 e 2](https://raw.githubusercontent.com/antoniohbmonteiro/ordemparanormal2/v0.7.0/docs/release-assets/v0.7.0/beta-adventure-importer.png)
+
+## Habilidades compartilhadas
+
+O Item `ability` pode ser reutilizado por Agentes e Ameaças. As formas de uso configuradas podem ser publicadas no chat ou iniciar um teste pelo fluxo normal de Check. As formas de combate podem incluir dano descritivo, imediato ou por rodada, conforme a configuração da habilidade.
 
 ## Compatibilidade e atualização
 
-- Compatível com **Foundry VTT v14+**, com atualização direta da **v0.5.1**.
-- **Não há nova migração de Mundo nesta release.**
+- Compatível com **Foundry VTT v14+**. A versão mínima e a versão verificada no manifesto são a **v14**.
+- Antes de atualizar da **v0.6.0**, faça um backup dos seus mundos.
 
 O projeto continua **source-available** sob a PolyForm Strict License 1.0.0. Releases públicas até v0.0.22 permanecem sob os termos MIT aplicáveis às cópias já distribuídas.
 
 ## Instalação
 
-**Manifest estável:** [system.json](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json)
+**Manifest estável** — [system.json](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/latest/download/system.json)
 
-**Pacote:** [ordemparanormal2-v0.6.0.zip](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.6.0/ordemparanormal2-v0.6.0.zip)
+**Pacote** — [ordemparanormal2-v0.7.0.zip](https://github.com/antoniohbmonteiro/ordemparanormal2/releases/download/v0.7.0/ordemparanormal2-v0.7.0.zip)
 
-**Comparar alterações:** [v0.5.1...v0.6.0](https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.5.1...v0.6.0)
+**Comparar alterações** — [v0.6.0...v0.7.0](https://github.com/antoniohbmonteiro/ordemparanormal2/compare/v0.6.0...v0.7.0)
